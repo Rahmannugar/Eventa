@@ -34,6 +34,7 @@ The project is designed to explore production engineering practices including di
 - RabbitMQ
 - gRPC
 - Stripe
+- Resend
 - pgvector
 
 ### AI
