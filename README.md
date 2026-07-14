@@ -2,6 +2,8 @@
 
 A distributed event ticketing platform built with NestJS microservices, gRPC, Kafka, RabbitMQ, PostgreSQL, Redis, pgvector, and OpenTelemetry.
 
+https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
+
 ## Overview
 
 Eventa is a distributed event ticketing platform that allows organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate tickets using QR codes during check-in, issue refunds for cancelled events, recommend events using vector embeddings, and provide analytics for organizers.
