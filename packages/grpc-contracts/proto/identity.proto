@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+service AttendeeIdentityService {
+  rpc RegisterAttendee(RegisterAttendeeRequest) returns (RegisterAttendeeResponse);
+}
+
+message RegisterAttendeeRequest {
+  string email = 1;
+  string password = 2;
+  string username = 3;
+}
+
+message RegisterAttendeeResponse {
+  string attendee_id = 1;
+  string email = 2;
+  string username = 3;
+  bool email_verified = 4;
+}

@@ -1,11 +1,29 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module';
 import { readRuntimeConfig } from './config/runtime-config';
+import { setupApiDocumentation } from './docs/open-api';
 
 async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule.register(config),
+  );
+
+  app.set('trust proxy', config.trustProxyHops);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      forbidNonWhitelisted: true,
+      transform: true,
+      whitelist: true,
+    }),
+  );
+
+  if (config.apiDocsEnabled) {
+    setupApiDocumentation(app);
+  }
 
   app.enableShutdownHooks();
 

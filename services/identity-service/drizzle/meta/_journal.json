@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784127163672,
+      "tag": "0000_create_attendee_accounts_and_profiles",
+      "breakpoints": true
+    }
+  ]
+}

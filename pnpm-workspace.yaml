@@ -3,7 +3,11 @@ packages:
   - services/*
   - packages/*
 
-injectWorkspacePackages: true
+allowBuilds:
+  '@nestjs/core': true
+  '@scarf/scarf': false
+  argon2: true
+  esbuild: true
+  protobufjs: true
 
-onlyBuiltDependencies:
-  - '@nestjs/core'
+injectWorkspacePackages: true

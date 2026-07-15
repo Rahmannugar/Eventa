@@ -1,0 +1,2 @@
+export const IDENTITY_DATABASE = Symbol('IDENTITY_DATABASE');
+export const POSTGRES_CLIENT = Symbol('POSTGRES_CLIENT');

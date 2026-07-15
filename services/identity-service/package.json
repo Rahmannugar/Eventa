@@ -1,0 +1,43 @@
+{
+  "name": "@eventa/identity-service",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "dist",
+    "drizzle"
+  ],
+  "scripts": {
+    "build": "nest build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "dotenv -e .env -- tsx src/database/migrate.ts",
+    "db:migrate:prod": "node dist/database/migrate.js",
+    "dev": "dotenv -e .env -- nest start --watch",
+    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
+    "start": "node dist/main.js",
+    "test": "pnpm test:unit",
+    "test:integration": "vitest run test/integration",
+    "test:unit": "vitest run test/unit",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@eventa/grpc-contracts": "workspace:*",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/microservices": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "argon2": "^0.44.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.8",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0"
+  }
+}

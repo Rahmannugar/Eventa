@@ -1,0 +1,76 @@
+name: ${COMPOSE_PROJECT_NAME}
+
+services:
+  identity-database:
+    image: postgres:17-alpine
+    env_file:
+      - ./infrastructure/docker/env/identity-database/.env
+    ports:
+      - '${IDENTITY_DATABASE_HOST_PORT}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - identity-database-data:/var/lib/postgresql/data
+
+  api-gateway-redis:
+    image: redis:7-alpine
+    ports:
+      - '${API_GATEWAY_REDIS_HOST_PORT}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  identity-migration:
+    build:
+      context: .
+      dockerfile: services/identity-service/Dockerfile
+    image: eventa-identity-service:local
+    command: ['node', 'dist/database/migrate.js']
+    env_file:
+      - ./infrastructure/docker/env/identity-service/.env
+    depends_on:
+      identity-database:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/identity-service/Dockerfile
+    image: eventa-identity-service:local
+    env_file:
+      - ./infrastructure/docker/env/identity-service/.env
+    ports:
+      - '${IDENTITY_HEALTH_HOST_PORT}:3005'
+      - '${IDENTITY_GRPC_HOST_PORT}:50051'
+    depends_on:
+      identity-migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    image: eventa-api-gateway:local
+    env_file:
+      - ./infrastructure/docker/env/api-gateway/.env
+    ports:
+      - '${API_GATEWAY_HOST_PORT}:3004'
+    depends_on:
+      identity-service:
+        condition: service_healthy
+      api-gateway-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  identity-database-data:

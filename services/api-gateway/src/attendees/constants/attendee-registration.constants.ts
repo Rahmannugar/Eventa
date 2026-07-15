@@ -1,0 +1,1 @@
+export const IDENTITY_GRPC_CLIENT = Symbol('IDENTITY_GRPC_CLIENT');

@@ -6,7 +6,7 @@ https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
 ## Overview
 
-Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver personalized event recommendations using pgvector embeddings, and provide analytics for organizers.
+Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver semantic and location-aware recommendations using Ahnlich, Gemini, and PostGIS, and provide analytics for organizers.
 
 The system is composed of independently deployable services responsible for identity, events, ticketing, orders, payments, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows.
 
@@ -59,3 +59,34 @@ The project is designed to explore production engineering practices including di
 ### Infrastructure
 
 - Docker Compose
+
+## Local Development
+
+The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and a one-shot Identity migration container.
+
+Local ignored environment files are already prepared in this workspace. Start the stack with:
+
+```bash
+docker compose up --build
+```
+
+The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
+
+Current local endpoints:
+
+- API Gateway: `http://localhost:3004`
+- Scalar API reference: `http://localhost:3004/docs`
+- OpenAPI JSON: `http://localhost:3004/openapi.json`
+- OpenAPI YAML: `http://localhost:3004/openapi.yaml`
+- Gateway liveness: `http://localhost:3004/health/live`
+- Identity readiness: `http://localhost:3005/health/ready`
+
+Stop the stack without deleting database data:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down --volumes` only when you intentionally want to delete the local Identity database.
+
+For a fresh clone, copy the root and `infrastructure/docker/env/**/.env.example` files to corresponding `.env` files, then supply matching local database credentials and a rate-limit HMAC secret of at least 32 characters.
