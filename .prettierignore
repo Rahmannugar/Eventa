@@ -1,0 +1,7 @@
+coverage/
+dist/
+local/
+node_modules/
+pnpm-lock.yaml
+AGENTS.md
+README.md

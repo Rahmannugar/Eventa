@@ -1,12 +1,12 @@
 # Eventa
 
-A distributed event ticketing platform built with NestJS microservices, gRPC, Kafka, RabbitMQ, PostgreSQL, Redis, pgvector, and OpenTelemetry.
+A distributed event ticketing platform built on a NestJS microservices architecture using gRPC, Kafka, RabbitMQ, PostgreSQL, Redis, OpenTelemetry, and Docker Compose.
 
 https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
 ## Overview
 
-Eventa is a distributed event ticketing platform that allows organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate tickets using QR codes during check-in, issue refunds for cancelled events, recommend events using vector embeddings, and provide analytics for organizers.
+Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver personalized event recommendations using pgvector embeddings, and provide analytics for organizers.
 
 The system is composed of independently deployable services responsible for identity, events, ticketing, orders, payments, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows.
 
@@ -37,7 +37,7 @@ The project is designed to explore production engineering practices including di
 - gRPC
 - Stripe
 - Resend
-- pgvector
+- Ahnlich(Vector DB + AI proxy)
 
 ### AI
 

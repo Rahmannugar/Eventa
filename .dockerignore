@@ -1,0 +1,12 @@
+.git
+.pnpm-store
+.turbo
+AGENTS.md
+coverage
+dist
+local
+node_modules
+**/.env
+**/.env.*
+*.log
+*.tsbuildinfo
