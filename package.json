@@ -9,13 +9,26 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "db:migrate:identity": "pnpm local:setup && docker compose run --rm identity-migration",
+    "db:reset:all": "pnpm local:setup && docker compose down --volumes && pnpm services:start",
+    "db:reset:identity": "pnpm local:setup && docker compose down && docker volume rm eventa_identity-database-data && pnpm services:start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "turbo run lint",
+    "local:setup": "node scripts/setup-local-env.mjs",
+    "services:logs": "docker compose logs -f",
+    "services:start": "pnpm local:setup && docker compose up --build -d && docker compose rm -f identity-migration",
+    "services:status": "docker compose ps -a",
+    "services:stop": "docker compose down",
     "test": "turbo run test",
+    "test:all": "pnpm test && pnpm test:integration",
+    "test:integration": "pnpm test:integration:identity && pnpm test:integration:gateway",
+    "test:integration:gateway": "pnpm local:setup && docker compose up -d api-gateway-redis && pnpm --filter @eventa/api-gateway test:integration",
+    "test:integration:identity": "pnpm local:setup && docker compose up -d identity-database && pnpm --filter @eventa/identity-service test:integration",
+    "test:unit:gateway": "pnpm --filter @eventa/api-gateway test:unit",
+    "test:unit:identity": "pnpm --filter @eventa/identity-service test:unit",
     "typecheck": "turbo run typecheck",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm format:check"
+    "verify": "pnpm lint && pnpm typecheck && pnpm test:all && pnpm build && pnpm format:check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

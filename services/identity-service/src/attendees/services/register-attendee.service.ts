@@ -18,7 +18,7 @@ export class RegisterAttendeeService {
     private readonly passwordHasher: PasswordHasher,
   ) {}
 
-  async execute(input: RegisterAttendeeDto): Promise<RegisteredAttendee> {
+  async register(input: RegisterAttendeeDto): Promise<RegisteredAttendee> {
     const email = input.email.trim().toLowerCase();
     const username = input.username.toLowerCase();
     const passwordHash = await this.passwordHasher.hash(input.password);

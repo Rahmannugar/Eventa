@@ -64,11 +64,13 @@ The project is designed to explore production engineering practices including di
 
 The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and a one-shot Identity migration container.
 
-Local ignored environment files are already prepared in this workspace. Start the stack with:
+Start the stack with:
 
 ```bash
-docker compose up --build
+pnpm services:start
 ```
+
+The command creates missing ignored service environment files automatically and does not overwrite existing files.
 
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 
@@ -84,9 +86,7 @@ Current local endpoints:
 Stop the stack without deleting database data:
 
 ```bash
-docker compose down
+pnpm services:stop
 ```
 
-Use `docker compose down --volumes` only when you intentionally want to delete the local Identity database.
-
-For a fresh clone, copy the root and `infrastructure/docker/env/**/.env.example` files to corresponding `.env` files, then supply matching local database credentials and a rate-limit HMAC secret of at least 32 characters.
+Use `pnpm db:reset:all` only when you intentionally want to delete and recreate all local databases.

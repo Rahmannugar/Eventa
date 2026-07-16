@@ -25,7 +25,7 @@ export class AttendeeRegistrationController implements AttendeeIdentityServiceCo
     request: RegisterAttendeeDto,
   ): Promise<RegisterAttendeeResponse> {
     try {
-      return await this.registerAttendeeService.execute(request);
+      return await this.registerAttendeeService.register(request);
     } catch (error: unknown) {
       if (
         error instanceof EmailAlreadyRegisteredError ||

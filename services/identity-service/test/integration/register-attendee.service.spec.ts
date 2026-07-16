@@ -25,13 +25,50 @@ if (testDatabaseUrl === undefined || testDatabaseUrl.trim() === '') {
   throw new Error('TEST_DATABASE_URL is required for integration tests');
 }
 
-const testDatabaseName = new URL(testDatabaseUrl).pathname.slice(1);
+const requiredTestDatabaseUrl = testDatabaseUrl;
+const testDatabaseName = new URL(requiredTestDatabaseUrl).pathname.slice(1);
 
-if (!testDatabaseName.endsWith('_test')) {
+if (!/^[a-z][a-z0-9_]*_test$/.test(testDatabaseName)) {
   throw new Error('TEST_DATABASE_URL must target a database ending in _test');
 }
 
-const client = postgres(testDatabaseUrl, { max: 5, onnotice: () => undefined });
+async function ensureTestDatabase(): Promise<void> {
+  const adminUrl = new URL(requiredTestDatabaseUrl);
+  adminUrl.pathname = '/postgres';
+  const adminClient = postgres(adminUrl.toString(), {
+    max: 1,
+    onnotice: () => undefined,
+  });
+
+  try {
+    const [databaseState] = await adminClient<{ exists: boolean }[]>`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_database
+        WHERE datname = ${testDatabaseName}
+      ) AS exists
+    `;
+
+    if (databaseState?.exists !== true) {
+      await adminClient.unsafe(`CREATE DATABASE "${testDatabaseName}"`);
+    }
+  } catch (error: unknown) {
+    if (
+      typeof error !== 'object' ||
+      error === null ||
+      Reflect.get(error, 'code') !== '42P04'
+    ) {
+      throw error;
+    }
+  } finally {
+    await adminClient.end();
+  }
+}
+
+const client = postgres(requiredTestDatabaseUrl, {
+  max: 5,
+  onnotice: () => undefined,
+});
 const database = drizzle(client);
 const repository = new AttendeeRegistrationRepository(database);
 const service = new RegisterAttendeeService(
@@ -41,6 +78,7 @@ const service = new RegisterAttendeeService(
 
 describe('RegisterAttendeeService integration', () => {
   beforeAll(async () => {
+    await ensureTestDatabase();
     await migrate(database, {
       migrationsFolder: resolve(process.cwd(), 'drizzle'),
     });
@@ -56,7 +94,7 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   it('registers an attendee with normalized identity fields and a secure password hash', async () => {
-    const registration = await service.execute({
+    const registration = await service.register({
       email: '  Attendee@Example.COM ',
       password: 'a-secure-password',
       username: 'EventFan',
@@ -93,14 +131,14 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   it('rejects another registration using the same email', async () => {
-    await service.execute({
+    await service.register({
       email: 'attendee@example.com',
       password: 'first-secure-password',
       username: 'first_user',
     });
 
     await expect(
-      service.execute({
+      service.register({
         email: 'ATTENDEE@example.com',
         password: 'second-secure-password',
         username: 'second_user',
@@ -109,14 +147,14 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   it('rolls back the new account when the username is already taken', async () => {
-    await service.execute({
+    await service.register({
       email: 'first@example.com',
       password: 'first-secure-password',
       username: 'eventfan',
     });
 
     await expect(
-      service.execute({
+      service.register({
         email: 'rolled-back@example.com',
         password: 'second-secure-password',
         username: 'EventFan',
@@ -133,12 +171,12 @@ describe('RegisterAttendeeService integration', () => {
 
   it('allows only one concurrent registration for the same email', async () => {
     const attempts = await Promise.allSettled([
-      service.execute({
+      service.register({
         email: 'race@example.com',
         password: 'first-secure-password',
         username: 'race_one',
       }),
-      service.execute({
+      service.register({
         email: 'RACE@example.com',
         password: 'second-secure-password',
         username: 'race_two',

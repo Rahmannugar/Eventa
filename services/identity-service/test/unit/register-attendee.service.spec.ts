@@ -38,7 +38,7 @@ describe('RegisterAttendeeService', () => {
     const passwordHasher = new DeterministicPasswordHasher();
     const service = new RegisterAttendeeService(repository, passwordHasher);
 
-    await service.execute({
+    await service.register({
       email: '  Attendee@Example.COM ',
       password: 'a-secure-password',
       username: 'EventFan',
@@ -56,7 +56,7 @@ describe('RegisterAttendeeService', () => {
     const passwordHasher = new DeterministicPasswordHasher();
     const service = new RegisterAttendeeService(repository, passwordHasher);
 
-    await service.execute({
+    await service.register({
       email: 'attendee@example.com',
       password: 'a-secure-password',
       username: 'eventfan',

@@ -7,11 +7,10 @@
   ],
   "scripts": {
     "build": "nest build",
-    "dev": "dotenv -e .env -- nest start --watch",
     "lint": "eslint src test --max-warnings 0",
     "start": "node dist/main.js",
     "test": "pnpm test:unit",
-    "test:integration": "vitest run test/integration",
+    "test:integration": "dotenv -e .env -- vitest run test/integration",
     "test:unit": "vitest run test/unit",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit --project tsconfig.json"

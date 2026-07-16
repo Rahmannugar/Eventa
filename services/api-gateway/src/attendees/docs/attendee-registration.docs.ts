@@ -31,7 +31,7 @@ const rateLimitHeaders = {
   },
 };
 
-export function DocumentAttendeeRegistration(): MethodDecorator {
+export function ApiRegisterAttendee(): MethodDecorator {
   return applyDecorators(
     ApiOperation({
       summary: 'Register an attendee account',
