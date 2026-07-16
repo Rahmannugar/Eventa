@@ -62,6 +62,8 @@ The project is designed to explore production engineering practices including di
 
 ## Local Development
 
+For the full command reference, see [commands.md](commands.md).
+
 The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and a one-shot Identity migration container.
 
 Start the stack with:
