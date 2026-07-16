@@ -12,10 +12,7 @@ import {
   UsernameUnavailableError,
 } from '../../src/attendees/errors/attendee-registration.errors';
 import { AttendeeRegistrationRepository } from '../../src/attendees/repositories/attendee-registration.repository';
-import {
-  attendeeAccounts,
-  attendeeProfiles,
-} from '../../src/attendees/schema/attendee.schema';
+import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
 import { RegisterAttendeeService } from '../../src/attendees/services/register-attendee.service';
 import { Argon2PasswordHasher } from '../../src/security/services/argon2-password-hasher.service';
 
@@ -85,7 +82,6 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   beforeEach(async () => {
-    await database.delete(attendeeProfiles);
     await database.delete(attendeeAccounts);
   });
 
@@ -111,13 +107,9 @@ describe('RegisterAttendeeService integration', () => {
         attendeeId: attendeeAccounts.id,
         email: attendeeAccounts.email,
         passwordHash: attendeeAccounts.passwordHash,
-        username: attendeeProfiles.username,
+        username: attendeeAccounts.username,
       })
-      .from(attendeeAccounts)
-      .innerJoin(
-        attendeeProfiles,
-        eq(attendeeProfiles.attendeeId, attendeeAccounts.id),
-      );
+      .from(attendeeAccounts);
 
     expect(persisted).toMatchObject({
       attendeeId: registration.attendeeId,
@@ -146,7 +138,7 @@ describe('RegisterAttendeeService integration', () => {
     ).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
   });
 
-  it('rolls back the new account when the username is already taken', async () => {
+  it('rejects another registration using the same username', async () => {
     await service.register({
       email: 'first@example.com',
       password: 'first-secure-password',
@@ -155,18 +147,18 @@ describe('RegisterAttendeeService integration', () => {
 
     await expect(
       service.register({
-        email: 'rolled-back@example.com',
+        email: 'second@example.com',
         password: 'second-secure-password',
         username: 'EventFan',
       }),
     ).rejects.toBeInstanceOf(UsernameUnavailableError);
 
-    const [rolledBackAccountCount] = await database
+    const [rejectedAccountCount] = await database
       .select({ value: count() })
       .from(attendeeAccounts)
-      .where(eq(attendeeAccounts.email, 'rolled-back@example.com'));
+      .where(eq(attendeeAccounts.email, 'second@example.com'));
 
-    expect(rolledBackAccountCount?.value).toBe(0);
+    expect(rejectedAccountCount?.value).toBe(0);
   });
 
   it('allows only one concurrent registration for the same email', async () => {

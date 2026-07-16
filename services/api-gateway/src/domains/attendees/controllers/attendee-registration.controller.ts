@@ -9,9 +9,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
-import { AttendeeRegistrationRateLimitGuard } from '../../rate-limit/guards/attendee-registration-rate-limit.guard';
 import { ApiRegisterAttendee } from '../docs/attendee-registration.docs';
 import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
+import { AttendeeRegistrationRateLimitGuard } from '../rate-limit/guards/attendee-registration-rate-limit.guard';
 import { AttendeeRegistrationService } from '../services/attendee-registration.service';
 
 @ApiTags('Attendee authentication')

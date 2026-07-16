@@ -1,4 +1,4 @@
-import { Module, type DynamicModule } from '@nestjs/common';
+import { Global, Module, type DynamicModule } from '@nestjs/common';
 import { createClient } from 'redis';
 
 import { RedisRateLimitAdapter } from './adapters/redis-rate-limit.adapter';
@@ -6,14 +6,12 @@ import {
   RATE_LIMIT_REDIS_CLIENT,
   RATE_LIMIT_STORE,
 } from './constants/rate-limit.constants';
-import { AttendeeRegistrationRateLimitGuard } from './guards/attendee-registration-rate-limit.guard';
-import { AttendeeRegistrationRateLimitService } from './services/attendee-registration-rate-limit.service';
 
 interface RateLimitModuleOptions {
-  keySecret: string;
   redisUrl: string;
 }
 
+@Global()
 @Module({})
 export class RateLimitModule {
   static register(options: RateLimitModuleOptions): DynamicModule {
@@ -36,18 +34,8 @@ export class RateLimitModule {
           provide: RATE_LIMIT_STORE,
           useClass: RedisRateLimitAdapter,
         },
-        {
-          provide: AttendeeRegistrationRateLimitService,
-          useFactory: (store: RedisRateLimitAdapter) =>
-            new AttendeeRegistrationRateLimitService(store, options.keySecret),
-          inject: [RATE_LIMIT_STORE],
-        },
-        AttendeeRegistrationRateLimitGuard,
       ],
-      exports: [
-        AttendeeRegistrationRateLimitGuard,
-        AttendeeRegistrationRateLimitService,
-      ],
+      exports: [RATE_LIMIT_STORE],
     };
   }
 }

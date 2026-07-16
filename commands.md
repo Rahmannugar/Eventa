@@ -2,6 +2,8 @@
 
 Run commands from the repository root.
 
+Create each service-owned `.env` file before running these commands; commands never generate configuration or secrets.
+
 ## Services
 
 Build and start Eventa, run migrations, then remove the completed migration container.
@@ -132,8 +134,8 @@ Delete every Eventa database volume and restart Eventa with fresh databases.
 pnpm db:reset:all
 ```
 
-## DBeaver
+## Local DB viewer
 
-| Service | Host | Port | Database | Username | Password |
-| --- | --- | --- | --- | --- | --- |
+| Service  | Host        | Port    | Database          | Username          | Password                   |
+| -------- | ----------- | ------- | ----------------- | ----------------- | -------------------------- |
 | Identity | `localhost` | `55432` | `eventa_identity` | `eventa_identity` | `eventa_identity_password` |

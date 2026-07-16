@@ -8,8 +8,8 @@ import {
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 
+import { ApiErrorResponseDto } from '../../../docs/dto/api-error-response.dto';
 import { RegisteredAttendeeDto } from '../dto/registered-attendee.dto';
-import { ApiErrorResponseDto } from '../../docs/dto/api-error-response.dto';
 
 const rateLimitHeaders = {
   RateLimit: {
@@ -36,10 +36,10 @@ export function ApiRegisterAttendee(): MethodDecorator {
     ApiOperation({
       summary: 'Register an attendee account',
       description:
-        'Creates an unverified attendee account and profile after applying the registration security policy.',
+        'Creates an unverified attendee account after applying the registration security policy.',
     }),
     ApiCreatedResponse({
-      description: 'The attendee account and profile were created atomically.',
+      description: 'The attendee account was created.',
       headers: rateLimitHeaders,
       type: RegisteredAttendeeDto,
     }),

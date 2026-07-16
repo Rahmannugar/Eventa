@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AttendeeRegistrationRateLimitService } from '../../src/rate-limit/services/attendee-registration-rate-limit.service';
+import { AttendeeRegistrationRateLimitService } from '../../src/domains/attendees/rate-limit/services/attendee-registration-rate-limit.service';
 import type {
   AtomicRateLimitAttempt,
   RateLimitDecision,
@@ -40,9 +40,15 @@ describe('AttendeeRegistrationRateLimitService', () => {
     const [first, second] = store.attempts;
 
     expect(first?.tokenBucketKey).toBe(second?.tokenBucketKey);
-    expect(first?.ipSlidingWindowKey).toBe(second?.ipSlidingWindowKey);
-    expect(first?.identityKey).toBe(second?.identityKey);
-    expect(first?.identityKey).not.toContain('attendee@example.com');
+    expect(first?.primarySlidingWindowKey).toBe(
+      second?.primarySlidingWindowKey,
+    );
+    expect(first?.secondarySlidingWindowKey).toBe(
+      second?.secondarySlidingWindowKey,
+    );
+    expect(first?.secondarySlidingWindowKey).not.toContain(
+      'attendee@example.com',
+    );
     expect(first?.member).not.toBe(second?.member);
   });
 
@@ -55,6 +61,6 @@ describe('AttendeeRegistrationRateLimitService', () => {
 
     await service.check({ clientIp: '203.0.113.10' });
 
-    expect(store.attempts[0]).not.toHaveProperty('identityKey');
+    expect(store.attempts[0]).not.toHaveProperty('secondarySlidingWindowKey');
   });
 });

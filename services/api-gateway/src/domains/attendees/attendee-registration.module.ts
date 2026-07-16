@@ -5,15 +5,17 @@ import {
 } from '@eventa/grpc-contracts';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
+import { RATE_LIMIT_STORE } from '../../rate-limit/constants/rate-limit.constants';
+import type { RateLimitStore } from '../../rate-limit/types/rate-limit.types';
 import { IDENTITY_GRPC_CLIENT } from './constants/attendee-registration.constants';
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
+import { AttendeeRegistrationRateLimitGuard } from './rate-limit/guards/attendee-registration-rate-limit.guard';
+import { AttendeeRegistrationRateLimitService } from './rate-limit/services/attendee-registration-rate-limit.service';
 import { AttendeeRegistrationService } from './services/attendee-registration.service';
-import { RateLimitModule } from '../rate-limit/rate-limit.module';
 
 interface AttendeeRegistrationModuleOptions {
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
-  redisUrl: string;
 }
 
 @Module({})
@@ -33,13 +35,21 @@ export class AttendeeRegistrationModule {
             },
           },
         ]),
-        RateLimitModule.register({
-          keySecret: options.rateLimitKeySecret,
-          redisUrl: options.redisUrl,
-        }),
       ],
       controllers: [AttendeeRegistrationController],
-      providers: [AttendeeRegistrationService],
+      providers: [
+        AttendeeRegistrationService,
+        {
+          provide: AttendeeRegistrationRateLimitService,
+          useFactory: (store: RateLimitStore) =>
+            new AttendeeRegistrationRateLimitService(
+              store,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STORE],
+        },
+        AttendeeRegistrationRateLimitGuard,
+      ],
     };
   }
 }

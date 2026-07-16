@@ -7,7 +7,7 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 
-import { RateLimitStoreUnavailableError } from '../errors/rate-limit.errors';
+import { RateLimitStoreUnavailableError } from '../../../../rate-limit/errors/rate-limit.errors';
 import { AttendeeRegistrationRateLimitService } from '../services/attendee-registration-rate-limit.service';
 
 interface RateLimitedRequest {

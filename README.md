@@ -14,6 +14,8 @@ The project is designed to explore production engineering practices including di
 
 ## Architecture
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boundaries, data ownership, and distributed workflow decisions.
+
 - API Gateway
 - Identity Service
 - Event Service
@@ -72,7 +74,7 @@ Start the stack with:
 pnpm services:start
 ```
 
-The command creates missing ignored service environment files automatically and does not overwrite existing files.
+Create each service `.env` file from its service-owned `.env.example` before starting Eventa. Missing files and invalid permanent configuration intentionally stop startup.
 
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 
@@ -92,3 +94,9 @@ pnpm services:stop
 ```
 
 Use `pnpm db:reset:all` only when you intentionally want to delete and recreate all local databases.
+
+## API Documentation
+
+See [API.md](API.md) for the current public API and internal contract map. While the Gateway is running, Scalar is available at `http://localhost:3004/docs` and the importable OpenAPI contracts are available as JSON and YAML.
+
+Each deployable service also owns its operational, API, and architecture documentation inside its service directory.

@@ -1,0 +1,29 @@
+# Eventa Identity Service
+
+Identity owns Eventa's security principals, credentials, verification state, and future sessions. Attendee and admin identities are separate namespaces; the current implementation contains attendee registration only.
+
+## Runtime
+
+- gRPC application port: configured by `GRPC_PORT`; local Compose publishes `50051`.
+- HTTP health port: configured by `HEALTH_PORT`; local Compose publishes `3005`.
+- PostgreSQL: configured by `DATABASE_URL`; local Compose publishes the database on host port `55432` for development tools.
+
+All required variables and the local database principal contract are listed in `.env.example`. Create the ignored `.env` deliberately before running Identity.
+
+## Commands
+
+Run from the repository root:
+
+```bash
+pnpm db:migrate:identity
+pnpm test:unit:identity
+pnpm test:integration:identity
+pnpm db:reset:identity
+```
+
+The integration suite requires `TEST_DATABASE_URL`, refuses databases without an `_test` suffix, and creates the isolated test database when it is missing.
+
+## Further Documentation
+
+- [API.md](API.md): gRPC and health contracts.
+- [ARCHITECTURE.md](ARCHITECTURE.md): registration execution, schema ownership, constraints, and failure translation.

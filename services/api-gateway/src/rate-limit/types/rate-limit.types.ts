@@ -10,10 +10,10 @@ export interface SlidingWindowRule {
   windowMs: number;
 }
 
-export interface AttendeeRegistrationRateLimitRules {
-  identitySlidingWindow: SlidingWindowRule;
-  ipSlidingWindow: SlidingWindowRule;
+export interface HybridRateLimitRules {
+  primarySlidingWindow: SlidingWindowRule;
   routeKey: string;
+  secondarySlidingWindow: SlidingWindowRule;
   tokenBucket: TokenBucketRule;
 }
 
@@ -31,16 +31,11 @@ export interface RateLimitSnapshot {
   windowSeconds: number;
 }
 
-export interface RegistrationRateLimitAttempt {
-  clientIp: string;
-  email?: string;
-}
-
 export interface AtomicRateLimitAttempt {
-  identityKey?: string;
-  ipSlidingWindowKey: string;
   member: string;
-  rules: AttendeeRegistrationRateLimitRules;
+  primarySlidingWindowKey: string;
+  rules: HybridRateLimitRules;
+  secondarySlidingWindowKey?: string;
   tokenBucketKey: string;
 }
 

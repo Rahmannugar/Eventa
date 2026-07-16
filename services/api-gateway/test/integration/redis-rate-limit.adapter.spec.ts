@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { RedisRateLimitAdapter } from '../../src/rate-limit/adapters/redis-rate-limit.adapter';
 import type {
   AtomicRateLimitAttempt,
-  AttendeeRegistrationRateLimitRules,
+  HybridRateLimitRules,
 } from '../../src/rate-limit/types/rate-limit.types';
 
 const testRedisUrl = process.env.TEST_REDIS_URL;
@@ -19,17 +19,21 @@ const client = createClient({
 });
 const adapter = new RedisRateLimitAdapter(client);
 
-const baseRules: AttendeeRegistrationRateLimitRules = {
+const baseRules: HybridRateLimitRules = {
   routeKey: 'integration-test',
   tokenBucket: {
     capacity: 100,
     name: 'ip-burst',
     refillIntervalMs: 60_000,
   },
-  ipSlidingWindow: { limit: 100, name: 'ip-window', windowMs: 60_000 },
-  identitySlidingWindow: {
+  primarySlidingWindow: {
     limit: 100,
-    name: 'identity-window',
+    name: 'primary-window',
+    windowMs: 60_000,
+  },
+  secondarySlidingWindow: {
+    limit: 100,
+    name: 'secondary-window',
     windowMs: 60_000,
   },
 };
@@ -39,10 +43,10 @@ function attempt(
   overrides: Partial<AtomicRateLimitAttempt> = {},
 ): AtomicRateLimitAttempt {
   return {
-    identityKey: 'test:{registration}:identity:one',
-    ipSlidingWindowKey: 'test:{registration}:ip:one',
     member,
+    primarySlidingWindowKey: 'test:{registration}:primary:one',
     rules: baseRules,
+    secondarySlidingWindowKey: 'test:{registration}:secondary:one',
     tokenBucketKey: 'test:{registration}:bucket:one',
     ...overrides,
   };
@@ -62,7 +66,7 @@ describe('RedisRateLimitAdapter', () => {
   });
 
   it('enforces the token bucket burst capacity', async () => {
-    const rules: AttendeeRegistrationRateLimitRules = {
+    const rules: HybridRateLimitRules = {
       ...baseRules,
       tokenBucket: {
         capacity: 2,
@@ -87,53 +91,53 @@ describe('RedisRateLimitAdapter', () => {
     );
   });
 
-  it('enforces IP and identity sliding windows independently', async () => {
-    const ipRules: AttendeeRegistrationRateLimitRules = {
+  it('enforces primary and secondary sliding windows independently', async () => {
+    const primaryRules: HybridRateLimitRules = {
       ...baseRules,
-      ipSlidingWindow: {
+      primarySlidingWindow: {
         limit: 2,
-        name: 'ip-window',
+        name: 'primary-window',
         windowMs: 60_000,
       },
     };
 
-    await adapter.consume(attempt('ip-one', { rules: ipRules }));
-    await adapter.consume(attempt('ip-two', { rules: ipRules }));
+    await adapter.consume(attempt('primary-one', { rules: primaryRules }));
+    await adapter.consume(attempt('primary-two', { rules: primaryRules }));
     await expect(
-      adapter.consume(attempt('ip-three', { rules: ipRules })),
+      adapter.consume(attempt('primary-three', { rules: primaryRules })),
     ).resolves.toMatchObject({ allowed: false });
 
     await client.flushDb();
 
-    const identityRules: AttendeeRegistrationRateLimitRules = {
+    const secondaryRules: HybridRateLimitRules = {
       ...baseRules,
-      identitySlidingWindow: {
+      secondarySlidingWindow: {
         limit: 2,
-        name: 'identity-window',
+        name: 'secondary-window',
         windowMs: 60_000,
       },
     };
 
     await adapter.consume(
-      attempt('identity-one', {
-        ipSlidingWindowKey: 'test:{registration}:ip:first',
-        rules: identityRules,
+      attempt('secondary-one', {
+        primarySlidingWindowKey: 'test:{registration}:primary:first',
+        rules: secondaryRules,
         tokenBucketKey: 'test:{registration}:bucket:first',
       }),
     );
     await adapter.consume(
-      attempt('identity-two', {
-        ipSlidingWindowKey: 'test:{registration}:ip:second',
-        rules: identityRules,
+      attempt('secondary-two', {
+        primarySlidingWindowKey: 'test:{registration}:primary:second',
+        rules: secondaryRules,
         tokenBucketKey: 'test:{registration}:bucket:second',
       }),
     );
 
     await expect(
       adapter.consume(
-        attempt('identity-three', {
-          ipSlidingWindowKey: 'test:{registration}:ip:third',
-          rules: identityRules,
+        attempt('secondary-three', {
+          primarySlidingWindowKey: 'test:{registration}:primary:third',
+          rules: secondaryRules,
           tokenBucketKey: 'test:{registration}:bucket:third',
         }),
       ),
@@ -141,7 +145,7 @@ describe('RedisRateLimitAdapter', () => {
   });
 
   it('admits exactly the configured capacity under concurrency', async () => {
-    const rules: AttendeeRegistrationRateLimitRules = {
+    const rules: HybridRateLimitRules = {
       ...baseRules,
       tokenBucket: {
         capacity: 3,

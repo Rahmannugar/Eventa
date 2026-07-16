@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 
+import { AttendeeRegistrationRateLimitGuard } from '../../src/domains/attendees/rate-limit/guards/attendee-registration-rate-limit.guard';
+import { AttendeeRegistrationRateLimitService } from '../../src/domains/attendees/rate-limit/services/attendee-registration-rate-limit.service';
 import { RateLimitStoreUnavailableError } from '../../src/rate-limit/errors/rate-limit.errors';
-import { AttendeeRegistrationRateLimitGuard } from '../../src/rate-limit/guards/attendee-registration-rate-limit.guard';
-import { AttendeeRegistrationRateLimitService } from '../../src/rate-limit/services/attendee-registration-rate-limit.service';
 import type {
   RateLimitDecision,
   RateLimitStore,

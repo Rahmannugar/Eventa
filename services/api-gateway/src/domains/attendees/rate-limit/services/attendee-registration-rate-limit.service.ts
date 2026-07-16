@@ -1,19 +1,14 @@
 import { createHmac, randomUUID } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
-
-import { RATE_LIMIT_STORE } from '../constants/rate-limit.constants';
-import { ATTENDEE_REGISTRATION_RATE_LIMIT_RULES } from '../rules/attendee-registration-rate-limit.rules';
 import type {
   RateLimitDecision,
   RateLimitStore,
-  RegistrationRateLimitAttempt,
-} from '../types/rate-limit.types';
+} from '../../../../rate-limit/types/rate-limit.types';
+import { ATTENDEE_REGISTRATION_RATE_LIMIT_RULES } from '../rules/attendee-registration-rate-limit.rules';
+import type { RegistrationRateLimitAttempt } from '../types/attendee-registration-rate-limit.types';
 
-@Injectable()
 export class AttendeeRegistrationRateLimitService {
   constructor(
-    @Inject(RATE_LIMIT_STORE)
     private readonly store: RateLimitStore,
     private readonly keySecret: string,
   ) {}
@@ -23,21 +18,21 @@ export class AttendeeRegistrationRateLimitService {
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
     const ipSubject = this.hashSubject(`ip:${attempt.clientIp}`);
     const normalizedEmail = attempt.email?.trim().toLowerCase();
-    const identityKey = normalizedEmail
+    const secondarySlidingWindowKey = normalizedEmail
       ? `${keyPrefix}:window:identity:${this.hashSubject(`email:${normalizedEmail}`)}`
       : undefined;
 
     const storeAttempt = {
-      ipSlidingWindowKey: `${keyPrefix}:window:ip:${ipSubject}`,
       member: randomUUID(),
+      primarySlidingWindowKey: `${keyPrefix}:window:ip:${ipSubject}`,
       rules,
       tokenBucketKey: `${keyPrefix}:bucket:ip:${ipSubject}`,
     };
 
     return this.store.consume(
-      identityKey === undefined
+      secondarySlidingWindowKey === undefined
         ? storeAttempt
-        : { ...storeAttempt, identityKey },
+        : { ...storeAttempt, secondarySlidingWindowKey },
     );
   }
 
