@@ -37,3 +37,9 @@ Identity validation errors become HTTP `400`, canonical uniqueness conflicts bec
 Gateway configuration is validated before the HTTP listener starts. Trusted-proxy hops are explicit. The Redis client connects lazily for the protected route, disables the offline queue and automatic reconnect loop, and closes during application shutdown.
 
 The Gateway intentionally exposes only liveness because it has no database or universal local dependency that would make every route unready.
+
+## Observability Boundary
+
+OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic HTTP and gRPC instrumentation propagates trace context into Identity. Gateway HTTP middleware adds or preserves `x-request-id`, records one bounded request count and duration, and emits one structured completion log carrying both request and trace IDs. Successful health probes are excluded from these signals.
+
+The middleware owns transport telemetry; attendee controllers, guards, and application services do not call telemetry APIs. Rate-limit outcomes remain observable through the final HTTP status and request metric without coupling the reusable rate-limit capability to the monitoring implementation.

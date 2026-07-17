@@ -72,5 +72,87 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  observability-collector:
+    image: grafana/alloy:v1.16.1
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    ports:
+      - '14317:4317'
+      - '14318:4318'
+      - '51234:12345'
+    volumes:
+      - ./infrastructure/observability/collector/grafana-alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      observability-logs:
+        condition: service_started
+      observability-metrics:
+        condition: service_started
+      observability-traces:
+        condition: service_started
+    restart: unless-stopped
+
+  observability-metrics:
+    image: prom/prometheus:v3.11.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-otlp-receiver
+    ports:
+      - '59090:9090'
+    volumes:
+      - ./infrastructure/observability/metrics/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - observability-metrics-data:/prometheus
+    restart: unless-stopped
+
+  observability-traces:
+    image: grafana/tempo:2.10.5
+    command: ['-config.file=/etc/tempo/tempo.yaml']
+    ports:
+      - '53200:3200'
+    volumes:
+      - ./infrastructure/observability/traces/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - observability-traces-data:/var/tempo
+    restart: unless-stopped
+
+  observability-logs:
+    build:
+      context: ./infrastructure/observability/logs/loki
+      dockerfile: Dockerfile
+    image: eventa-observability-logs:local
+    command: ['-config.file=/etc/loki/loki.yaml']
+    ports:
+      - '53100:3100'
+    volumes:
+      - ./infrastructure/observability/logs/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - observability-logs-data:/var/loki
+    restart: unless-stopped
+
+  observability-dashboard:
+    image: grafana/grafana:13.1.0
+    ports:
+      - '3300:3000'
+    volumes:
+      - ./infrastructure/observability/dashboards/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./infrastructure/observability/dashboards/grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/eventa.yaml:ro
+      - ./infrastructure/observability/dashboards/grafana/provisioning/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/eventa.yaml:ro
+      - ./infrastructure/observability/dashboards/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - observability-dashboard-data:/var/lib/grafana
+    depends_on:
+      observability-logs:
+        condition: service_started
+      observability-metrics:
+        condition: service_started
+      observability-traces:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   identity-database-data:
+  observability-dashboard-data:
+  observability-logs-data:
+  observability-metrics-data:
+  observability-traces-data:

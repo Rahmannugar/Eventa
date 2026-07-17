@@ -49,3 +49,9 @@ Migration `0001_move_username_to_attendee_accounts` forwards already-migrated da
 Liveness confirms the process is running. Readiness queries PostgreSQL because Identity cannot serve its current business capability without its database.
 
 Unexpected database failures propagate as internal gRPC failures. Named email and username uniqueness violations are the only persistence failures deliberately exposed as stable domain conflicts.
+
+## Observability Boundary
+
+OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic gRPC instrumentation continues the Gateway trace, while the global RPC interceptor records bounded request metrics and one structured completion log with the active trace ID.
+
+`ObservedAttendeeRegistrar` is a domain-owned decorator around the `AttendeeRegistrar` capability. It records the authoritative registration outcome only after the core registrar returns or throws, then preserves the exact result or error. This keeps telemetry out of the controller and `RegisterAttendeeService` while still distinguishing `created`, `email_conflict`, `username_conflict`, and unexpected `failed` outcomes. Nest module composition selects the observed decorator; callers remain coupled only to the registrar capability token.

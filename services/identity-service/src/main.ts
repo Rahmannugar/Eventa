@@ -13,10 +13,13 @@ import {
 
 import { AppModule } from './app.module';
 import { readRuntimeConfig } from './config/runtime-config';
+import { EventaLogger } from '@eventa/observability';
 
 async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
-  const app = await NestFactory.create(AppModule.register(config));
+  const app = await NestFactory.create(AppModule.register(config), {
+    logger: new EventaLogger('eventa-identity-service'),
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

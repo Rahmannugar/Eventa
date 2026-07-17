@@ -139,3 +139,17 @@ pnpm db:reset:all
 | Service  | Host        | Port    | Database          | Username          | Password                   |
 | -------- | ----------- | ------- | ----------------- | ----------------- | -------------------------- |
 | Identity | `localhost` | `55432` | `eventa_identity` | `eventa_identity` | `eventa_identity_password` |
+
+## Local operations
+
+Open the provisioned Eventa dashboard and explore metrics, traces, and logs in Grafana.
+
+```bash
+open http://localhost:3300
+```
+
+Open Alloy's component graph and collector diagnostics.
+
+```bash
+open http://localhost:51234
+```

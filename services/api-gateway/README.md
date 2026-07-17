@@ -9,6 +9,8 @@ The API Gateway is Eventa's public HTTP boundary. It owns transport validation, 
 - Redis rate-limit dependency: configured by `REDIS_URL`.
 - Interactive API reference: `/docs` when `API_DOCS_ENABLED=true`.
 - Liveness: `/health/live`.
+- OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.
+- Deployment label: configured by `DEPLOYMENT_ENVIRONMENT`.
 
 All required variables are listed in `.env.example`. Create the ignored `.env` deliberately before running the service; startup fails when permanent configuration is missing or invalid.
 
@@ -24,6 +26,8 @@ pnpm --filter @eventa/api-gateway build
 ```
 
 Use `pnpm services:start` to run the complete local registration path.
+
+The local stack sends Gateway metrics and traces through Alloy and collects its structured container logs. Open Grafana at `http://localhost:3300`.
 
 ## Further Documentation
 

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@eventa/grpc-contracts": "workspace:*",
+    "@eventa/observability": "workspace:*",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@nestjs/common": "^11.1.28",

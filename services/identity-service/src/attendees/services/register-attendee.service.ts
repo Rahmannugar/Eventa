@@ -4,13 +4,14 @@ import { PASSWORD_HASHER } from '../../security/constants/security.constants';
 import type { PasswordHasher } from '../../security/types/password-hasher.types';
 import { ATTENDEE_REGISTRATION_STORE } from '../constants/attendee-registration.constants';
 import type {
+  AttendeeRegistrar,
   AttendeeRegistrationStore,
+  RegisterAttendeeInput,
   RegisteredAttendee,
 } from '../types/attendee-registration.types';
-import type { RegisterAttendeeDto } from '../dto/register-attendee.dto';
 
 @Injectable()
-export class RegisterAttendeeService {
+export class RegisterAttendeeService implements AttendeeRegistrar {
   constructor(
     @Inject(ATTENDEE_REGISTRATION_STORE)
     private readonly repository: AttendeeRegistrationStore,
@@ -18,7 +19,7 @@ export class RegisterAttendeeService {
     private readonly passwordHasher: PasswordHasher,
   ) {}
 
-  async register(input: RegisterAttendeeDto): Promise<RegisteredAttendee> {
+  async register(input: RegisterAttendeeInput): Promise<RegisteredAttendee> {
     const email = input.email.trim().toLowerCase();
     const username = input.username.toLowerCase();
     const passwordHash = await this.passwordHasher.hash(input.password);

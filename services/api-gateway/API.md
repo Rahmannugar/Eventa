@@ -41,7 +41,7 @@ Possible outcomes:
 | `429`  | A registration rate-limit rule denied the attempt.                       |
 | `503`  | Redis could not make the admission decision or Identity was unavailable. |
 
-Admitted and denied attempts include `RateLimit-Policy` and `RateLimit`. Denied attempts also include `Retry-After`.
+Admitted and denied attempts include `RateLimit-Policy` and `RateLimit`. Denied attempts also include `Retry-After`. Every response includes an `x-request-id`; a valid incoming value is preserved, otherwise the Gateway creates one.
 
 ## Operational and Documentation Routes
 

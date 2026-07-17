@@ -66,7 +66,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 
 For the full command reference, see [commands.md](commands.md).
 
-The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and a one-shot Identity migration container.
+The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
 
 Start the stack with:
 
@@ -86,6 +86,9 @@ Current local endpoints:
 - OpenAPI YAML: `http://localhost:3004/openapi.yaml`
 - Gateway liveness: `http://localhost:3004/health/live`
 - Identity readiness: `http://localhost:3005/health/ready`
+- Grafana: `http://localhost:3300`
+- Grafana Alloy diagnostics: `http://localhost:51234`
+- Prometheus: `http://localhost:59090`
 
 Stop the stack without deleting database data:
 

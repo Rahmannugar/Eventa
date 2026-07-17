@@ -12,6 +12,19 @@ Attendee client
        -> Redis rate-limit store
        -> Identity Service over gRPC
             -> Identity PostgreSQL
+
+Gateway and Identity
+  -> OpenTelemetry OTLP
+       -> Grafana Alloy
+            -> Prometheus metrics
+            -> Tempo traces
+
+Container stdout/stderr
+  -> Grafana Alloy
+       -> Loki logs
+
+Grafana
+  -> Prometheus, Tempo, and Loki
 ```
 
 The wider product design includes Event, Order, Payment, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. These boundaries are architectural decisions, not claims that every service is implemented.
@@ -78,8 +91,14 @@ Permanent configuration is injected through environment variables and validated 
 
 Liveness describes whether a process is alive. Readiness is exposed only when a real local dependency determines whether an instance should receive traffic. Services close owned connections during graceful shutdown.
 
+Gateway and Identity start OpenTelemetry before NestJS loads so HTTP, gRPC, and supported runtime libraries are instrumented automatically. Each instance exports traces and bounded-cardinality request metrics over OTLP to Alloy. HTTP and gRPC boundary components emit structured completion logs and add the active trace ID; the Gateway also returns or preserves `x-request-id`. Successful health probes are excluded from request logs, custom request metrics, and incoming HTTP traces.
+
+Authoritative business outcomes are measured at a domain-owned decorator boundary rather than inside controllers or core application services. For attendee registration, `ObservedAttendeeRegistrar` wraps the registrar capability and records `created`, known conflict, or unexpected failure after the core operation decides the outcome.
+
+Alloy is the collection and routing layer. It sends metrics to Prometheus, traces to Tempo, and Docker JSON logs to Loki. Grafana provisions those three data sources and the `Attendee Registration Overview` dashboard. Telemetry backend availability is deliberately not an application readiness dependency: losing observability must not stop registration, while exporter failures remain visible in service diagnostics.
+
 ## Performance Validation
 
 Eventa will run dedicated performance testing after a major business workflow or product story is complete, not after each implementation slice. The selected load generator will send controlled HTTP traffic through the API Gateway after that workflow and its observability instrumentation are implemented. A dedicated performance environment will use deterministic, service-owned seed tooling to create million-scale datasets without making normal startup, CI, or integration tests depend on that volume.
 
-Load-test results will be interpreted together with OpenTelemetry traces and Prometheus, Grafana, Loki, and Tempo signals. Performance runs will measure throughput, latency percentiles, error rate, resource saturation, database and Redis behavior, and cross-service trace continuity. Each scenario will reflect the real endpoint policy; rate limiting and other security boundaries will not be silently disabled to manufacture higher throughput. Autocannon is the current candidate, subject to a deliberate tool comparison before the first performance milestone.
+Load-test results will be interpreted together with OpenTelemetry traces and Prometheus, Grafana, Loki, and Tempo signals. Performance runs will measure throughput, latency percentiles, error rate, resource saturation, database and Redis behavior, and cross-service trace continuity. Each scenario will reflect the real endpoint policy; rate limiting and other security boundaries will not be silently disabled to manufacture higher throughput. k6 is the selected load-testing tool because its scenario model, thresholds, and metric output fit Eventa's workflow-level performance validation better than a small HTTP benchmarking utility.
