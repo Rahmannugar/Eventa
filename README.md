@@ -49,9 +49,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 
 - OpenTelemetry
 - Prometheus
-- Grafana
-- Loki
-- Tempo
+- Grafana(Loki, Tempo)
+
 
 ### Frontend
 
@@ -75,6 +74,8 @@ pnpm services:start
 ```
 
 Create each service `.env` file from its service-owned `.env.example` before starting Eventa. Missing files and invalid permanent configuration intentionally stop startup.
+
+Create the ignored Grafana `.env` from `infrastructure/observability/dashboards/grafana/.env.example` as well. It owns the local admin credentials and optional Resend SMTP settings; secrets are not stored in Compose or committed configuration.
 
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 

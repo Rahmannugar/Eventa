@@ -34,14 +34,35 @@ Boundary requirements:
 
 Possible outcomes:
 
-| Status | Meaning                                                                  |
-| ------ | ------------------------------------------------------------------------ |
-| `400`  | HTTP or Identity boundary validation rejected the command.               |
-| `409`  | The canonical email or username already exists.                          |
-| `429`  | A registration rate-limit rule denied the attempt.                       |
-| `503`  | Redis could not make the admission decision or Identity was unavailable. |
+| Status | Meaning                                                         |
+| ------ | --------------------------------------------------------------- |
+| `400`  | The request body is malformed and cannot be parsed.             |
+| `405`  | The registration path was called with a method other than POST. |
+| `409`  | The email or username is unavailable.                           |
+| `422`  | One or more registration fields are invalid.                    |
+| `429`  | Too many registration attempts were made.                       |
+| `503`  | Registration is temporarily unavailable.                        |
 
-Admitted and denied attempts include `RateLimit-Policy` and `RateLimit`. Denied attempts also include `Retry-After`. Every response includes an `x-request-id`; a valid incoming value is preserved, otherwise the Gateway creates one.
+Errors use one public shape:
+
+```json
+{
+  "statusCode": 422,
+  "code": "VALIDATION_FAILED",
+  "message": "Check the highlighted fields and try again.",
+  "errors": [
+    {
+      "field": "password",
+      "code": "TOO_SHORT",
+      "message": "Password must be at least 12 characters."
+    }
+  ]
+}
+```
+
+`errors` is present only when the client can correct specific fields. Internal dependency names and error details are never exposed in the public response.
+
+Admitted and denied attempts include `RateLimit-Policy` and `RateLimit`. Denied attempts also include `Retry-After`. A `405` response includes `Allow: POST`. Every response includes an `x-request-id`; a valid incoming value is preserved, otherwise the Gateway creates one and forwards it to Identity over gRPC metadata.
 
 ## Operational and Documentation Routes
 

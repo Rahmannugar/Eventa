@@ -1,6 +1,6 @@
 # Eventa API
 
-## Current Public API
+## Public API Map
 
 Clients communicate with Eventa through the API Gateway over HTTP. The currently implemented business endpoint is:
 
@@ -15,7 +15,7 @@ The Gateway also exposes:
 - OpenAPI YAML at `/openapi.yaml`;
 - process liveness at `/health/live`.
 
-The generated OpenAPI documents are the authoritative HTTP contract. See [services/api-gateway/API.md](services/api-gateway/API.md) for boundary behavior and error translation.
+This root file remains a compact map as Eventa grows; it does not duplicate every endpoint, example, or response. The generated OpenAPI documents are the authoritative public HTTP contract. See [services/api-gateway/API.md](services/api-gateway/API.md) for Gateway boundary behavior and error translation.
 
 ## Internal Contracts
 
@@ -23,4 +23,4 @@ Synchronous service commands and queries use gRPC. The current contract is `even
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Future event-bus and job-queue contracts will be documented when their producing and consuming slices are implemented.
+Each service documents its owned internal surface in its own `API.md`. Future event-bus and job-queue contracts will be documented beside their producing and consuming services when implemented.

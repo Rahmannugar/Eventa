@@ -26,7 +26,7 @@ schema_config:
 
 limits_config:
   allow_structured_metadata: true
-  retention_period: 168h
+  retention_period: 24h
 
 compactor:
   working_directory: /var/loki/compactor

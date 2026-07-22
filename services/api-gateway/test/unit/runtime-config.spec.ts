@@ -6,6 +6,7 @@ const validEnvironment = {
   API_DOCS_ENABLED: 'true',
   IDENTITY_GRPC_URL: 'identity-service:50051',
   PORT: '4100',
+  PUBLIC_API_URL: 'http://localhost:4100',
   RATE_LIMIT_KEY_SECRET: 'a-development-secret-that-is-32-chars',
   REDIS_URL: 'redis://redis:6379',
   TRUST_PROXY_HOPS: '1',
@@ -25,6 +26,7 @@ describe('readRuntimeConfig', () => {
       apiDocsEnabled: true,
       identityGrpcUrl: 'identity-service:50051',
       port: 4100,
+      publicApiUrl: 'http://localhost:4100',
       rateLimitKeySecret: 'a-development-secret-that-is-32-chars',
       redisUrl: 'redis://redis:6379',
       trustProxyHops: 1,
@@ -40,6 +42,18 @@ describe('readRuntimeConfig', () => {
           PORT: port,
         }),
       ).toThrow('PORT must be an integer between 1 and 65535');
+    },
+  );
+
+  it.each(['localhost:4100', 'redis://localhost:4100', ''])(
+    'rejects the invalid public API URL %s',
+    (publicApiUrl) => {
+      expect(() =>
+        readRuntimeConfig({
+          ...validEnvironment,
+          PUBLIC_API_URL: publicApiUrl,
+        }),
+      ).toThrow();
     },
   );
 

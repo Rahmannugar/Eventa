@@ -4,7 +4,7 @@ import {
   type AttendeeIdentityServiceController,
   type RegisterAttendeeResponse,
 } from '@eventa/grpc-contracts';
-import { status } from '@grpc/grpc-js';
+import { status, type Metadata } from '@grpc/grpc-js';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 
 import { ATTENDEE_REGISTRAR } from '../constants/attendee-registration.constants';
@@ -25,6 +25,7 @@ export class AttendeeRegistrationController implements AttendeeIdentityServiceCo
   @GrpcMethod(ATTENDEE_IDENTITY_SERVICE_NAME, 'RegisterAttendee')
   async registerAttendee(
     request: RegisterAttendeeDto,
+    _metadata?: Metadata,
   ): Promise<RegisterAttendeeResponse> {
     try {
       return await this.attendeeRegistrar.register(request);

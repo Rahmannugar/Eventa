@@ -24,13 +24,13 @@ Domain code decides which subjects and numeric rules protect an endpoint. The sh
 2. `AttendeeRegistrationRateLimitService` canonicalizes and HMACs subjects, then supplies attendee registration rules to the shared store.
 3. `RedisRateLimitAdapter` uses Redis server time and one Lua script to evaluate a token bucket, primary sliding window, and optional secondary sliding window atomically.
 4. An admitted request reaches the global validation pipe and attendee controller.
-5. `AttendeeRegistrationService` sends the typed `RegisterAttendee` gRPC command to Identity and translates gRPC outcomes into stable HTTP responses.
+5. `AttendeeRegistrationService` sends the typed `RegisterAttendee` gRPC command and the request ID to Identity and translates gRPC outcomes into stable client-facing HTTP responses.
 
 ## Failure Behavior
 
 Registration fails closed with `503` when Redis cannot make the admission decision. This does not make Gateway liveness false because Redis is a route dependency rather than a dependency of every Gateway capability.
 
-Identity validation errors become HTTP `400`, canonical uniqueness conflicts become `409`, and unavailable or unexpected Identity failures become `503`.
+Malformed JSON becomes `400`. A known registration path called with the wrong HTTP method becomes `405`. Gateway DTO or Identity command validation becomes `422`, uniqueness conflicts become `409`, rate-limit denial becomes `429`, and unavailable dependencies become `503`. The shared HTTP filter keeps the response envelope stable and records a safe diagnostic code for request logs without exposing Redis, gRPC, or database details to clients.
 
 ## Configuration and Lifecycle
 
@@ -40,6 +40,8 @@ The Gateway intentionally exposes only liveness because it has no database or un
 
 ## Observability Boundary
 
-OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic HTTP and gRPC instrumentation propagates trace context into Identity. Gateway HTTP middleware adds or preserves `x-request-id`, records one bounded request count and duration, and emits one structured completion log carrying both request and trace IDs. Successful health probes are excluded from these signals.
+OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic HTTP and gRPC instrumentation propagates trace context into Identity. Gateway HTTP middleware validates and preserves an incoming `x-request-id` or creates one, records one bounded request count and duration, and emits one structured completion log carrying request ID, trace ID, status, and safe error reason. The gRPC call forwards the same request ID as metadata. Successful health probes are excluded from these signals.
+
+Framework middleware/controller auto-spans are disabled because their inclusive timing obscured the real work. The trace keeps the HTTP and gRPC transport spans and adds a concrete `rate_limit.consume` client span around Redis admission.
 
 The middleware owns transport telemetry; attendee controllers, guards, and application services do not call telemetry APIs. Rate-limit outcomes remain observable through the final HTTP status and request metric without coupling the reusable rate-limit capability to the monitoring implementation.

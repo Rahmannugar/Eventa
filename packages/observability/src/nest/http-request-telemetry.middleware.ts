@@ -5,6 +5,7 @@ import { Injectable, Logger, type NestMiddleware } from '@nestjs/common';
 import { recordRequestMetrics } from '../metrics/request-metrics';
 
 interface HttpRequest {
+  headers: Record<string, string | string[] | undefined>;
   method: string;
   originalUrl?: string;
   path?: string;
@@ -12,10 +13,25 @@ interface HttpRequest {
 }
 
 interface HttpResponse {
-  getHeader(name: string): number | string | string[] | undefined;
   once(event: 'finish', listener: () => void): void;
   setHeader(name: string, value: string): void;
   statusCode: number;
+  locals?: {
+    eventaError?: {
+      errorCode: string;
+      validationErrors?: string[];
+    };
+  };
+}
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+
+function readRequestId(request: HttpRequest): string {
+  const header = request.headers['x-request-id'];
+
+  return typeof header === 'string' && REQUEST_ID_PATTERN.test(header)
+    ? header
+    : randomUUID();
 }
 
 function readOperation(request: HttpRequest): string {
@@ -48,12 +64,11 @@ export class HttpRequestTelemetryMiddleware implements NestMiddleware {
 
   use(request: HttpRequest, response: HttpResponse, next: () => void): void {
     const startedAt = process.hrtime.bigint();
-    const requestIdHeader = response.getHeader('x-request-id');
-    const requestId =
-      typeof requestIdHeader === 'string' ? requestIdHeader : randomUUID();
+    const requestId = readRequestId(request);
     const traceId = trace.getActiveSpan()?.spanContext().traceId;
 
     response.setHeader('x-request-id', requestId);
+    request.headers['x-request-id'] = requestId;
     response.once('finish', () => {
       const durationMilliseconds =
         Number(process.hrtime.bigint() - startedAt) / 1_000_000;
@@ -78,6 +93,17 @@ export class HttpRequestTelemetryMiddleware implements NestMiddleware {
           outcome,
           request_id: requestId,
           status_code: response.statusCode,
+          ...(response.locals?.eventaError === undefined
+            ? {}
+            : {
+                error_code: response.locals.eventaError.errorCode,
+                ...(response.locals.eventaError.validationErrors === undefined
+                  ? {}
+                  : {
+                      validation_errors:
+                        response.locals.eventaError.validationErrors,
+                    }),
+              }),
           ...(traceId === undefined ? {} : { trace_id: traceId }),
         });
       }

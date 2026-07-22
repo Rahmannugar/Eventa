@@ -21,7 +21,8 @@
     "@opentelemetry/resources": "^2.9.0",
     "@opentelemetry/sdk-metrics": "^2.9.0",
     "@opentelemetry/sdk-node": "^0.220.0",
-    "@opentelemetry/semantic-conventions": "^1.43.0"
+    "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@grpc/grpc-js": "^1.14.3"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",

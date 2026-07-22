@@ -15,7 +15,21 @@ ingester:
 
 compactor:
   compaction:
-    block_retention: 168h
+    block_retention: 24h
+
+metrics_generator:
+  ring:
+    kvstore:
+      store: inmemory
+  processor:
+    local_blocks:
+      filter_server_spans: false
+      flush_to_storage: true
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [local-blocks]
 
 storage:
   trace:

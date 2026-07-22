@@ -1,5 +1,11 @@
 name: eventa
 
+x-local-logging: &local-logging
+  driver: json-file
+  options:
+    max-file: '2'
+    max-size: 10m
+
 services:
   identity-database:
     image: postgres:17-alpine
@@ -15,6 +21,7 @@ services:
       start_period: 5s
     volumes:
       - identity-database-data:/var/lib/postgresql/data
+    logging: *local-logging
 
   api-gateway-redis:
     image: redis:7-alpine
@@ -25,6 +32,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    logging: *local-logging
 
   identity-migration:
     build:
@@ -40,6 +48,7 @@ services:
     healthcheck:
       disable: true
     restart: 'no'
+    logging: *local-logging
 
   identity-service:
     build:
@@ -55,6 +64,7 @@ services:
       identity-migration:
         condition: service_completed_successfully
     restart: unless-stopped
+    logging: *local-logging
 
   api-gateway:
     build:
@@ -71,6 +81,7 @@ services:
       api-gateway-redis:
         condition: service_healthy
     restart: unless-stopped
+    logging: *local-logging
 
   observability-collector:
     image: grafana/alloy:v1.16.1
@@ -93,13 +104,14 @@ services:
       observability-traces:
         condition: service_started
     restart: unless-stopped
+    logging: *local-logging
 
   observability-metrics:
     image: prom/prometheus:v3.11.0
     command:
       - --config.file=/etc/prometheus/prometheus.yaml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.time=1d
       - --web.enable-otlp-receiver
     ports:
       - '59090:9090'
@@ -107,6 +119,7 @@ services:
       - ./infrastructure/observability/metrics/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - observability-metrics-data:/prometheus
     restart: unless-stopped
+    logging: *local-logging
 
   observability-traces:
     image: grafana/tempo:2.10.5
@@ -117,6 +130,7 @@ services:
       - ./infrastructure/observability/traces/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - observability-traces-data:/var/tempo
     restart: unless-stopped
+    logging: *local-logging
 
   observability-logs:
     build:
@@ -130,9 +144,12 @@ services:
       - ./infrastructure/observability/logs/loki/loki.yaml:/etc/loki/loki.yaml:ro
       - observability-logs-data:/var/loki
     restart: unless-stopped
+    logging: *local-logging
 
   observability-dashboard:
     image: grafana/grafana:13.1.0
+    env_file:
+      - ./infrastructure/observability/dashboards/grafana/.env
     ports:
       - '3300:3000'
     volumes:
@@ -149,6 +166,7 @@ services:
       observability-traces:
         condition: service_started
     restart: unless-stopped
+    logging: *local-logging
 
 volumes:
   identity-database-data:

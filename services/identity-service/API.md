@@ -29,6 +29,8 @@ gRPC outcomes:
 
 The protobuf file is authoritative for field numbers, wire names, package version, and service method names.
 
+The Gateway forwards `x-request-id` as optional gRPC metadata. Identity includes it in its completion log when present; direct gRPC clients may omit it.
+
 ## Operational HTTP
 
 | Method | Path            | Purpose                                                                         |

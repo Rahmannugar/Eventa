@@ -1,14 +1,13 @@
 import {
-  HttpException,
   HttpStatus,
   Injectable,
-  ServiceUnavailableException,
   type CanActivate,
   type ExecutionContext,
 } from '@nestjs/common';
 
 import { RateLimitStoreUnavailableError } from '../../../../rate-limit/errors/rate-limit.errors';
 import { AttendeeRegistrationRateLimitService } from '../services/attendee-registration-rate-limit.service';
+import { ApiHttpException } from '../../../../http/errors/api-http.exception';
 
 interface RateLimitedRequest {
   body: unknown;
@@ -78,18 +77,18 @@ export class AttendeeRegistrationRateLimitGuard implements CanActivate {
       }
 
       response.setHeader('Retry-After', String(decision.retryAfterSeconds));
-      throw new HttpException(
-        {
-          error: 'Too Many Requests',
-          message: 'ATTENDEE_REGISTRATION_RATE_LIMITED',
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-        },
+      throw new ApiHttpException(
         HttpStatus.TOO_MANY_REQUESTS,
+        'REGISTRATION_RATE_LIMITED',
+        'Wait before trying to register again.',
       );
     } catch (error: unknown) {
       if (error instanceof RateLimitStoreUnavailableError) {
-        throw new ServiceUnavailableException(
-          'Attendee registration temporarily unavailable',
+        throw new ApiHttpException(
+          HttpStatus.SERVICE_UNAVAILABLE,
+          'REGISTRATION_UNAVAILABLE',
+          'Registration is temporarily unavailable. Try again later.',
+          { diagnosticCode: 'RATE_LIMIT_STORE_UNAVAILABLE' },
         );
       }
 

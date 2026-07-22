@@ -6,6 +6,8 @@ import { AppModule } from './app.module';
 import { readRuntimeConfig } from './config/runtime-config';
 import { setupApiDocumentation } from './docs/open-api';
 import { EventaLogger } from '@eventa/observability';
+import { ApiErrorFilter } from './http/errors/api-error.filter';
+import { createValidationException } from './http/errors/validation-errors';
 
 async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
@@ -15,8 +17,10 @@ async function bootstrap(): Promise<void> {
   );
 
   app.set('trust proxy', config.trustProxyHops);
+  app.useGlobalFilters(new ApiErrorFilter());
   app.useGlobalPipes(
     new ValidationPipe({
+      exceptionFactory: createValidationException,
       forbidNonWhitelisted: true,
       transform: true,
       whitelist: true,
@@ -24,7 +28,7 @@ async function bootstrap(): Promise<void> {
   );
 
   if (config.apiDocsEnabled) {
-    setupApiDocumentation(app);
+    setupApiDocumentation(app, config.publicApiUrl);
   }
 
   app.enableShutdownHooks();

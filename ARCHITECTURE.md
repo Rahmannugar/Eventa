@@ -91,11 +91,15 @@ Permanent configuration is injected through environment variables and validated 
 
 Liveness describes whether a process is alive. Readiness is exposed only when a real local dependency determines whether an instance should receive traffic. Services close owned connections during graceful shutdown.
 
-Gateway and Identity start OpenTelemetry before NestJS loads so HTTP, gRPC, and supported runtime libraries are instrumented automatically. Each instance exports traces and bounded-cardinality request metrics over OTLP to Alloy. HTTP and gRPC boundary components emit structured completion logs and add the active trace ID; the Gateway also returns or preserves `x-request-id`. Successful health probes are excluded from request logs, custom request metrics, and incoming HTTP traces.
+Gateway and Identity start OpenTelemetry before NestJS loads so HTTP and gRPC transport context propagates automatically. Each instance exports traces and bounded-cardinality request metrics over OTLP to Alloy. HTTP and gRPC boundary components emit structured completion logs and add the active trace ID; the Gateway also validates, returns, and forwards `x-request-id`. Safe error codes and field-rule names explain failed requests without logging submitted values. Successful health probes are excluded from request logs, custom request metrics, and incoming HTTP traces.
+
+Concrete spans expose Redis rate-limit consumption, Argon2id hashing, and the Identity PostgreSQL insert. Generic framework middleware/controller spans are disabled because their inclusive durations do not identify which dependency consumed the time.
 
 Authoritative business outcomes are measured at a domain-owned decorator boundary rather than inside controllers or core application services. For attendee registration, `ObservedAttendeeRegistrar` wraps the registrar capability and records `created`, known conflict, or unexpected failure after the core operation decides the outcome.
 
-Alloy is the collection and routing layer. It sends metrics to Prometheus, traces to Tempo, and Docker JSON logs to Loki. Grafana provisions those three data sources and the `Attendee Registration Overview` dashboard. Telemetry backend availability is deliberately not an application readiness dependency: losing observability must not stop registration, while exporter failures remain visible in service diagnostics.
+Alloy is the collection and routing layer. It sends metrics to Prometheus, traces to Tempo, and Docker JSON logs to Loki. Docker logs are grouped as application, infrastructure, or observability services. Grafana provisions those three data sources and the `Attendee Registration Overview` dashboard. Prometheus, Tempo, and Loki retain one day of local data, and Docker JSON logs rotate at two 10 MB files per container. Telemetry backend availability is deliberately not an application readiness dependency: losing observability must not stop registration, while exporter failures remain visible in service diagnostics.
+
+Grafana administration and optional SMTP configuration come from its ignored environment file. Resend SMTP can deliver Grafana alert notifications independently of Eventa's application mail adapter. Alert rules and SMTP delivery are enabled only after an actionable workflow signal exists and the contact point can be tested end to end.
 
 ## Performance Validation
 

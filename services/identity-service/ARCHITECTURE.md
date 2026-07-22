@@ -36,6 +36,8 @@ There is no attendee profile table because the current product has no separate p
 
 Attendee code depends on the `PasswordHasher` capability. `Argon2PasswordHasher` is the concrete security adapter, and the raw password never crosses the repository boundary.
 
+The Argon2id work factor is explicit: 64 MiB memory, three iterations, and parallelism four. It preserves the library behavior used by the registration slice while making the security and latency cost reviewable rather than relying on implicit defaults.
+
 Registration creates an unverified account by leaving `email_verified_at` null. Verification challenge issuance and confirmation are intentionally deferred to the next slice.
 
 ## Database and Migrations
@@ -52,6 +54,8 @@ Unexpected database failures propagate as internal gRPC failures. Named email an
 
 ## Observability Boundary
 
-OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic gRPC instrumentation continues the Gateway trace, while the global RPC interceptor records bounded request metrics and one structured completion log with the active trace ID.
+OpenTelemetry starts through Node's `--require` hook before NestJS and instrumented libraries load. Automatic gRPC instrumentation continues the Gateway trace, while the global RPC interceptor records bounded request metrics and one structured completion log with the active trace ID and forwarded request ID.
+
+The trace includes `password.hash` and `INSERT attendee_accounts` spans around the concrete Argon2 and PostgreSQL work. The database span contains only bounded semantic attributes such as system, operation, database, and table; it never records SQL values, credentials, email, username, or password. Manual database instrumentation is used because the current postgres.js driver is not covered by the installed PostgreSQL auto-instrumentation.
 
 `ObservedAttendeeRegistrar` is a domain-owned decorator around the `AttendeeRegistrar` capability. It records the authoritative registration outcome only after the core registrar returns or throws, then preserves the exact result or error. This keeps telemetry out of the controller and `RegisterAttendeeService` while still distinguishing `created`, `email_conflict`, `username_conflict`, and unexpected `failed` outcomes. Nest module composition selects the observed decorator; callers remain coupled only to the registrar capability token.

@@ -55,6 +55,27 @@ discovery.relabel "eventa_logs" {
   }
 
   rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(api-gateway|identity-service)"
+    replacement   = "application"
+    target_label  = "service_group"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "observability-.*"
+    replacement   = "observability"
+    target_label  = "service_group"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(identity-database|identity-migration|api-gateway-redis)"
+    replacement   = "infrastructure"
+    target_label  = "service_group"
+  }
+
+  rule {
     source_labels = ["__meta_docker_container_name"]
     regex         = "/(.*)"
     target_label  = "container"

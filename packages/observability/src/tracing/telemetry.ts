@@ -26,11 +26,15 @@ export function startTelemetry(config: ObservabilityConfig): void {
   telemetrySdk = new NodeSDK({
     instrumentations: [
       getNodeAutoInstrumentations({
+        '@opentelemetry/instrumentation-connect': { enabled: false },
+        '@opentelemetry/instrumentation-express': { enabled: false },
         '@opentelemetry/instrumentation-fs': { enabled: false },
         '@opentelemetry/instrumentation-http': {
           ignoreIncomingRequestHook: (request) =>
             request.url === '/health/live' || request.url === '/health/ready',
         },
+        '@opentelemetry/instrumentation-nestjs-core': { enabled: false },
+        '@opentelemetry/instrumentation-router': { enabled: false },
       }),
     ],
     metricReader: new PeriodicExportingMetricReader({

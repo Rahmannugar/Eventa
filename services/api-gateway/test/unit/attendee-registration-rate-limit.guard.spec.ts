@@ -1,8 +1,4 @@
-import {
-  HttpException,
-  ServiceUnavailableException,
-  type ExecutionContext,
-} from '@nestjs/common';
+import { HttpException, type ExecutionContext } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 
 import { AttendeeRegistrationRateLimitGuard } from '../../src/domains/attendees/rate-limit/guards/attendee-registration-rate-limit.guard';
@@ -12,6 +8,7 @@ import type {
   RateLimitDecision,
   RateLimitStore,
 } from '../../src/rate-limit/types/rate-limit.types';
+import { ApiHttpException } from '../../src/http/errors/api-http.exception';
 
 class FixedRateLimitStore implements RateLimitStore {
   constructor(private readonly outcome: RateLimitDecision | Error) {}
@@ -84,6 +81,24 @@ describe('AttendeeRegistrationRateLimitGuard', () => {
 
     await expect(
       guard.canActivate(createContext(new Map())),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toMatchObject({
+      diagnosticCode: 'RATE_LIMIT_STORE_UNAVAILABLE',
+      status: 503,
+    });
+  });
+
+  it('uses the stable public error contract for denied attempts', async () => {
+    const guard = createGuard(
+      new FixedRateLimitStore({
+        allowed: false,
+        limits: [],
+        retryAfterSeconds: 12,
+      }),
+    );
+
+    const rejection = guard.canActivate(createContext(new Map()));
+
+    await expect(rejection).rejects.toBeInstanceOf(ApiHttpException);
+    await expect(rejection).rejects.toMatchObject({ status: 429 });
   });
 });

@@ -42,12 +42,18 @@ importers:
 
   packages/grpc-contracts:
     dependencies:
+      '@grpc/grpc-js':
+        specifier: ^1.14.3
+        version: 1.14.4
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
 
   packages/observability:
     dependencies:
+      '@grpc/grpc-js':
+        specifier: ^1.14.3
+        version: 1.14.4
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1

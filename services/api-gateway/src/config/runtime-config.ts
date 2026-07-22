@@ -2,6 +2,7 @@ export interface RuntimeConfig {
   apiDocsEnabled: boolean;
   identityGrpcUrl: string;
   port: number;
+  publicApiUrl: string;
   rateLimitKeySecret: string;
   redisUrl: string;
   trustProxyHops: number;
@@ -47,6 +48,19 @@ export function readRuntimeConfig(
     throw new Error('IDENTITY_GRPC_URL must use the host:port format');
   }
 
+  const publicApiUrl = readRequiredString(environment, 'PUBLIC_API_URL');
+  let parsedPublicApiUrl: URL;
+
+  try {
+    parsedPublicApiUrl = new URL(publicApiUrl);
+  } catch {
+    throw new Error('PUBLIC_API_URL must be a valid HTTP or HTTPS URL');
+  }
+
+  if (!['http:', 'https:'].includes(parsedPublicApiUrl.protocol)) {
+    throw new Error('PUBLIC_API_URL must be a valid HTTP or HTTPS URL');
+  }
+
   const redisUrl = readRequiredString(environment, 'REDIS_URL');
 
   let parsedRedisUrl: URL;
@@ -81,6 +95,7 @@ export function readRuntimeConfig(
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
     identityGrpcUrl,
     port,
+    publicApiUrl: parsedPublicApiUrl.toString().replace(/\/$/, ''),
     rateLimitKeySecret,
     redisUrl,
     trustProxyHops,

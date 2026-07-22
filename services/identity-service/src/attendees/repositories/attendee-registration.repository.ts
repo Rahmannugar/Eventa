@@ -1,4 +1,5 @@
 import { Inject } from '@nestjs/common';
+import { runWithOperationSpan } from '@eventa/observability';
 
 import { IDENTITY_DATABASE } from '../../database/database.constants';
 import type { IdentityDatabase } from '../../database/database.types';
@@ -47,41 +48,55 @@ export class AttendeeRegistrationRepository implements AttendeeRegistrationStore
   ) {}
 
   async create(input: CreateAttendeeAccount): Promise<RegisteredAttendee> {
-    try {
-      const [account] = await this.database
-        .insert(attendeeAccounts)
-        .values({
-          email: input.email,
-          passwordHash: input.passwordHash,
-          username: input.username,
-        })
-        .returning({
-          attendeeId: attendeeAccounts.id,
-          email: attendeeAccounts.email,
-          username: attendeeAccounts.username,
-        });
+    return runWithOperationSpan(
+      'INSERT attendee_accounts',
+      async () => {
+        try {
+          const [account] = await this.database
+            .insert(attendeeAccounts)
+            .values({
+              email: input.email,
+              passwordHash: input.passwordHash,
+              username: input.username,
+            })
+            .returning({
+              attendeeId: attendeeAccounts.id,
+              email: attendeeAccounts.email,
+              username: attendeeAccounts.username,
+            });
 
-      if (account === undefined) {
-        throw new Error('Attendee account insert returned no row');
-      }
+          if (account === undefined) {
+            throw new Error('Attendee account insert returned no row');
+          }
 
-      return { ...account, emailVerified: false };
-    } catch (error: unknown) {
-      if (readDatabaseErrorField(error, 'code') !== UNIQUE_VIOLATION) {
-        throw error;
-      }
+          return { ...account, emailVerified: false };
+        } catch (error: unknown) {
+          if (readDatabaseErrorField(error, 'code') !== UNIQUE_VIOLATION) {
+            throw error;
+          }
 
-      const constraint = readDatabaseErrorField(error, 'constraint_name');
+          const constraint = readDatabaseErrorField(error, 'constraint_name');
 
-      if (constraint === 'attendee_accounts_email_unique') {
-        throw new EmailAlreadyRegisteredError();
-      }
+          if (constraint === 'attendee_accounts_email_unique') {
+            throw new EmailAlreadyRegisteredError();
+          }
 
-      if (constraint === 'attendee_accounts_username_unique') {
-        throw new UsernameUnavailableError();
-      }
+          if (constraint === 'attendee_accounts_username_unique') {
+            throw new UsernameUnavailableError();
+          }
 
-      throw error;
-    }
+          throw error;
+        }
+      },
+      {
+        attributes: {
+          'db.namespace': 'eventa_identity',
+          'db.operation.name': 'INSERT',
+          'db.system.name': 'postgresql',
+          'db.collection.name': 'attendee_accounts',
+        },
+        kind: 'client',
+      },
+    );
   }
 }

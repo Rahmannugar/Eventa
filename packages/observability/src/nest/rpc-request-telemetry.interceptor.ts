@@ -6,6 +6,7 @@ import {
   type NestInterceptor,
 } from '@nestjs/common';
 import { catchError, Observable, tap, throwError } from 'rxjs';
+import type { Metadata } from '@grpc/grpc-js';
 
 import { recordRequestMetrics } from '../metrics/request-metrics';
 
@@ -51,15 +52,20 @@ export class RpcRequestTelemetryInterceptor implements NestInterceptor {
 
     const startedAt = process.hrtime.bigint();
     const operation = `${context.getClass().name}.${context.getHandler().name}`;
+    const metadata = context.getArgByIndex<Metadata | undefined>(1);
+    const requestIdValue = metadata?.get('x-request-id')[0];
+    const requestId =
+      typeof requestIdValue === 'string' ? requestIdValue : undefined;
 
     return next.handle().pipe(
-      tap(() => this.complete(startedAt, operation, 'success', '0')),
+      tap(() => this.complete(startedAt, operation, 'success', '0', requestId)),
       catchError((error: unknown) => {
         this.complete(
           startedAt,
           operation,
           'server_error',
           readGrpcStatusCode(error),
+          requestId,
         );
         return throwError(() => error);
       }),
@@ -71,6 +77,7 @@ export class RpcRequestTelemetryInterceptor implements NestInterceptor {
     operation: string,
     outcome: 'server_error' | 'success',
     statusCode: string,
+    requestId: string | undefined,
   ): void {
     const durationMilliseconds =
       Number(process.hrtime.bigint() - startedAt) / 1_000_000;
@@ -87,6 +94,7 @@ export class RpcRequestTelemetryInterceptor implements NestInterceptor {
       operation,
       outcome,
       status_code: statusCode,
+      ...(requestId === undefined ? {} : { request_id: requestId }),
     });
   }
 }

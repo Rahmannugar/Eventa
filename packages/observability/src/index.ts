@@ -13,3 +13,4 @@ export { HttpRequestTelemetryMiddleware } from './nest/http-request-telemetry.mi
 export { RpcRequestTelemetryInterceptor } from './nest/rpc-request-telemetry.interceptor';
 export { TelemetryLifecycleService } from './nest/telemetry-lifecycle.service';
 export { startTelemetry, stopTelemetry } from './tracing/telemetry';
+export { runWithOperationSpan } from './tracing/operation-span';

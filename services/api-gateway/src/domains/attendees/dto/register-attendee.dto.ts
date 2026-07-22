@@ -10,14 +10,14 @@ import {
 
 export class RegisterAttendeeDto implements RegisterAttendeeRequest {
   @ApiProperty({ example: 'attendee@example.com', maxLength: 320 })
-  @IsEmail()
-  @MaxLength(320)
+  @IsEmail({}, { message: 'Enter a valid email address.' })
+  @MaxLength(320, { message: 'Email must not exceed 320 characters.' })
   email!: string;
 
   @ApiProperty({ example: 'a-secure-password', minLength: 12, maxLength: 128 })
-  @IsString()
-  @MinLength(12)
-  @MaxLength(128)
+  @IsString({ message: 'Password must be text.' })
+  @MinLength(12, { message: 'Password must be at least 12 characters.' })
+  @MaxLength(128, { message: 'Password must not exceed 128 characters.' })
   password!: string;
 
   @ApiProperty({
@@ -26,9 +26,11 @@ export class RegisterAttendeeDto implements RegisterAttendeeRequest {
     maxLength: 30,
     pattern: '^[a-zA-Z0-9_]+$',
   })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(30)
-  @Matches(/^[a-zA-Z0-9_]+$/)
+  @IsString({ message: 'Username must be text.' })
+  @MinLength(3, { message: 'Username must be at least 3 characters.' })
+  @MaxLength(30, { message: 'Username must not exceed 30 characters.' })
+  @Matches(/^[a-zA-Z0-9_]+$/, {
+    message: 'Username may contain only letters, numbers, and underscores.',
+  })
   username!: string;
 }

@@ -2,7 +2,7 @@
 
 Run commands from the repository root.
 
-Create each service-owned `.env` file before running these commands; commands never generate configuration or secrets.
+Create each service-owned `.env` and the Grafana `.env` before running these commands; commands never generate configuration or secrets.
 
 ## Services
 
@@ -128,7 +128,7 @@ pnpm test:integration:gateway
 
 ## All databases
 
-Delete every Eventa database volume and restart Eventa with fresh databases.
+Delete all Eventa database and observability volumes, then restart Eventa with fresh local state.
 
 ```bash
 pnpm db:reset:all

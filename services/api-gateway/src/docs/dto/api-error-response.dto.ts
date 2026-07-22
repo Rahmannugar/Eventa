@@ -1,21 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class ApiValidationErrorDto {
+  @ApiProperty({ example: 'TOO_SHORT' })
+  code!: string;
+
+  @ApiProperty({ example: 'password' })
+  field!: string;
+
+  @ApiProperty({ example: 'Password must be at least 12 characters.' })
+  message!: string;
+}
+
 export class ApiErrorResponseDto {
-  @ApiProperty({ example: 'Conflict' })
-  error!: string;
+  @ApiProperty({ example: 'VALIDATION_FAILED' })
+  code!: string;
 
   @ApiProperty({
-    oneOf: [
-      { example: 'EMAIL_ALREADY_REGISTERED', type: 'string' },
-      {
-        example: ['email must be an email'],
-        items: { type: 'string' },
-        type: 'array',
-      },
-    ],
+    example: 'Check the highlighted fields and try again.',
   })
-  message!: string | string[];
+  message!: string;
 
-  @ApiProperty({ example: 409 })
+  @ApiProperty({ example: 422 })
   statusCode!: number;
+
+  @ApiProperty({ required: false, type: [ApiValidationErrorDto] })
+  errors?: ApiValidationErrorDto[];
 }
