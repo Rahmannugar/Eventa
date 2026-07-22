@@ -13,9 +13,9 @@ import { Metadata, status } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
-import { IDENTITY_GRPC_CLIENT } from '../constants/attendee-registration.constants';
-import type { RegisterAttendeeDto } from '../dto/register-attendee.dto';
-import { ApiHttpException } from '../../../http/errors/api-http.exception';
+import { IDENTITY_GRPC_CLIENT } from '../../constants/attendee-registration.constants';
+import { ApiHttpException } from '../../../../http/errors/api-http.exception';
+import type { RegisterAttendeeCommand } from './register-attendee.command';
 
 function readErrorField(error: unknown, field: string): unknown {
   if (typeof error !== 'object' || error === null || !(field in error)) {
@@ -26,7 +26,7 @@ function readErrorField(error: unknown, field: string): unknown {
 }
 
 @Injectable()
-export class AttendeeRegistrationService implements OnModuleInit {
+export class RegisterAttendeeCommandHandler implements OnModuleInit {
   private identityService?: AttendeeIdentityServiceClient;
 
   constructor(
@@ -41,9 +41,8 @@ export class AttendeeRegistrationService implements OnModuleInit {
       );
   }
 
-  async register(
-    request: RegisterAttendeeDto,
-    requestId: string,
+  async handle(
+    command: RegisterAttendeeCommand,
   ): Promise<RegisterAttendeeResponse> {
     if (this.identityService === undefined) {
       throw new ApiHttpException(
@@ -56,9 +55,16 @@ export class AttendeeRegistrationService implements OnModuleInit {
 
     try {
       const metadata = new Metadata();
-      metadata.set('x-request-id', requestId);
+      metadata.set('x-request-id', command.requestId);
       return await firstValueFrom(
-        this.identityService.registerAttendee(request, metadata),
+        this.identityService.registerAttendee(
+          {
+            email: command.email,
+            password: command.password,
+            username: command.username,
+          },
+          metadata,
+        ),
       );
     } catch (error: unknown) {
       const code = readErrorField(error, 'code');

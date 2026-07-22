@@ -1,35 +1,14 @@
 # Identity Service API
 
-## gRPC Contract
+## Business Domains
 
 Identity implements `eventa.identity.v1.AttendeeIdentityService` from [../../packages/grpc-contracts/proto/identity.proto](../../packages/grpc-contracts/proto/identity.proto).
 
-### RegisterAttendee
+| Domain    | Internal surface                          | Documentation                         |
+| --------- | ----------------------------------------- | ------------------------------------- |
+| Attendees | `AttendeeIdentityService` gRPC operations | [Attendees API](src/attendees/API.md) |
 
-Request fields:
-
-- `email`
-- `password`
-- `username`
-
-Successful response fields:
-
-- `attendee_id`
-- canonical `email`
-- canonical `username`
-- `email_verified`, currently `false` at registration
-
-gRPC outcomes:
-
-| Status             | Meaning                                                       |
-| ------------------ | ------------------------------------------------------------- |
-| `INVALID_ARGUMENT` | Boundary validation rejected the command.                     |
-| `ALREADY_EXISTS`   | Canonical attendee email or username uniqueness was violated. |
-| `UNKNOWN`          | An unexpected unhandled internal failure occurred.            |
-
-The protobuf file is authoritative for field numbers, wire names, package version, and service method names.
-
-The Gateway forwards `x-request-id` as optional gRPC metadata. Identity includes it in its completion log when present; direct gRPC clients may omit it.
+The protobuf file is authoritative for service names, method names, wire fields, and field numbers. Domain API files explain command/query behavior and failures without duplicating the machine-readable contract.
 
 ## Operational HTTP
 

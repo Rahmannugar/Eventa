@@ -96,27 +96,6 @@ export function ApiRegisterAttendee(): MethodDecorator {
         },
       },
     }),
-    errorResponse(
-      405,
-      'This route accepts POST requests only.',
-      {
-        methodNotAllowed: {
-          summary: 'Unsupported HTTP method',
-          value: {
-            code: 'METHOD_NOT_ALLOWED',
-            message: 'Use POST to register an attendee.',
-            statusCode: 405,
-          },
-        },
-      },
-      {
-        Allow: {
-          description: 'Methods accepted by this route.',
-          schema: { example: 'POST', type: 'string' },
-        },
-        'x-request-id': requestIdResponseHeader,
-      },
-    ),
     errorResponse(409, 'The email or username is unavailable.', {
       emailAlreadyRegistered: {
         summary: 'Email already registered',

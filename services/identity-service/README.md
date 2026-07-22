@@ -31,3 +31,4 @@ The local stack sends Identity metrics and traces through Alloy and collects its
 
 - [API.md](API.md): gRPC and health contracts.
 - [ARCHITECTURE.md](ARCHITECTURE.md): registration execution, schema ownership, constraints, and failure translation.
+- [Attendees API](src/attendees/API.md) and [architecture](src/attendees/ARCHITECTURE.md): the domain-owned registration command, account state, and invariants.

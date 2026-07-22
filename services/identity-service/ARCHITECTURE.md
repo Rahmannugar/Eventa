@@ -2,47 +2,20 @@
 
 ## Ownership
 
-Identity owns attendee and admin security principals, credentials, verification, and sessions. The namespaces remain separate so one human email can independently identify an attendee and an admin without sharing credentials or lifecycle.
+Identity owns attendee and admin security principals, credentials, verification, and sessions. Each substantial identity domain owns its application flow, state rules, and concise API and architecture documentation.
 
-The current slice implements only attendee registration.
+The current implementation contains the Attendees domain only. Its registration command, state, invariants, and failure behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
 
-## Registration Execution
+## Service Composition
 
-1. The gRPC controller receives `RegisterAttendee` and Identity's global pipe validates it independently of the Gateway.
-2. `RegisterAttendeeService` canonicalizes email and username and asks the `PasswordHasher` capability to produce an Argon2id hash.
-3. `AttendeeRegistrationRepository` receives only canonical fields and the password hash.
-4. One PostgreSQL insert creates the attendee account and returns its public registration projection.
-5. Named uniqueness violations are translated into Identity domain errors and then gRPC `ALREADY_EXISTS`.
-
-## Persistence
-
-Identity owns the `attendee_accounts` table:
-
-```text
-attendee_accounts
-  id
-  email
-  username
-  password_hash
-  email_verified_at
-  created_at
-```
-
-PostgreSQL enforces canonical lowercase email, canonical username syntax, unique email, and unique username. The database is the final authority under concurrent requests; the application does not rely on a check-before-insert race.
-
-There is no attendee profile table because the current product has no separate profile behavior. Explicit event interests and behavior-derived preferences belong to Discovery rather than Identity.
-
-## Security Boundary
-
-Attendee code depends on the `PasswordHasher` capability. `Argon2PasswordHasher` is the concrete security adapter, and the raw password never crosses the repository boundary.
-
-The Argon2id work factor is explicit: 64 MiB memory, three iterations, and parallelism four. It preserves the library behavior used by the registration slice while making the security and latency cost reviewable rather than relying on implicit defaults.
-
-Registration creates an unverified account by leaving `email_verified_at` null. Verification challenge issuance and confirmation are intentionally deferred to the next slice.
+- `AppModule` composes runtime configuration, database lifecycle, health, security adapters, and business domains.
+- Domain modules expose gRPC command/query controllers and depend on capability-oriented ports.
+- The service composition root selects concrete persistence, security, and observability decorators.
+- Business domains do not own process startup or cross-domain infrastructure client lifecycle.
 
 ## Database and Migrations
 
-Drizzle schema and migrations remain inside Identity. The migration runner uses a dedicated one-connection process and always closes it. Runtime database connections are closed during graceful shutdown.
+Drizzle schemas and migrations remain inside Identity and are organized by owning domain. The migration runner uses a dedicated one-connection process and always closes it. Runtime database connections are closed during graceful shutdown.
 
 Migration `0001_move_username_to_attendee_accounts` forwards already-migrated databases by copying usernames from the former profile table before enforcing non-null uniqueness and dropping that table.
 
@@ -50,7 +23,7 @@ Migration `0001_move_username_to_attendee_accounts` forwards already-migrated da
 
 Liveness confirms the process is running. Readiness queries PostgreSQL because Identity cannot serve its current business capability without its database.
 
-Unexpected database failures propagate as internal gRPC failures. Named email and username uniqueness violations are the only persistence failures deliberately exposed as stable domain conflicts.
+Unexpected infrastructure failures propagate as internal gRPC failures unless a domain deliberately defines a stable translation. Domain documents own those expected outcomes.
 
 ## Observability Boundary
 
@@ -58,4 +31,4 @@ OpenTelemetry starts through Node's `--require` hook before NestJS and instrumen
 
 The trace includes `password.hash` and `INSERT attendee_accounts` spans around the concrete Argon2 and PostgreSQL work. The database span contains only bounded semantic attributes such as system, operation, database, and table; it never records SQL values, credentials, email, username, or password. Manual database instrumentation is used because the current postgres.js driver is not covered by the installed PostgreSQL auto-instrumentation.
 
-`ObservedAttendeeRegistrar` is a domain-owned decorator around the `AttendeeRegistrar` capability. It records the authoritative registration outcome only after the core registrar returns or throws, then preserves the exact result or error. This keeps telemetry out of the controller and `RegisterAttendeeService` while still distinguishing `created`, `email_conflict`, `username_conflict`, and unexpected `failed` outcomes. Nest module composition selects the observed decorator; callers remain coupled only to the registrar capability token.
+Authoritative business outcomes are recorded through domain-owned decorators around command/query capabilities. Nest module composition selects those decorators while controllers remain coupled only to application capability tokens. The Attendees domain documents its current outcome vocabulary.

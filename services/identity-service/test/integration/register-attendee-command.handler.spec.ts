@@ -11,9 +11,10 @@ import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../../src/attendees/errors/attendee-registration.errors';
-import { AttendeeRegistrationRepository } from '../../src/attendees/repositories/attendee-registration.repository';
+import { AttendeeAccountWriteRepository } from '../../src/attendees/repositories/attendee-account-write.repository';
 import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
-import { RegisterAttendeeService } from '../../src/attendees/services/register-attendee.service';
+import { RegisterAttendeeCommand } from '../../src/attendees/commands/register-attendee/register-attendee.command';
+import { RegisterAttendeeCommandHandler } from '../../src/attendees/commands/register-attendee/register-attendee-command.handler';
 import { Argon2PasswordHasher } from '../../src/security/services/argon2-password-hasher.service';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -67,13 +68,21 @@ const client = postgres(requiredTestDatabaseUrl, {
   onnotice: () => undefined,
 });
 const database = drizzle(client);
-const repository = new AttendeeRegistrationRepository(database);
-const service = new RegisterAttendeeService(
+const repository = new AttendeeAccountWriteRepository(database);
+const handler = new RegisterAttendeeCommandHandler(
   repository,
   new Argon2PasswordHasher(),
 );
 
-describe('RegisterAttendeeService integration', () => {
+function command(
+  email: string,
+  password: string,
+  username: string,
+): RegisterAttendeeCommand {
+  return new RegisterAttendeeCommand(email, password, username);
+}
+
+describe('RegisterAttendeeCommandHandler integration', () => {
   beforeAll(async () => {
     await ensureTestDatabase();
     await migrate(database, {
@@ -90,11 +99,9 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   it('registers an attendee with normalized identity fields and a secure password hash', async () => {
-    const registration = await service.register({
-      email: '  Attendee@Example.COM ',
-      password: 'a-secure-password',
-      username: 'EventFan',
-    });
+    const registration = await handler.handle(
+      command('  Attendee@Example.COM ', 'a-secure-password', 'EventFan'),
+    );
 
     expect(registration).toMatchObject({
       email: 'attendee@example.com',
@@ -123,34 +130,30 @@ describe('RegisterAttendeeService integration', () => {
   });
 
   it('rejects another registration using the same email', async () => {
-    await service.register({
-      email: 'attendee@example.com',
-      password: 'first-secure-password',
-      username: 'first_user',
-    });
+    await handler.handle(
+      command('attendee@example.com', 'first-secure-password', 'first_user'),
+    );
 
     await expect(
-      service.register({
-        email: 'ATTENDEE@example.com',
-        password: 'second-secure-password',
-        username: 'second_user',
-      }),
+      handler.handle(
+        command(
+          'ATTENDEE@example.com',
+          'second-secure-password',
+          'second_user',
+        ),
+      ),
     ).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
   });
 
   it('rejects another registration using the same username', async () => {
-    await service.register({
-      email: 'first@example.com',
-      password: 'first-secure-password',
-      username: 'eventfan',
-    });
+    await handler.handle(
+      command('first@example.com', 'first-secure-password', 'eventfan'),
+    );
 
     await expect(
-      service.register({
-        email: 'second@example.com',
-        password: 'second-secure-password',
-        username: 'EventFan',
-      }),
+      handler.handle(
+        command('second@example.com', 'second-secure-password', 'EventFan'),
+      ),
     ).rejects.toBeInstanceOf(UsernameUnavailableError);
 
     const [rejectedAccountCount] = await database
@@ -163,16 +166,12 @@ describe('RegisterAttendeeService integration', () => {
 
   it('allows only one concurrent registration for the same email', async () => {
     const attempts = await Promise.allSettled([
-      service.register({
-        email: 'race@example.com',
-        password: 'first-secure-password',
-        username: 'race_one',
-      }),
-      service.register({
-        email: 'RACE@example.com',
-        password: 'second-secure-password',
-        username: 'race_two',
-      }),
+      handler.handle(
+        command('race@example.com', 'first-secure-password', 'race_one'),
+      ),
+      handler.handle(
+        command('RACE@example.com', 'second-secure-password', 'race_two'),
+      ),
     ]);
 
     expect(

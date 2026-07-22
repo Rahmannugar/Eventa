@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import type {
-  AttendeeRegistrationStore,
+  AttendeeAccountWriter,
   CreateAttendeeAccount,
-  RegisteredAttendee,
-} from '../../src/attendees/types/attendee-registration.types';
-import { RegisterAttendeeService } from '../../src/attendees/services/register-attendee.service';
+} from '../../src/attendees/types/attendee-account-write.types';
+import {
+  RegisterAttendeeCommand,
+  type RegisteredAttendee,
+} from '../../src/attendees/commands/register-attendee/register-attendee.command';
+import { RegisterAttendeeCommandHandler } from '../../src/attendees/commands/register-attendee/register-attendee-command.handler';
 import type { PasswordHasher } from '../../src/security/types/password-hasher.types';
 
-class RecordingRepository implements AttendeeRegistrationStore {
+class RecordingRepository implements AttendeeAccountWriter {
   received?: CreateAttendeeAccount;
 
   create(input: CreateAttendeeAccount): Promise<RegisteredAttendee> {
@@ -32,17 +35,22 @@ class DeterministicPasswordHasher implements PasswordHasher {
   }
 }
 
-describe('RegisterAttendeeService', () => {
+describe('RegisterAttendeeCommandHandler', () => {
   it('normalizes the email and username before creating the attendee', async () => {
     const repository = new RecordingRepository();
     const passwordHasher = new DeterministicPasswordHasher();
-    const service = new RegisterAttendeeService(repository, passwordHasher);
+    const handler = new RegisterAttendeeCommandHandler(
+      repository,
+      passwordHasher,
+    );
 
-    await service.register({
-      email: '  Attendee@Example.COM ',
-      password: 'a-secure-password',
-      username: 'EventFan',
-    });
+    await handler.handle(
+      new RegisterAttendeeCommand(
+        '  Attendee@Example.COM ',
+        'a-secure-password',
+        'EventFan',
+      ),
+    );
 
     expect(repository.received).toEqual({
       email: 'attendee@example.com',
@@ -54,13 +62,18 @@ describe('RegisterAttendeeService', () => {
   it('hashes the password before creating the attendee', async () => {
     const repository = new RecordingRepository();
     const passwordHasher = new DeterministicPasswordHasher();
-    const service = new RegisterAttendeeService(repository, passwordHasher);
+    const handler = new RegisterAttendeeCommandHandler(
+      repository,
+      passwordHasher,
+    );
 
-    await service.register({
-      email: 'attendee@example.com',
-      password: 'a-secure-password',
-      username: 'eventfan',
-    });
+    await handler.handle(
+      new RegisterAttendeeCommand(
+        'attendee@example.com',
+        'a-secure-password',
+        'eventfan',
+      ),
+    );
 
     expect(passwordHasher.received).toBe('a-secure-password');
     expect(repository.received?.passwordHash).toBe('$argon2id$test-hash');

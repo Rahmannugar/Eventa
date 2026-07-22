@@ -8,7 +8,8 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { of, throwError, type Observable } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
-import { AttendeeRegistrationService } from '../../src/domains/attendees/services/attendee-registration.service';
+import { RegisterAttendeeCommandHandler } from '../../src/domains/attendees/commands/register-attendee/register-attendee-command.handler';
+import { RegisterAttendeeCommand } from '../../src/domains/attendees/commands/register-attendee/register-attendee.command';
 
 const registrationRequest = {
   email: 'attendee@example.com',
@@ -18,16 +19,25 @@ const registrationRequest = {
 
 function createService(
   registerAttendee: AttendeeIdentityServiceClient['registerAttendee'],
-): AttendeeRegistrationService {
+): RegisterAttendeeCommandHandler {
   const grpcClient = {
     getService: () => ({ registerAttendee }),
   } as unknown as ClientGrpc;
-  const service = new AttendeeRegistrationService(grpcClient);
-  service.onModuleInit();
-  return service;
+  const handler = new RegisterAttendeeCommandHandler(grpcClient);
+  handler.onModuleInit();
+  return handler;
 }
 
-describe('AttendeeRegistrationService', () => {
+function command(requestId = 'request-42'): RegisterAttendeeCommand {
+  return new RegisterAttendeeCommand(
+    registrationRequest.email,
+    registrationRequest.password,
+    registrationRequest.username,
+    requestId,
+  );
+}
+
+describe('RegisterAttendeeCommandHandler', () => {
   it('forwards the Gateway request ID through gRPC metadata', async () => {
     let receivedMetadata: Metadata | undefined;
     const response: RegisterAttendeeResponse = {
@@ -36,7 +46,7 @@ describe('AttendeeRegistrationService', () => {
       emailVerified: false,
       username: registrationRequest.username,
     };
-    const service = createService(
+    const handler = createService(
       (
         _request: RegisterAttendeeRequest,
         metadata?: Metadata,
@@ -46,9 +56,9 @@ describe('AttendeeRegistrationService', () => {
       },
     );
 
-    await expect(
-      service.register(registrationRequest, 'client-request-42'),
-    ).resolves.toEqual(response);
+    await expect(handler.handle(command('client-request-42'))).resolves.toEqual(
+      response,
+    );
     expect(receivedMetadata?.get('x-request-id')).toEqual([
       'client-request-42',
     ]);
@@ -68,13 +78,11 @@ describe('AttendeeRegistrationService', () => {
   ])(
     'translates Identity conflict %s into the public 409 contract',
     async (details, expectedCode, expectedMessage) => {
-      const service = createService(() =>
+      const handler = createService(() =>
         throwError(() => ({ code: status.ALREADY_EXISTS, details })),
       );
 
-      await expect(
-        service.register(registrationRequest, 'request-42'),
-      ).rejects.toMatchObject({
+      await expect(handler.handle(command())).rejects.toMatchObject({
         response: {
           code: expectedCode,
           message: expectedMessage,
@@ -86,13 +94,11 @@ describe('AttendeeRegistrationService', () => {
   );
 
   it('hides internal Identity failures behind a stable 503 response', async () => {
-    const service = createService(() =>
+    const handler = createService(() =>
       throwError(() => ({ code: status.UNAVAILABLE, details: 'connection' })),
     );
 
-    await expect(
-      service.register(registrationRequest, 'request-42'),
-    ).rejects.toMatchObject({
+    await expect(handler.handle(command())).rejects.toMatchObject({
       diagnosticCode: 'IDENTITY_RPC_UNAVAILABLE',
       response: {
         code: 'REGISTRATION_UNAVAILABLE',

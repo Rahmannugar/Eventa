@@ -8,10 +8,10 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RATE_LIMIT_STORE } from '../../rate-limit/constants/rate-limit.constants';
 import type { RateLimitStore } from '../../rate-limit/types/rate-limit.types';
 import { IDENTITY_GRPC_CLIENT } from './constants/attendee-registration.constants';
+import { RegisterAttendeeCommandHandler } from './commands/register-attendee/register-attendee-command.handler';
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
 import { AttendeeRegistrationRateLimitGuard } from './rate-limit/guards/attendee-registration-rate-limit.guard';
 import { AttendeeRegistrationRateLimitService } from './rate-limit/services/attendee-registration-rate-limit.service';
-import { AttendeeRegistrationService } from './services/attendee-registration.service';
 
 interface AttendeeRegistrationModuleOptions {
   identityGrpcUrl: string;
@@ -38,7 +38,7 @@ export class AttendeeRegistrationModule {
       ],
       controllers: [AttendeeRegistrationController],
       providers: [
-        AttendeeRegistrationService,
+        RegisterAttendeeCommandHandler,
         {
           provide: AttendeeRegistrationRateLimitService,
           useFactory: (store: RateLimitStore) =>

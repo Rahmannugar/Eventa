@@ -4,33 +4,26 @@
 
 The Gateway accepts public HTTP requests and translates them into explicit internal contracts. It owns client transport concerns but does not decide attendee uniqueness or persist attendee data.
 
-## Source Boundaries
+## Service Composition
 
 ```text
 src/domains/
   attendees/
-    controllers, DTOs, docs, services
-    rate-limit rules and attendee-specific subject extraction
+    attendee-owned transport, application, policy, and documentation
 
 src/rate-limit/
   Redis adapter, atomic hybrid engine, connection lifecycle, shared contracts
 ```
 
-Domain code decides which subjects and numeric rules protect an endpoint. The shared rate-limit capability knows how to consume a supplied hybrid policy atomically but does not know that the secondary subject is an email. `AppModule` registers one Gateway-wide Redis client and exports the store capability globally; future domains inject that capability without creating their own clients. Their rules remain beside their endpoints, and Redis remains explicit at the concrete adapter leaf.
+Domain code decides which subjects and numeric rules protect an endpoint. The shared rate-limit capability consumes supplied hybrid policies but knows nothing about attendee fields. `AppModule` owns one Gateway-wide Redis client and exports the store capability; domains reuse it without creating clients. Redis remains explicit only at the concrete adapter leaf.
 
-## Registration Execution
-
-1. `AttendeeRegistrationRateLimitGuard` derives the trusted client IP and optional email subject before DTO validation.
-2. `AttendeeRegistrationRateLimitService` canonicalizes and HMACs subjects, then supplies attendee registration rules to the shared store.
-3. `RedisRateLimitAdapter` uses Redis server time and one Lua script to evaluate a token bucket, primary sliding window, and optional secondary sliding window atomically.
-4. An admitted request reaches the global validation pipe and attendee controller.
-5. `AttendeeRegistrationService` sends the typed `RegisterAttendee` gRPC command and the request ID to Identity and translates gRPC outcomes into stable client-facing HTTP responses.
+The implemented attendee flow is documented in the domain-owned [ARCHITECTURE.md](src/domains/attendees/ARCHITECTURE.md). Future substantial domains follow the same ownership model and keep their command/query details beside their code.
 
 ## Failure Behavior
 
-Registration fails closed with `503` when Redis cannot make the admission decision. This does not make Gateway liveness false because Redis is a route dependency rather than a dependency of every Gateway capability.
+Protected routes fail closed with `503` when Redis cannot make an admission decision. This does not make Gateway liveness false because Redis is a route dependency rather than a dependency of every Gateway capability.
 
-Malformed JSON becomes `400`. A known registration path called with the wrong HTTP method becomes `405`. Gateway DTO or Identity command validation becomes `422`, uniqueness conflicts become `409`, rate-limit denial becomes `429`, and unavailable dependencies become `503`. The shared HTTP filter keeps the response envelope stable and records a safe diagnostic code for request logs without exposing Redis, gRPC, or database details to clients.
+The shared HTTP filter keeps the public envelope stable and records a safe diagnostic code without exposing Redis, gRPC, or database details. Domain-owned API and architecture documents define their deliberate failure translations. Unsupported methods fall through to the normal unmatched-route response rather than relying on overlapping catch-all routes.
 
 ## Configuration and Lifecycle
 
@@ -44,4 +37,4 @@ OpenTelemetry starts through Node's `--require` hook before NestJS and instrumen
 
 Framework middleware/controller auto-spans are disabled because their inclusive timing obscured the real work. The trace keeps the HTTP and gRPC transport spans and adds a concrete `rate_limit.consume` client span around Redis admission.
 
-The middleware owns transport telemetry; attendee controllers, guards, and application services do not call telemetry APIs. Rate-limit outcomes remain observable through the final HTTP status and request metric without coupling the reusable rate-limit capability to the monitoring implementation.
+The middleware owns transport telemetry; domain controllers, guards, and command/query handlers do not call telemetry APIs. Rate-limit outcomes remain observable through the final HTTP status and request metric without coupling the reusable capability to monitoring.

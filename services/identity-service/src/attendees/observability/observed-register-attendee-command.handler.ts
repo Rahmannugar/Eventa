@@ -1,21 +1,21 @@
 import { recordBusinessOutcome } from '@eventa/observability';
 
+import type {
+  RegisteredAttendee,
+  RegisterAttendeeCommand,
+  RegisterAttendeeHandler,
+} from '../commands/register-attendee/register-attendee.command';
 import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../errors/attendee-registration.errors';
-import type {
-  AttendeeRegistrar,
-  RegisterAttendeeInput,
-  RegisteredAttendee,
-} from '../types/attendee-registration.types';
 
-export class ObservedAttendeeRegistrar implements AttendeeRegistrar {
-  constructor(private readonly attendeeRegistrar: AttendeeRegistrar) {}
+export class ObservedRegisterAttendeeCommandHandler implements RegisterAttendeeHandler {
+  constructor(private readonly handler: RegisterAttendeeHandler) {}
 
-  async register(input: RegisterAttendeeInput): Promise<RegisteredAttendee> {
+  async handle(command: RegisterAttendeeCommand): Promise<RegisteredAttendee> {
     try {
-      const attendee = await this.attendeeRegistrar.register(input);
+      const attendee = await this.handler.handle(command);
       this.record('created');
       return attendee;
     } catch (error: unknown) {

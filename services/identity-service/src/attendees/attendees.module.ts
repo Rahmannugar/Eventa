@@ -3,28 +3,28 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { SecurityModule } from '../security/security.module';
 import {
-  ATTENDEE_REGISTRAR,
-  ATTENDEE_REGISTRATION_STORE,
+  ATTENDEE_ACCOUNT_WRITER,
+  REGISTER_ATTENDEE_HANDLER,
 } from './constants/attendee-registration.constants';
+import { RegisterAttendeeCommandHandler } from './commands/register-attendee/register-attendee-command.handler';
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
-import { AttendeeRegistrationRepository } from './repositories/attendee-registration.repository';
-import { ObservedAttendeeRegistrar } from './observability/observed-attendee-registrar';
-import { RegisterAttendeeService } from './services/register-attendee.service';
+import { ObservedRegisterAttendeeCommandHandler } from './observability/observed-register-attendee-command.handler';
+import { AttendeeAccountWriteRepository } from './repositories/attendee-account-write.repository';
 
 @Module({
   imports: [DatabaseModule, SecurityModule],
   controllers: [AttendeeRegistrationController],
   providers: [
-    RegisterAttendeeService,
+    RegisterAttendeeCommandHandler,
     {
-      provide: ATTENDEE_REGISTRAR,
-      useFactory: (attendeeRegistrar: RegisterAttendeeService) =>
-        new ObservedAttendeeRegistrar(attendeeRegistrar),
-      inject: [RegisterAttendeeService],
+      provide: REGISTER_ATTENDEE_HANDLER,
+      useFactory: (commandHandler: RegisterAttendeeCommandHandler) =>
+        new ObservedRegisterAttendeeCommandHandler(commandHandler),
+      inject: [RegisterAttendeeCommandHandler],
     },
     {
-      provide: ATTENDEE_REGISTRATION_STORE,
-      useClass: AttendeeRegistrationRepository,
+      provide: ATTENDEE_ACCOUNT_WRITER,
+      useClass: AttendeeAccountWriteRepository,
     },
   ],
 })

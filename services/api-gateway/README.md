@@ -33,3 +33,4 @@ The local stack sends Gateway metrics and traces through Alloy and collects its 
 
 - [API.md](API.md): public routes, errors, documentation endpoints, and rate-limit metadata.
 - [ARCHITECTURE.md](ARCHITECTURE.md): domain modules, shared infrastructure, dependency behavior, and protocol translation.
+- [Attendees API](src/domains/attendees/API.md) and [architecture](src/domains/attendees/ARCHITECTURE.md): the domain-owned registration contract and command flow.

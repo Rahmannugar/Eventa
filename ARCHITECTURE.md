@@ -100,7 +100,7 @@ Gateway and Identity start OpenTelemetry before NestJS loads so HTTP and gRPC tr
 
 Concrete spans expose Redis rate-limit consumption, Argon2id hashing, and the Identity PostgreSQL insert. Generic framework middleware/controller spans are disabled because their inclusive durations do not identify which dependency consumed the time.
 
-Authoritative business outcomes are measured at a domain-owned decorator boundary rather than inside controllers or core application services. For attendee registration, `ObservedAttendeeRegistrar` wraps the registrar capability and records `created`, known conflict, or unexpected failure after the core operation decides the outcome.
+Authoritative business outcomes are measured at a domain-owned decorator boundary rather than inside controllers or core command/query handlers.
 
 Alloy is the collection and routing layer. It sends metrics to Prometheus, traces to Tempo, and Docker JSON logs to Loki. Docker logs are grouped as application, infrastructure, or observability services. Grafana provisions those three data sources and the `Attendee Registration Overview` dashboard. Prometheus, Tempo, and Loki retain one day of local data, and Docker JSON logs rotate at two 10 MB files per container. Telemetry backend availability is deliberately not an application readiness dependency: losing observability must not stop registration, while exporter failures remain visible in service diagnostics.
 
