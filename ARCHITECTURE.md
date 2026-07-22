@@ -27,21 +27,26 @@ Grafana
   -> Prometheus, Tempo, and Loki
 ```
 
-The wider product design includes Event, Order, Payment, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. These boundaries are architectural decisions, not claims that every service is implemented.
+The wider product design includes Event, Commerce, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. Each service is an independently deployable modular monolith. These boundaries are architectural decisions, not claims that every service is implemented.
 
 ## Ownership
 
 - API Gateway owns public transport, boundary validation, request security, authentication and authorization enforcement, and protocol translation.
 - Identity Service owns attendee and admin principals, credentials, verification, and sessions. Attendees and admins remain separate security namespaces.
 - Event Service owns events, venues, capacity, ticket types, waitlists, and authoritative geographic data.
-- Order Service owns orders and order state.
-- Payment Service owns provider interaction, payment attempts, refunds, receipts, and invoices.
+- Commerce Service owns the Order and Payment domains plus explicitly named commerce workflows. Order owns orders, order items, discounts, and order state. Payment owns payment attempts, Stripe interaction, webhooks, reconciliation, refunds, receipts, invoices, and all money invariants. They share one Commerce database and migration stream but do not access each other's repositories directly.
 - Ticket Service owns issued tickets, QR codes, and check-ins.
 - Discovery Service owns explicit attendee interests, behavior-derived recommendation preferences, semantic indexes, and recommendation ranking.
 - Notification Service owns delivery and notification history.
 - Analytics Service owns reporting projections rather than transactional source data.
 
 No service reads or writes another service's database.
+
+## Application Architecture and Languages
+
+Every deployable is a modular monolith and applies CQRS within its owned boundary. Commands express intended state changes and own validation, authorization, invariants, transactions, idempotency, and emitted facts. Queries return read models without mutating domain state. Command and query handlers, contracts, repositories, and models remain explicit; CQRS does not require event sourcing, separate physical databases, or a generic in-process command bus.
+
+API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/TypeScript. Ticket and Discovery use Go without an application framework. Their composition roots use explicit constructor wiring and standard-library capabilities where suitable; protocol, PostgreSQL, GORM, OpenTelemetry, messaging, QR, and Ahnlich SDK packages remain focused dependencies rather than a replacement framework.
 
 ## Communication
 
@@ -75,15 +80,15 @@ Stripe webhooks are the primary provider-update path. Scheduled reconciliation i
 
 ## Discovery and Geography
 
-Discovery combines explicit interests with weighted behavioral signals to build attendee recommendation preferences. Semantic retrieval uses Gemini and Ahnlich only where meaning cannot be expressed reliably through categories or lexical filters. Before implementing the Ahnlich adapter, Eventa must review the current official Ahnlich documentation and follow its supported production practices rather than relying on remembered APIs.
+Discovery combines explicit interests with weighted behavioral signals to build attendee recommendation preferences. Semantic retrieval uses Gemini and Ahnlich only where meaning cannot be expressed reliably through categories or lexical filters. Ahnlich's [official Go SDK documentation](https://ahnlich.dev/docs/client-libraries/go/go-specific-resources/) describes typed gRPC clients for Ahnlich DB and Ahnlich AI, including batching utilities. Ahnlich currently describes the platform as alpha/testing and subject to breaking changes, so Discovery must pin versions and isolate the SDK behind a capability adapter with contract tests, deadlines, bounded retries, observability, and graceful degradation. Implementation must still begin by reviewing the current official documentation rather than relying on remembered APIs.
 
 Event Service remains authoritative for event and venue data. PostGIS provides radius filtering, exact distance ordering, and map/spatial queries after Discovery produces semantic candidate event IDs. Current or selected location is request context, not an Identity field.
 
 ## Persistence and Correctness
 
-Each service owns its PostgreSQL schema, Drizzle migrations, constraints, and database principal. Critical invariants use database constraints and transactions where multiple writes must commit together. Shared databases and cross-service queries are prohibited.
+Each service owns its PostgreSQL schema, migrations, constraints, and database principal. TypeScript services use Drizzle. Go services use GORM for persistence while reviewed, versioned SQL migrations—not `AutoMigrate`—remain the deployment authority. Critical invariants use database constraints and transactions where multiple writes must commit together. Shared databases and cross-service queries are prohibited.
 
-Schema changes are forward migrations. Human-readable migration names describe business intent and Drizzle's journal remains consistent with those names.
+Schema changes are forward migrations. Human-readable migration names describe business intent, and Drizzle's journal remains consistent with TypeScript migration filenames.
 
 ## Operations
 
@@ -103,6 +108,8 @@ Grafana administration and optional SMTP configuration come from its ignored env
 
 ## Performance Validation
 
-Eventa will run dedicated performance testing after a major business workflow or product story is complete, not after each implementation slice. The selected load generator will send controlled HTTP traffic through the API Gateway after that workflow and its observability instrumentation are implemented. A dedicated performance environment will use deterministic, service-owned seed tooling to create million-scale datasets without making normal startup, CI, or integration tests depend on that volume.
+After a product story's behavior, observability, dashboards, and actionable monitoring are complete, the full story is audited and locally benchmarked with k6. A dedicated performance environment uses deterministic, service-owned seed tooling to create million-scale datasets without making normal startup, CI, or integration tests depend on that volume.
 
-Load-test results will be interpreted together with OpenTelemetry traces and Prometheus, Grafana, Loki, and Tempo signals. Performance runs will measure throughput, latency percentiles, error rate, resource saturation, database and Redis behavior, and cross-service trace continuity. Each scenario will reflect the real endpoint policy; rate limiting and other security boundaries will not be silently disabled to manufacture higher throughput. k6 is the selected load-testing tool because its scenario model, thresholds, and metric output fit Eventa's workflow-level performance validation better than a small HTTP benchmarking utility.
+Synchronous benchmarks cover HTTP, Redis, database operations, response latency, throughput, resource pressure, and error behavior. Asynchronous benchmarks cover event publication, queue delay, consumer processing, retries, idempotency, eventual completion, and end-to-end workflow latency. An asynchronous benchmark measures from the initiating action to the durable terminal business outcome, never merely to producer or queue acknowledgement.
+
+Results are interpreted together with OpenTelemetry traces and Prometheus, Grafana, Loki, and Tempo signals. Each scenario reflects the real endpoint policy; rate limiting and other security boundaries are not silently disabled to manufacture higher throughput. k6 is selected because its scenario model, thresholds, checks, and custom metrics fit both request-response and workflow-level validation.

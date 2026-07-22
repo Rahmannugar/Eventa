@@ -19,7 +19,7 @@ interface ErrorResponse {
 }
 
 function defaultError(statusCode: number): ApiErrorResponse {
-  if (statusCode === HttpStatus.BAD_REQUEST) {
+  if (statusCode === Number(HttpStatus.BAD_REQUEST)) {
     return {
       code: 'INVALID_REQUEST',
       message: 'The request could not be parsed.',
@@ -27,7 +27,7 @@ function defaultError(statusCode: number): ApiErrorResponse {
     };
   }
 
-  if (statusCode === HttpStatus.NOT_FOUND) {
+  if (statusCode === Number(HttpStatus.NOT_FOUND)) {
     return {
       code: 'NOT_FOUND',
       message: 'The requested resource was not found.',

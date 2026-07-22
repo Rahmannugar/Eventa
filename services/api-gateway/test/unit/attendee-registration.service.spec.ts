@@ -5,7 +5,7 @@ import type {
 } from '@eventa/grpc-contracts';
 import { status, type Metadata } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
-import { Observable, of, throwError } from 'rxjs';
+import { of, throwError, type Observable } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
 import { AttendeeRegistrationService } from '../../src/domains/attendees/services/attendee-registration.service';

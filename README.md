@@ -1,6 +1,6 @@
 # Eventa
 
-A distributed event ticketing platform built on a NestJS microservices architecture using gRPC, Kafka, RabbitMQ, PostgreSQL, Redis, OpenTelemetry, and Docker Compose.
+A distributed event ticketing platform built on a NestJS and Go microservices architecture using gRPC, Kafka, RabbitMQ, PostgreSQL, Redis, OpenTelemetry, and Docker Compose.
 
 https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
@@ -8,7 +8,7 @@ https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
 Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver semantic and location-aware recommendations using Ahnlich, Gemini, and PostGIS, and provide analytics for organizers.
 
-The system is composed of independently deployable services responsible for identity, events, ticketing, orders, payments, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows.
+The system is composed of independently deployable modular-monolith services responsible for identity, events, commerce, ticketing, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows.
 
 The project is designed to explore production engineering practices including distributed transactions, compensating actions, event-driven architecture, observability, background processing, and clear service ownership while remaining fully runnable locally using Docker Compose.
 
@@ -19,19 +19,22 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 - API Gateway
 - Identity Service
 - Event Service
-- Order Service
+- Commerce Service
 - Ticket Service
-- Payment Service
 - Discovery Service
 - Analytics Service
 - Notification Service
+
+Every service applies CQRS internally: commands own state transitions and invariants, while queries own reads and projections. CQRS does not require event sourcing, separate command/query databases, or a framework command bus. Every deployable owns `README.md`, `API.md`, and `ARCHITECTURE.md`; each substantial domain owns concise `API.md` and `ARCHITECTURE.md` files without duplicating machine-readable contracts.
 
 ## Technology
 
 ### Backend
 
-- NestJS
-- TypeScript
+- NestJS and TypeScript: API Gateway, Identity, Event, Commerce, Analytics, and Notification
+- Go: Ticket and Discovery
+- GORM
+- Drizzle
 - PostgreSQL
 - Redis
 - Kafka
@@ -39,8 +42,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 - gRPC
 - Stripe
 - Resend
-- Ahnlich(Vector DB + AI proxy)
-
+- Ahnlich (vector DB, AI proxy)
 ### AI
 
 - Google Gemini
@@ -60,6 +62,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 ### Infrastructure
 
 - Docker Compose
+- k6 for local performance testing
 
 ## Local Development
 
@@ -104,3 +107,12 @@ Use `pnpm db:reset:all` only when you intentionally want to delete and recreate 
 See [API.md](API.md) for the current public API and internal contract map. While the Gateway is running, Scalar is available at `http://localhost:3004/docs` and the importable OpenAPI contracts are available as JSON and YAML.
 
 Each deployable service also owns its operational, API, and architecture documentation inside its service directory.
+
+## Performance Validation
+
+Eventa uses k6 for local performance validation. k6 scenarios validate both request-response and event-driven work:
+
+- Request-response scenarios measure throughput, latency, errors, and resource pressure across HTTP, Redis, and PostgreSQL.
+- Event-driven scenarios measure publication, broker and queue delay, consumer processing, retries, duplicate handling, and eventual workflow completion.
+
+Event-driven latency is measured from the initiating request to the durable terminal business outcome, rather than stopping at broker acknowledgement. Results are evaluated with the corresponding OpenTelemetry traces, Prometheus metrics, Grafana dashboards, Loki logs, and Tempo traces.
