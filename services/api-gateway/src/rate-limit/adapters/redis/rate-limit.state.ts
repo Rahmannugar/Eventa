@@ -1,20 +1,14 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnApplicationShutdown,
-} from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
 
-import { RATE_LIMIT_REDIS_CLIENT } from '../constants/rate-limit.constants';
-import { RateLimitStoreUnavailableError } from '../errors/rate-limit.errors';
+import type { RedisClient } from '../../../infrastructure/clients/redis.client';
+import { RateLimitStateUnavailableError } from '../../errors/rate-limit.errors';
+import type { RateLimitState } from '../../ports/rate-limit.state';
 import type {
   AtomicRateLimitAttempt,
   RateLimitDecision,
-  RateLimitRedisClient,
   RateLimitSnapshot,
-  RateLimitStore,
-} from '../types/rate-limit.types';
+} from '../../types/rate-limit.types';
 
 const HYBRID_RATE_LIMIT_SCRIPT = `
 local redis_time = redis.call('TIME')
@@ -135,7 +129,7 @@ function readNonNegativeNumber(result: unknown[], index: number): number {
   const value = Number(result[index]);
 
   if (!Number.isFinite(value) || value < 0) {
-    throw new RateLimitStoreUnavailableError();
+    throw new RateLimitStateUnavailableError();
   }
 
   return value;
@@ -162,7 +156,7 @@ function parseDecision(
   attempt: AtomicRateLimitAttempt,
 ): RateLimitDecision {
   if (!Array.isArray(result) || result.length !== 9) {
-    throw new RateLimitStoreUnavailableError();
+    throw new RateLimitStateUnavailableError();
   }
 
   const allowedValue = readNonNegativeNumber(result, 0);
@@ -170,7 +164,7 @@ function parseDecision(
   const secondaryEnabled = readNonNegativeNumber(result, 8) === 1;
 
   if (![0, 1].includes(allowedValue)) {
-    throw new RateLimitStoreUnavailableError();
+    throw new RateLimitStateUnavailableError();
   }
 
   const limits = [
@@ -214,64 +208,49 @@ function parseDecision(
   };
 }
 
-@Injectable()
-export class RedisRateLimitAdapter
-  implements RateLimitStore, OnApplicationShutdown
-{
-  private readonly logger = new Logger(RedisRateLimitAdapter.name);
-  private connectionAttempt: Promise<void> | undefined;
+export class RedisRateLimitState implements RateLimitState {
+  private readonly logger = new Logger(RedisRateLimitState.name);
 
-  constructor(
-    @Inject(RATE_LIMIT_REDIS_CLIENT)
-    private readonly client: RateLimitRedisClient,
-    private readonly operationTimeoutMs = 750,
-  ) {
-    this.client.on('error', (error: Error) => {
-      this.logger.error(`Redis rate-limit connection error: ${error.message}`);
-    });
-  }
+  constructor(private readonly redis: RedisClient) {}
 
   async consume(attempt: AtomicRateLimitAttempt): Promise<RateLimitDecision> {
     return runWithOperationSpan(
       'rate_limit.consume',
       async () => {
         try {
-          await this.ensureConnected();
-
           const secondaryEnabled =
             attempt.secondarySlidingWindowKey === undefined ? 0 : 1;
-          const result = await this.client
-            .withAbortSignal(AbortSignal.timeout(this.operationTimeoutMs))
-            .eval(HYBRID_RATE_LIMIT_SCRIPT, {
-              keys: [
-                attempt.tokenBucketKey,
+          const result = await this.redis.evaluate(
+            HYBRID_RATE_LIMIT_SCRIPT,
+            [
+              attempt.tokenBucketKey,
+              attempt.primarySlidingWindowKey,
+              attempt.secondarySlidingWindowKey ??
                 attempt.primarySlidingWindowKey,
-                attempt.secondarySlidingWindowKey ??
-                  attempt.primarySlidingWindowKey,
-              ],
-              arguments: [
-                String(attempt.rules.tokenBucket.capacity),
-                String(attempt.rules.tokenBucket.refillIntervalMs),
-                String(attempt.rules.primarySlidingWindow.windowMs),
-                String(attempt.rules.primarySlidingWindow.limit),
-                String(secondaryEnabled),
-                String(attempt.rules.secondarySlidingWindow.windowMs),
-                String(attempt.rules.secondarySlidingWindow.limit),
-                attempt.member,
-              ],
-            });
+            ],
+            [
+              String(attempt.rules.tokenBucket.capacity),
+              String(attempt.rules.tokenBucket.refillIntervalMs),
+              String(attempt.rules.primarySlidingWindow.windowMs),
+              String(attempt.rules.primarySlidingWindow.limit),
+              String(secondaryEnabled),
+              String(attempt.rules.secondarySlidingWindow.windowMs),
+              String(attempt.rules.secondarySlidingWindow.limit),
+              attempt.member,
+            ],
+          );
 
           return parseDecision(result, attempt);
         } catch (error: unknown) {
-          if (error instanceof RateLimitStoreUnavailableError) {
+          if (error instanceof RateLimitStateUnavailableError) {
             throw error;
           }
 
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
-            event: 'rate_limit_store_operation_failed',
+            event: 'rate_limit_state_operation_failed',
           });
-          throw new RateLimitStoreUnavailableError();
+          throw new RateLimitStateUnavailableError();
         }
       },
       {
@@ -282,34 +261,5 @@ export class RedisRateLimitAdapter
         kind: 'client',
       },
     );
-  }
-
-  async onApplicationShutdown(): Promise<void> {
-    if (this.client.isOpen) {
-      await this.client.close();
-    }
-  }
-
-  private async ensureConnected(): Promise<void> {
-    if (this.client.isReady) {
-      return;
-    }
-
-    if (!this.client.isOpen) {
-      this.connectionAttempt ??= this.client
-        .connect()
-        .then(() => undefined)
-        .finally(() => {
-          this.connectionAttempt = undefined;
-        });
-    }
-
-    if (this.connectionAttempt !== undefined) {
-      await this.connectionAttempt;
-    }
-
-    if (!this.client.isReady) {
-      throw new RateLimitStoreUnavailableError();
-    }
   }
 }

@@ -1,7 +1,8 @@
 import { createClient } from 'redis';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { RedisRateLimitAdapter } from '../../src/rate-limit/adapters/redis-rate-limit.adapter';
+import { RedisClient } from '../../src/infrastructure/clients/redis.client';
+import { RedisRateLimitState } from '../../src/rate-limit/adapters/redis/rate-limit.state';
 import type {
   AtomicRateLimitAttempt,
   HybridRateLimitRules,
@@ -13,11 +14,12 @@ if (testRedisUrl === undefined || testRedisUrl.trim() === '') {
   throw new Error('TEST_REDIS_URL is required for integration tests');
 }
 
-const client = createClient({
+const administrativeClient = createClient({
   socket: { connectTimeout: 1_000, reconnectStrategy: false },
   url: testRedisUrl,
 });
-const adapter = new RedisRateLimitAdapter(client);
+const redis = new RedisClient(testRedisUrl, 1_000, 750);
+const state = new RedisRateLimitState(redis);
 
 const baseRules: HybridRateLimitRules = {
   routeKey: 'integration-test',
@@ -52,17 +54,18 @@ function attempt(
   };
 }
 
-describe('RedisRateLimitAdapter', () => {
+describe('RedisRateLimitState', () => {
   beforeAll(async () => {
-    await client.connect();
+    await administrativeClient.connect();
   });
 
   beforeEach(async () => {
-    await client.flushDb();
+    await administrativeClient.flushDb();
   });
 
   afterAll(async () => {
-    await adapter.onApplicationShutdown();
+    await redis.onApplicationShutdown();
+    await administrativeClient.close();
   });
 
   it('enforces the token bucket burst capacity', async () => {
@@ -76,13 +79,13 @@ describe('RedisRateLimitAdapter', () => {
     };
 
     await expect(
-      adapter.consume(attempt('one', { rules })),
+      state.consume(attempt('one', { rules })),
     ).resolves.toMatchObject({ allowed: true, retryAfterSeconds: 0 });
     await expect(
-      adapter.consume(attempt('two', { rules })),
+      state.consume(attempt('two', { rules })),
     ).resolves.toMatchObject({ allowed: true, retryAfterSeconds: 0 });
 
-    const denied = await adapter.consume(attempt('three', { rules }));
+    const denied = await state.consume(attempt('three', { rules }));
 
     expect(denied.allowed).toBe(false);
     expect(denied.retryAfterSeconds).toBeGreaterThan(0);
@@ -101,13 +104,13 @@ describe('RedisRateLimitAdapter', () => {
       },
     };
 
-    await adapter.consume(attempt('primary-one', { rules: primaryRules }));
-    await adapter.consume(attempt('primary-two', { rules: primaryRules }));
+    await state.consume(attempt('primary-one', { rules: primaryRules }));
+    await state.consume(attempt('primary-two', { rules: primaryRules }));
     await expect(
-      adapter.consume(attempt('primary-three', { rules: primaryRules })),
+      state.consume(attempt('primary-three', { rules: primaryRules })),
     ).resolves.toMatchObject({ allowed: false });
 
-    await client.flushDb();
+    await administrativeClient.flushDb();
 
     const secondaryRules: HybridRateLimitRules = {
       ...baseRules,
@@ -118,14 +121,14 @@ describe('RedisRateLimitAdapter', () => {
       },
     };
 
-    await adapter.consume(
+    await state.consume(
       attempt('secondary-one', {
         primarySlidingWindowKey: 'test:{registration}:primary:first',
         rules: secondaryRules,
         tokenBucketKey: 'test:{registration}:bucket:first',
       }),
     );
-    await adapter.consume(
+    await state.consume(
       attempt('secondary-two', {
         primarySlidingWindowKey: 'test:{registration}:primary:second',
         rules: secondaryRules,
@@ -134,7 +137,7 @@ describe('RedisRateLimitAdapter', () => {
     );
 
     await expect(
-      adapter.consume(
+      state.consume(
         attempt('secondary-three', {
           primarySlidingWindowKey: 'test:{registration}:primary:third',
           rules: secondaryRules,
@@ -156,7 +159,7 @@ describe('RedisRateLimitAdapter', () => {
 
     const decisions = await Promise.all(
       Array.from({ length: 10 }, (_, index) =>
-        adapter.consume(attempt(`concurrent-${index}`, { rules })),
+        state.consume(attempt(`concurrent-${index}`, { rules })),
       ),
     );
 

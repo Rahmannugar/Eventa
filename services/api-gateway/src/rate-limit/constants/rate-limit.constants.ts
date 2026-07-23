@@ -1,2 +1,1 @@
-export const RATE_LIMIT_REDIS_CLIENT = Symbol('RATE_LIMIT_REDIS_CLIENT');
-export const RATE_LIMIT_STORE = Symbol('RATE_LIMIT_STORE');
+export const RATE_LIMIT_STATE = Symbol('RATE_LIMIT_STATE');

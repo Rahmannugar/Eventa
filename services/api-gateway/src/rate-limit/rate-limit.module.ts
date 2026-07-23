@@ -1,12 +1,8 @@
 import { Global, Module, type DynamicModule } from '@nestjs/common';
-import { createClient } from 'redis';
 
-import { RedisRateLimitAdapter } from './adapters/redis-rate-limit.adapter';
-import {
-  RATE_LIMIT_REDIS_CLIENT,
-  RATE_LIMIT_STORE,
-} from './constants/rate-limit.constants';
-import type { RateLimitRedisClient } from './types/rate-limit.types';
+import { RedisClient } from '../infrastructure/clients/redis.client';
+import { RedisRateLimitState } from './adapters/redis/rate-limit.state';
+import { RATE_LIMIT_STATE } from './constants/rate-limit.constants';
 
 interface RateLimitModuleOptions {
   connectTimeoutMs: number;
@@ -22,25 +18,21 @@ export class RateLimitModule {
       module: RateLimitModule,
       providers: [
         {
-          provide: RATE_LIMIT_REDIS_CLIENT,
+          provide: RedisClient,
           useFactory: () =>
-            createClient({
-              disableOfflineQueue: true,
-              socket: {
-                connectTimeout: options.connectTimeoutMs,
-                reconnectStrategy: false,
-              },
-              url: options.redisUrl,
-            }),
+            new RedisClient(
+              options.redisUrl,
+              options.connectTimeoutMs,
+              options.operationTimeoutMs,
+            ),
         },
         {
-          provide: RATE_LIMIT_STORE,
-          useFactory: (client: RateLimitRedisClient) =>
-            new RedisRateLimitAdapter(client, options.operationTimeoutMs),
-          inject: [RATE_LIMIT_REDIS_CLIENT],
+          provide: RATE_LIMIT_STATE,
+          useFactory: (redis: RedisClient) => new RedisRateLimitState(redis),
+          inject: [RedisClient],
         },
       ],
-      exports: [RATE_LIMIT_STORE],
+      exports: [RATE_LIMIT_STATE],
     };
   }
 }

@@ -8,6 +8,7 @@ FROM base AS dependencies
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
+COPY packages/messaging-contracts/package.json packages/messaging-contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY services/api-gateway/package.json services/api-gateway/package.json
 COPY services/identity-service/package.json services/identity-service/package.json
@@ -26,6 +27,7 @@ FROM dependencies AS quality
 COPY . .
 
 RUN pnpm --filter @eventa/grpc-contracts build \
+  && pnpm --filter @eventa/messaging-contracts build \
   && pnpm --filter @eventa/observability build \
   && pnpm --filter @eventa/identity-service lint \
   && pnpm --filter @eventa/identity-service typecheck \

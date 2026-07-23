@@ -69,7 +69,7 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, the Identity-owned Redis OTP store, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
+The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, Redis-backed registration rate-limit and OTP state, RabbitMQ for queued work, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
 
 Start the stack with:
 
@@ -79,7 +79,7 @@ pnpm services:start
 
 Create each service `.env` file from its service-owned `.env.example` before starting Eventa. Missing files and invalid permanent configuration intentionally stop startup.
 
-Create the ignored Grafana `.env` from `infrastructure/observability/dashboards/grafana/.env.example` as well. It owns the local admin credentials and optional Resend SMTP settings; secrets are not stored in Compose or committed configuration.
+Create the ignored RabbitMQ `.env` from `infrastructure/messaging/job-queue/rabbitmq/.env.example` and the Grafana `.env` from `infrastructure/observability/dashboards/grafana/.env.example` as well. Secrets are not stored in Compose or committed configuration.
 
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 

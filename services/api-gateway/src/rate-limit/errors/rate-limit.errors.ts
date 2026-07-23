@@ -1,6 +1,6 @@
-export class RateLimitStoreUnavailableError extends Error {
+export class RateLimitStateUnavailableError extends Error {
   constructor() {
-    super('Rate limit store unavailable');
-    this.name = 'RateLimitStoreUnavailableError';
+    super('Rate limit state unavailable');
+    this.name = 'RateLimitStateUnavailableError';
   }
 }

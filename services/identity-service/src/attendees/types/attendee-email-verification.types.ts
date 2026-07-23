@@ -24,6 +24,17 @@ export interface EmailVerificationOtpIssue {
   otp: string;
 }
 
+export interface EmailVerificationOtpIssuer {
+  issueInitial(
+    attendeeId: string,
+    email: string,
+  ): Promise<EmailVerificationOtpIssue>;
+}
+
+export interface AttendeeRegistrationEmailVerification {
+  start(attendeeId: string, email: string): Promise<void>;
+}
+
 export type EmailVerificationOtpMatch =
   | { status: 'active'; attendeeId: string }
   | { status: 'confirmed'; attendeeId: string }
@@ -32,38 +43,6 @@ export type EmailVerificationOtpMatch =
 export interface EmailVerificationResendDecision {
   allowed: boolean;
   retryAfterSeconds: number;
-}
-
-export interface EmailVerificationOtpStore {
-  markConfirmed(subject: string, otpDigest: string): Promise<void>;
-  saveOtp(
-    record: EmailVerificationOtpRecord,
-    cooldownMs?: number,
-  ): Promise<void>;
-  reserveResend(
-    subject: string,
-    cooldownMs: number,
-  ): Promise<EmailVerificationResendDecision>;
-  verify(
-    subject: string,
-    otpDigest: string,
-  ): Promise<EmailVerificationOtpMatch>;
-}
-
-export interface EmailVerificationRedisCommandClient {
-  eval(
-    script: string,
-    options: { arguments: string[]; keys: string[] },
-  ): Promise<unknown>;
-}
-
-export interface EmailVerificationRedisClient extends EmailVerificationRedisCommandClient {
-  readonly isOpen: boolean;
-  readonly isReady: boolean;
-  close(): Promise<void>;
-  connect(): Promise<unknown>;
-  on(event: 'error', listener: (error: Error) => void): unknown;
-  withAbortSignal(signal: AbortSignal): EmailVerificationRedisCommandClient;
 }
 
 export interface ResendAttendeeEmailVerificationResult {

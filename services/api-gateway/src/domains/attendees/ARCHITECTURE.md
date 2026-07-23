@@ -24,4 +24,4 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 
 ## Dependencies and Observability
 
-The domain consumes the Gateway-wide rate-limit store and Identity gRPC client. It owns neither client lifecycle. The Gateway's HTTP middleware and automatic HTTP/gRPC instrumentation record transport signals, so controllers and application services do not call telemetry APIs.
+The domain consumes Gateway-wide `RateLimitState` and the Identity gRPC client. It owns neither client lifecycle. The Gateway's HTTP middleware and automatic HTTP/gRPC instrumentation record transport signals, so controllers and application services do not call telemetry APIs.

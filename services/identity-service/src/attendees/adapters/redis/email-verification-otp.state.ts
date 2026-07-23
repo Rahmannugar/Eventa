@@ -1,20 +1,14 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type OnApplicationShutdown,
-} from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
 
-import { EMAIL_VERIFICATION_REDIS_CLIENT } from '../constants/attendee-email-verification.constants';
-import { EmailVerificationStoreUnavailableError } from '../errors/attendee-email-verification.errors';
+import type { RedisClient } from '../../../infrastructure/clients/redis.client';
+import { EmailVerificationStateUnavailableError } from '../../errors/attendee-email-verification.errors';
+import type { EmailVerificationOtpState } from '../../ports/email-verification-otp.state';
 import type {
   EmailVerificationOtpMatch,
   EmailVerificationOtpRecord,
-  EmailVerificationOtpStore,
-  EmailVerificationRedisClient,
   EmailVerificationResendDecision,
-} from '../types/attendee-email-verification.types';
+} from '../../types/attendee-email-verification.types';
 
 const SAVE_OTP_SCRIPT = `
 redis.call(
@@ -95,7 +89,7 @@ function cooldownKey(subject: string): string {
 
 function parseResendDecision(result: unknown): EmailVerificationResendDecision {
   if (!Array.isArray(result) || result.length !== 2) {
-    throw new EmailVerificationStoreUnavailableError();
+    throw new EmailVerificationStateUnavailableError();
   }
 
   const allowedValue = Number(result[0]);
@@ -106,7 +100,7 @@ function parseResendDecision(result: unknown): EmailVerificationResendDecision {
     !Number.isFinite(retryAfterMs) ||
     retryAfterMs < 0
   ) {
-    throw new EmailVerificationStoreUnavailableError();
+    throw new EmailVerificationStateUnavailableError();
   }
 
   return {
@@ -118,7 +112,7 @@ function parseResendDecision(result: unknown): EmailVerificationResendDecision {
 
 function parseOtpMatch(result: unknown): EmailVerificationOtpMatch {
   if (!Array.isArray(result) || result.length !== 2) {
-    throw new EmailVerificationStoreUnavailableError();
+    throw new EmailVerificationStateUnavailableError();
   }
 
   const status = Number(result[0]);
@@ -129,7 +123,7 @@ function parseOtpMatch(result: unknown): EmailVerificationOtpMatch {
   }
 
   if (attendeeId === '') {
-    throw new EmailVerificationStoreUnavailableError();
+    throw new EmailVerificationStateUnavailableError();
   }
 
   if (status === 1) {
@@ -140,28 +134,13 @@ function parseOtpMatch(result: unknown): EmailVerificationOtpMatch {
     return { attendeeId, status: 'confirmed' };
   }
 
-  throw new EmailVerificationStoreUnavailableError();
+  throw new EmailVerificationStateUnavailableError();
 }
 
-@Injectable()
-export class RedisEmailVerificationOtpStore
-  implements EmailVerificationOtpStore, OnApplicationShutdown
-{
-  private readonly logger = new Logger(RedisEmailVerificationOtpStore.name);
-  private connectionAttempt: Promise<void> | undefined;
+export class RedisEmailVerificationOtpState implements EmailVerificationOtpState {
+  private readonly logger = new Logger(RedisEmailVerificationOtpState.name);
 
-  constructor(
-    @Inject(EMAIL_VERIFICATION_REDIS_CLIENT)
-    private readonly client: EmailVerificationRedisClient,
-    private readonly operationTimeoutMs: number,
-  ) {
-    this.client.on('error', (error: Error) => {
-      this.logger.error({
-        error_type: error.name,
-        event: 'email_verification_store_connection_error',
-      });
-    });
-  }
+  constructor(private readonly redis: RedisClient) {}
 
   async saveOtp(
     record: EmailVerificationOtpRecord,
@@ -218,12 +197,6 @@ export class RedisEmailVerificationOtpStore
     );
   }
 
-  async onApplicationShutdown(): Promise<void> {
-    if (this.client.isOpen) {
-      await this.client.close();
-    }
-  }
-
   private async evaluate(
     operation: string,
     script: string,
@@ -234,22 +207,18 @@ export class RedisEmailVerificationOtpStore
       operation,
       async () => {
         try {
-          await this.ensureConnected();
-
-          return await this.client
-            .withAbortSignal(AbortSignal.timeout(this.operationTimeoutMs))
-            .eval(script, { arguments: arguments_, keys });
+          return await this.redis.evaluate(script, keys, arguments_);
         } catch (error: unknown) {
-          if (error instanceof EmailVerificationStoreUnavailableError) {
+          if (error instanceof EmailVerificationStateUnavailableError) {
             throw error;
           }
 
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
-            event: 'email_verification_store_operation_failed',
+            event: 'email_verification_state_operation_failed',
             operation,
           });
-          throw new EmailVerificationStoreUnavailableError();
+          throw new EmailVerificationStateUnavailableError();
         }
       },
       {
@@ -260,28 +229,5 @@ export class RedisEmailVerificationOtpStore
         kind: 'client',
       },
     );
-  }
-
-  private async ensureConnected(): Promise<void> {
-    if (this.client.isReady) {
-      return;
-    }
-
-    if (!this.client.isOpen) {
-      this.connectionAttempt ??= this.client
-        .connect()
-        .then(() => undefined)
-        .finally(() => {
-          this.connectionAttempt = undefined;
-        });
-    }
-
-    if (this.connectionAttempt !== undefined) {
-      await this.connectionAttempt;
-    }
-
-    if (!this.client.isReady) {
-      throw new EmailVerificationStoreUnavailableError();
-    }
   }
 }

@@ -3,14 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { AttendeeRegistrationRateLimitGuard } from '../../src/domains/attendees/rate-limit/guards/attendee-registration-rate-limit.guard';
 import { AttendeeRegistrationRateLimitService } from '../../src/domains/attendees/rate-limit/services/attendee-registration-rate-limit.service';
-import { RateLimitStoreUnavailableError } from '../../src/rate-limit/errors/rate-limit.errors';
-import type {
-  RateLimitDecision,
-  RateLimitStore,
-} from '../../src/rate-limit/types/rate-limit.types';
+import { RateLimitStateUnavailableError } from '../../src/rate-limit/errors/rate-limit.errors';
+import type { RateLimitDecision } from '../../src/rate-limit/types/rate-limit.types';
+import type { RateLimitState } from '../../src/rate-limit/ports/rate-limit.state';
 import { ApiHttpException } from '../../src/http/errors/api-http.exception';
 
-class FixedRateLimitStore implements RateLimitStore {
+class FixedRateLimitState implements RateLimitState {
   constructor(private readonly outcome: RateLimitDecision | Error) {}
 
   consume(): Promise<RateLimitDecision> {
@@ -36,10 +34,10 @@ function createContext(headers: Map<string, string>): ExecutionContext {
 }
 
 function createGuard(
-  store: RateLimitStore,
+  state: RateLimitState,
 ): AttendeeRegistrationRateLimitGuard {
   const service = new AttendeeRegistrationRateLimitService(
-    store,
+    state,
     'a-development-secret-that-is-32-chars',
   );
 
@@ -50,7 +48,7 @@ describe('AttendeeRegistrationRateLimitGuard', () => {
   it('returns 429 with Retry-After when the registration attempt is denied', async () => {
     const headers = new Map<string, string>();
     const guard = createGuard(
-      new FixedRateLimitStore({
+      new FixedRateLimitState({
         allowed: false,
         limits: [
           {
@@ -76,20 +74,20 @@ describe('AttendeeRegistrationRateLimitGuard', () => {
 
   it('fails closed when Redis cannot make the security decision', async () => {
     const guard = createGuard(
-      new FixedRateLimitStore(new RateLimitStoreUnavailableError()),
+      new FixedRateLimitState(new RateLimitStateUnavailableError()),
     );
 
     await expect(
       guard.canActivate(createContext(new Map())),
     ).rejects.toMatchObject({
-      diagnosticCode: 'RATE_LIMIT_STORE_UNAVAILABLE',
+      diagnosticCode: 'RATE_LIMIT_STATE_UNAVAILABLE',
       status: 503,
     });
   });
 
   it('uses the stable public error contract for denied attempts', async () => {
     const guard = createGuard(
-      new FixedRateLimitStore({
+      new FixedRateLimitState({
         allowed: false,
         limits: [],
         retryAfterSeconds: 12,

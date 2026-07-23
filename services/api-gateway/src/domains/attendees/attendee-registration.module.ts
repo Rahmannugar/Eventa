@@ -6,8 +6,8 @@ import {
 } from '@eventa/grpc-contracts';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
-import { RATE_LIMIT_STORE } from '../../rate-limit/constants/rate-limit.constants';
-import type { RateLimitStore } from '../../rate-limit/types/rate-limit.types';
+import { RATE_LIMIT_STATE } from '../../rate-limit/constants/rate-limit.constants';
+import type { RateLimitState } from '../../rate-limit/ports/rate-limit.state';
 import {
   IDENTITY_GRPC_CLIENT,
   IDENTITY_GRPC_DEADLINE_MS,
@@ -53,12 +53,12 @@ export class AttendeeRegistrationModule {
         AttendeeRegistrationService,
         {
           provide: AttendeeRegistrationRateLimitService,
-          useFactory: (store: RateLimitStore) =>
+          useFactory: (state: RateLimitState) =>
             new AttendeeRegistrationRateLimitService(
-              store,
+              state,
               options.rateLimitKeySecret,
             ),
-          inject: [RATE_LIMIT_STORE],
+          inject: [RATE_LIMIT_STATE],
         },
         AttendeeRegistrationRateLimitGuard,
       ],

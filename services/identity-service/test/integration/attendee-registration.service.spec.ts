@@ -72,6 +72,9 @@ const repository = new PostgresAttendeeAccountRepository(database);
 const service = new AttendeeRegistrationService(
   repository,
   new Argon2PasswordHasher(),
+  {
+    start: () => Promise.resolve(),
+  },
 );
 
 function registrationInput(

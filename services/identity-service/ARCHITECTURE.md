@@ -12,7 +12,7 @@ The current implementation contains the Attendees domain only. Its registration 
 - Domain modules expose gRPC command/query controllers and depend on capability-oriented ports.
 - The service composition root selects concrete persistence, security, and observability decorators.
 - Business domains do not own process startup or cross-domain infrastructure client lifecycle.
-- `AttendeesModule` owns one long-lived Redis client for its temporary OTP store and closes it during graceful shutdown.
+- `RedisClient` owns Identity's Redis connection; `RabbitMQClient` owns its RabbitMQ connection and purpose-specific confirm channels. Both are process singletons closed during graceful shutdown.
 
 ## Database and Migrations
 

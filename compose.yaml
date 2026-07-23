@@ -45,6 +45,23 @@ services:
       retries: 10
     logging: *local-logging
 
+  job-queue:
+    image: rabbitmq:4.1-management-alpine
+    env_file:
+      - ./infrastructure/messaging/job-queue/rabbitmq/.env
+    ports:
+      - '5673:5672'
+      - '15673:15672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    volumes:
+      - job-queue-data:/var/lib/rabbitmq
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -75,6 +92,8 @@ services:
       identity-migration:
         condition: service_completed_successfully
       identity-redis:
+        condition: service_healthy
+      job-queue:
         condition: service_healthy
     restart: unless-stopped
     logging: *local-logging
@@ -183,6 +202,7 @@ services:
 
 volumes:
   identity-database-data:
+  job-queue-data:
   observability-dashboard-data:
   observability-logs-data:
   observability-metrics-data:

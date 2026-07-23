@@ -6,6 +6,7 @@ import type {
 } from '../../src/attendees/types/attendee-account-repository.types';
 import type { RegisteredAttendee } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
+import type { AttendeeRegistrationEmailVerification } from '../../src/attendees/types/attendee-email-verification.types';
 import type { PasswordHasher } from '../../src/security/types/password-hasher.types';
 
 class RecordingRepository implements AttendeeAccountRepository {
@@ -32,11 +33,25 @@ class DeterministicPasswordHasher implements PasswordHasher {
   }
 }
 
+class RecordingEmailVerification implements AttendeeRegistrationEmailVerification {
+  starts: Array<{ attendeeId: string; email: string }> = [];
+
+  start(attendeeId: string, email: string): Promise<void> {
+    this.starts.push({ attendeeId, email });
+    return Promise.resolve();
+  }
+}
+
 describe('AttendeeRegistrationService', () => {
   it('normalizes the email and username before creating the attendee', async () => {
     const repository = new RecordingRepository();
     const passwordHasher = new DeterministicPasswordHasher();
-    const service = new AttendeeRegistrationService(repository, passwordHasher);
+    const emailVerification = new RecordingEmailVerification();
+    const service = new AttendeeRegistrationService(
+      repository,
+      passwordHasher,
+      emailVerification,
+    );
 
     await service.register({
       email: '  Attendee@Example.COM ',
@@ -49,12 +64,22 @@ describe('AttendeeRegistrationService', () => {
       passwordHash: '$argon2id$test-hash',
       username: 'eventfan',
     });
+    expect(emailVerification.starts).toEqual([
+      {
+        attendeeId: '60c75051-d63f-4b47-b815-fb3b81df44ae',
+        email: 'attendee@example.com',
+      },
+    ]);
   });
 
   it('hashes the password before creating the attendee', async () => {
     const repository = new RecordingRepository();
     const passwordHasher = new DeterministicPasswordHasher();
-    const service = new AttendeeRegistrationService(repository, passwordHasher);
+    const service = new AttendeeRegistrationService(
+      repository,
+      passwordHasher,
+      new RecordingEmailVerification(),
+    );
 
     await service.register({
       email: 'attendee@example.com',

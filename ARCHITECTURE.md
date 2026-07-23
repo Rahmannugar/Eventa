@@ -9,9 +9,11 @@ The currently running local slice contains:
 ```text
 Attendee client
   -> API Gateway
-       -> Redis rate-limit store
+       -> Redis rate-limit state
        -> Identity Service over gRPC
             -> Identity PostgreSQL
+            -> Redis email-verification OTP state
+            -> RabbitMQ email-verification job queue
 
 Gateway and Identity
   -> OpenTelemetry OTLP

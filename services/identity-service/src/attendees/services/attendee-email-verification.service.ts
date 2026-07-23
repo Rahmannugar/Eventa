@@ -5,7 +5,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
   EMAIL_VERIFICATION_OTP_MAX_GUESSES,
-  EMAIL_VERIFICATION_OTP_STORE,
+  EMAIL_VERIFICATION_OTP_STATE,
   EMAIL_VERIFICATION_OTP_TTL_MS,
   EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
 } from '../constants/attendee-email-verification.constants';
@@ -16,17 +16,17 @@ import {
 import type {
   AttendeeEmailVerificationRepository,
   EmailVerificationOtpIssue,
-  EmailVerificationOtpStore,
   ResendAttendeeEmailVerificationResult,
 } from '../types/attendee-email-verification.types';
+import type { EmailVerificationOtpState } from '../ports/email-verification-otp.state';
 
 @Injectable()
 export class AttendeeEmailVerificationService {
   constructor(
     @Inject(ATTENDEE_EMAIL_VERIFICATION_REPOSITORY)
     private readonly attendeeAccounts: AttendeeEmailVerificationRepository,
-    @Inject(EMAIL_VERIFICATION_OTP_STORE)
-    private readonly otpStore: EmailVerificationOtpStore,
+    @Inject(EMAIL_VERIFICATION_OTP_STATE)
+    private readonly otpState: EmailVerificationOtpState,
     private readonly hmacSecret: string,
   ) {}
 
@@ -40,7 +40,7 @@ export class AttendeeEmailVerificationService {
   async resend(email: string): Promise<ResendAttendeeEmailVerificationResult> {
     const canonicalEmail = this.canonicalizeEmail(email);
     const subject = this.protect('subject', canonicalEmail);
-    const decision = await this.otpStore.reserveResend(
+    const decision = await this.otpState.reserveResend(
       subject,
       EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
     );
@@ -71,7 +71,7 @@ export class AttendeeEmailVerificationService {
     const canonicalEmail = this.canonicalizeEmail(email);
     const subject = this.protect('subject', canonicalEmail);
     const otpDigest = this.protect('otp', `${canonicalEmail}:${otp}`);
-    const match = await this.otpStore.verify(subject, otpDigest);
+    const match = await this.otpState.verify(subject, otpDigest);
 
     if (match.status === 'invalid') {
       throw new EmailVerificationOtpInvalidError();
@@ -86,7 +86,7 @@ export class AttendeeEmailVerificationService {
         throw new EmailVerificationOtpInvalidError();
       }
 
-      await this.otpStore.markConfirmed(subject, otpDigest);
+      await this.otpState.markConfirmed(subject, otpDigest);
     }
 
     return { emailVerified: true };
@@ -101,7 +101,7 @@ export class AttendeeEmailVerificationService {
     const subject = this.protect('subject', canonicalEmail);
     const otpDigest = this.protect('otp', `${canonicalEmail}:${otp}`);
 
-    await this.otpStore.saveOtp(
+    await this.otpState.saveOtp(
       {
         attendeeId,
         attempts: EMAIL_VERIFICATION_OTP_MAX_GUESSES,

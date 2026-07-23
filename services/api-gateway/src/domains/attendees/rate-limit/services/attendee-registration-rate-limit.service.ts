@@ -1,15 +1,13 @@
 import { createHmac, randomUUID } from 'node:crypto';
 
-import type {
-  RateLimitDecision,
-  RateLimitStore,
-} from '../../../../rate-limit/types/rate-limit.types';
+import type { RateLimitDecision } from '../../../../rate-limit/types/rate-limit.types';
+import type { RateLimitState } from '../../../../rate-limit/ports/rate-limit.state';
 import { ATTENDEE_REGISTRATION_RATE_LIMIT_RULES } from '../rules/attendee-registration-rate-limit.rules';
 import type { RegistrationRateLimitAttempt } from '../types/attendee-registration-rate-limit.types';
 
 export class AttendeeRegistrationRateLimitService {
   constructor(
-    private readonly store: RateLimitStore,
+    private readonly state: RateLimitState,
     private readonly keySecret: string,
   ) {}
 
@@ -22,17 +20,17 @@ export class AttendeeRegistrationRateLimitService {
       ? `${keyPrefix}:window:identity:${this.hashSubject(`email:${normalizedEmail}`)}`
       : undefined;
 
-    const storeAttempt = {
+    const stateAttempt = {
       member: randomUUID(),
       primarySlidingWindowKey: `${keyPrefix}:window:ip:${ipSubject}`,
       rules,
       tokenBucketKey: `${keyPrefix}:bucket:ip:${ipSubject}`,
     };
 
-    return this.store.consume(
+    return this.state.consume(
       secondarySlidingWindowKey === undefined
-        ? storeAttempt
-        : { ...storeAttempt, secondarySlidingWindowKey },
+        ? stateAttempt
+        : { ...stateAttempt, secondarySlidingWindowKey },
     );
   }
 

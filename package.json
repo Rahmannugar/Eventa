@@ -26,7 +26,7 @@
     "test:all": "pnpm test && pnpm test:integration",
     "test:integration": "pnpm test:integration:identity && pnpm test:integration:gateway",
     "test:integration:gateway": "docker compose up -d api-gateway-redis && pnpm --filter @eventa/api-gateway test:integration",
-    "test:integration:identity": "docker compose up -d identity-database && pnpm --filter @eventa/identity-service test:integration",
+    "test:integration:identity": "docker compose up -d identity-database identity-redis job-queue && pnpm --filter @eventa/identity-service test:integration",
     "test:unit:gateway": "pnpm --filter @eventa/api-gateway test:unit",
     "test:unit:identity": "pnpm --filter @eventa/identity-service test:unit",
     "typecheck": "turbo run typecheck",

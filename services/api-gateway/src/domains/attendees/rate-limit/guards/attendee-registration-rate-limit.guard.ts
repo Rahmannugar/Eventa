@@ -5,7 +5,7 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 
-import { RateLimitStoreUnavailableError } from '../../../../rate-limit/errors/rate-limit.errors';
+import { RateLimitStateUnavailableError } from '../../../../rate-limit/errors/rate-limit.errors';
 import { AttendeeRegistrationRateLimitService } from '../services/attendee-registration-rate-limit.service';
 import { ApiHttpException } from '../../../../http/errors/api-http.exception';
 
@@ -83,12 +83,12 @@ export class AttendeeRegistrationRateLimitGuard implements CanActivate {
         'Wait before trying to register again.',
       );
     } catch (error: unknown) {
-      if (error instanceof RateLimitStoreUnavailableError) {
+      if (error instanceof RateLimitStateUnavailableError) {
         throw new ApiHttpException(
           HttpStatus.SERVICE_UNAVAILABLE,
           'REGISTRATION_UNAVAILABLE',
           'Registration is temporarily unavailable. Try again later.',
-          { diagnosticCode: 'RATE_LIMIT_STORE_UNAVAILABLE' },
+          { diagnosticCode: 'RATE_LIMIT_STATE_UNAVAILABLE' },
         );
       }
 

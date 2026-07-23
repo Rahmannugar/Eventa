@@ -4,10 +4,10 @@ import { AttendeeRegistrationRateLimitService } from '../../src/domains/attendee
 import type {
   AtomicRateLimitAttempt,
   RateLimitDecision,
-  RateLimitStore,
 } from '../../src/rate-limit/types/rate-limit.types';
+import type { RateLimitState } from '../../src/rate-limit/ports/rate-limit.state';
 
-class RecordingRateLimitStore implements RateLimitStore {
+class RecordingRateLimitState implements RateLimitState {
   attempts: AtomicRateLimitAttempt[] = [];
 
   consume(attempt: AtomicRateLimitAttempt): Promise<RateLimitDecision> {
@@ -22,9 +22,9 @@ class RecordingRateLimitStore implements RateLimitStore {
 
 describe('AttendeeRegistrationRateLimitService', () => {
   it('uses deterministic HMAC subjects and canonicalizes email identity', async () => {
-    const store = new RecordingRateLimitStore();
+    const state = new RecordingRateLimitState();
     const service = new AttendeeRegistrationRateLimitService(
-      store,
+      state,
       'a-development-secret-that-is-32-chars',
     );
 
@@ -37,7 +37,7 @@ describe('AttendeeRegistrationRateLimitService', () => {
       email: 'attendee@example.com',
     });
 
-    const [first, second] = store.attempts;
+    const [first, second] = state.attempts;
 
     expect(first?.tokenBucketKey).toBe(second?.tokenBucketKey);
     expect(first?.primarySlidingWindowKey).toBe(
@@ -53,14 +53,14 @@ describe('AttendeeRegistrationRateLimitService', () => {
   });
 
   it('applies only IP rules when no email identity is available', async () => {
-    const store = new RecordingRateLimitStore();
+    const state = new RecordingRateLimitState();
     const service = new AttendeeRegistrationRateLimitService(
-      store,
+      state,
       'a-development-secret-that-is-32-chars',
     );
 
     await service.check({ clientIp: '203.0.113.10' });
 
-    expect(store.attempts[0]).not.toHaveProperty('secondarySlidingWindowKey');
+    expect(state.attempts[0]).not.toHaveProperty('secondarySlidingWindowKey');
   });
 });

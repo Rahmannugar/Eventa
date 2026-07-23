@@ -4,6 +4,9 @@ export interface RuntimeConfig {
   grpcHost: string;
   grpcPort: number;
   healthPort: number;
+  rabbitMqConnectTimeoutMs: number;
+  rabbitMqPublishTimeoutMs: number;
+  rabbitMqUrl: string;
   redisConnectTimeoutMs: number;
   redisOperationTimeoutMs: number;
   redisUrl: string;
@@ -68,6 +71,23 @@ function readRedisUrl(environment: NodeJS.ProcessEnv): string {
   return value;
 }
 
+function readRabbitMqUrl(environment: NodeJS.ProcessEnv): string {
+  const value = readRequiredString(environment, 'RABBITMQ_URL');
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('RABBITMQ_URL must be a valid amqp:// or amqps:// URL');
+  }
+
+  if (!['amqp:', 'amqps:'].includes(url.protocol)) {
+    throw new Error('RABBITMQ_URL must be a valid amqp:// or amqps:// URL');
+  }
+
+  return value;
+}
+
 function readEmailVerificationHmacSecret(
   environment: NodeJS.ProcessEnv,
 ): string {
@@ -94,6 +114,15 @@ export function readRuntimeConfig(
     grpcHost: readRequiredString(environment, 'GRPC_HOST'),
     grpcPort: readPort(environment, 'GRPC_PORT'),
     healthPort: readPort(environment, 'HEALTH_PORT'),
+    rabbitMqConnectTimeoutMs: readPositiveInteger(
+      environment,
+      'RABBITMQ_CONNECT_TIMEOUT_MS',
+    ),
+    rabbitMqPublishTimeoutMs: readPositiveInteger(
+      environment,
+      'RABBITMQ_PUBLISH_TIMEOUT_MS',
+    ),
+    rabbitMqUrl: readRabbitMqUrl(environment),
     redisConnectTimeoutMs: readPositiveInteger(
       environment,
       'REDIS_CONNECT_TIMEOUT_MS',

@@ -12,9 +12,9 @@ export class EmailVerificationResendRateLimitedError extends Error {
   }
 }
 
-export class EmailVerificationStoreUnavailableError extends Error {
+export class EmailVerificationStateUnavailableError extends Error {
   constructor() {
-    super('EMAIL_VERIFICATION_STORE_UNAVAILABLE');
-    this.name = 'EmailVerificationStoreUnavailableError';
+    super('EMAIL_VERIFICATION_STATE_UNAVAILABLE');
+    this.name = 'EmailVerificationStateUnavailableError';
   }
 }

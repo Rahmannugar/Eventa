@@ -15,9 +15,9 @@ import type {
   AttendeeEmailVerificationRepository,
   EmailVerificationOtpMatch,
   EmailVerificationOtpRecord,
-  EmailVerificationOtpStore,
   EmailVerificationResendDecision,
 } from '../../src/attendees/types/attendee-email-verification.types';
+import type { EmailVerificationOtpState } from '../../src/attendees/ports/email-verification-otp.state';
 
 const HMAC_SECRET = 'unit-test-email-verification-secret-32-characters';
 
@@ -40,7 +40,7 @@ class RecordingRepository implements AttendeeEmailVerificationRepository {
   }
 }
 
-class RecordingOtpStore implements EmailVerificationOtpStore {
+class RecordingOtpState implements EmailVerificationOtpState {
   savedOtps: Array<{
     cooldownMs: number;
     record: EmailVerificationOtpRecord;
@@ -80,19 +80,19 @@ class RecordingOtpStore implements EmailVerificationOtpStore {
 }
 
 function createService(): {
-  otpStore: RecordingOtpStore;
+  otpState: RecordingOtpState;
   repository: RecordingRepository;
   service: AttendeeEmailVerificationService;
 } {
   const repository = new RecordingRepository();
-  const otpStore = new RecordingOtpStore();
+  const otpState = new RecordingOtpState();
 
   return {
-    otpStore,
+    otpState,
     repository,
     service: new AttendeeEmailVerificationService(
       repository,
-      otpStore,
+      otpState,
       HMAC_SECRET,
     ),
   };
@@ -100,7 +100,7 @@ function createService(): {
 
 describe('AttendeeEmailVerificationService', () => {
   it('creates a protected six-digit initial OTP with the configured lifetime and guess allowance', async () => {
-    const { otpStore, service } = createService();
+    const { otpState, service } = createService();
 
     const issue = await service.issueInitial(
       'attendee-1',
@@ -112,8 +112,8 @@ describe('AttendeeEmailVerificationService', () => {
       email: 'attendee@example.com',
     });
     expect(issue.otp).toMatch(/^\d{6}$/);
-    expect(otpStore.savedOtps).toHaveLength(1);
-    const savedOtp = otpStore.savedOtps[0];
+    expect(otpState.savedOtps).toHaveLength(1);
+    const savedOtp = otpState.savedOtps[0];
     expect(savedOtp).toMatchObject({
       cooldownMs: EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
       record: {
@@ -128,7 +128,7 @@ describe('AttendeeEmailVerificationService', () => {
   });
 
   it('reserves resend quota before replacing an unverified attendee OTP', async () => {
-    const { otpStore, repository, service } = createService();
+    const { otpState, repository, service } = createService();
     repository.account = {
       attendeeId: 'attendee-1',
       emailVerified: false,
@@ -137,11 +137,11 @@ describe('AttendeeEmailVerificationService', () => {
     const result = await service.resend('  Attendee@Example.COM ');
 
     expect(repository.requestedEmails).toEqual(['attendee@example.com']);
-    expect(otpStore.resendReservations).toHaveLength(1);
-    expect(otpStore.resendReservations[0]?.cooldownMs).toBe(
+    expect(otpState.resendReservations).toHaveLength(1);
+    expect(otpState.resendReservations[0]?.cooldownMs).toBe(
       EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
     );
-    expect(otpStore.resendReservations[0]?.subject).toMatch(/^[a-f0-9]{64}$/);
+    expect(otpState.resendReservations[0]?.subject).toMatch(/^[a-f0-9]{64}$/);
     expect(result).toMatchObject({
       accepted: true,
       issue: {
@@ -150,7 +150,7 @@ describe('AttendeeEmailVerificationService', () => {
       },
     });
     expect(result.issue?.otp).toMatch(/^\d{6}$/);
-    expect(otpStore.savedOtps[0]?.cooldownMs).toBe(0);
+    expect(otpState.savedOtps[0]?.cooldownMs).toBe(0);
   });
 
   it.each([
@@ -160,18 +160,18 @@ describe('AttendeeEmailVerificationService', () => {
       { attendeeId: 'attendee-1', emailVerified: true },
     ],
   ] as const)('accepts resend generically for an %s', async (_, account) => {
-    const { otpStore, repository, service } = createService();
+    const { otpState, repository, service } = createService();
     repository.account = account;
 
     await expect(service.resend('attendee@example.com')).resolves.toEqual({
       accepted: true,
     });
-    expect(otpStore.savedOtps).toHaveLength(0);
+    expect(otpState.savedOtps).toHaveLength(0);
   });
 
   it('rejects a resend while the Redis-owned cooldown is active', async () => {
-    const { otpStore, repository, service } = createService();
-    otpStore.resendDecision = { allowed: false, retryAfterSeconds: 37 };
+    const { otpState, repository, service } = createService();
+    otpState.resendDecision = { allowed: false, retryAfterSeconds: 37 };
 
     await expect(service.resend('attendee@example.com')).rejects.toEqual(
       new EmailVerificationResendRateLimitedError(37),
@@ -180,27 +180,27 @@ describe('AttendeeEmailVerificationService', () => {
   });
 
   it('marks the account and OTP state after an active OTP matches', async () => {
-    const { otpStore, repository, service } = createService();
-    otpStore.match = { attendeeId: 'attendee-1', status: 'active' };
+    const { otpState, repository, service } = createService();
+    otpState.match = { attendeeId: 'attendee-1', status: 'active' };
 
     await expect(
       service.confirm('Attendee@Example.COM', '123456'),
     ).resolves.toEqual({ emailVerified: true });
     expect(repository.markedAttendeeIds).toEqual(['attendee-1']);
-    expect(otpStore.markedConfirmed).toHaveLength(1);
-    expect(otpStore.markedConfirmed[0]?.otpDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(otpStore.markedConfirmed[0]?.subject).toMatch(/^[a-f0-9]{64}$/);
+    expect(otpState.markedConfirmed).toHaveLength(1);
+    expect(otpState.markedConfirmed[0]?.otpDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(otpState.markedConfirmed[0]?.subject).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('returns the same success for an exact confirmed OTP replay', async () => {
-    const { otpStore, repository, service } = createService();
-    otpStore.match = { attendeeId: 'attendee-1', status: 'confirmed' };
+    const { otpState, repository, service } = createService();
+    otpState.match = { attendeeId: 'attendee-1', status: 'confirmed' };
 
     await expect(
       service.confirm('attendee@example.com', '123456'),
     ).resolves.toEqual({ emailVerified: true });
     expect(repository.markedAttendeeIds).toHaveLength(0);
-    expect(otpStore.markedConfirmed).toHaveLength(0);
+    expect(otpState.markedConfirmed).toHaveLength(0);
   });
 
   it('rejects every non-matching or missing OTP through one domain error', async () => {
@@ -213,24 +213,24 @@ describe('AttendeeEmailVerificationService', () => {
   });
 
   it('rejects malformed OTPs before reading or changing verification state', async () => {
-    const { otpStore, repository, service } = createService();
+    const { otpState, repository, service } = createService();
 
     await expect(
       service.confirm('attendee@example.com', '12345'),
     ).rejects.toBeInstanceOf(EmailVerificationOtpInvalidError);
     expect(repository.markedAttendeeIds).toHaveLength(0);
-    expect(otpStore.markedConfirmed).toHaveLength(0);
+    expect(otpState.markedConfirmed).toHaveLength(0);
   });
 
   it('uses the same invalid OTP outcome when its attendee no longer exists', async () => {
-    const { otpStore, repository, service } = createService();
-    otpStore.match = { attendeeId: 'missing-attendee', status: 'active' };
+    const { otpState, repository, service } = createService();
+    otpState.match = { attendeeId: 'missing-attendee', status: 'active' };
     repository.markResult = false;
 
     await expect(
       service.confirm('attendee@example.com', '123456'),
     ).rejects.toBeInstanceOf(EmailVerificationOtpInvalidError);
     expect(repository.markedAttendeeIds).toEqual(['missing-attendee']);
-    expect(otpStore.markedConfirmed).toHaveLength(0);
+    expect(otpState.markedConfirmed).toHaveLength(0);
   });
 });
