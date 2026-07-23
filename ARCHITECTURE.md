@@ -44,9 +44,9 @@ No service reads or writes another service's database.
 
 ## Application Architecture and Languages
 
-Every deployable is a modular monolith and applies CQRS within its owned boundary. Commands express intended state changes and own validation, authorization, invariants, transactions, idempotency, and emitted facts. Queries return read models without mutating domain state. Command and query handlers, contracts, repositories, and models remain explicit; CQRS does not require event sourcing, separate physical databases, or a generic in-process command bus.
+Every deployable is a modular monolith and applies CQRS within its owned boundary. Commands express intended state changes and own validation, authorization, invariants, transactions, idempotency, and emitted facts. Queries return read models without mutating domain state. Command and query handlers, contracts, repositories, and models remain explicit.
 
-API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/TypeScript. Ticket and Discovery use Go without an application framework. Their composition roots use explicit constructor wiring and standard-library capabilities where suitable; protocol, PostgreSQL, GORM, OpenTelemetry, messaging, QR, and Ahnlich SDK packages remain focused dependencies rather than a replacement framework.
+API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/TypeScript. Ticket and Discovery use Go.
 
 ## Communication
 
@@ -56,6 +56,8 @@ API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/T
 - Job queue: retryable background work assigned to workers. RabbitMQ is the current adapter choice.
 
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
+
+RabbitMQ DLQs are used only for actionable failed work with a defined recovery path, not as a default for every queue. Replaceable, best-effort, and time-bounded jobs use owned failed or expired states, resend, reconciliation, or rebuild behavior instead. Production DLQs are bounded, observable through RabbitMQ and OpenTelemetry signals, alerted through Grafana, and reviewed through audited manual recovery; review automation remains read-only.
 
 ## Current Registration Flow
 

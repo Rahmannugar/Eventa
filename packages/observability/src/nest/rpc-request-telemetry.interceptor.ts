@@ -6,7 +6,7 @@ import {
   type NestInterceptor,
 } from '@nestjs/common';
 import { catchError, Observable, tap, throwError } from 'rxjs';
-import type { Metadata } from '@grpc/grpc-js';
+import { status, type Metadata } from '@grpc/grpc-js';
 
 import { recordRequestMetrics } from '../metrics/request-metrics';
 
@@ -41,6 +41,26 @@ function readGrpcStatusCode(error: unknown): string {
     : 'unknown';
 }
 
+const CLIENT_ERROR_STATUS_CODES = new Set([
+  String(status.CANCELLED),
+  String(status.INVALID_ARGUMENT),
+  String(status.NOT_FOUND),
+  String(status.ALREADY_EXISTS),
+  String(status.PERMISSION_DENIED),
+  String(status.FAILED_PRECONDITION),
+  String(status.ABORTED),
+  String(status.OUT_OF_RANGE),
+  String(status.UNAUTHENTICATED),
+]);
+
+export function classifyGrpcRequestOutcome(
+  error: unknown,
+): 'client_error' | 'server_error' {
+  return CLIENT_ERROR_STATUS_CODES.has(readGrpcStatusCode(error))
+    ? 'client_error'
+    : 'server_error';
+}
+
 @Injectable()
 export class RpcRequestTelemetryInterceptor implements NestInterceptor {
   private readonly logger = new Logger(RpcRequestTelemetryInterceptor.name);
@@ -60,11 +80,12 @@ export class RpcRequestTelemetryInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(() => this.complete(startedAt, operation, 'success', '0', requestId)),
       catchError((error: unknown) => {
+        const statusCode = readGrpcStatusCode(error);
         this.complete(
           startedAt,
           operation,
-          'server_error',
-          readGrpcStatusCode(error),
+          classifyGrpcRequestOutcome(error),
+          statusCode,
           requestId,
         );
         return throwError(() => error);
@@ -75,7 +96,7 @@ export class RpcRequestTelemetryInterceptor implements NestInterceptor {
   private complete(
     startedAt: bigint,
     operation: string,
-    outcome: 'server_error' | 'success',
+    outcome: 'client_error' | 'server_error' | 'success',
     statusCode: string,
     requestId: string | undefined,
   ): void {

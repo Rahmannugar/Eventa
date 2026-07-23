@@ -1,123 +1,125 @@
 otelcol.receiver.otlp "eventa" {
-  grpc {
-    endpoint = "0.0.0.0:4317"
-  }
+	grpc {
+		endpoint = "0.0.0.0:4317"
+	}
 
-  http {
-    endpoint = "0.0.0.0:4318"
-  }
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
 
-  output {
-    metrics = [otelcol.processor.batch.eventa.input]
-    traces  = [otelcol.processor.batch.eventa.input]
-  }
+	output {
+		metrics = [otelcol.processor.batch.eventa.input]
+		traces  = [otelcol.processor.batch.eventa.input]
+	}
 }
 
 otelcol.processor.batch "eventa" {
-  output {
-    metrics = [otelcol.exporter.otlphttp.prometheus.input]
-    traces  = [otelcol.exporter.otlp.tempo.input]
-  }
+	output {
+		metrics = [otelcol.exporter.otlphttp.prometheus.input]
+		traces  = [otelcol.exporter.otlp.tempo.input]
+	}
 }
 
 otelcol.exporter.otlphttp "prometheus" {
-  client {
-    endpoint = "http://observability-metrics:9090/api/v1/otlp"
-  }
+	client {
+		endpoint = "http://observability-metrics:9090/api/v1/otlp"
+	}
 }
 
 otelcol.exporter.otlp "tempo" {
-  client {
-    endpoint = "observability-traces:4317"
+	client {
+		endpoint = "observability-traces:4317"
 
-    tls {
-      insecure = true
-    }
-  }
+		tls {
+			insecure = true
+		}
+	}
 }
 
 discovery.docker "eventa" {
-  host = "unix:///var/run/docker.sock"
+	host = "unix:///var/run/docker.sock"
 }
 
 discovery.relabel "eventa_logs" {
-  targets = discovery.docker.eventa.targets
+	targets = discovery.docker.eventa.targets
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
-    regex         = "eventa"
-    action        = "keep"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		regex         = "eventa"
+		action        = "keep"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    target_label  = "service"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "compose_service"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    regex         = "(api-gateway|identity-service)"
-    replacement   = "application"
-    target_label  = "service_group"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		regex         = "(api-gateway|identity-service)"
+		replacement   = "application"
+		target_label  = "service_group"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    regex         = "observability-.*"
-    replacement   = "observability"
-    target_label  = "service_group"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		regex         = "observability-.*"
+		replacement   = "observability"
+		target_label  = "service_group"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    regex         = "(identity-database|identity-migration|api-gateway-redis)"
-    replacement   = "infrastructure"
-    target_label  = "service_group"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		regex         = "(identity-database|identity-migration|api-gateway-redis)"
+		replacement   = "infrastructure"
+		target_label  = "service_group"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
 
-  rule {
-    replacement  = "eventa"
-    target_label = "project"
-  }
+	rule {
+		replacement  = "eventa"
+		target_label = "project"
+	}
 }
 
 loki.source.docker "eventa" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = discovery.relabel.eventa_logs.output
-  forward_to = [loki.process.eventa.receiver]
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.eventa_logs.output
+	forward_to = [loki.process.eventa.receiver]
 }
 
 loki.process "eventa" {
-  forward_to = [loki.write.eventa.receiver]
+	forward_to = [loki.write.eventa.receiver]
 
-  stage.json {
-    expressions = {
-      level    = "level",
-      trace_id = "trace_id",
-    }
-  }
+	stage.json {
+		expressions = {
+			level        = "level",
+			service_name = "service",
+			trace_id     = "trace_id",
+		}
+	}
 
-  stage.labels {
-    values = {
-      level = "",
-    }
-  }
+	stage.labels {
+		values = {
+			level        = "",
+			service_name = "",
+		}
+	}
 
-  stage.structured_metadata {
-    values = {
-      trace_id = "",
-    }
-  }
+	stage.structured_metadata {
+		values = {
+			trace_id = "",
+		}
+	}
 }
 
 loki.write "eventa" {
-  endpoint {
-    url = "http://observability-logs:3100/loki/api/v1/push"
-  }
+	endpoint {
+		url = "http://observability-logs:3100/loki/api/v1/push"
+	}
 }

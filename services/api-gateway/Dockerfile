@@ -10,8 +10,16 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY services/api-gateway/package.json services/api-gateway/package.json
+COPY services/identity-service/package.json services/identity-service/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=eventa-pnpm-store,target=/pnpm/store,sharing=locked \
+  --mount=type=cache,id=eventa-pnpm-cache,target=/pnpm/cache,sharing=locked \
+  pnpm install --frozen-lockfile \
+  --store-dir=/pnpm/store \
+  --cache-dir=/pnpm/cache \
+  --network-concurrency=8 \
+  --fetch-retries=5 \
+  --fetch-timeout=300000
 
 FROM dependencies AS quality
 
@@ -26,7 +34,14 @@ RUN pnpm --filter @eventa/grpc-contracts build \
 
 FROM quality AS package
 
-RUN pnpm --filter @eventa/api-gateway --prod deploy /opt/api-gateway
+RUN --mount=type=cache,id=eventa-pnpm-store,target=/pnpm/store,sharing=locked \
+  --mount=type=cache,id=eventa-pnpm-cache,target=/pnpm/cache,sharing=locked \
+  pnpm --filter @eventa/api-gateway --prod deploy /opt/api-gateway \
+  --store-dir=/pnpm/store \
+  --cache-dir=/pnpm/cache \
+  --network-concurrency=8 \
+  --fetch-retries=5 \
+  --fetch-timeout=300000
 
 FROM node:22.22.0-alpine AS runtime
 

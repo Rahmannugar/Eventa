@@ -1,0 +1,462 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max by (service_name) (eventa_service_instance{service_name=~\"$service_name\"})",
+          "legendFormat": "{{service_name}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Reporting application services",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 0,
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (service_name, outcome) (increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"} offset $__range))",
+          "instant": true,
+          "legendFormat": "{{service_name}} · {{outcome}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Client HTTP requests",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across client-facing HTTP requests in the selected range. Percentiles become meaningful under sustained traffic; inspect Tempo for individual sparse requests.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "mappings": [],
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (increase(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "{{service_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Client HTTP p95 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across client-facing HTTP requests in the selected range. Percentiles become meaningful under sustained traffic; inspect Tempo for individual sparse requests.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "mappings": [],
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le, service_name) (increase(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"http\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "{{service_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Client HTTP p99 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "requests/second",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (service_name, operation, outcome) ((increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[1m]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[1m]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"} offset 1m)) / 60)",
+          "legendFormat": "{{service_name}} · {{operation}} · {{outcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Client HTTP traffic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 0,
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (outcome) (increase(eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"}[$__range]) unless eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"} offset $__range))",
+          "instant": true,
+          "legendFormat": "{{outcome}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Registration outcomes in selected range",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "calls/second",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (service_name, operation, outcome, statusCode) ((increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"}[1m]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"}[1m]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"} offset 1m)) / 60)",
+          "legendFormat": "{{service_name}} · {{operation}} · {{outcome}} · gRPC {{statusCode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Internal gRPC traffic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across internal gRPC requests in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "mappings": [],
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 14 },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (increase(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "{{service_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Internal gRPC p95 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across internal gRPC requests in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "mappings": [],
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 14 },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le, service_name) (increase(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=~\"$service_name\", transport=\"grpc\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "{{service_name}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Internal gRPC p99 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 22 },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"application\", service_name=~\"$service_name\"} | json | outcome=\"server_error\"",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"application\", service_name=~\"$service_name\", level=~\"error|fatal\"}",
+          "queryType": "range",
+          "refId": "B"
+        }
+      ],
+      "title": "Recent application failures",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["eventa", "overview"],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": { "selected": true, "text": "All", "value": "$__all" },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "definition": "label_values(eventa_service_instance, service_name)",
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service_name",
+        "query": {
+          "query": "label_values(eventa_service_instance, service_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Eventa Application Overview",
+  "uid": "eventa-application-overview",
+  "version": 2
+}

@@ -41,6 +41,12 @@ export function initializeMetrics(): void {
     description: 'Completed requests grouped by bounded operation and outcome',
   });
   requestDuration = meter.createHistogram('eventa.request.duration', {
+    advice: {
+      explicitBucketBoundaries: [
+        5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1_000, 1_250,
+        1_500, 2_000, 2_500, 5_000, 7_500, 10_000,
+      ],
+    },
     description: 'Completed request duration',
     unit: 'ms',
   });

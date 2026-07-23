@@ -1,0 +1,289 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "max(eventa_service_instance{service_name=\"eventa-identity-service\"})",
+          "instant": true,
+          "legendFormat": "Identity",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Reporting instances",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (outcome, statusCode) (increase(eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) unless eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"} offset $__range))",
+          "instant": true,
+          "legendFormat": "{{outcome}} · gRPC {{statusCode}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC requests",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across Identity gRPC requests in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "Identity",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC p95 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Histogram estimate across Identity gRPC requests in the selected range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 1,
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=\"eventa-identity-service\", transport=\"grpc\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "Identity",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC p99 latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "calls/second",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (operation, outcome, statusCode) ((increase(eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"}[1m]) + (last_over_time(eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"}[1m]) unless eventa_request_count_total{service_name=\"eventa-identity-service\", transport=\"grpc\"} offset 1m)) / 60)",
+          "legendFormat": "{{operation}} · {{outcome}} · gRPC {{statusCode}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "gRPC traffic by operation and outcome",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-identity-service\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-identity-service\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-identity-service\"} offset $__range))",
+          "instant": true,
+          "legendFormat": "{{operation}} · {{outcome}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Business outcomes",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 14 },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"application\", service_name=\"eventa-identity-service\"} | json | outcome=\"server_error\"",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"application\", service_name=\"eventa-identity-service\", level=~\"error|fatal\"}",
+          "queryType": "range",
+          "refId": "B"
+        }
+      ],
+      "title": "Recent Identity failures",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 41,
+  "tags": ["eventa", "service", "identity"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Identity Service",
+  "uid": "eventa-identity-service",
+  "version": 1
+}
