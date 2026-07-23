@@ -2,15 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { PASSWORD_HASHER } from '../../security/constants/security.constants';
 import type { PasswordHasher } from '../../security/types/password-hasher.types';
-import { ATTENDEE_REGISTRATION_EMAIL_VERIFICATION } from '../constants/attendee-email-verification.constants';
 import { ATTENDEE_ACCOUNT_REPOSITORY } from '../constants/attendee-registration.constants';
 import type { AttendeeAccountRepository } from '../types/attendee-account-repository.types';
-import type { AttendeeRegistrationEmailVerification } from '../types/attendee-email-verification.types';
 import type {
   AttendeeRegistrar,
   RegisteredAttendee,
   RegisterAttendeeInput,
 } from '../types/attendee-registration.types';
+import { AttendeeEmailVerificationService } from './attendee-email-verification.service';
 
 @Injectable()
 export class AttendeeRegistrationService implements AttendeeRegistrar {
@@ -19,8 +18,11 @@ export class AttendeeRegistrationService implements AttendeeRegistrar {
     private readonly attendeeAccounts: AttendeeAccountRepository,
     @Inject(PASSWORD_HASHER)
     private readonly passwordHasher: PasswordHasher,
-    @Inject(ATTENDEE_REGISTRATION_EMAIL_VERIFICATION)
-    private readonly emailVerification: AttendeeRegistrationEmailVerification,
+    @Inject(AttendeeEmailVerificationService)
+    private readonly emailVerification: Pick<
+      AttendeeEmailVerificationService,
+      'start'
+    >,
   ) {}
 
   async register(input: RegisterAttendeeInput): Promise<RegisteredAttendee> {

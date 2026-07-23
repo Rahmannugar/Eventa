@@ -8,8 +8,6 @@ import { RedisClient } from '../infrastructure/clients/redis.client';
 import { SecurityModule } from '../security/security.module';
 import {
   ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
-  ATTENDEE_EMAIL_VERIFICATION_SERVICE,
-  ATTENDEE_REGISTRATION_EMAIL_VERIFICATION,
   EMAIL_VERIFICATION_JOB_PUBLISHER,
   EMAIL_VERIFICATION_OTP_STATE,
 } from './constants/attendee-email-verification.constants';
@@ -22,10 +20,10 @@ import { AttendeeRegistrationService } from './services/attendee-registration.se
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
 import { ObservedAttendeeRegistrar } from './observability/observed-attendee-registrar';
 import { PostgresAttendeeAccountRepository } from './repositories/attendee-account.repository';
-import { RabbitMQEmailVerificationJobPublisher } from './adapters/job-queue/email-verification-job.publisher';
+import { RabbitMQEmailVerificationJobPublisher } from './adapters/job-queue/rabbitmq-email-verification-job.publisher';
 import { RedisEmailVerificationOtpState } from './adapters/redis/email-verification-otp.state';
-import { AttendeeRegistrationEmailVerificationService } from './services/attendee-registration-email-verification.service';
 import type { AttendeeEmailVerificationRepository } from './types/attendee-email-verification.types';
+import type { EmailVerificationJobPublisher } from './ports/email-verification-job.publisher';
 import type { EmailVerificationOtpState } from './ports/email-verification-otp.state';
 
 @Module({
@@ -64,24 +62,6 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
       inject: [RedisClient],
     },
     {
-      provide: ATTENDEE_EMAIL_VERIFICATION_SERVICE,
-      useFactory: (
-        repository: AttendeeEmailVerificationRepository,
-        otpState: EmailVerificationOtpState,
-        config: RuntimeConfig,
-      ) =>
-        new AttendeeEmailVerificationService(
-          repository,
-          otpState,
-          config.emailVerificationHmacSecret,
-        ),
-      inject: [
-        ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
-        EMAIL_VERIFICATION_OTP_STATE,
-        RUNTIME_CONFIG,
-      ],
-    },
-    {
       provide: RabbitMQClient,
       useFactory: (config: RuntimeConfig) =>
         new RabbitMQClient(config.rabbitMqUrl, config.rabbitMqConnectTimeoutMs),
@@ -97,10 +77,27 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
       inject: [RabbitMQClient, RUNTIME_CONFIG],
     },
     {
-      provide: ATTENDEE_REGISTRATION_EMAIL_VERIFICATION,
-      useClass: AttendeeRegistrationEmailVerificationService,
+      provide: AttendeeEmailVerificationService,
+      useFactory: (
+        repository: AttendeeEmailVerificationRepository,
+        otpState: EmailVerificationOtpState,
+        jobPublisher: EmailVerificationJobPublisher,
+        config: RuntimeConfig,
+      ) =>
+        new AttendeeEmailVerificationService(
+          repository,
+          otpState,
+          jobPublisher,
+          config.emailVerificationHmacSecret,
+        ),
+      inject: [
+        ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
+        EMAIL_VERIFICATION_OTP_STATE,
+        EMAIL_VERIFICATION_JOB_PUBLISHER,
+        RUNTIME_CONFIG,
+      ],
     },
   ],
-  exports: [ATTENDEE_EMAIL_VERIFICATION_SERVICE],
+  exports: [AttendeeEmailVerificationService],
 })
 export class AttendeesModule {}

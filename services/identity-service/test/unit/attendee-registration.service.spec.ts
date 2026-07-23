@@ -6,7 +6,6 @@ import type {
 } from '../../src/attendees/types/attendee-account-repository.types';
 import type { RegisteredAttendee } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
-import type { AttendeeRegistrationEmailVerification } from '../../src/attendees/types/attendee-email-verification.types';
 import type { PasswordHasher } from '../../src/security/types/password-hasher.types';
 
 class RecordingRepository implements AttendeeAccountRepository {
@@ -33,7 +32,7 @@ class DeterministicPasswordHasher implements PasswordHasher {
   }
 }
 
-class RecordingEmailVerification implements AttendeeRegistrationEmailVerification {
+class RecordingEmailVerification {
   starts: Array<{ attendeeId: string; email: string }> = [];
 
   start(attendeeId: string, email: string): Promise<void> {

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   EMAIL_VERIFICATION_OTP_MAX_GUESSES,
@@ -16,7 +17,9 @@ import type {
   EmailVerificationOtpMatch,
   EmailVerificationOtpRecord,
   EmailVerificationResendDecision,
+  EmailVerificationOtp,
 } from '../../src/attendees/types/attendee-email-verification.types';
+import type { EmailVerificationJobPublisher } from '../../src/attendees/ports/email-verification-job.publisher';
 import type { EmailVerificationOtpState } from '../../src/attendees/ports/email-verification-otp.state';
 
 const HMAC_SECRET = 'unit-test-email-verification-secret-32-characters';
@@ -79,20 +82,33 @@ class RecordingOtpState implements EmailVerificationOtpState {
   }
 }
 
+class RecordingPublisher implements EmailVerificationJobPublisher {
+  otps: EmailVerificationOtp[] = [];
+
+  publish(otp: EmailVerificationOtp): Promise<void> {
+    this.otps.push(otp);
+    return Promise.resolve();
+  }
+}
+
 function createService(): {
   otpState: RecordingOtpState;
+  publisher: RecordingPublisher;
   repository: RecordingRepository;
   service: AttendeeEmailVerificationService;
 } {
   const repository = new RecordingRepository();
   const otpState = new RecordingOtpState();
+  const publisher = new RecordingPublisher();
 
   return {
     otpState,
+    publisher,
     repository,
     service: new AttendeeEmailVerificationService(
       repository,
       otpState,
+      publisher,
       HMAC_SECRET,
     ),
   };
@@ -100,18 +116,16 @@ function createService(): {
 
 describe('AttendeeEmailVerificationService', () => {
   it('creates a protected six-digit initial OTP with the configured lifetime and guess allowance', async () => {
-    const { otpState, service } = createService();
+    const { otpState, publisher, service } = createService();
 
-    const issue = await service.issueInitial(
-      'attendee-1',
-      '  Attendee@Example.COM ',
-    );
+    await service.start('attendee-1', '  Attendee@Example.COM ');
 
-    expect(issue).toMatchObject({
-      accountId: 'attendee-1',
+    expect(publisher.otps).toHaveLength(1);
+    expect(publisher.otps[0]).toMatchObject({
+      attendeeId: 'attendee-1',
       email: 'attendee@example.com',
     });
-    expect(issue.otp).toMatch(/^\d{6}$/);
+    expect(publisher.otps[0]?.otp).toMatch(/^\d{6}$/);
     expect(otpState.savedOtps).toHaveLength(1);
     const savedOtp = otpState.savedOtps[0];
     expect(savedOtp).toMatchObject({
@@ -124,11 +138,13 @@ describe('AttendeeEmailVerificationService', () => {
     });
     expect(savedOtp?.record.subject).toMatch(/^[a-f0-9]{64}$/);
     expect(savedOtp?.record.otpDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(savedOtp?.record.otpDigest).not.toContain(issue.otp);
+    expect(savedOtp?.record.otpDigest).not.toContain(
+      publisher.otps[0]?.otp ?? '',
+    );
   });
 
   it('reserves resend quota before replacing an unverified attendee OTP', async () => {
-    const { otpState, repository, service } = createService();
+    const { otpState, publisher, repository, service } = createService();
     repository.account = {
       attendeeId: 'attendee-1',
       emailVerified: false,
@@ -142,14 +158,12 @@ describe('AttendeeEmailVerificationService', () => {
       EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
     );
     expect(otpState.resendReservations[0]?.subject).toMatch(/^[a-f0-9]{64}$/);
-    expect(result).toMatchObject({
-      accepted: true,
-      issue: {
-        accountId: 'attendee-1',
-        email: 'attendee@example.com',
-      },
+    expect(result).toEqual({ accepted: true });
+    expect(publisher.otps[0]).toMatchObject({
+      attendeeId: 'attendee-1',
+      email: 'attendee@example.com',
     });
-    expect(result.issue?.otp).toMatch(/^\d{6}$/);
+    expect(publisher.otps[0]?.otp).toMatch(/^\d{6}$/);
     expect(otpState.savedOtps[0]?.cooldownMs).toBe(0);
   });
 
@@ -160,13 +174,32 @@ describe('AttendeeEmailVerificationService', () => {
       { attendeeId: 'attendee-1', emailVerified: true },
     ],
   ] as const)('accepts resend generically for an %s', async (_, account) => {
-    const { otpState, repository, service } = createService();
+    const { otpState, publisher, repository, service } = createService();
     repository.account = account;
 
     await expect(service.resend('attendee@example.com')).resolves.toEqual({
       accepted: true,
     });
     expect(otpState.savedOtps).toHaveLength(0);
+    expect(publisher.otps).toHaveLength(0);
+  });
+
+  it('does not turn an initial delivery failure into a second registration outcome', async () => {
+    const logError = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const { publisher, service } = createService();
+    publisher.publish = () => Promise.reject(new Error('queue unavailable'));
+
+    await expect(
+      service.start('attendee-1', 'attendee@example.com'),
+    ).resolves.toBeUndefined();
+    expect(logError).toHaveBeenCalledWith({
+      attendee_id: 'attendee-1',
+      error_type: 'Error',
+      event: 'email_verification_job_failed',
+    });
+    logError.mockRestore();
   });
 
   it('rejects a resend while the Redis-owned cooldown is active', async () => {

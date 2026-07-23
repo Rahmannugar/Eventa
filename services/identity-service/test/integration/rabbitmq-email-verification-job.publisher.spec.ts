@@ -6,7 +6,7 @@ import {
 import { connect, type Channel, type ChannelModel } from 'amqplib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { RabbitMQEmailVerificationJobPublisher } from '../../src/attendees/adapters/job-queue/email-verification-job.publisher';
+import { RabbitMQEmailVerificationJobPublisher } from '../../src/attendees/adapters/job-queue/rabbitmq-email-verification-job.publisher';
 import { RabbitMQClient } from '../../src/infrastructure/clients/rabbitmq.client';
 
 const testRabbitMqUrl = process.env.TEST_RABBITMQ_URL;
@@ -43,7 +43,7 @@ describe('RabbitMQEmailVerificationJobPublisher integration', () => {
 
   it('publishes one persistent expiring OTP job after broker confirmation', async () => {
     await publisher.publish({
-      accountId: 'attendee-1',
+      attendeeId: 'attendee-1',
       email: 'attendee@example.com',
       otp: '123456',
     });

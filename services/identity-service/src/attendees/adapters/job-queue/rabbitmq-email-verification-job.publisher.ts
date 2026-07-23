@@ -12,7 +12,7 @@ import { context, propagation } from '@opentelemetry/api';
 import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.client';
 import { EMAIL_VERIFICATION_OTP_TTL_MS } from '../../constants/attendee-email-verification.constants';
 import type { EmailVerificationJobPublisher } from '../../ports/email-verification-job.publisher';
-import type { EmailVerificationOtpIssue } from '../../types/attendee-email-verification.types';
+import type { EmailVerificationOtp } from '../../types/attendee-email-verification.types';
 
 export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJobPublisher {
   constructor(
@@ -20,10 +20,10 @@ export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJ
     private readonly publishTimeoutMs: number,
   ) {}
 
-  async publish(issue: EmailVerificationOtpIssue): Promise<void> {
+  async publish(otp: EmailVerificationOtp): Promise<void> {
     return runWithOperationSpan(
       'email_verification_job.publish',
-      () => this.publishConfirmed(issue),
+      () => this.publishConfirmed(otp),
       {
         attributes: {
           'messaging.destination.name': ATTENDEE_EMAIL_VERIFICATION_QUEUE,
@@ -35,9 +35,7 @@ export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJ
     );
   }
 
-  private async publishConfirmed(
-    issue: EmailVerificationOtpIssue,
-  ): Promise<void> {
+  private async publishConfirmed(otp: EmailVerificationOtp): Promise<void> {
     const channel = await this.rabbitMQ.confirmChannel(
       'email-verification-job-publisher',
     );
@@ -55,8 +53,8 @@ export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJ
     const job: AttendeeEmailVerificationJob = {
       expiresAt,
       jobId,
-      otp: issue.otp,
-      recipientEmail: issue.email,
+      otp: otp.otp,
+      recipientEmail: otp.email,
       type: ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
     };
     const traceHeaders: Record<string, string> = {};

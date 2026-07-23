@@ -1,9 +1,10 @@
 import { createHmac, randomInt } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
   ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
+  EMAIL_VERIFICATION_JOB_PUBLISHER,
   EMAIL_VERIFICATION_OTP_MAX_GUESSES,
   EMAIL_VERIFICATION_OTP_STATE,
   EMAIL_VERIFICATION_OTP_TTL_MS,
@@ -15,26 +16,37 @@ import {
 } from '../errors/attendee-email-verification.errors';
 import type {
   AttendeeEmailVerificationRepository,
-  EmailVerificationOtpIssue,
+  EmailVerificationOtp,
   ResendAttendeeEmailVerificationResult,
 } from '../types/attendee-email-verification.types';
+import type { EmailVerificationJobPublisher } from '../ports/email-verification-job.publisher';
 import type { EmailVerificationOtpState } from '../ports/email-verification-otp.state';
 
 @Injectable()
 export class AttendeeEmailVerificationService {
+  private readonly logger = new Logger(AttendeeEmailVerificationService.name);
+
   constructor(
     @Inject(ATTENDEE_EMAIL_VERIFICATION_REPOSITORY)
     private readonly attendeeAccounts: AttendeeEmailVerificationRepository,
     @Inject(EMAIL_VERIFICATION_OTP_STATE)
     private readonly otpState: EmailVerificationOtpState,
+    @Inject(EMAIL_VERIFICATION_JOB_PUBLISHER)
+    private readonly jobPublisher: EmailVerificationJobPublisher,
     private readonly hmacSecret: string,
   ) {}
 
-  async issueInitial(
-    attendeeId: string,
-    email: string,
-  ): Promise<EmailVerificationOtpIssue> {
-    return this.issue(attendeeId, this.canonicalizeEmail(email), true);
+  async start(attendeeId: string, email: string): Promise<void> {
+    try {
+      const otp = await this.createOtp(
+        attendeeId,
+        this.canonicalizeEmail(email),
+        true,
+      );
+      await this.jobPublisher.publish(otp);
+    } catch (error: unknown) {
+      this.logDeliveryFailure(attendeeId, error);
+    }
   }
 
   async resend(email: string): Promise<ResendAttendeeEmailVerificationResult> {
@@ -57,10 +69,18 @@ export class AttendeeEmailVerificationService {
       return { accepted: true };
     }
 
-    return {
-      accepted: true,
-      issue: await this.issue(account.attendeeId, canonicalEmail, false),
-    };
+    try {
+      const otp = await this.createOtp(
+        account.attendeeId,
+        canonicalEmail,
+        false,
+      );
+      await this.jobPublisher.publish(otp);
+    } catch (error: unknown) {
+      this.logDeliveryFailure(account.attendeeId, error);
+    }
+
+    return { accepted: true };
   }
 
   async confirm(email: string, otp: string): Promise<{ emailVerified: true }> {
@@ -92,11 +112,11 @@ export class AttendeeEmailVerificationService {
     return { emailVerified: true };
   }
 
-  private async issue(
+  private async createOtp(
     attendeeId: string,
     canonicalEmail: string,
     startResendCooldown: boolean,
-  ): Promise<EmailVerificationOtpIssue> {
+  ): Promise<EmailVerificationOtp> {
     const otp = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const subject = this.protect('subject', canonicalEmail);
     const otpDigest = this.protect('otp', `${canonicalEmail}:${otp}`);
@@ -112,7 +132,7 @@ export class AttendeeEmailVerificationService {
       startResendCooldown ? EMAIL_VERIFICATION_RESEND_COOLDOWN_MS : 0,
     );
 
-    return { accountId: attendeeId, email: canonicalEmail, otp };
+    return { attendeeId, email: canonicalEmail, otp };
   }
 
   private canonicalizeEmail(email: string): string {
@@ -123,5 +143,13 @@ export class AttendeeEmailVerificationService {
     return createHmac('sha256', this.hmacSecret)
       .update(`${purpose}\0${value}`)
       .digest('hex');
+  }
+
+  private logDeliveryFailure(attendeeId: string, error: unknown): void {
+    this.logger.error({
+      attendee_id: attendeeId,
+      error_type: error instanceof Error ? error.name : 'UnknownError',
+      event: 'email_verification_job_failed',
+    });
   }
 }

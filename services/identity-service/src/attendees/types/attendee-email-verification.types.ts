@@ -18,21 +18,10 @@ export interface EmailVerificationOtpRecord {
   ttlMs: number;
 }
 
-export interface EmailVerificationOtpIssue {
-  accountId: string;
+export interface EmailVerificationOtp {
+  attendeeId: string;
   email: string;
   otp: string;
-}
-
-export interface EmailVerificationOtpIssuer {
-  issueInitial(
-    attendeeId: string,
-    email: string,
-  ): Promise<EmailVerificationOtpIssue>;
-}
-
-export interface AttendeeRegistrationEmailVerification {
-  start(attendeeId: string, email: string): Promise<void>;
 }
 
 export type EmailVerificationOtpMatch =
@@ -47,5 +36,4 @@ export interface EmailVerificationResendDecision {
 
 export interface ResendAttendeeEmailVerificationResult {
   accepted: true;
-  issue?: EmailVerificationOtpIssue;
 }
