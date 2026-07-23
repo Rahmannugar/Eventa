@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 
 import type { Observable } from 'rxjs';
-import type { Metadata } from '@grpc/grpc-js';
+import type { CallOptions, Metadata } from '@grpc/grpc-js';
 
 export const IDENTITY_PACKAGE_NAME = 'eventa.identity.v1';
 export const ATTENDEE_IDENTITY_SERVICE_NAME = 'AttendeeIdentityService';
@@ -23,6 +23,7 @@ export interface AttendeeIdentityServiceClient {
   registerAttendee(
     request: RegisterAttendeeRequest,
     metadata?: Metadata,
+    options?: CallOptions,
   ): Observable<RegisterAttendeeResponse>;
 }
 

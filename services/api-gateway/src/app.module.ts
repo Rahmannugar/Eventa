@@ -21,8 +21,13 @@ export class AppModule implements NestModule {
       module: AppModule,
       imports: [
         HealthModule,
-        RateLimitModule.register({ redisUrl: config.redisUrl }),
+        RateLimitModule.register({
+          connectTimeoutMs: config.redisConnectTimeoutMs,
+          operationTimeoutMs: config.redisOperationTimeoutMs,
+          redisUrl: config.redisUrl,
+        }),
         AttendeeRegistrationModule.register({
+          identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
         }),

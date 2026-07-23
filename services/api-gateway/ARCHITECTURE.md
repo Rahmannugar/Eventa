@@ -23,11 +23,13 @@ The implemented attendee flow is documented in the domain-owned [ARCHITECTURE.md
 
 Protected routes fail closed with `503` when Redis cannot make an admission decision. This does not make Gateway liveness false because Redis is a route dependency rather than a dependency of every Gateway capability.
 
-The shared HTTP filter keeps the public envelope stable and records a safe diagnostic code without exposing Redis, gRPC, or database details. Domain-owned API and architecture documents define their deliberate failure translations. Unsupported methods fall through to the normal unmatched-route response rather than relying on overlapping catch-all routes.
+The shared HTTP filter keeps the public envelope stable and records a safe diagnostic code without exposing Redis, gRPC, or database details. Domain-owned API and architecture documents define their deliberate failure translations. Dependency timeouts are operational failures, not client errors. Unsupported methods fall through to the normal unmatched-route response rather than relying on overlapping catch-all routes.
 
 ## Configuration and Lifecycle
 
-Gateway configuration is validated before the HTTP listener starts. Trusted-proxy hops are explicit. The Redis client connects lazily for the protected route, disables the offline queue and automatic reconnect loop, and closes during application shutdown.
+Gateway configuration is validated before the HTTP listener starts. Trusted-proxy hops are explicit. Node's HTTP header and request-body reception limits protect the public listener from incomplete requests; the keep-alive timeout bounds idle connection reuse. These transport limits do not masquerade as handler-execution deadlines.
+
+Each Identity gRPC command carries an explicit absolute deadline. Deadline expiry cancels the client call through grpc-js and maps to the stable public `503 REGISTRATION_UNAVAILABLE` response with an internal deadline-specific diagnostic. The Redis client connects lazily for the protected route, disables the offline queue and automatic reconnect loop, bounds connection establishment and each command, and closes during application shutdown.
 
 The Gateway intentionally exposes only liveness because it has no database or universal local dependency that would make every route unready.
 

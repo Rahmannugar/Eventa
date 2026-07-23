@@ -4,10 +4,16 @@ import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
   API_DOCS_ENABLED: 'true',
+  HTTP_HEADERS_TIMEOUT_MS: '10000',
+  HTTP_KEEP_ALIVE_TIMEOUT_MS: '5000',
+  HTTP_REQUEST_TIMEOUT_MS: '15000',
+  IDENTITY_GRPC_DEADLINE_MS: '3000',
   IDENTITY_GRPC_URL: 'identity-service:50051',
   PORT: '4100',
   PUBLIC_API_URL: 'http://localhost:4100',
   RATE_LIMIT_KEY_SECRET: 'a-development-secret-that-is-32-chars',
+  REDIS_CONNECT_TIMEOUT_MS: '1000',
+  REDIS_OPERATION_TIMEOUT_MS: '750',
   REDIS_URL: 'redis://redis:6379',
   TRUST_PROXY_HOPS: '1',
 };
@@ -24,10 +30,16 @@ describe('readRuntimeConfig', () => {
       }),
     ).toEqual({
       apiDocsEnabled: true,
+      httpHeadersTimeoutMs: 10000,
+      httpKeepAliveTimeoutMs: 5000,
+      httpRequestTimeoutMs: 15000,
+      identityGrpcDeadlineMs: 3000,
       identityGrpcUrl: 'identity-service:50051',
       port: 4100,
       publicApiUrl: 'http://localhost:4100',
       rateLimitKeySecret: 'a-development-secret-that-is-32-chars',
+      redisConnectTimeoutMs: 1000,
+      redisOperationTimeoutMs: 750,
       redisUrl: 'redis://redis:6379',
       trustProxyHops: 1,
     });
@@ -116,4 +128,28 @@ describe('readRuntimeConfig', () => {
       ).toThrow();
     },
   );
+
+  it.each([
+    'HTTP_HEADERS_TIMEOUT_MS',
+    'HTTP_KEEP_ALIVE_TIMEOUT_MS',
+    'HTTP_REQUEST_TIMEOUT_MS',
+    'IDENTITY_GRPC_DEADLINE_MS',
+    'REDIS_CONNECT_TIMEOUT_MS',
+    'REDIS_OPERATION_TIMEOUT_MS',
+  ])('requires a positive integer for %s', (name) => {
+    expect(() =>
+      readRuntimeConfig({ ...validEnvironment, [name]: '0' }),
+    ).toThrow(`${name} must be a positive integer`);
+  });
+
+  it('requires the HTTP header deadline to fit inside the request-body deadline', () => {
+    expect(() =>
+      readRuntimeConfig({
+        ...validEnvironment,
+        HTTP_HEADERS_TIMEOUT_MS: '16000',
+      }),
+    ).toThrow(
+      'HTTP_HEADERS_TIMEOUT_MS must not exceed HTTP_REQUEST_TIMEOUT_MS',
+    );
+  });
 });

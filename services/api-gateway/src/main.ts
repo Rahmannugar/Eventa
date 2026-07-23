@@ -33,6 +33,11 @@ async function bootstrap(): Promise<void> {
 
   app.enableShutdownHooks();
 
+  const server = app.getHttpServer();
+  server.requestTimeout = config.httpRequestTimeoutMs;
+  server.headersTimeout = config.httpHeadersTimeoutMs;
+  server.keepAliveTimeout = config.httpKeepAliveTimeoutMs;
+
   await app.listen(config.port);
 }
 

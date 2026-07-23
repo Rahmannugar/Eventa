@@ -11,7 +11,7 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 3. The shared Redis adapter atomically evaluates the token bucket and sliding windows.
 4. An admitted request passes the global validation pipe and reaches `AttendeeRegistrationController`.
 5. The controller creates `RegisterAttendeeCommand`.
-6. `RegisterAttendeeCommandHandler.handle()` forwards the typed gRPC command and request ID to Identity and maps the outcome to the public HTTP contract.
+6. `RegisterAttendeeCommandHandler.handle()` forwards the typed gRPC command, request ID, and absolute deadline to Identity and maps the outcome to the public HTTP contract.
 
 Registration is currently command-only. A query handler will be added only for a real read use case; this domain does not use a generic command bus.
 
@@ -21,6 +21,7 @@ Registration is currently command-only. A query handler will be added only for a
 - Submitted rate-limit subjects are HMACed before becoming Redis keys.
 - DTO validation and Identity validation remain independent trust boundaries.
 - Malformed JSON maps to `400`, validation to `422`, uniqueness conflicts to `409`, denial to `429`, and unavailable dependencies to `503`.
+- Identity deadline expiry cancels the Gateway's gRPC call, returns the same safe `503` contract, and retains a deadline-specific internal diagnostic for logs and traces.
 - Unsupported methods use the Gateway's ordinary unmatched-route behavior; there is no overlapping method catch-all.
 
 ## Dependencies and Observability

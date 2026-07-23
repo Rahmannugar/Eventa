@@ -43,14 +43,18 @@ export interface RateLimitStore {
   consume(attempt: AtomicRateLimitAttempt): Promise<RateLimitDecision>;
 }
 
-export interface RateLimitRedisClient {
-  readonly isOpen: boolean;
-  readonly isReady: boolean;
-  close(): Promise<void>;
-  connect(): Promise<unknown>;
+export interface RateLimitRedisCommandClient {
   eval(
     script: string,
     options: { arguments: string[]; keys: string[] },
   ): Promise<unknown>;
+}
+
+export interface RateLimitRedisClient extends RateLimitRedisCommandClient {
+  readonly isOpen: boolean;
+  readonly isReady: boolean;
+  close(): Promise<void>;
+  connect(): Promise<unknown>;
   on(event: 'error', listener: (error: Error) => void): unknown;
+  withAbortSignal(signal: AbortSignal): RateLimitRedisCommandClient;
 }

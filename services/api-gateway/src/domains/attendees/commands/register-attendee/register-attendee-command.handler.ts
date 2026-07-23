@@ -13,7 +13,10 @@ import { Metadata, status } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
-import { IDENTITY_GRPC_CLIENT } from '../../constants/attendee-registration.constants';
+import {
+  IDENTITY_GRPC_CLIENT,
+  IDENTITY_GRPC_DEADLINE_MS,
+} from '../../constants/attendee-registration.constants';
 import { ApiHttpException } from '../../../../http/errors/api-http.exception';
 import type { RegisterAttendeeCommand } from './register-attendee.command';
 
@@ -32,6 +35,8 @@ export class RegisterAttendeeCommandHandler implements OnModuleInit {
   constructor(
     @Inject(IDENTITY_GRPC_CLIENT)
     private readonly grpcClient: ClientGrpc,
+    @Inject(IDENTITY_GRPC_DEADLINE_MS)
+    private readonly identityGrpcDeadlineMs: number,
   ) {}
 
   onModuleInit(): void {
@@ -64,6 +69,9 @@ export class RegisterAttendeeCommandHandler implements OnModuleInit {
             username: command.username,
           },
           metadata,
+          {
+            deadline: new Date(Date.now() + this.identityGrpcDeadlineMs),
+          },
         ),
       );
     } catch (error: unknown) {
@@ -90,6 +98,15 @@ export class RegisterAttendeeCommandHandler implements OnModuleInit {
           'VALIDATION_FAILED',
           'Check the registration fields and try again.',
           { diagnosticCode: 'IDENTITY_VALIDATION_FAILED' },
+        );
+      }
+
+      if (code === status.DEADLINE_EXCEEDED) {
+        throw new ApiHttpException(
+          HttpStatus.SERVICE_UNAVAILABLE,
+          'REGISTRATION_UNAVAILABLE',
+          'Registration is temporarily unavailable. Try again later.',
+          { diagnosticCode: 'IDENTITY_RPC_DEADLINE_EXCEEDED' },
         );
       }
 

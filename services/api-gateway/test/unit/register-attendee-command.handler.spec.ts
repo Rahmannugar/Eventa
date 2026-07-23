@@ -3,10 +3,10 @@ import type {
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
 } from '@eventa/grpc-contracts';
-import { status, type Metadata } from '@grpc/grpc-js';
+import { status, type CallOptions, type Metadata } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
 import { of, throwError, type Observable } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RegisterAttendeeCommandHandler } from '../../src/domains/attendees/commands/register-attendee/register-attendee-command.handler';
 import { RegisterAttendeeCommand } from '../../src/domains/attendees/commands/register-attendee/register-attendee.command';
@@ -19,11 +19,12 @@ const registrationRequest = {
 
 function createService(
   registerAttendee: AttendeeIdentityServiceClient['registerAttendee'],
+  deadlineMs = 3_000,
 ): RegisterAttendeeCommandHandler {
   const grpcClient = {
     getService: () => ({ registerAttendee }),
   } as unknown as ClientGrpc;
-  const handler = new RegisterAttendeeCommandHandler(grpcClient);
+  const handler = new RegisterAttendeeCommandHandler(grpcClient, deadlineMs);
   handler.onModuleInit();
   return handler;
 }
@@ -38,8 +39,13 @@ function command(requestId = 'request-42'): RegisterAttendeeCommand {
 }
 
 describe('RegisterAttendeeCommandHandler', () => {
-  it('forwards the Gateway request ID through gRPC metadata', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('forwards the request ID and a bounded deadline through gRPC', async () => {
     let receivedMetadata: Metadata | undefined;
+    let receivedOptions: CallOptions | undefined;
     const response: RegisterAttendeeResponse = {
       attendeeId: '85aa26b8-253f-42a0-9a99-f83e1bb2d871',
       email: registrationRequest.email,
@@ -50,11 +56,14 @@ describe('RegisterAttendeeCommandHandler', () => {
       (
         _request: RegisterAttendeeRequest,
         metadata?: Metadata,
+        options?: CallOptions,
       ): Observable<RegisterAttendeeResponse> => {
         receivedMetadata = metadata;
+        receivedOptions = options;
         return of(response);
       },
     );
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
 
     await expect(handler.handle(command('client-request-42'))).resolves.toEqual(
       response,
@@ -62,6 +71,7 @@ describe('RegisterAttendeeCommandHandler', () => {
     expect(receivedMetadata?.get('x-request-id')).toEqual([
       'client-request-42',
     ]);
+    expect(receivedOptions).toEqual({ deadline: new Date(13_000) });
   });
 
   it.each([
@@ -100,6 +110,24 @@ describe('RegisterAttendeeCommandHandler', () => {
 
     await expect(handler.handle(command())).rejects.toMatchObject({
       diagnosticCode: 'IDENTITY_RPC_UNAVAILABLE',
+      response: {
+        code: 'REGISTRATION_UNAVAILABLE',
+        message: 'Registration is temporarily unavailable. Try again later.',
+        statusCode: 503,
+      },
+    });
+  });
+
+  it('identifies an expired Identity deadline behind the stable 503 response', async () => {
+    const handler = createService(() =>
+      throwError(() => ({
+        code: status.DEADLINE_EXCEEDED,
+        details: 'Deadline exceeded',
+      })),
+    );
+
+    await expect(handler.handle(command())).rejects.toMatchObject({
+      diagnosticCode: 'IDENTITY_RPC_DEADLINE_EXCEEDED',
       response: {
         code: 'REGISTRATION_UNAVAILABLE',
         message: 'Registration is temporarily unavailable. Try again later.',

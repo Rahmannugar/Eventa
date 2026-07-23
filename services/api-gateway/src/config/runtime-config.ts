@@ -1,9 +1,15 @@
 export interface RuntimeConfig {
   apiDocsEnabled: boolean;
+  httpHeadersTimeoutMs: number;
+  httpKeepAliveTimeoutMs: number;
+  httpRequestTimeoutMs: number;
+  identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   port: number;
   publicApiUrl: string;
   rateLimitKeySecret: string;
+  redisConnectTimeoutMs: number;
+  redisOperationTimeoutMs: number;
   redisUrl: string;
   trustProxyHops: number;
 }
@@ -29,6 +35,19 @@ function readRequiredString(
   }
 
   return value.trim();
+}
+
+function readPositiveInteger(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+): number {
+  const value = Number(readRequiredString(environment, name));
+
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+
+  return value;
 }
 
 export function readRuntimeConfig(
@@ -91,12 +110,45 @@ export function readRuntimeConfig(
     throw new Error('TRUST_PROXY_HOPS must be a non-negative integer');
   }
 
+  const httpHeadersTimeoutMs = readPositiveInteger(
+    environment,
+    'HTTP_HEADERS_TIMEOUT_MS',
+  );
+  const httpRequestTimeoutMs = readPositiveInteger(
+    environment,
+    'HTTP_REQUEST_TIMEOUT_MS',
+  );
+
+  if (httpHeadersTimeoutMs > httpRequestTimeoutMs) {
+    throw new Error(
+      'HTTP_HEADERS_TIMEOUT_MS must not exceed HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
+
   return {
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
+    httpHeadersTimeoutMs,
+    httpKeepAliveTimeoutMs: readPositiveInteger(
+      environment,
+      'HTTP_KEEP_ALIVE_TIMEOUT_MS',
+    ),
+    httpRequestTimeoutMs,
+    identityGrpcDeadlineMs: readPositiveInteger(
+      environment,
+      'IDENTITY_GRPC_DEADLINE_MS',
+    ),
     identityGrpcUrl,
     port,
     publicApiUrl: parsedPublicApiUrl.toString().replace(/\/$/, ''),
     rateLimitKeySecret,
+    redisConnectTimeoutMs: readPositiveInteger(
+      environment,
+      'REDIS_CONNECT_TIMEOUT_MS',
+    ),
+    redisOperationTimeoutMs: readPositiveInteger(
+      environment,
+      'REDIS_OPERATION_TIMEOUT_MS',
+    ),
     redisUrl,
     trustProxyHops,
   };

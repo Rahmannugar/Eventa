@@ -7,6 +7,9 @@ The API Gateway is Eventa's public HTTP boundary. It owns transport validation, 
 - HTTP port: configured by `PORT`; local Compose publishes `3004`.
 - Identity dependency: configured by `IDENTITY_GRPC_URL`.
 - Redis rate-limit dependency: configured by `REDIS_URL`.
+- HTTP header, request-body, and keep-alive limits: configured by the corresponding `HTTP_*_TIMEOUT_MS` variables.
+- Identity RPC deadline: configured by `IDENTITY_GRPC_DEADLINE_MS`.
+- Redis connection and command budgets: configured by `REDIS_CONNECT_TIMEOUT_MS` and `REDIS_OPERATION_TIMEOUT_MS`.
 - Interactive API reference: `/docs` when `API_DOCS_ENABLED=true`.
 - Liveness: `/health/live`.
 - OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.

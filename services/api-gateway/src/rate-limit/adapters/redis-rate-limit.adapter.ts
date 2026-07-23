@@ -224,6 +224,7 @@ export class RedisRateLimitAdapter
   constructor(
     @Inject(RATE_LIMIT_REDIS_CLIENT)
     private readonly client: RateLimitRedisClient,
+    private readonly operationTimeoutMs = 750,
   ) {
     this.client.on('error', (error: Error) => {
       this.logger.error(`Redis rate-limit connection error: ${error.message}`);
@@ -239,24 +240,26 @@ export class RedisRateLimitAdapter
 
           const secondaryEnabled =
             attempt.secondarySlidingWindowKey === undefined ? 0 : 1;
-          const result = await this.client.eval(HYBRID_RATE_LIMIT_SCRIPT, {
-            keys: [
-              attempt.tokenBucketKey,
-              attempt.primarySlidingWindowKey,
-              attempt.secondarySlidingWindowKey ??
+          const result = await this.client
+            .withAbortSignal(AbortSignal.timeout(this.operationTimeoutMs))
+            .eval(HYBRID_RATE_LIMIT_SCRIPT, {
+              keys: [
+                attempt.tokenBucketKey,
                 attempt.primarySlidingWindowKey,
-            ],
-            arguments: [
-              String(attempt.rules.tokenBucket.capacity),
-              String(attempt.rules.tokenBucket.refillIntervalMs),
-              String(attempt.rules.primarySlidingWindow.windowMs),
-              String(attempt.rules.primarySlidingWindow.limit),
-              String(secondaryEnabled),
-              String(attempt.rules.secondarySlidingWindow.windowMs),
-              String(attempt.rules.secondarySlidingWindow.limit),
-              attempt.member,
-            ],
-          });
+                attempt.secondarySlidingWindowKey ??
+                  attempt.primarySlidingWindowKey,
+              ],
+              arguments: [
+                String(attempt.rules.tokenBucket.capacity),
+                String(attempt.rules.tokenBucket.refillIntervalMs),
+                String(attempt.rules.primarySlidingWindow.windowMs),
+                String(attempt.rules.primarySlidingWindow.limit),
+                String(secondaryEnabled),
+                String(attempt.rules.secondarySlidingWindow.windowMs),
+                String(attempt.rules.secondarySlidingWindow.limit),
+                attempt.member,
+              ],
+            });
 
           return parseDecision(result, attempt);
         } catch (error: unknown) {
