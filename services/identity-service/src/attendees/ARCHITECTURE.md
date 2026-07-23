@@ -2,7 +2,7 @@
 
 ## Ownership
 
-The attendees domain owns attendee principals, credentials, email-verification state, and future attendee sessions. Admin identities remain a separate Identity domain, allowing the same human email to identify independent attendee and admin principals.
+The attendees domain owns attendee principals, credentials, and email-verification state. Admin identities remain a separate Identity domain, allowing the same human email to identify independent attendee and admin principals.
 
 ## Registration Flow
 
@@ -14,7 +14,7 @@ The attendees domain owns attendee principals, credentials, email-verification s
 6. One PostgreSQL insert creates the account and returns its public registration projection.
 7. Named uniqueness violations become domain conflicts and then gRPC `ALREADY_EXISTS`.
 
-Registration is command-only. A query handler will be introduced when the domain gains an actual read use case; no generic command bus is used.
+Registration is command-only and does not use a generic command bus.
 
 ## State and Invariants
 
@@ -26,7 +26,15 @@ The domain owns `attendee_accounts`: `id`, canonical `email`, canonical `usernam
 - Registration leaves `email_verified_at` null.
 - There is no separate attendee profile because no current behavior requires one.
 
-Verification challenge issuance, delivery, and confirmation belong to this domain but remain unimplemented in the next slices of the current story.
+## Internal Email-Verification OTP Lifecycle
+
+`AttendeeEmailVerificationService` creates cryptographically random six-digit OTPs and returns the plaintext value only to its in-process caller. It protects both the canonical email subject and OTP with purpose-separated HMAC-SHA256 values before calling `RedisEmailVerificationOtpStore`; Redis keys, stored fields, logs, and traces never contain the email or plaintext OTP.
+
+Redis stores one OTP record per protected email subject for 15 minutes. Saving a replacement overwrites the previous OTP and resets its five-guess allowance. One Lua operation checks an OTP and atomically decrements incorrect guesses; the fifth incorrect guess removes the OTP. A confirmed OTP keeps its confirmed state only for the original Redis lifetime so an exact retry returns the same success without extending validity.
+
+Resend admission uses one atomic 60-second per-email cooldown before account lookup, including unknown and already-verified emails. There is no separate hourly product cap inside Identity.
+
+`PostgresAttendeeAccountRepository.markEmailVerified()` uses `COALESCE(email_verified_at, NOW())`, so repeated or concurrent confirmation preserves the first database timestamp. Redis confirmation is recorded after the database update; if that Redis call fails, retrying the same OTP repeats the idempotent database operation.
 
 ## Failure and Observability
 

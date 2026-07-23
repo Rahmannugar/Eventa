@@ -17,7 +17,7 @@ src/rate-limit/
 
 Domain code decides which subjects and numeric rules protect an endpoint. The shared rate-limit capability consumes supplied hybrid policies but knows nothing about attendee fields. `AppModule` owns one Gateway-wide Redis client and exports the store capability; domains reuse it without creating clients. Redis remains explicit only at the concrete adapter leaf.
 
-The implemented attendee flow is documented in the domain-owned [ARCHITECTURE.md](src/domains/attendees/ARCHITECTURE.md). Future substantial domains follow the same ownership model and keep their command/query details beside their code.
+The implemented attendee flow is documented in the domain-owned [ARCHITECTURE.md](src/domains/attendees/ARCHITECTURE.md).
 
 ## Failure Behavior
 

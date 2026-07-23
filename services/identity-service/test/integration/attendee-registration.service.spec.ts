@@ -212,4 +212,47 @@ describe('AttendeeRegistrationService integration', () => {
 
     expect(accountCount?.value).toBe(1);
   });
+
+  it('marks email verification idempotently without changing the original timestamp', async () => {
+    const registration = await service.register(
+      registrationInput(
+        'verify@example.com',
+        'verification-password',
+        'verify_user',
+      ),
+    );
+
+    await expect(repository.findByEmail('verify@example.com')).resolves.toEqual(
+      {
+        attendeeId: registration.attendeeId,
+        emailVerified: false,
+      },
+    );
+    await expect(
+      repository.markEmailVerified(registration.attendeeId),
+    ).resolves.toBe(true);
+
+    const [firstUpdate] = await database
+      .select({ emailVerifiedAt: attendeeAccounts.emailVerifiedAt })
+      .from(attendeeAccounts)
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+
+    await expect(
+      repository.markEmailVerified(registration.attendeeId),
+    ).resolves.toBe(true);
+
+    const [secondUpdate] = await database
+      .select({ emailVerifiedAt: attendeeAccounts.emailVerifiedAt })
+      .from(attendeeAccounts)
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+
+    expect(firstUpdate?.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(secondUpdate?.emailVerifiedAt).toEqual(firstUpdate?.emailVerifiedAt);
+    await expect(repository.findByEmail('verify@example.com')).resolves.toEqual(
+      {
+        attendeeId: registration.attendeeId,
+        emailVerified: true,
+      },
+    );
+  });
 });

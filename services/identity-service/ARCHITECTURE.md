@@ -2,9 +2,9 @@
 
 ## Ownership
 
-Identity owns attendee and admin security principals, credentials, verification, and sessions. Each substantial identity domain owns its application flow, state rules, and concise API and architecture documentation.
+Identity owns attendee and admin security principals, credentials, and verification state. Each implemented identity domain owns its application flow, state rules, and concise API and architecture documentation.
 
-The current implementation contains the Attendees domain only. Its registration command, state, invariants, and failure behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
+The current implementation contains the Attendees domain only. Its registration behavior and internal Redis-backed email-verification OTP lifecycle are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md). Registration remains the only exposed Identity gRPC operation.
 
 ## Service Composition
 
@@ -12,6 +12,7 @@ The current implementation contains the Attendees domain only. Its registration 
 - Domain modules expose gRPC command/query controllers and depend on capability-oriented ports.
 - The service composition root selects concrete persistence, security, and observability decorators.
 - Business domains do not own process startup or cross-domain infrastructure client lifecycle.
+- `AttendeesModule` owns one long-lived Redis client for its temporary OTP store and closes it during graceful shutdown.
 
 ## Database and Migrations
 
@@ -21,7 +22,7 @@ Migration `0001_move_username_to_attendee_accounts` forwards already-migrated da
 
 ## Health and Failure
 
-Liveness confirms the process is running. Readiness queries PostgreSQL because Identity cannot serve its current business capability without its database.
+Liveness confirms the process is running. Readiness queries PostgreSQL because registration, the currently exposed business capability, requires it. Redis is not a readiness dependency because no exposed operation currently uses the internal OTP capability.
 
 Unexpected infrastructure failures propagate as internal gRPC failures unless a domain deliberately defines a stable translation. Domain documents own those expected outcomes.
 

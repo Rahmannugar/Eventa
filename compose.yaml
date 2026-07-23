@@ -34,6 +34,17 @@ services:
       retries: 10
     logging: *local-logging
 
+  identity-redis:
+    image: redis:7-alpine
+    ports:
+      - '57379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -63,6 +74,8 @@ services:
     depends_on:
       identity-migration:
         condition: service_completed_successfully
+      identity-redis:
+        condition: service_healthy
     restart: unless-stopped
     logging: *local-logging
 

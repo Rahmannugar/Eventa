@@ -69,7 +69,7 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
+The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, the Redis-backed registration rate-limit store, the Identity-owned Redis OTP store, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
 
 Start the stack with:
 

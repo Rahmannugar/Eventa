@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
+import { eq, sql } from 'drizzle-orm';
 
 import { IDENTITY_DATABASE } from '../../database/database.constants';
 import type { IdentityDatabase } from '../../database/database.types';
@@ -12,6 +13,10 @@ import type {
   AttendeeAccountRepository,
   CreateAttendeeAccount,
 } from '../types/attendee-account-repository.types';
+import type {
+  AttendeeEmailVerificationAccount,
+  AttendeeEmailVerificationRepository,
+} from '../types/attendee-email-verification.types';
 import type { RegisteredAttendee } from '../types/attendee-registration.types';
 
 const UNIQUE_VIOLATION = '23505';
@@ -41,7 +46,9 @@ function readDatabaseErrorField(
   return undefined;
 }
 
-export class PostgresAttendeeAccountRepository implements AttendeeAccountRepository {
+export class PostgresAttendeeAccountRepository
+  implements AttendeeAccountRepository, AttendeeEmailVerificationRepository
+{
   constructor(
     @Inject(IDENTITY_DATABASE)
     private readonly database: IdentityDatabase,
@@ -98,5 +105,39 @@ export class PostgresAttendeeAccountRepository implements AttendeeAccountReposit
         kind: 'client',
       },
     );
+  }
+
+  async findByEmail(
+    email: string,
+  ): Promise<AttendeeEmailVerificationAccount | undefined> {
+    const [account] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        emailVerifiedAt: attendeeAccounts.emailVerifiedAt,
+      })
+      .from(attendeeAccounts)
+      .where(eq(attendeeAccounts.email, email))
+      .limit(1);
+
+    if (account === undefined) {
+      return undefined;
+    }
+
+    return {
+      attendeeId: account.attendeeId,
+      emailVerified: account.emailVerifiedAt !== null,
+    };
+  }
+
+  async markEmailVerified(attendeeId: string): Promise<boolean> {
+    const [account] = await this.database
+      .update(attendeeAccounts)
+      .set({
+        emailVerifiedAt: sql`COALESCE(${attendeeAccounts.emailVerifiedAt}, NOW())`,
+      })
+      .where(eq(attendeeAccounts.id, attendeeId))
+      .returning({ attendeeId: attendeeAccounts.id });
+
+    return account !== undefined;
   }
 }

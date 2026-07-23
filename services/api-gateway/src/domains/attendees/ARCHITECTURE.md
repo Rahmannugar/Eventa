@@ -13,8 +13,6 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 5. The controller passes the validated input to `AttendeeRegistrationService.register()`.
 6. The service forwards the typed gRPC request, request ID, and absolute deadline to Identity and maps the outcome to the public HTTP contract.
 
-Separate read services or projections will be added only when a real access pattern requires them.
-
 ## Invariants and Failure Behavior
 
 - Rate limiting fails closed with `503` when Redis cannot make an admission decision.
