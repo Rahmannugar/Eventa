@@ -57,6 +57,8 @@ API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/T
 
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
 
+Protobuf files under `packages/grpc-contracts/proto` are authoritative for gRPC packages, services, messages, fields, and field numbers. Their directories mirror the full protobuf package namespace. Pinned Buf tooling enforces schema conventions and orchestrates pinned ts-proto generation; committed generated TypeScript supplies NestJS message and service types. Runtime-only concerns that protobuf cannot express, such as loader paths or grpc-js call options for deadlines, remain narrow handwritten transport code. Buf uses package-level compatibility checks so files may be reorganized inside the same protobuf package without treating a wire-compatible change as breaking.
+
 RabbitMQ DLQs are used only for actionable failed work with a defined recovery path, not as a default for every queue. Replaceable, best-effort, and time-bounded jobs use owned failed or expired states, resend, reconciliation, or rebuild behavior instead. Production DLQs are bounded, observable through RabbitMQ and OpenTelemetry signals, alerted through Grafana, and reviewed through audited manual recovery; review automation remains read-only.
 
 ## Current Registration Flow

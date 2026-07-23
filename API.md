@@ -19,7 +19,9 @@ This root file remains a compact map as Eventa grows; it does not duplicate ever
 
 ## Internal Contracts
 
-Synchronous service commands and queries use gRPC. The current contract is `eventa.identity.v1.AttendeeIdentityService`, defined in [packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto](packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto).
+Synchronous service commands and queries use gRPC. The current contract is `eventa.identity.v1.AttendeeIdentityService`, defined in [packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto).
+
+The protobuf schemas are authoritative. Buf validates and generates the TypeScript message, client, controller, package, and service declarations exported by `@eventa/grpc-contracts`; consumers do not hand-maintain protobuf-derived TypeScript shapes.
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 

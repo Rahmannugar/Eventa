@@ -40,6 +40,7 @@ Services use explicit application services for business use cases, thin transpor
 - Kafka
 - RabbitMQ
 - gRPC
+- Buf and ts-proto
 - Stripe
 - Resend
 - Ahnlich (vector DB, AI proxy)

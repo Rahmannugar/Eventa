@@ -4,6 +4,7 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@bufbuild/buf': true
   '@nestjs/core': true
   '@scarf/scarf': false
   argon2: true

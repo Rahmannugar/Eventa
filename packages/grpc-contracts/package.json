@@ -10,15 +10,23 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "lint": "eslint src test --max-warnings 0",
-    "test": "vitest run test/unit",
+    "lint": "node scripts/run-buf.mjs lint && eslint src scripts --ignore-pattern src/generated --max-warnings 0",
+    "proto:breaking": "node scripts/run-buf.mjs breaking --against ../../.git#subdir=packages/grpc-contracts/proto",
+    "proto:check": "node scripts/check-generated.mjs",
+    "proto:generate": "node scripts/run-buf.mjs generate",
+    "test": "pnpm proto:check",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
     "rxjs": "^7.8.2"
   },
+  "peerDependencies": {
+    "@nestjs/microservices": "^11.0.0"
+  },
   "devDependencies": {
-    "@grpc/proto-loader": "^0.8.0"
+    "@bufbuild/buf": "1.72.0",
+    "@nestjs/microservices": "^11.1.28",
+    "ts-proto": "2.12.0"
   }
 }

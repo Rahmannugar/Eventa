@@ -1,0 +1,12 @@
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-ts_proto
+    out: src/generated
+    strategy: all
+    opt:
+      - addGrpcMetadata=true
+      - esModuleInterop=true
+      - fileSuffix=.generated
+      - nestJs=true
+      - returnObservable=true

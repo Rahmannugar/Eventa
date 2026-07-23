@@ -1,5 +1,6 @@
 coverage/
 dist/
+packages/grpc-contracts/src/generated/
 local/
 node_modules/
 pnpm-lock.yaml

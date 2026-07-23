@@ -1,11 +1,12 @@
 import { Controller, Inject } from '@nestjs/common';
 import {
-  ATTENDEE_IDENTITY_SERVICE_NAME,
+  AttendeeIdentityServiceControllerMethods,
   type AttendeeIdentityServiceController,
   type RegisterAttendeeResponse,
 } from '@eventa/grpc-contracts';
 import { status } from '@grpc/grpc-js';
-import { GrpcMethod, RpcException } from '@nestjs/microservices';
+import { RpcException } from '@nestjs/microservices';
+import { from, type Observable } from 'rxjs';
 
 import { ATTENDEE_REGISTRAR } from '../constants/attendee-registration.constants';
 import {
@@ -16,14 +17,20 @@ import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
 import type { AttendeeRegistrar } from '../types/attendee-registration.types';
 
 @Controller()
+@AttendeeIdentityServiceControllerMethods()
 export class AttendeeRegistrationController implements AttendeeIdentityServiceController {
   constructor(
     @Inject(ATTENDEE_REGISTRAR)
     private readonly attendeeRegistrar: AttendeeRegistrar,
   ) {}
 
-  @GrpcMethod(ATTENDEE_IDENTITY_SERVICE_NAME, 'RegisterAttendee')
-  async registerAttendee(
+  registerAttendee(
+    request: RegisterAttendeeDto,
+  ): Observable<RegisterAttendeeResponse> {
+    return from(this.handleRegistration(request));
+  }
+
+  private async handleRegistration(
     request: RegisterAttendeeDto,
   ): Promise<RegisterAttendeeResponse> {
     try {

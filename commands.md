@@ -86,6 +86,26 @@ Run linting, type-checking, all tests, builds, and the formatting check.
 pnpm verify
 ```
 
+## gRPC contracts
+
+Regenerate committed TypeScript contracts from the authoritative protobuf schemas.
+
+```bash
+pnpm proto:generate
+```
+
+Regenerate and fail if the existing generated output was stale.
+
+```bash
+pnpm proto:check
+```
+
+Compare current protobuf schemas with the Git baseline using Eventa's package-level compatibility policy.
+
+```bash
+pnpm proto:breaking
+```
+
 ## Identity Service
 
 Run Identity migrations in a temporary container.

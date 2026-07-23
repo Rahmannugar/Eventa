@@ -1,5 +1,4 @@
 import type {
-  AttendeeIdentityServiceClient,
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
 } from '@eventa/grpc-contracts';
@@ -12,6 +11,7 @@ import {
   AttendeeRegistrationService,
   type RegisterAttendeeInput,
 } from '../../src/domains/attendees/services/attendee-registration.service';
+import type { DeadlineAwareAttendeeIdentityServiceClient } from '../../src/domains/attendees/types/attendee-identity-grpc-client.types';
 
 const registrationRequest = {
   email: 'attendee@example.com',
@@ -20,7 +20,7 @@ const registrationRequest = {
 };
 
 function createService(
-  registerAttendee: AttendeeIdentityServiceClient['registerAttendee'],
+  registerAttendee: DeadlineAwareAttendeeIdentityServiceClient['registerAttendee'],
   deadlineMs = 3_000,
 ): AttendeeRegistrationService {
   const grpcClient = {

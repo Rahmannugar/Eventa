@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import {
   ATTENDEE_IDENTITY_SERVICE_NAME,
-  type AttendeeIdentityServiceClient,
   type RegisterAttendeeResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -17,6 +16,7 @@ import {
   IDENTITY_GRPC_CLIENT,
   IDENTITY_GRPC_DEADLINE_MS,
 } from '../constants/attendee-registration.constants';
+import type { DeadlineAwareAttendeeIdentityServiceClient } from '../types/attendee-identity-grpc-client.types';
 import { ApiHttpException } from '../../../http/errors/api-http.exception';
 export interface RegisterAttendeeInput {
   email: string;
@@ -35,7 +35,7 @@ function readErrorField(error: unknown, field: string): unknown {
 
 @Injectable()
 export class AttendeeRegistrationService implements OnModuleInit {
-  private identityService?: AttendeeIdentityServiceClient;
+  private identityService?: DeadlineAwareAttendeeIdentityServiceClient;
 
   constructor(
     @Inject(IDENTITY_GRPC_CLIENT)
@@ -46,7 +46,7 @@ export class AttendeeRegistrationService implements OnModuleInit {
 
   onModuleInit(): void {
     this.identityService =
-      this.grpcClient.getService<AttendeeIdentityServiceClient>(
+      this.grpcClient.getService<DeadlineAwareAttendeeIdentityServiceClient>(
         ATTENDEE_IDENTITY_SERVICE_NAME,
       );
   }
