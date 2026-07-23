@@ -25,7 +25,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 - Analytics Service
 - Notification Service
 
-Every service applies CQRS internally: commands own state transitions and invariants, while queries own reads and projections. CQRS does not require event sourcing, separate command/query databases, or a framework command bus. Every deployable owns `README.md`, `API.md`, and `ARCHITECTURE.md`; each substantial domain owns concise `API.md` and `ARCHITECTURE.md` files without duplicating machine-readable contracts.
+Services use explicit application services for business use cases, thin transport controllers, persistence-only repositories, and capability adapters for infrastructure. Separate read models are introduced only when a real access pattern justifies them. Every deployable owns `README.md`, `API.md`, and `ARCHITECTURE.md`; each substantial domain owns concise `API.md` and `ARCHITECTURE.md` files without duplicating machine-readable contracts.
 
 ## Technology
 

@@ -11,7 +11,7 @@ import {
   IDENTITY_GRPC_CLIENT,
   IDENTITY_GRPC_DEADLINE_MS,
 } from './constants/attendee-registration.constants';
-import { RegisterAttendeeCommandHandler } from './commands/register-attendee/register-attendee-command.handler';
+import { AttendeeRegistrationService } from './services/attendee-registration.service';
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
 import { AttendeeRegistrationRateLimitGuard } from './rate-limit/guards/attendee-registration-rate-limit.guard';
 import { AttendeeRegistrationRateLimitService } from './rate-limit/services/attendee-registration-rate-limit.service';
@@ -46,7 +46,7 @@ export class AttendeeRegistrationModule {
           provide: IDENTITY_GRPC_DEADLINE_MS,
           useValue: options.identityGrpcDeadlineMs,
         },
-        RegisterAttendeeCommandHandler,
+        AttendeeRegistrationService,
         {
           provide: AttendeeRegistrationRateLimitService,
           useFactory: (store: RateLimitStore) =>

@@ -1,4 +1,4 @@
-import type { RegisteredAttendee } from '../commands/register-attendee/register-attendee.command';
+import type { RegisteredAttendee } from './attendee-registration.types';
 
 export interface CreateAttendeeAccount {
   email: string;
@@ -6,6 +6,6 @@ export interface CreateAttendeeAccount {
   username: string;
 }
 
-export interface AttendeeAccountWriter {
+export interface AttendeeAccountRepository {
   create(input: CreateAttendeeAccount): Promise<RegisteredAttendee>;
 }

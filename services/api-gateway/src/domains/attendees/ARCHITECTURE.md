@@ -2,18 +2,18 @@
 
 ## Ownership
 
-The Gateway attendees domain owns the public attendee transport boundary: request validation, registration-specific abuse controls, CQRS command construction, gRPC translation, and stable HTTP error mapping. Identity owns attendee-account state and invariants.
+The Gateway attendees domain owns the public attendee transport boundary: request validation, abuse controls, gRPC translation, and stable HTTP error mapping. Identity owns attendee-account state and invariants.
 
-## Registration Command Flow
+## Registration Flow
 
 1. `AttendeeRegistrationRateLimitGuard` derives the trusted client IP and optional email subject before DTO validation.
 2. `AttendeeRegistrationRateLimitService` canonicalizes and HMACs subjects, then supplies the registration policy to the shared rate-limit capability.
 3. The shared Redis adapter atomically evaluates the token bucket and sliding windows.
 4. An admitted request passes the global validation pipe and reaches `AttendeeRegistrationController`.
-5. The controller creates `RegisterAttendeeCommand`.
-6. `RegisterAttendeeCommandHandler.handle()` forwards the typed gRPC command, request ID, and absolute deadline to Identity and maps the outcome to the public HTTP contract.
+5. The controller passes the validated input to `AttendeeRegistrationService.register()`.
+6. The service forwards the typed gRPC request, request ID, and absolute deadline to Identity and maps the outcome to the public HTTP contract.
 
-Registration is currently command-only. A query handler will be added only for a real read use case; this domain does not use a generic command bus.
+Separate read services or projections will be added only when a real access pattern requires them.
 
 ## Invariants and Failure Behavior
 
@@ -26,4 +26,4 @@ Registration is currently command-only. A query handler will be added only for a
 
 ## Dependencies and Observability
 
-The domain consumes the Gateway-wide rate-limit store and Identity gRPC client. It owns neither client lifecycle. The Gateway's HTTP middleware and automatic HTTP/gRPC instrumentation record transport signals, so controllers and command handlers do not call telemetry APIs.
+The domain consumes the Gateway-wide rate-limit store and Identity gRPC client. It owns neither client lifecycle. The Gateway's HTTP middleware and automatic HTTP/gRPC instrumentation record transport signals, so controllers and application services do not call telemetry APIs.

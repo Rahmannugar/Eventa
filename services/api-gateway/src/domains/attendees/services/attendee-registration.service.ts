@@ -16,9 +16,14 @@ import { firstValueFrom } from 'rxjs';
 import {
   IDENTITY_GRPC_CLIENT,
   IDENTITY_GRPC_DEADLINE_MS,
-} from '../../constants/attendee-registration.constants';
-import { ApiHttpException } from '../../../../http/errors/api-http.exception';
-import type { RegisterAttendeeCommand } from './register-attendee.command';
+} from '../constants/attendee-registration.constants';
+import { ApiHttpException } from '../../../http/errors/api-http.exception';
+export interface RegisterAttendeeInput {
+  email: string;
+  password: string;
+  requestId: string;
+  username: string;
+}
 
 function readErrorField(error: unknown, field: string): unknown {
   if (typeof error !== 'object' || error === null || !(field in error)) {
@@ -29,7 +34,7 @@ function readErrorField(error: unknown, field: string): unknown {
 }
 
 @Injectable()
-export class RegisterAttendeeCommandHandler implements OnModuleInit {
+export class AttendeeRegistrationService implements OnModuleInit {
   private identityService?: AttendeeIdentityServiceClient;
 
   constructor(
@@ -46,8 +51,8 @@ export class RegisterAttendeeCommandHandler implements OnModuleInit {
       );
   }
 
-  async handle(
-    command: RegisterAttendeeCommand,
+  async register(
+    input: RegisterAttendeeInput,
   ): Promise<RegisterAttendeeResponse> {
     if (this.identityService === undefined) {
       throw new ApiHttpException(
@@ -60,13 +65,13 @@ export class RegisterAttendeeCommandHandler implements OnModuleInit {
 
     try {
       const metadata = new Metadata();
-      metadata.set('x-request-id', command.requestId);
+      metadata.set('x-request-id', input.requestId);
       return await firstValueFrom(
         this.identityService.registerAttendee(
           {
-            email: command.email,
-            password: command.password,
-            username: command.username,
+            email: input.email,
+            password: input.password,
+            username: input.username,
           },
           metadata,
           {

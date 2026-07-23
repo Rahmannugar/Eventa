@@ -9,10 +9,10 @@ import {
   UsernameUnavailableError,
 } from '../errors/attendee-registration.errors';
 import type {
-  AttendeeAccountWriter,
+  AttendeeAccountRepository,
   CreateAttendeeAccount,
-} from '../types/attendee-account-write.types';
-import type { RegisteredAttendee } from '../commands/register-attendee/register-attendee.command';
+} from '../types/attendee-account-repository.types';
+import type { RegisteredAttendee } from '../types/attendee-registration.types';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -41,7 +41,7 @@ function readDatabaseErrorField(
   return undefined;
 }
 
-export class AttendeeAccountWriteRepository implements AttendeeAccountWriter {
+export class PostgresAttendeeAccountRepository implements AttendeeAccountRepository {
   constructor(
     @Inject(IDENTITY_DATABASE)
     private readonly database: IdentityDatabase,

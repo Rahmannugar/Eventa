@@ -7,20 +7,19 @@ import {
 import { status } from '@grpc/grpc-js';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 
-import { RegisterAttendeeCommand } from '../commands/register-attendee/register-attendee.command';
-import { REGISTER_ATTENDEE_HANDLER } from '../constants/attendee-registration.constants';
+import { ATTENDEE_REGISTRAR } from '../constants/attendee-registration.constants';
 import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../errors/attendee-registration.errors';
 import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
-import type { RegisterAttendeeHandler } from '../commands/register-attendee/register-attendee.command';
+import type { AttendeeRegistrar } from '../types/attendee-registration.types';
 
 @Controller()
 export class AttendeeRegistrationController implements AttendeeIdentityServiceController {
   constructor(
-    @Inject(REGISTER_ATTENDEE_HANDLER)
-    private readonly registerAttendeeHandler: RegisterAttendeeHandler,
+    @Inject(ATTENDEE_REGISTRAR)
+    private readonly attendeeRegistrar: AttendeeRegistrar,
   ) {}
 
   @GrpcMethod(ATTENDEE_IDENTITY_SERVICE_NAME, 'RegisterAttendee')
@@ -28,13 +27,7 @@ export class AttendeeRegistrationController implements AttendeeIdentityServiceCo
     request: RegisterAttendeeDto,
   ): Promise<RegisterAttendeeResponse> {
     try {
-      return await this.registerAttendeeHandler.handle(
-        new RegisterAttendeeCommand(
-          request.email,
-          request.password,
-          request.username,
-        ),
-      );
+      return await this.attendeeRegistrar.register(request);
     } catch (error: unknown) {
       if (
         error instanceof EmailAlreadyRegisteredError ||

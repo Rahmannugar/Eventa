@@ -8,8 +8,10 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { of, throwError, type Observable } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { RegisterAttendeeCommandHandler } from '../../src/domains/attendees/commands/register-attendee/register-attendee-command.handler';
-import { RegisterAttendeeCommand } from '../../src/domains/attendees/commands/register-attendee/register-attendee.command';
+import {
+  AttendeeRegistrationService,
+  type RegisterAttendeeInput,
+} from '../../src/domains/attendees/services/attendee-registration.service';
 
 const registrationRequest = {
   email: 'attendee@example.com',
@@ -20,25 +22,20 @@ const registrationRequest = {
 function createService(
   registerAttendee: AttendeeIdentityServiceClient['registerAttendee'],
   deadlineMs = 3_000,
-): RegisterAttendeeCommandHandler {
+): AttendeeRegistrationService {
   const grpcClient = {
     getService: () => ({ registerAttendee }),
   } as unknown as ClientGrpc;
-  const handler = new RegisterAttendeeCommandHandler(grpcClient, deadlineMs);
-  handler.onModuleInit();
-  return handler;
+  const service = new AttendeeRegistrationService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
 }
 
-function command(requestId = 'request-42'): RegisterAttendeeCommand {
-  return new RegisterAttendeeCommand(
-    registrationRequest.email,
-    registrationRequest.password,
-    registrationRequest.username,
-    requestId,
-  );
+function input(requestId = 'request-42'): RegisterAttendeeInput {
+  return { ...registrationRequest, requestId };
 }
 
-describe('RegisterAttendeeCommandHandler', () => {
+describe('AttendeeRegistrationService', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -52,7 +49,7 @@ describe('RegisterAttendeeCommandHandler', () => {
       emailVerified: false,
       username: registrationRequest.username,
     };
-    const handler = createService(
+    const service = createService(
       (
         _request: RegisterAttendeeRequest,
         metadata?: Metadata,
@@ -65,7 +62,7 @@ describe('RegisterAttendeeCommandHandler', () => {
     );
     vi.spyOn(Date, 'now').mockReturnValue(10_000);
 
-    await expect(handler.handle(command('client-request-42'))).resolves.toEqual(
+    await expect(service.register(input('client-request-42'))).resolves.toEqual(
       response,
     );
     expect(receivedMetadata?.get('x-request-id')).toEqual([
@@ -88,11 +85,11 @@ describe('RegisterAttendeeCommandHandler', () => {
   ])(
     'translates Identity conflict %s into the public 409 contract',
     async (details, expectedCode, expectedMessage) => {
-      const handler = createService(() =>
+      const service = createService(() =>
         throwError(() => ({ code: status.ALREADY_EXISTS, details })),
       );
 
-      await expect(handler.handle(command())).rejects.toMatchObject({
+      await expect(service.register(input())).rejects.toMatchObject({
         response: {
           code: expectedCode,
           message: expectedMessage,
@@ -104,11 +101,11 @@ describe('RegisterAttendeeCommandHandler', () => {
   );
 
   it('hides internal Identity failures behind a stable 503 response', async () => {
-    const handler = createService(() =>
+    const service = createService(() =>
       throwError(() => ({ code: status.UNAVAILABLE, details: 'connection' })),
     );
 
-    await expect(handler.handle(command())).rejects.toMatchObject({
+    await expect(service.register(input())).rejects.toMatchObject({
       diagnosticCode: 'IDENTITY_RPC_UNAVAILABLE',
       response: {
         code: 'REGISTRATION_UNAVAILABLE',
@@ -119,14 +116,14 @@ describe('RegisterAttendeeCommandHandler', () => {
   });
 
   it('identifies an expired Identity deadline behind the stable 503 response', async () => {
-    const handler = createService(() =>
+    const service = createService(() =>
       throwError(() => ({
         code: status.DEADLINE_EXCEEDED,
         details: 'Deadline exceeded',
       })),
     );
 
-    await expect(handler.handle(command())).rejects.toMatchObject({
+    await expect(service.register(input())).rejects.toMatchObject({
       diagnosticCode: 'IDENTITY_RPC_DEADLINE_EXCEEDED',
       response: {
         code: 'REGISTRATION_UNAVAILABLE',

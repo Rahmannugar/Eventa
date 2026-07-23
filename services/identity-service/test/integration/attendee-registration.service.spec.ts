@@ -11,10 +11,10 @@ import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../../src/attendees/errors/attendee-registration.errors';
-import { AttendeeAccountWriteRepository } from '../../src/attendees/repositories/attendee-account-write.repository';
+import { PostgresAttendeeAccountRepository } from '../../src/attendees/repositories/attendee-account.repository';
 import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
-import { RegisterAttendeeCommand } from '../../src/attendees/commands/register-attendee/register-attendee.command';
-import { RegisterAttendeeCommandHandler } from '../../src/attendees/commands/register-attendee/register-attendee-command.handler';
+import type { RegisterAttendeeInput } from '../../src/attendees/types/attendee-registration.types';
+import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
 import { Argon2PasswordHasher } from '../../src/security/services/argon2-password-hasher.service';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -68,21 +68,21 @@ const client = postgres(requiredTestDatabaseUrl, {
   onnotice: () => undefined,
 });
 const database = drizzle(client);
-const repository = new AttendeeAccountWriteRepository(database);
-const handler = new RegisterAttendeeCommandHandler(
+const repository = new PostgresAttendeeAccountRepository(database);
+const service = new AttendeeRegistrationService(
   repository,
   new Argon2PasswordHasher(),
 );
 
-function command(
+function registrationInput(
   email: string,
   password: string,
   username: string,
-): RegisterAttendeeCommand {
-  return new RegisterAttendeeCommand(email, password, username);
+): RegisterAttendeeInput {
+  return { email, password, username };
 }
 
-describe('RegisterAttendeeCommandHandler integration', () => {
+describe('AttendeeRegistrationService integration', () => {
   beforeAll(async () => {
     await ensureTestDatabase();
     await migrate(database, {
@@ -99,8 +99,12 @@ describe('RegisterAttendeeCommandHandler integration', () => {
   });
 
   it('registers an attendee with normalized identity fields and a secure password hash', async () => {
-    const registration = await handler.handle(
-      command('  Attendee@Example.COM ', 'a-secure-password', 'EventFan'),
+    const registration = await service.register(
+      registrationInput(
+        '  Attendee@Example.COM ',
+        'a-secure-password',
+        'EventFan',
+      ),
     );
 
     expect(registration).toMatchObject({
@@ -130,13 +134,17 @@ describe('RegisterAttendeeCommandHandler integration', () => {
   });
 
   it('rejects another registration using the same email', async () => {
-    await handler.handle(
-      command('attendee@example.com', 'first-secure-password', 'first_user'),
+    await service.register(
+      registrationInput(
+        'attendee@example.com',
+        'first-secure-password',
+        'first_user',
+      ),
     );
 
     await expect(
-      handler.handle(
-        command(
+      service.register(
+        registrationInput(
           'ATTENDEE@example.com',
           'second-secure-password',
           'second_user',
@@ -146,13 +154,21 @@ describe('RegisterAttendeeCommandHandler integration', () => {
   });
 
   it('rejects another registration using the same username', async () => {
-    await handler.handle(
-      command('first@example.com', 'first-secure-password', 'eventfan'),
+    await service.register(
+      registrationInput(
+        'first@example.com',
+        'first-secure-password',
+        'eventfan',
+      ),
     );
 
     await expect(
-      handler.handle(
-        command('second@example.com', 'second-secure-password', 'EventFan'),
+      service.register(
+        registrationInput(
+          'second@example.com',
+          'second-secure-password',
+          'EventFan',
+        ),
       ),
     ).rejects.toBeInstanceOf(UsernameUnavailableError);
 
@@ -166,11 +182,19 @@ describe('RegisterAttendeeCommandHandler integration', () => {
 
   it('allows only one concurrent registration for the same email', async () => {
     const attempts = await Promise.allSettled([
-      handler.handle(
-        command('race@example.com', 'first-secure-password', 'race_one'),
+      service.register(
+        registrationInput(
+          'race@example.com',
+          'first-secure-password',
+          'race_one',
+        ),
       ),
-      handler.handle(
-        command('RACE@example.com', 'second-secure-password', 'race_two'),
+      service.register(
+        registrationInput(
+          'RACE@example.com',
+          'second-secure-password',
+          'race_two',
+        ),
       ),
     ]);
 

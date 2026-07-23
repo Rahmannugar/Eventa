@@ -10,8 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
-import { RegisterAttendeeCommandHandler } from '../commands/register-attendee/register-attendee-command.handler';
-import { RegisterAttendeeCommand } from '../commands/register-attendee/register-attendee.command';
+import { AttendeeRegistrationService } from '../services/attendee-registration.service';
 import { ApiRegisterAttendee } from '../docs/attendee-registration.docs';
 import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
 import { AttendeeRegistrationRateLimitGuard } from '../rate-limit/guards/attendee-registration-rate-limit.guard';
@@ -20,7 +19,7 @@ import { AttendeeRegistrationRateLimitGuard } from '../rate-limit/guards/attende
 @Controller('auth/attendees')
 export class AttendeeRegistrationController {
   constructor(
-    private readonly registerAttendee: RegisterAttendeeCommandHandler,
+    private readonly attendeeRegistration: AttendeeRegistrationService,
   ) {}
 
   @Post('register')
@@ -31,13 +30,11 @@ export class AttendeeRegistrationController {
     @Body() request: RegisterAttendeeDto,
     @Headers('x-request-id') requestId: string,
   ): Promise<RegisterAttendeeResponse> {
-    return this.registerAttendee.handle(
-      new RegisterAttendeeCommand(
-        request.email,
-        request.password,
-        request.username,
-        requestId,
-      ),
-    );
+    return this.attendeeRegistration.register({
+      email: request.email,
+      password: request.password,
+      requestId,
+      username: request.username,
+    });
   }
 }
