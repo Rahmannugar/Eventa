@@ -10,12 +10,15 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "lint": "eslint src --max-warnings 0",
-    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src test --max-warnings 0",
+    "test": "vitest run test/unit",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
     "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@grpc/proto-loader": "^0.8.0"
   }
 }

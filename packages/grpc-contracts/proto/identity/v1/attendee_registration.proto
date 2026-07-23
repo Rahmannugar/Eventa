@@ -2,10 +2,6 @@ syntax = "proto3";
 
 package eventa.identity.v1;
 
-service AttendeeIdentityService {
-  rpc RegisterAttendee(RegisterAttendeeRequest) returns (RegisterAttendeeResponse);
-}
-
 message RegisterAttendeeRequest {
   string email = 1;
   string password = 2;

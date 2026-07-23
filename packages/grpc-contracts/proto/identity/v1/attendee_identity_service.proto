@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+import "identity/v1/attendee_registration.proto";
+
+service AttendeeIdentityService {
+  rpc RegisterAttendee(RegisterAttendeeRequest) returns (RegisterAttendeeResponse);
+}

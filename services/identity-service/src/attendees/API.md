@@ -23,4 +23,4 @@ Successful response fields:
 | `ALREADY_EXISTS`   | Canonical attendee email or username uniqueness was violated. |
 | `UNKNOWN`          | An unexpected unhandled internal failure occurred.            |
 
-The Gateway may forward `x-request-id` as gRPC metadata; direct clients may omit it. The protobuf file at [../../../../packages/grpc-contracts/proto/identity.proto](../../../../packages/grpc-contracts/proto/identity.proto) is authoritative for service names, methods, wire fields, and field numbers.
+The Gateway may forward `x-request-id` as gRPC metadata; direct clients may omit it. The service contract at [../../../../packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto](../../../../packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto) and its imported registration messages are authoritative for service names, methods, wire fields, and field numbers.

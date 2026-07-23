@@ -1,4 +1,5 @@
 import {
+  getIdentityProtoIncludeDirs,
   getIdentityProtoPath,
   IDENTITY_PACKAGE_NAME,
 } from '@eventa/grpc-contracts';
@@ -39,6 +40,9 @@ async function bootstrap(): Promise<void> {
       options: {
         package: IDENTITY_PACKAGE_NAME,
         protoPath: getIdentityProtoPath(),
+        loader: {
+          includeDirs: getIdentityProtoIncludeDirs(),
+        },
         url: `${config.grpcHost}:${config.grpcPort}`,
       },
     },

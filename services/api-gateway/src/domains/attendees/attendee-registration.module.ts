@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from '@nestjs/common';
 import {
+  getIdentityProtoIncludeDirs,
   getIdentityProtoPath,
   IDENTITY_PACKAGE_NAME,
 } from '@eventa/grpc-contracts';
@@ -35,6 +36,9 @@ export class AttendeeRegistrationModule {
             options: {
               package: IDENTITY_PACKAGE_NAME,
               protoPath: getIdentityProtoPath(),
+              loader: {
+                includeDirs: getIdentityProtoIncludeDirs(),
+              },
               url: options.identityGrpcUrl,
             },
           },

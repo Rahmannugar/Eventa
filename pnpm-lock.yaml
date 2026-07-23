@@ -48,6 +48,10 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+    devDependencies:
+      '@grpc/proto-loader':
+        specifier: ^0.8.0
+        version: 0.8.1
 
   packages/observability:
     dependencies:

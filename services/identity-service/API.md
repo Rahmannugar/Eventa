@@ -2,7 +2,7 @@
 
 ## Business Domains
 
-Identity implements `eventa.identity.v1.AttendeeIdentityService` from [../../packages/grpc-contracts/proto/identity.proto](../../packages/grpc-contracts/proto/identity.proto).
+Identity implements `eventa.identity.v1.AttendeeIdentityService` from [../../packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto](../../packages/grpc-contracts/proto/identity/v1/attendee_identity_service.proto).
 
 | Domain    | Internal surface                          | Documentation                         |
 | --------- | ----------------------------------------- | ------------------------------------- |
