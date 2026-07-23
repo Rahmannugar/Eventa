@@ -398,6 +398,32 @@
     {
       "datasource": { "type": "loki", "uid": "loki" },
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 22 },
+      "id": 13,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"application\", service_name=~\"$service_name\"} | json",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent application logs",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 31 },
       "id": 5,
       "options": {
         "dedupStrategy": "none",
