@@ -63,6 +63,13 @@ discovery.relabel "eventa_logs" {
 
 	rule {
 		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		regex         = "notification-service"
+		replacement   = "worker"
+		target_label  = "service_group"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
 		regex         = "observability-.*"
 		replacement   = "observability"
 		target_label  = "service_group"
@@ -70,7 +77,7 @@ discovery.relabel "eventa_logs" {
 
 	rule {
 		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-		regex         = "(identity-database|identity-migration|api-gateway-redis)"
+		regex         = "(identity-database|identity-migration|identity-redis|notification-database|notification-migration|api-gateway-redis|job-queue)"
 		replacement   = "infrastructure"
 		target_label  = "service_group"
 	}

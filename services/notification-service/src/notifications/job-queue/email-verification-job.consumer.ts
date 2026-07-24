@@ -87,6 +87,11 @@ export class EmailVerificationJobConsumer
     );
 
     this.consumerTag = reply.consumerTag;
+    this.logger.log({
+      event: 'email_verification_consumer_ready',
+      prefetch: EMAIL_VERIFICATION_CONSUMER_PREFETCH,
+      queue_name: ATTENDEE_EMAIL_VERIFICATION_QUEUE,
+    });
     channel.once('close', () => this.scheduleRestart());
   }
 

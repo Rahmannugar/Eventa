@@ -397,7 +397,7 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 22 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 22 },
       "id": 13,
       "options": {
         "dedupStrategy": "none",
@@ -419,6 +419,32 @@
         }
       ],
       "title": "Recent application logs",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 22 },
+      "id": 14,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"worker\"} | json",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent worker logs",
       "type": "logs"
     },
     {
@@ -484,5 +510,5 @@
   "timezone": "browser",
   "title": "Eventa Application Overview",
   "uid": "eventa-application-overview",
-  "version": 2
+  "version": 3
 }

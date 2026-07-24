@@ -123,6 +123,12 @@ pnpm db:reset:all
 
 ## Local operations
 
+Open the shared RabbitMQ management interface.
+
+```bash
+open http://localhost:15673
+```
+
 Open the provisioned Eventa dashboard and explore metrics, traces, and logs in Grafana.
 
 ```bash

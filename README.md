@@ -83,7 +83,7 @@ Create the ignored RabbitMQ `.env` from `infrastructure/messaging/job-queue/rabb
 
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 
-Current local endpoints:
+Local endpoints:
 
 - API Gateway: `http://localhost:3004`
 - Scalar API reference: `http://localhost:3004/docs`
@@ -92,6 +92,7 @@ Current local endpoints:
 - Gateway liveness: `http://localhost:3004/health/live`
 - Identity readiness: `http://localhost:3005/health/ready`
 - Notification readiness: `http://localhost:3006/health/ready`
+- RabbitMQ management: `http://localhost:15673`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`
 - Prometheus: `http://localhost:59090`
