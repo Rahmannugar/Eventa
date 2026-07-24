@@ -220,6 +220,55 @@ importers:
         specifier: ^4.21.0
         version: 4.23.1
 
+  services/notification-service:
+    dependencies:
+      '@eventa/messaging-contracts':
+        specifier: workspace:*
+        version: link:../../packages/messaging-contracts
+      '@eventa/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@nestjs/common':
+        specifier: ^11.1.28
+        version: 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.28
+        version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@11.1.28)(@nestjs/platform-express@11.1.28)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/platform-express':
+        specifier: ^11.1.28
+        version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.1
+      amqplib:
+        specifier: ^2.0.1
+        version: 2.0.1
+      class-validator:
+        specifier: ^0.15.1
+        version: 0.15.1
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.8
+        version: 3.4.9
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      rxjs:
+        specifier: ^7.8.2
+        version: 7.8.2
+    devDependencies:
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
+      drizzle-kit:
+        specifier: ^0.31.8
+        version: 0.31.10
+      tsx:
+        specifier: ^4.21.0
+        version: 4.23.1
+
 packages:
 
   '@angular-devkit/core@19.2.24':

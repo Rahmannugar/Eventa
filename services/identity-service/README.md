@@ -17,14 +17,7 @@ All required variables and the local database principal contract are listed in `
 
 ## Commands
 
-Run from the repository root:
-
-```bash
-pnpm db:migrate:identity
-pnpm test:unit:identity
-pnpm test:integration:identity
-pnpm db:reset:identity
-```
+See [commands.md](commands.md) for Identity-owned database and validation commands.
 
 The integration suite requires `TEST_DATABASE_URL`, `TEST_REDIS_URL`, and `TEST_RABBITMQ_URL`. It refuses databases without an `_test` suffix and creates the isolated test database when it is missing.
 
@@ -34,4 +27,5 @@ The local stack sends Identity metrics and traces through Alloy and collects its
 
 - [API.md](API.md): gRPC and health contracts.
 - [ARCHITECTURE.md](ARCHITECTURE.md): registration execution, schema ownership, constraints, and failure translation.
+- [commands.md](commands.md): service-owned database and validation commands.
 - [Attendees API](src/attendees/API.md) and [architecture](src/attendees/ARCHITECTURE.md): the domain-owned registration command, account state, and invariants.

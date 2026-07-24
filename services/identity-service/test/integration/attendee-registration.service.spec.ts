@@ -11,7 +11,7 @@ import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../../src/attendees/errors/attendee-registration.errors';
-import { PostgresAttendeeAccountRepository } from '../../src/attendees/repositories/attendee-account.repository';
+import { AttendeeAccountRepository } from '../../src/attendees/repositories/attendee-account.repository';
 import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
 import type { RegisterAttendeeInput } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
@@ -68,7 +68,7 @@ const client = postgres(requiredTestDatabaseUrl, {
   onnotice: () => undefined,
 });
 const database = drizzle(client);
-const repository = new PostgresAttendeeAccountRepository(database);
+const repository = new AttendeeAccountRepository(database);
 const service = new AttendeeRegistrationService(
   repository,
   new Argon2PasswordHasher(),

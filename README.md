@@ -69,7 +69,7 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-The current Compose stack starts the API Gateway, Identity Service, its PostgreSQL database, Redis-backed registration rate-limit and OTP state, RabbitMQ for queued work, and the complete local observability pipeline. Identity migrations run in a one-shot container before the service starts.
+Docker Compose starts the API Gateway, Identity Service, Notification Service, their owned PostgreSQL databases, Redis-backed registration rate-limit and OTP state, RabbitMQ, and the local observability pipeline. Identity and Notification migrations run in one-shot containers before their services start.
 
 Start the stack with:
 
@@ -91,6 +91,7 @@ Current local endpoints:
 - OpenAPI YAML: `http://localhost:3004/openapi.yaml`
 - Gateway liveness: `http://localhost:3004/health/live`
 - Identity readiness: `http://localhost:3005/health/ready`
+- Notification readiness: `http://localhost:3006/health/ready`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`
 - Prometheus: `http://localhost:59090`
@@ -105,7 +106,7 @@ Use `pnpm db:reset:all` only when you intentionally want to delete and recreate 
 
 ## API Documentation
 
-See [API.md](API.md) for the current public API and internal contract map. While the Gateway is running, Scalar is available at `http://localhost:3004/docs` and the importable OpenAPI contracts are available as JSON and YAML.
+See [API.md](API.md) for the public API and internal contract map. While the Gateway is running, Scalar is available at `http://localhost:3004/docs` and the importable OpenAPI contracts are available as JSON and YAML.
 
 Each deployable service also owns its operational, API, and architecture documentation inside its service directory.
 

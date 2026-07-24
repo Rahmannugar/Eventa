@@ -106,46 +106,6 @@ Compare current protobuf schemas with the Git baseline using Eventa's package-le
 pnpm proto:breaking
 ```
 
-## Identity Service
-
-Run Identity migrations in a temporary container.
-
-```bash
-pnpm db:migrate:identity
-```
-
-Run Identity Service unit tests.
-
-```bash
-pnpm test:unit:identity
-```
-
-Start Identity PostgreSQL, create the test database when missing, and run integration tests.
-
-```bash
-pnpm test:integration:identity
-```
-
-Delete Identity database data and restart Eventa with a fresh Identity database.
-
-```bash
-pnpm db:reset:identity
-```
-
-## API Gateway
-
-Run API Gateway unit tests.
-
-```bash
-pnpm test:unit:gateway
-```
-
-Start Redis and run API Gateway integration tests against it.
-
-```bash
-pnpm test:integration:gateway
-```
-
 ## All databases
 
 Delete all Eventa database and observability volumes, then restart Eventa with fresh local state.
@@ -156,9 +116,10 @@ pnpm db:reset:all
 
 ## Local DB viewer
 
-| Service  | Host        | Port    | Database          | Username          | Password                   |
-| -------- | ----------- | ------- | ----------------- | ----------------- | -------------------------- |
-| Identity | `localhost` | `55432` | `eventa_identity` | `eventa_identity` | `eventa_identity_password` |
+| Service      | Host        | Port    | Database              | Username              | Password                       |
+| ------------ | ----------- | ------- | --------------------- | --------------------- | ------------------------------ |
+| Identity     | `localhost` | `55432` | `eventa_identity`     | `eventa_identity`     | `eventa_identity_password`     |
+| Notification | `localhost` | `56432` | `eventa_notification` | `eventa_notification` | `eventa_notification_password` |
 
 ## Local operations
 

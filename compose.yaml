@@ -23,6 +23,22 @@ services:
       - identity-database-data:/var/lib/postgresql/data
     logging: *local-logging
 
+  notification-database:
+    image: postgres:17-alpine
+    env_file:
+      - ./services/notification-service/.env
+    ports:
+      - '56432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - notification-database-data:/var/lib/postgresql/data
+    logging: *local-logging
+
   api-gateway-redis:
     image: redis:7-alpine
     ports:
@@ -93,6 +109,39 @@ services:
         condition: service_completed_successfully
       identity-redis:
         condition: service_healthy
+      job-queue:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
+  notification-migration:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: eventa-notification-service:local
+    command: ['node', 'dist/database/migrate.js']
+    env_file:
+      - ./services/notification-service/.env
+    depends_on:
+      notification-database:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+    logging: *local-logging
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: eventa-notification-service:local
+    env_file:
+      - ./services/notification-service/.env
+    ports:
+      - '3006:3006'
+    depends_on:
+      notification-migration:
+        condition: service_completed_successfully
       job-queue:
         condition: service_healthy
     restart: unless-stopped
@@ -202,6 +251,7 @@ services:
 
 volumes:
   identity-database-data:
+  notification-database-data:
   job-queue-data:
   observability-dashboard-data:
   observability-logs-data:

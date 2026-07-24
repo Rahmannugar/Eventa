@@ -1,0 +1,39 @@
+{
+  "name": "@eventa/notification-service",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "dist",
+    "drizzle"
+  ],
+  "scripts": {
+    "build": "nest build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:prod": "node dist/database/migrate.js",
+    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
+    "start": "node dist/main.js",
+    "test": "pnpm test:unit",
+    "test:integration": "dotenv -e .env -- vitest run test/integration",
+    "test:unit": "vitest run test/unit",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@eventa/messaging-contracts": "workspace:*",
+    "@eventa/observability": "workspace:*",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "@opentelemetry/api": "^1.9.0",
+    "amqplib": "^2.0.1",
+    "class-validator": "^0.15.1",
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.8",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0"
+  }
+}

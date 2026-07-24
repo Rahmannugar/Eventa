@@ -4,18 +4,20 @@
 
 Eventa is organized as independently deployable services with explicit business ownership. Clients use HTTP through the API Gateway. Services use gRPC for synchronous commands and queries, an event bus for durable business facts, and a job queue for retryable worker assignments.
 
-The currently running local slice contains:
+The local stack contains:
 
 ```text
 Attendee client
   -> API Gateway
-       -> Redis rate-limit state
-       -> Identity Service over gRPC
-            -> Identity PostgreSQL
-            -> Redis email-verification OTP state
-            -> RabbitMQ email-verification job queue
+       -> Identity Service
+            -> RabbitMQ
+                 -> Notification Service
+                      -> Email provider
 
-Gateway and Identity
+Gateway, Identity, and Notification
+  -> service-owned state
+
+Gateway, Identity, and Notification
   -> OpenTelemetry OTLP
        -> Grafana Alloy
             -> Prometheus metrics
@@ -29,7 +31,7 @@ Grafana
   -> Prometheus, Tempo, and Loki
 ```
 
-The wider product design includes Event, Commerce, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. Each service is an independently deployable modular monolith. These boundaries are architectural decisions, not claims that every service is implemented.
+Eventa includes Event, Commerce, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. Each service is an independently deployable modular monolith.
 
 ## Ownership
 
@@ -54,68 +56,27 @@ API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/T
 
 - HTTP: clients to API Gateway.
 - gRPC: synchronous internal commands and queries requiring an immediate result.
-- Event bus: durable completed business facts and independent consumers. Kafka is the current adapter choice.
-- Job queue: retryable background work assigned to workers. RabbitMQ is the current adapter choice.
+- Event bus: durable completed business facts and independent consumers. Kafka is the adapter choice.
+- Job queue: retryable background work assigned to workers. RabbitMQ is the adapter choice.
 
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
 
-Protobuf files under `packages/grpc-contracts/proto` are authoritative for gRPC packages, services, messages, fields, and field numbers. Their directories mirror the full protobuf package namespace. Pinned Buf tooling enforces schema conventions and orchestrates pinned ts-proto generation; committed generated TypeScript supplies NestJS message and service types. Runtime-only concerns that protobuf cannot express, such as loader paths or grpc-js call options for deadlines, remain narrow handwritten transport code. Buf uses package-level compatibility checks so files may be reorganized inside the same protobuf package without treating a wire-compatible change as breaking.
+We keep authoritative gRPC schemas in `packages/grpc-contracts/proto`. Pinned Buf tooling checks compatibility and generates the committed TypeScript contracts; loader and deadline behavior stays in narrow handwritten transport code.
 
-RabbitMQ DLQs are used only for actionable failed work with a defined recovery path, not as a default for every queue. Replaceable, best-effort, and time-bounded jobs use owned failed or expired states, resend, reconciliation, or rebuild behavior instead. Production DLQs are bounded, observable through RabbitMQ and OpenTelemetry signals, alerted through Grafana, and reviewed through audited manual recovery; review automation remains read-only.
+RabbitMQ DLQs are used only for actionable failed work with a defined recovery path, not as a default for every queue. Replaceable, best-effort, and time-bounded jobs use owned failed or expired states, resend, reconciliation, or rebuild behavior instead. Production DLQs are bounded, observable through RabbitMQ and OpenTelemetry signals, alerted through Grafana, and reviewed through audited manual recovery;.
 
-## Current Registration Flow
-
-The Gateway applies an atomic Redis hybrid rate limit before DTO validation, Argon2id, or gRPC work. Admitted requests are validated and sent to Identity. Identity independently validates the gRPC command, canonicalizes email and username, hashes the password, and performs one PostgreSQL insert. Database constraints are the final authority for canonical email and username uniqueness under concurrency.
-
-See [services/api-gateway/ARCHITECTURE.md](services/api-gateway/ARCHITECTURE.md) and [services/identity-service/ARCHITECTURE.md](services/identity-service/ARCHITECTURE.md) for the concrete boundaries.
-
-## Ticket Purchase Workflow
-
-The accepted purchase sequence is:
-
-1. create a pending order;
-2. temporarily reserve capacity;
-3. create and confirm payment through Stripe;
-4. receive or reconcile authoritative payment status;
-5. finalize the reservation;
-6. issue the ticket;
-7. complete the order;
-8. publish business facts for independent consumers.
-
-Stripe webhooks are the primary provider-update path. Scheduled reconciliation is a recovery backstop.
-
-## Discovery and Geography
-
-Discovery combines explicit interests with weighted behavioral signals to build attendee recommendation preferences. Semantic retrieval uses Gemini and Ahnlich only where meaning cannot be expressed reliably through categories or lexical filters. Ahnlich's [official Go SDK documentation](https://ahnlich.dev/docs/client-libraries/go/go-specific-resources/) describes typed gRPC clients for Ahnlich DB and Ahnlich AI, including batching utilities. Ahnlich currently describes the platform as alpha/testing and subject to breaking changes, so Discovery must pin versions and isolate the SDK behind a capability adapter with contract tests, deadlines, bounded retries, observability, and graceful degradation. Implementation must still begin by reviewing the current official documentation rather than relying on remembered APIs.
-
-Event Service remains authoritative for event and venue data. PostGIS provides radius filtering, exact distance ordering, and map/spatial queries after Discovery produces semantic candidate event IDs. Current or selected location is request context, not an Identity field.
+We document concrete behavior in the owning service: [API Gateway architecture](services/api-gateway/ARCHITECTURE.md), [Identity architecture](services/identity-service/ARCHITECTURE.md), and [Notification architecture](services/notification-service/ARCHITECTURE.md).
 
 ## Persistence and Correctness
 
-Each service owns its PostgreSQL schema, migrations, constraints, and database principal. TypeScript services use Drizzle. Go services use GORM for persistence while reviewed, versioned SQL migrations—not `AutoMigrate`—remain the deployment authority. Critical invariants use database constraints and transactions where multiple writes must commit together. Shared databases and cross-service queries are prohibited.
-
-Schema changes are forward migrations. Human-readable migration names describe business intent, and Drizzle's journal remains consistent with TypeScript migration filenames.
+Each service owns its PostgreSQL schema, migrations, constraints, and database principal. We use Drizzle in TypeScript services. Go services use GORM for persistence and reviewed SQL migrations as the deployment authority.
 
 ## Operations
 
-Permanent configuration is injected through environment variables and validated at startup. Missing service `.env` files or required variables fail local startup rather than being generated automatically. Containers do not bake in application configuration or secrets.
-
 Liveness describes whether a process is alive. Readiness is exposed only when a real local dependency determines whether an instance should receive traffic. Services close owned connections during graceful shutdown.
 
-Gateway and Identity start OpenTelemetry before NestJS loads so HTTP and gRPC transport context propagates automatically. Each instance exports traces and bounded-cardinality request metrics over OTLP to Alloy. HTTP and gRPC boundary components emit structured completion logs and add the active trace ID; the Gateway also validates, returns, and forwards `x-request-id`. Safe error codes and field-rule names explain failed requests without logging submitted values. Successful health probes are excluded from request logs, custom request metrics, and incoming HTTP traces.
-
-Concrete spans expose Redis rate-limit consumption, Argon2id hashing, and the Identity PostgreSQL insert. Generic framework middleware/controller spans are disabled because their inclusive durations do not identify which dependency consumed the time.
-
-Authoritative business outcomes are measured at a domain-owned decorator boundary rather than inside controllers or core command/query handlers.
-
-Alloy is the collection and routing layer. It sends metrics to Prometheus, traces to Tempo, and Docker JSON logs to Loki. Docker logs are grouped as application, infrastructure, or observability services. Grafana provisions those three data sources and the `Attendee Registration Overview` dashboard. Prometheus, Tempo, and Loki retain one day of local data, and Docker JSON logs rotate at two 10 MB files per container. Telemetry backend availability is deliberately not an application readiness dependency: losing observability must not stop registration, while exporter failures remain visible in service diagnostics.
-
-Grafana administration and optional SMTP configuration come from its ignored environment file. Resend SMTP can deliver Grafana alert notifications independently of Eventa's application mail adapter. Alert rules and SMTP delivery are enabled only after an actionable workflow signal exists and the contact point can be tested end to end.
+We send metrics, traces, and logs through Alloy to Prometheus, Tempo, and Loki, with Grafana as the operational interface. Telemetry availability is not an application readiness dependency.
 
 ## Performance Validation
 
-After a product story's behavior, observability, dashboards, and actionable monitoring are complete, the full story is audited and locally benchmarked with k6. A dedicated performance environment uses deterministic, service-owned seed tooling to create million-scale datasets without making normal startup, CI, or integration tests depend on that volume.
-
-Synchronous benchmarks cover HTTP, Redis, database operations, response latency, throughput, resource pressure, and error behavior. Asynchronous benchmarks cover event publication, queue delay, consumer processing, retries, idempotency, eventual completion, and end-to-end workflow latency. An asynchronous benchmark measures from the initiating action to the durable terminal business outcome, never merely to producer or queue acknowledgement.
-
-Results are interpreted together with OpenTelemetry traces and Prometheus, Grafana, Loki, and Tempo signals. Each scenario reflects the real endpoint policy; rate limiting and other security boundaries are not silently disabled to manufacture higher throughput. k6 is selected because its scenario model, thresholds, checks, and custom metrics fit both request-response and workflow-level validation.
+We use k6 after behavior and observability are complete. Synchronous scenarios measure the full request path; asynchronous scenarios measure from the initiating action to the durable terminal outcome. We interpret results with the configured metrics, traces, and logs.

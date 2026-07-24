@@ -10,7 +10,7 @@ The attendees domain owns attendee principals, credentials, and email-verificati
 2. The controller invokes the injected `AttendeeRegistrar` capability with validated input.
 3. `ObservedAttendeeRegistrar` wraps the core application service and records the authoritative outcome.
 4. `AttendeeRegistrationService.register()` canonicalizes email and username and asks the `PasswordHasher` capability for an Argon2id hash.
-5. `PostgresAttendeeAccountRepository` receives canonical fields and the hash through `AttendeeAccountRepository`.
+5. `AttendeeAccountRepository` receives canonical fields and the hash through its domain repository port.
 6. One PostgreSQL insert creates the account and returns its public registration projection.
 7. `AttendeeEmailVerificationService` creates the first OTP and asks `EmailVerificationJobPublisher` to place its expiring delivery job on RabbitMQ.
 8. Named uniqueness violations become domain conflicts and then gRPC `ALREADY_EXISTS`.
@@ -35,9 +35,9 @@ Redis stores one OTP record per protected email subject for 15 minutes. Saving a
 
 Resend admission uses one atomic 60-second per-email cooldown before account lookup, including unknown and already-verified emails. There is no separate hourly product cap inside Identity.
 
-`PostgresAttendeeAccountRepository.markEmailVerified()` uses `COALESCE(email_verified_at, NOW())`, so repeated or concurrent confirmation preserves the first database timestamp. Redis confirmation is recorded after the database update; if that Redis call fails, retrying the same OTP repeats the idempotent database operation.
+`AttendeeAccountRepository.markEmailVerified()` uses `COALESCE(email_verified_at, NOW())`, so repeated or concurrent confirmation preserves the first database timestamp. Redis confirmation is recorded after the database update; if that Redis call fails, retrying the same OTP repeats the idempotent database operation.
 
-`EmailVerificationJobPublisher` creates a versioned job with a unique job ID and the same 15-minute expiry as the OTP. Its RabbitMQ adapter uses a persistent message, durable quorum queue, publisher confirmation, and OpenTelemetry propagation headers. `RabbitMQClient` owns the shared connection and the publisher's purpose-specific confirm channel.
+`EmailVerificationJobPublisher` creates a versioned job with a unique job ID and the same 15-minute absolute expiry as the OTP. Its RabbitMQ adapter uses a persistent message, durable quorum queue, publisher confirmation, and OpenTelemetry propagation headers. The payload deadline—not broker deletion—is authoritative so Notification can record an expired outcome after worker downtime. `RabbitMQClient` owns the shared connection and the publisher's purpose-specific confirm channel.
 
 RabbitMQ's built-in default direct exchange routes each job directly to the queue by queue name. The flow currently has one job type and one owning Notification consumer, so it does not add an explicit exchange or binding without a routing requirement.
 

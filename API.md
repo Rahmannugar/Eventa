@@ -2,7 +2,7 @@
 
 ## Public API Map
 
-Clients communicate with Eventa through the API Gateway over HTTP. The currently implemented business endpoint is:
+Clients communicate with Eventa through the API Gateway over HTTP.
 
 | Method | Path                       | Outcome                                                                                          |
 | ------ | -------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -19,10 +19,12 @@ This root file remains a compact map as Eventa grows; it does not duplicate ever
 
 ## Internal Contracts
 
-Synchronous service commands and queries use gRPC. The current contract is `eventa.identity.v1.AttendeeIdentityService`, defined in [packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto).
+Synchronous service commands and queries use gRPC. `eventa.identity.v1.AttendeeIdentityService` is defined in [packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto).
 
 The protobuf schemas are authoritative. Buf validates and generates the TypeScript message, client, controller, package, and service declarations exported by `@eventa/grpc-contracts`; consumers do not hand-maintain protobuf-derived TypeScript shapes.
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Each service documents its owned internal surface in its own `API.md`. Future event-bus and job-queue contracts will be documented beside their producing and consuming services when implemented.
+We publish `AttendeeEmailVerificationJob` version `1` from Identity and consume it in Notification. `@eventa/messaging-contracts` owns the contract. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
+
+Each service documents its owned internal surface in its own `API.md`.

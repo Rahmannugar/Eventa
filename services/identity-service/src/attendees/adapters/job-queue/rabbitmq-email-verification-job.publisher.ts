@@ -42,6 +42,7 @@ export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJ
     await channel.assertQueue(ATTENDEE_EMAIL_VERIFICATION_QUEUE, {
       durable: true,
       arguments: {
+        'x-delivery-limit': -1,
         'x-queue-type': 'quorum',
       },
     });
@@ -67,7 +68,6 @@ export class RabbitMQEmailVerificationJobPublisher implements EmailVerificationJ
           Buffer.from(JSON.stringify(job)),
           {
             contentType: 'application/json',
-            expiration: String(EMAIL_VERIFICATION_OTP_TTL_MS),
             headers: traceHeaders,
             messageId: jobId,
             persistent: true,

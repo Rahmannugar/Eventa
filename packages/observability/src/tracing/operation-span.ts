@@ -9,7 +9,7 @@ import {
 
 interface OperationSpanOptions {
   attributes?: Attributes;
-  kind?: 'client' | 'internal';
+  kind?: 'client' | 'consumer' | 'internal' | 'producer';
 }
 
 const tracer = trace.getTracer('@eventa/observability');
@@ -20,7 +20,14 @@ export function runWithOperationSpan<T>(
   options: OperationSpanOptions = {},
 ): Promise<T> {
   const spanOptions: SpanOptions = {
-    kind: options.kind === 'client' ? SpanKind.CLIENT : SpanKind.INTERNAL,
+    kind:
+      options.kind === 'client'
+        ? SpanKind.CLIENT
+        : options.kind === 'consumer'
+          ? SpanKind.CONSUMER
+          : options.kind === 'producer'
+            ? SpanKind.PRODUCER
+            : SpanKind.INTERNAL,
     ...(options.attributes === undefined
       ? {}
       : { attributes: options.attributes }),

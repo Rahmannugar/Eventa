@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784835482918,
+      "tag": "0000_create_email_verification_deliveries",
+      "breakpoints": true
+    }
+  ]
+}

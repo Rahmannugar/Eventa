@@ -19,7 +19,7 @@ import { AttendeeEmailVerificationService } from './services/attendee-email-veri
 import { AttendeeRegistrationService } from './services/attendee-registration.service';
 import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
 import { ObservedAttendeeRegistrar } from './observability/observed-attendee-registrar';
-import { PostgresAttendeeAccountRepository } from './repositories/attendee-account.repository';
+import { AttendeeAccountRepository } from './repositories/attendee-account.repository';
 import { RabbitMQEmailVerificationJobPublisher } from './adapters/job-queue/rabbitmq-email-verification-job.publisher';
 import { RedisEmailVerificationOtpState } from './adapters/redis/email-verification-otp.state';
 import type { AttendeeEmailVerificationRepository } from './types/attendee-email-verification.types';
@@ -39,7 +39,7 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
     },
     {
       provide: ATTENDEE_ACCOUNT_REPOSITORY,
-      useClass: PostgresAttendeeAccountRepository,
+      useClass: AttendeeAccountRepository,
     },
     {
       provide: ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,

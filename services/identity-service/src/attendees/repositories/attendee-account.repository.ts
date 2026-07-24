@@ -10,7 +10,7 @@ import {
   UsernameUnavailableError,
 } from '../errors/attendee-registration.errors';
 import type {
-  AttendeeAccountRepository,
+  AttendeeAccountRepository as AttendeeAccountRepositoryPort,
   CreateAttendeeAccount,
 } from '../types/attendee-account-repository.types';
 import type {
@@ -46,8 +46,8 @@ function readDatabaseErrorField(
   return undefined;
 }
 
-export class PostgresAttendeeAccountRepository
-  implements AttendeeAccountRepository, AttendeeEmailVerificationRepository
+export class AttendeeAccountRepository
+  implements AttendeeAccountRepositoryPort, AttendeeEmailVerificationRepository
 {
   constructor(
     @Inject(IDENTITY_DATABASE)

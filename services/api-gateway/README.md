@@ -19,16 +19,7 @@ All required variables are listed in `.env.example`. Create the ignored `.env` d
 
 ## Commands
 
-Run from the repository root:
-
-```bash
-pnpm test:unit:gateway
-pnpm test:integration:gateway
-pnpm --filter @eventa/api-gateway typecheck
-pnpm --filter @eventa/api-gateway build
-```
-
-Use `pnpm services:start` to run the complete local registration path.
+See [commands.md](commands.md) for Gateway-owned validation and local runtime commands.
 
 The local stack sends Gateway metrics and traces through Alloy and collects its structured container logs. Open Grafana at `http://localhost:3300`.
 
@@ -36,4 +27,5 @@ The local stack sends Gateway metrics and traces through Alloy and collects its 
 
 - [API.md](API.md): public routes, errors, documentation endpoints, and rate-limit metadata.
 - [ARCHITECTURE.md](ARCHITECTURE.md): domain modules, shared infrastructure, dependency behavior, and protocol translation.
+- [commands.md](commands.md): service-owned validation and local runtime commands.
 - [Attendees API](src/domains/attendees/API.md) and [architecture](src/domains/attendees/ARCHITECTURE.md): the domain-owned registration contract and command flow.

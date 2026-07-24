@@ -26,7 +26,10 @@ describe('RabbitMQEmailVerificationJobPublisher integration', () => {
     channel = await connection.createChannel();
     await channel.assertQueue(ATTENDEE_EMAIL_VERIFICATION_QUEUE, {
       durable: true,
-      arguments: { 'x-queue-type': 'quorum' },
+      arguments: {
+        'x-delivery-limit': -1,
+        'x-queue-type': 'quorum',
+      },
     });
     await channel.purgeQueue(ATTENDEE_EMAIL_VERIFICATION_QUEUE);
 
@@ -41,7 +44,7 @@ describe('RabbitMQEmailVerificationJobPublisher integration', () => {
     await connection.close();
   });
 
-  it('publishes one persistent expiring OTP job after broker confirmation', async () => {
+  it('publishes one persistent OTP job with an absolute expiry after broker confirmation', async () => {
     await publisher.publish({
       attendeeId: 'attendee-1',
       email: 'attendee@example.com',
@@ -72,6 +75,7 @@ describe('RabbitMQEmailVerificationJobPublisher integration', () => {
     expect(message.properties.deliveryMode).toBe(2);
     expect(message.properties.messageId).toBe(job.jobId);
     expect(message.properties.type).toBe(ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE);
+    expect(message.properties.expiration).toBeUndefined();
 
     channel.ack(message);
   });
