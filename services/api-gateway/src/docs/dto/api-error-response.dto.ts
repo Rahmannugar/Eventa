@@ -7,7 +7,7 @@ export class ApiValidationErrorDto {
   @ApiProperty({ example: 'password' })
   field!: string;
 
-  @ApiProperty({ example: 'Password must be at least 12 characters.' })
+  @ApiProperty({ example: 'Password must be at least 8 characters.' })
   message!: string;
 }
 

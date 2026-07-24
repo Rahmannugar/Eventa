@@ -9,7 +9,7 @@ describe('API validation errors', () => {
       {
         children: [],
         constraints: {
-          minLength: 'Password must be at least 12 characters.',
+          minLength: 'Password must be at least 8 characters.',
         },
         property: 'password',
       },
@@ -24,7 +24,7 @@ describe('API validation errors', () => {
         {
           code: 'TOO_SHORT',
           field: 'password',
-          message: 'Password must be at least 12 characters.',
+          message: 'Password must be at least 8 characters.',
         },
       ],
       message: 'Check the highlighted fields and try again.',

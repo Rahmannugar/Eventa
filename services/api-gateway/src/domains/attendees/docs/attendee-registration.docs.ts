@@ -123,7 +123,7 @@ export function ApiRegisterAttendee(): MethodDecorator {
             {
               code: 'TOO_SHORT',
               field: 'password',
-              message: 'Password must be at least 12 characters.',
+              message: 'Password must be at least 8 characters.',
             },
           ],
           message: 'Check the highlighted fields and try again.',

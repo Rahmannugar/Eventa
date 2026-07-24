@@ -28,7 +28,7 @@ Successful response: `201 Created`
 Boundary rules:
 
 - email must be valid and at most 320 characters;
-- password must contain 12 through 128 characters;
+- password must contain 8 through 128 characters;
 - username must contain 3 through 30 letters, digits, or underscores;
 - unknown request fields are rejected.
 

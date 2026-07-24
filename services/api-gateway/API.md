@@ -21,7 +21,7 @@ Business endpoints use one public shape:
     {
       "field": "password",
       "code": "TOO_SHORT",
-      "message": "Password must be at least 12 characters."
+      "message": "Password must be at least 8 characters."
     }
   ]
 }

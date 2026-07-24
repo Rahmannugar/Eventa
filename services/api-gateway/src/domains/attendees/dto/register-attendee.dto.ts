@@ -14,9 +14,9 @@ export class RegisterAttendeeDto implements RegisterAttendeeRequest {
   @MaxLength(320, { message: 'Email must not exceed 320 characters.' })
   email!: string;
 
-  @ApiProperty({ example: 'a-secure-password', minLength: 12, maxLength: 128 })
+  @ApiProperty({ example: 'a-secure-password', minLength: 8, maxLength: 128 })
   @IsString({ message: 'Password must be text.' })
-  @MinLength(12, { message: 'Password must be at least 12 characters.' })
+  @MinLength(8, { message: 'Password must be at least 8 characters.' })
   @MaxLength(128, { message: 'Password must not exceed 128 characters.' })
   password!: string;
 
