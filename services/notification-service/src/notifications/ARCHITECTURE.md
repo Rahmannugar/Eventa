@@ -7,7 +7,7 @@
 3. We insert or lock the Notification-owned job row in `EmailVerificationDeliveryRepository.claim()`. A 30-second claim lease permits one provider attempt and recovery after a process crash.
 4. We acknowledge terminal duplicates without provider work and record expired work as `expired`.
 5. We pass valid claimed work from `EmailVerificationDeliveryService` to `EmailVerificationEmailSender`.
-6. We keep subject and HTML/text content in the sender and pass a provider-neutral request to `EmailClient`.
+6. We keep subject and HTML/text content in the sender and pass a provider-neutral request through `EmailDeliveryProvider`.
 7. We apply Resend authentication, a bounded HTTP timeout, response translation, and job-ID idempotency in `ResendClient`.
 8. We record provider acceptance as `delivered`, including the provider message ID, before acknowledgement.
 

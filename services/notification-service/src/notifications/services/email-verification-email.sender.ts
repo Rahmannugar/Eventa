@@ -1,7 +1,7 @@
 import { Inject } from '@nestjs/common';
 
-import { EMAIL_CLIENT } from '../constants/email-verification-delivery.constants';
-import type { EmailClient } from '../ports/email.client';
+import { EMAIL_DELIVERY_PROVIDER } from '../constants/email-verification-delivery.constants';
+import type { EmailDeliveryProvider } from '../ports/email-delivery.provider';
 import type {
   EmailVerificationEmail,
   EmailVerificationEmailSender as EmailVerificationEmailSenderPort,
@@ -9,15 +9,15 @@ import type {
 
 export class EmailVerificationEmailSender implements EmailVerificationEmailSenderPort {
   constructor(
-    @Inject(EMAIL_CLIENT)
-    private readonly emailClient: EmailClient,
+    @Inject(EMAIL_DELIVERY_PROVIDER)
+    private readonly emailDeliveryProvider: EmailDeliveryProvider,
     private readonly from: string,
   ) {}
 
   async send(
     email: EmailVerificationEmail,
   ): Promise<{ providerMessageId: string }> {
-    const result = await this.emailClient.send({
+    const result = await this.emailDeliveryProvider.send({
       from: this.from,
       html: this.renderHtml(email.otp),
       idempotencyKey: email.jobId,

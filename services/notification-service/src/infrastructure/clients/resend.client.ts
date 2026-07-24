@@ -1,10 +1,11 @@
 import { runWithOperationSpan } from '@eventa/observability';
 
 import { EmailDeliveryError } from '../../notifications/errors/email-delivery.errors';
+import type { EmailDeliveryProvider } from '../../notifications/ports/email-delivery.provider';
 import type {
-  EmailClient,
-  SendEmail,
-} from '../../notifications/ports/email.client';
+  EmailDeliveryRequest,
+  EmailDeliveryResult,
+} from '../../notifications/types/email.types';
 
 interface ResendErrorBody {
   name?: unknown;
@@ -16,7 +17,7 @@ interface ResendSuccessBody {
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
-export class ResendClient implements EmailClient {
+export class ResendClient implements EmailDeliveryProvider {
   constructor(
     private readonly apiKey: string,
     private readonly requestTimeoutMs: number,
@@ -24,7 +25,7 @@ export class ResendClient implements EmailClient {
     private readonly apiUrl: string = RESEND_API_URL,
   ) {}
 
-  async send(email: SendEmail): Promise<{ messageId: string }> {
+  async send(email: EmailDeliveryRequest): Promise<EmailDeliveryResult> {
     return runWithOperationSpan(
       'resend.email.send',
       () => this.sendRequest(email),
@@ -38,7 +39,9 @@ export class ResendClient implements EmailClient {
     );
   }
 
-  private async sendRequest(email: SendEmail): Promise<{ messageId: string }> {
+  private async sendRequest(
+    email: EmailDeliveryRequest,
+  ): Promise<EmailDeliveryResult> {
     let response: Response;
 
     try {
