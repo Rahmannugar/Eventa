@@ -10,6 +10,7 @@ describe('classifyGrpcRequestOutcome', () => {
     status.NOT_FOUND,
     status.ALREADY_EXISTS,
     status.PERMISSION_DENIED,
+    status.RESOURCE_EXHAUSTED,
     status.FAILED_PRECONDITION,
     status.ABORTED,
     status.OUT_OF_RANGE,
@@ -21,7 +22,6 @@ describe('classifyGrpcRequestOutcome', () => {
   it.each([
     status.UNKNOWN,
     status.DEADLINE_EXCEEDED,
-    status.RESOURCE_EXHAUSTED,
     status.UNIMPLEMENTED,
     status.INTERNAL,
     status.UNAVAILABLE,

@@ -39,9 +39,9 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "max(eventa_service_instance{service_name=\"eventa-api-gateway\"})",
+          "expr": "max(eventa_service_instance{service_name=\"eventa-notification-service\"})",
           "instant": true,
-          "legendFormat": "Gateway",
+          "legendFormat": "Notification",
           "range": false,
           "refId": "A"
         }
@@ -51,6 +51,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Failed, expired, or rejected terminal deliveries as a percentage of non-duplicate terminal outcomes. Scheduled retries are not terminal.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -85,19 +86,19 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "100 * ((sum(increase(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\", outcome=\"server_error\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\", outcome=\"server_error\"}[$__range]) unless eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\", outcome=\"server_error\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) unless eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"} offset $__range)), 1))",
+          "expr": "100 * ((sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"} offset $__range)), 1))",
           "instant": true,
-          "legendFormat": "server errors",
+          "legendFormat": "terminal failures",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "HTTP server error rate",
+      "title": "Terminal delivery failure rate",
       "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "Histogram estimate across Gateway HTTP requests in the selected range.",
+      "description": "Time from RabbitMQ delivery until acknowledgement, including bounded infrastructure retries performed while the delivery remains in flight.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -124,24 +125,40 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"} offset $__range)))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset $__range)))",
           "instant": true,
-          "legendFormat": "Gateway",
+          "legendFormat": "p95",
           "range": false,
           "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset $__range)))",
+          "instant": true,
+          "legendFormat": "p99",
+          "range": false,
+          "refId": "B"
         }
       ],
-      "title": "HTTP p95 latency",
+      "title": "Delivery processing latency",
       "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "Histogram estimate across Gateway HTTP requests in the selected range.",
+      "description": "Active deliveries against this worker's prefetch capacity of 8. Broker backlog is intentionally separate and requires RabbitMQ metrics.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "decimals": 1,
-          "unit": "ms"
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 6 },
+              { "color": "red", "value": 8 }
+            ]
+          },
+          "unit": "short"
         },
         "overrides": []
       },
@@ -163,14 +180,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (increase(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"}[$__range]) unless eventa_request_duration_milliseconds_bucket{service_name=\"eventa-api-gateway\", transport=\"http\"} offset $__range)))",
+          "expr": "sum(eventa_job_in_flight{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}) or vector(0)",
           "instant": true,
-          "legendFormat": "Gateway",
+          "legendFormat": "active of 8",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "HTTP p99 latency",
+      "title": "Active delivery jobs",
       "type": "stat"
     },
     {
@@ -179,14 +196,14 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisLabel": "requests/second",
+            "axisLabel": "jobs/second",
             "drawStyle": "line",
             "fillOpacity": 10,
             "lineWidth": 2,
             "showPoints": "never",
             "spanNulls": false
           },
-          "unit": "reqps"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -204,44 +221,18 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (operation, outcome) ((increase(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"}[1m]) + (last_over_time(eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"}[1m]) unless eventa_request_count_total{service_name=\"eventa-api-gateway\", transport=\"http\"} offset 1m)) / 60)",
-          "legendFormat": "{{operation}} · {{outcome}}",
+          "expr": "sum by (outcome) ((increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[1m]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[1m]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset 1m)) / 60)",
+          "legendFormat": "{{outcome}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "HTTP traffic by operation and outcome",
+      "title": "Delivery job traffic by outcome",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 14 },
-      "id": 7,
-      "options": {
-        "dedupStrategy": "none",
-        "enableInfiniteScrolling": false,
-        "enableLogDetails": true,
-        "prettifyLogMessage": true,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "{project=\"eventa\", service_group=\"application\", service_name=\"eventa-api-gateway\"} | json",
-          "queryType": "range",
-          "refId": "A"
-        }
-      ],
-      "title": "Recent Gateway logs",
-      "type": "logs"
-    },
-    {
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
       "id": 6,
       "options": {
         "dedupStrategy": "none",
@@ -257,29 +248,55 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "{project=\"eventa\", service_group=\"application\", service_name=\"eventa-api-gateway\"} | json | outcome=\"server_error\"",
+          "expr": "{project=\"eventa\", service_group=\"worker\", service_name=\"eventa-notification-service\"} | json",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Notification worker logs",
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "{project=\"eventa\", service_group=\"worker\", service_name=\"eventa-notification-service\"} | json | event=\"email_verification_delivery_completed\" | outcome=~\"failed|expired|rejected\"",
           "queryType": "range",
           "refId": "A"
         },
         {
           "editorMode": "code",
-          "expr": "{project=\"eventa\", service_group=\"application\", service_name=\"eventa-api-gateway\", level=~\"error|fatal\"}",
+          "expr": "{project=\"eventa\", service_group=\"worker\", service_name=\"eventa-notification-service\", level=~\"error|fatal\"}",
           "queryType": "range",
           "refId": "B"
         }
       ],
-      "title": "Recent Gateway failures",
+      "title": "Recent terminal delivery failures",
       "type": "logs"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 41,
-  "tags": ["eventa", "service", "gateway"],
+  "tags": ["eventa", "service", "notification"],
   "templating": { "list": [] },
   "time": { "from": "now-30m", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "API Gateway",
-  "uid": "eventa-api-gateway",
+  "title": "Notification Service",
+  "uid": "eventa-notification-service",
   "version": 1
 }

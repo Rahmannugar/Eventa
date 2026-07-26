@@ -5,7 +5,11 @@ import {
   ATTENDEE_EMAIL_VERIFICATION_QUEUE,
   type AttendeeEmailVerificationJob,
 } from '@eventa/messaging-contracts';
-import { runWithOperationSpan } from '@eventa/observability';
+import {
+  addJobInFlight,
+  recordJobMetrics,
+  runWithOperationSpan,
+} from '@eventa/observability';
 import {
   Logger,
   type OnApplicationShutdown,
@@ -28,6 +32,11 @@ interface RetryQueue {
   delayMs: number;
   name: string;
 }
+
+type JobProcessingOutcome =
+  EmailVerificationDeliveryOutcome['kind'] | 'rejected';
+
+const EMAIL_VERIFICATION_JOB_OPERATION = 'attendee.email_verification.delivery';
 
 const RETRY_QUEUES: readonly RetryQueue[] =
   EMAIL_VERIFICATION_RETRY_DELAYS_MS.map((delayMs) => ({
@@ -123,42 +132,56 @@ export class EmailVerificationJobConsumer
     channel: Channel,
     message: Message,
   ): Promise<void> {
+    const startedAt = process.hrtime.bigint();
     const parentContext = propagation.extract(
       context.active(),
       this.readTraceHeaders(message),
     );
 
-    while (!this.shuttingDown && this.consumerChannel === channel) {
-      try {
-        await context.with(parentContext, () =>
-          runWithOperationSpan(
-            'email_verification_job.process',
-            () => this.processMessage(channel, message),
-            {
-              attributes: {
-                'messaging.destination.name': ATTENDEE_EMAIL_VERIFICATION_QUEUE,
-                'messaging.operation.name': 'process',
-                'messaging.system': 'rabbitmq',
+    addJobInFlight(1, { operation: EMAIL_VERIFICATION_JOB_OPERATION });
+
+    try {
+      while (!this.shuttingDown && this.consumerChannel === channel) {
+        try {
+          const outcome = await context.with(parentContext, () =>
+            runWithOperationSpan(
+              'email_verification_job.process',
+              () => this.processMessage(channel, message),
+              {
+                attributes: {
+                  'messaging.destination.name':
+                    ATTENDEE_EMAIL_VERIFICATION_QUEUE,
+                  'messaging.operation.name': 'process',
+                  'messaging.system': 'rabbitmq',
+                },
+                kind: 'consumer',
               },
-              kind: 'consumer',
-            },
-          ),
-        );
-        return;
-      } catch (error: unknown) {
-        this.logger.error({
-          error_type: error instanceof Error ? error.name : 'UnknownError',
-          event: 'email_verification_job_consumer_error',
-        });
-        await this.delay(1_000);
+            ),
+          );
+          const durationMilliseconds =
+            Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+          recordJobMetrics(durationMilliseconds, {
+            operation: EMAIL_VERIFICATION_JOB_OPERATION,
+            outcome,
+          });
+          return;
+        } catch (error: unknown) {
+          this.logger.error({
+            error_type: error instanceof Error ? error.name : 'UnknownError',
+            event: 'email_verification_job_consumer_error',
+          });
+          await this.delay(1_000);
+        }
       }
+    } finally {
+      addJobInFlight(-1, { operation: EMAIL_VERIFICATION_JOB_OPERATION });
     }
   }
 
   private async processMessage(
     channel: Channel,
     message: Message,
-  ): Promise<void> {
+  ): Promise<JobProcessingOutcome> {
     const validation = validateAttendeeEmailVerificationJob(message);
 
     if (validation.kind === 'invalid') {
@@ -180,7 +203,7 @@ export class EmailVerificationJobConsumer
             }),
       });
       channel.ack(message);
-      return;
+      return 'rejected';
     }
 
     const outcome = await this.deliveryService.deliver(validation.job);
@@ -194,11 +217,12 @@ export class EmailVerificationJobConsumer
         outcome: 'retry',
       });
       channel.ack(message);
-      return;
+      return 'retry';
     }
 
     this.logTerminalOutcome(validation.job.jobId, outcome);
     channel.ack(message);
+    return outcome.kind;
   }
 
   private async publishRetry(

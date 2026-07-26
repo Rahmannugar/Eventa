@@ -4,6 +4,12 @@ export {
 } from './config/observability-config';
 export { EventaLogger } from './logging/eventa.logger';
 export {
+  addJobInFlight,
+  recordJobMetrics,
+  type JobInFlightAttributes,
+  type JobMetricAttributes,
+} from './metrics/job-metrics';
+export {
   recordBusinessOutcome,
   recordRequestMetrics,
   type BusinessOutcomeAttributes,

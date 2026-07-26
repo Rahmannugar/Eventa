@@ -47,6 +47,7 @@ const CLIENT_ERROR_STATUS_CODES = new Set([
   String(status.NOT_FOUND),
   String(status.ALREADY_EXISTS),
   String(status.PERMISSION_DENIED),
+  String(status.RESOURCE_EXHAUSTED),
   String(status.FAILED_PRECONDITION),
   String(status.ABORTED),
   String(status.OUT_OF_RANGE),

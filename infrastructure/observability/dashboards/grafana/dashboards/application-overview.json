@@ -53,10 +53,18 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
           "mappings": [],
-          "unit": "short"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -78,14 +86,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (service_name, outcome) (increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"} offset $__range))",
+          "expr": "100 * ((sum(increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\", outcome=\"server_error\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\", outcome=\"server_error\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\", outcome=\"server_error\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"http\"} offset $__range)), 1))",
           "instant": true,
-          "legendFormat": "{{service_name}} · {{outcome}}",
+          "legendFormat": "server errors",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Client HTTP requests",
+      "title": "Client HTTP server error rate",
       "type": "stat"
     },
     {
@@ -199,7 +207,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
       "id": 2,
       "options": {
         "legend": {
@@ -226,15 +234,23 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
           "mappings": [],
-          "unit": "short"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "id": 4,
+      "gridPos": { "h": 8, "w": 4, "x": 12, "y": 14 },
+      "id": 15,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -251,14 +267,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (outcome) (increase(eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"}[$__range]) unless eventa_business_outcome_count_total{service_name=~\"$service_name\", operation=\"attendee.registration\"} offset $__range))",
+          "expr": "100 * ((sum(increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\", outcome=\"server_error\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\", outcome=\"server_error\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\", outcome=\"server_error\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) + (last_over_time(eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"}[$__range]) unless eventa_request_count_total{service_name=~\"$service_name\", transport=\"grpc\"} offset $__range)), 1))",
           "instant": true,
-          "legendFormat": "{{outcome}}",
+          "legendFormat": "server errors",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Registration outcomes in selected range",
+      "title": "Internal gRPC server error rate",
       "type": "stat"
     },
     {
@@ -327,7 +343,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 14 },
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 14 },
       "id": 11,
       "options": {
         "colorMode": "value",
@@ -367,7 +383,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 14 },
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 14 },
       "id": 12,
       "options": {
         "colorMode": "value",

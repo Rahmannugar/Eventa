@@ -14,6 +14,7 @@ import {
 } from '@opentelemetry/semantic-conventions';
 
 import type { ObservabilityConfig } from '../config/observability-config';
+import { initializeJobMetrics } from '../metrics/job-metrics';
 import { initializeMetrics } from '../metrics/request-metrics';
 
 let telemetrySdk: NodeSDK | undefined;
@@ -57,6 +58,7 @@ export function startTelemetry(config: ObservabilityConfig): void {
 
   telemetrySdk.start();
   initializeMetrics();
+  initializeJobMetrics();
 }
 
 export async function stopTelemetry(): Promise<void> {
