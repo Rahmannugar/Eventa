@@ -14,6 +14,7 @@ interface ErrorResponse {
   locals?: {
     eventaError?: ApiErrorTelemetry;
   };
+  setHeader(name: string, value: string): void;
   status(statusCode: number): ErrorResponse;
   json(body: ApiErrorResponse): void;
 }
@@ -69,6 +70,12 @@ export class ApiErrorFilter implements ExceptionFilter {
 
     response.locals ??= {};
     response.locals.eventaError = telemetry;
+
+    if (exception instanceof ApiHttpException) {
+      for (const [name, value] of Object.entries(exception.headers)) {
+        response.setHeader(name, value);
+      }
+    }
 
     if (!(exception instanceof HttpException)) {
       this.logger.error({

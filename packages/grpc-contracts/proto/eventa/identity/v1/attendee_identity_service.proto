@@ -2,8 +2,11 @@ syntax = "proto3";
 
 package eventa.identity.v1;
 
+import "eventa/identity/v1/attendee_email_verification.proto";
 import "eventa/identity/v1/attendee_registration.proto";
 
 service AttendeeIdentityService {
   rpc RegisterAttendee(RegisterAttendeeRequest) returns (RegisterAttendeeResponse);
+  rpc ConfirmAttendeeEmailVerification(ConfirmAttendeeEmailVerificationRequest) returns (ConfirmAttendeeEmailVerificationResponse);
+  rpc ResendAttendeeEmailVerification(ResendAttendeeEmailVerificationRequest) returns (ResendAttendeeEmailVerificationResponse);
 }

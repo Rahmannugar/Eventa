@@ -43,3 +43,17 @@ Boundary rules:
 Errors use the Gateway-wide public envelope documented in the service [API.md](../../../API.md). Admitted and denied attempts include `RateLimit-Policy` and `RateLimit`; denied attempts also include `Retry-After`. Every response includes `x-request-id`.
 
 The generated OpenAPI document is authoritative for exact HTTP schemas. This file explains the domain behavior without duplicating that machine-readable contract.
+
+## Confirm Email Verification
+
+`POST /auth/attendees/email-verification/confirm`
+
+The request contains a canonicalizable email address and a six-digit `otp`. Success returns `200 { "emailVerified": true }`. Invalid, expired, replaced, missing, and guess-exhausted OTPs all return `400 EMAIL_VERIFICATION_INVALID`; the response does not disclose account existence.
+
+## Resend Email Verification
+
+`POST /auth/attendees/email-verification/resend`
+
+The request contains an email address. Accepted requests return `202 { "accepted": true }` for unknown, already-verified, and unverified accounts alike. Identity applies the 60-second per-email resend cooldown before account lookup.
+
+Both endpoints apply independent Gateway token-bucket and hourly limits by client IP and canonical email before DTO validation. Validation returns `422`, endpoint or cooldown denial returns `429` with `Retry-After`, and unavailable dependencies return `503`. Responses include `RateLimit-Policy`, `RateLimit`, and `x-request-id`.

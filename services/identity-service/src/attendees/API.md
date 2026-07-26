@@ -24,3 +24,23 @@ Successful response fields:
 | `UNKNOWN`          | An unexpected unhandled internal failure occurred.            |
 
 The Gateway may forward `x-request-id` as gRPC metadata; direct clients may omit it. The service contract at [../../../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](../../../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto) and its imported registration messages are authoritative for service names, methods, wire fields, and field numbers.
+
+## ConfirmAttendeeEmailVerification Command
+
+The request contains `email` and a six-digit `otp`. Success returns `email_verified = true`, including an exact replay of an already-confirmed OTP while its original Redis state remains valid.
+
+| gRPC status           | Meaning                                                       |
+| --------------------- | ------------------------------------------------------------- |
+| `INVALID_ARGUMENT`    | Identity validation rejected the command shape.               |
+| `FAILED_PRECONDITION` | The OTP is invalid, expired, replaced, missing, or exhausted. |
+| `UNAVAILABLE`         | Verification state could not be read or changed.              |
+
+## ResendAttendeeEmailVerification Command
+
+The request contains `email`. Success returns `accepted = true` without disclosing whether the attendee exists or is already verified. Identity reserves the 60-second cooldown before account lookup and publishes a replacement OTP job only for an existing unverified attendee.
+
+| gRPC status          | Meaning                                          |
+| -------------------- | ------------------------------------------------ |
+| `INVALID_ARGUMENT`   | Identity validation rejected the command shape.  |
+| `RESOURCE_EXHAUSTED` | The per-email resend cooldown is active.         |
+| `UNAVAILABLE`        | Verification state could not be read or changed. |

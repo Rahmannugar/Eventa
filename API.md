@@ -4,9 +4,11 @@
 
 Clients communicate with Eventa through the API Gateway over HTTP.
 
-| Method | Path                       | Outcome                                                                                          |
-| ------ | -------------------------- | ------------------------------------------------------------------------------------------------ |
-| `POST` | `/auth/attendees/register` | Creates an unverified attendee account after registration rate limiting and Identity validation. |
+| Method | Path                                         | Outcome                                                                                          |
+| ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST` | `/auth/attendees/register`                   | Creates an unverified attendee account after registration rate limiting and Identity validation. |
+| `POST` | `/auth/attendees/email-verification/confirm` | Confirms email ownership with a valid six-digit OTP.                                             |
+| `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 
 The Gateway also exposes:
 

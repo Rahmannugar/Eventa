@@ -10,7 +10,7 @@ import {
 } from '@eventa/observability';
 
 import type { RuntimeConfig } from './config/runtime-config';
-import { AttendeeRegistrationModule } from './domains/attendees/attendee-registration.module';
+import { AttendeesModule } from './domains/attendees/attendees.module';
 import { HealthModule } from './health/health.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 
@@ -26,7 +26,7 @@ export class AppModule implements NestModule {
           operationTimeoutMs: config.redisOperationTimeoutMs,
           redisUrl: config.redisUrl,
         }),
-        AttendeeRegistrationModule.register({
+        AttendeesModule.register({
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,

@@ -6,6 +6,12 @@ export {
   type AttendeeIdentityServiceController,
 } from '../../generated/eventa/identity/v1/attendee_identity_service.generated';
 export type {
+  ConfirmAttendeeEmailVerificationRequest,
+  ConfirmAttendeeEmailVerificationResponse,
+  ResendAttendeeEmailVerificationRequest,
+  ResendAttendeeEmailVerificationResponse,
+} from '../../generated/eventa/identity/v1/attendee_email_verification.generated';
+export type {
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
 } from '../../generated/eventa/identity/v1/attendee_registration.generated';

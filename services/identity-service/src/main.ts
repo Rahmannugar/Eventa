@@ -27,7 +27,7 @@ async function bootstrap(): Promise<void> {
       exceptionFactory: () =>
         new RpcException({
           code: status.INVALID_ARGUMENT,
-          message: 'INVALID_REGISTRATION_REQUEST',
+          message: 'INVALID_IDENTITY_REQUEST',
         }),
       forbidNonWhitelisted: true,
       transform: true,

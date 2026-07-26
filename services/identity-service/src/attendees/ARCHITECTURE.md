@@ -31,6 +31,8 @@ The domain owns `attendee_accounts`: `id`, canonical `email`, canonical `usernam
 
 `AttendeeEmailVerificationService` owns starting verification, resend, and confirmation. It creates cryptographically random six-digit OTPs and passes plaintext values only to `EmailVerificationJobPublisher` for delivery. It protects both the canonical email subject and OTP with purpose-separated HMAC-SHA256 values before calling `EmailVerificationOtpState`; Redis keys, stored fields, logs, and traces never contain the email or plaintext OTP.
 
+`AttendeeIdentityController` exposes the generated confirm and resend RPC handlers and delegates both commands to that same service. It maps unusable OTP state to `FAILED_PRECONDITION`, resend cooldown to `RESOURCE_EXHAUSTED` with safe retry metadata, and unavailable Redis state to `UNAVAILABLE`.
+
 Redis stores one OTP record per protected email subject for 15 minutes. Saving a replacement overwrites the previous OTP and resets its five-guess allowance. One Lua operation checks an OTP and atomically decrements incorrect guesses; the fifth incorrect guess removes the OTP. A confirmed OTP keeps its confirmed state only for the original Redis lifetime so an exact retry returns the same success without extending validity.
 
 Resend admission uses one atomic 60-second per-email cooldown before account lookup, including unknown and already-verified emails. There is no separate hourly product cap inside Identity.

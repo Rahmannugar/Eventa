@@ -8,6 +8,12 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
+import {
+  ConfirmAttendeeEmailVerificationRequest,
+  ConfirmAttendeeEmailVerificationResponse,
+  ResendAttendeeEmailVerificationRequest,
+  ResendAttendeeEmailVerificationResponse,
+} from "./attendee_email_verification.generated";
 import { RegisterAttendeeRequest, RegisterAttendeeResponse } from "./attendee_registration.generated";
 
 export const protobufPackage = "eventa.identity.v1";
@@ -16,15 +22,39 @@ export const EVENTA_IDENTITY_V1_PACKAGE_NAME = "eventa.identity.v1";
 
 export interface AttendeeIdentityServiceClient {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
+
+  confirmAttendeeEmailVerification(
+    request: ConfirmAttendeeEmailVerificationRequest,
+    metadata?: Metadata,
+  ): Observable<ConfirmAttendeeEmailVerificationResponse>;
+
+  resendAttendeeEmailVerification(
+    request: ResendAttendeeEmailVerificationRequest,
+    metadata?: Metadata,
+  ): Observable<ResendAttendeeEmailVerificationResponse>;
 }
 
 export interface AttendeeIdentityServiceController {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
+
+  confirmAttendeeEmailVerification(
+    request: ConfirmAttendeeEmailVerificationRequest,
+    metadata?: Metadata,
+  ): Observable<ConfirmAttendeeEmailVerificationResponse>;
+
+  resendAttendeeEmailVerification(
+    request: ResendAttendeeEmailVerificationRequest,
+    metadata?: Metadata,
+  ): Observable<ResendAttendeeEmailVerificationResponse>;
 }
 
 export function AttendeeIdentityServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["registerAttendee"];
+    const grpcMethods: string[] = [
+      "registerAttendee",
+      "confirmAttendeeEmailVerification",
+      "resendAttendeeEmailVerification",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AttendeeIdentityService", method)(constructor.prototype[method], method, descriptor);

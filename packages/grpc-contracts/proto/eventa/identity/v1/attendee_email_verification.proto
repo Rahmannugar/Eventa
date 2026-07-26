@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message ConfirmAttendeeEmailVerificationRequest {
+  string email = 1;
+  string otp = 2;
+}
+
+message ConfirmAttendeeEmailVerificationResponse {
+  bool email_verified = 1;
+}
+
+message ResendAttendeeEmailVerificationRequest {
+  string email = 1;
+}
+
+message ResendAttendeeEmailVerificationResponse {
+  bool accepted = 1;
+}

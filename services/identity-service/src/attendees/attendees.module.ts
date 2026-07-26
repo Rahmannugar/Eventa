@@ -17,7 +17,7 @@ import {
 } from './constants/attendee-registration.constants';
 import { AttendeeEmailVerificationService } from './services/attendee-email-verification.service';
 import { AttendeeRegistrationService } from './services/attendee-registration.service';
-import { AttendeeRegistrationController } from './controllers/attendee-registration.controller';
+import { AttendeeIdentityController } from './controllers/attendee-identity.controller';
 import { ObservedAttendeeRegistrar } from './observability/observed-attendee-registrar';
 import { AttendeeAccountRepository } from './repositories/attendee-account.repository';
 import { RabbitMQEmailVerificationJobPublisher } from './adapters/job-queue/rabbitmq-email-verification-job.publisher';
@@ -28,7 +28,7 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
 
 @Module({
   imports: [DatabaseModule, SecurityModule],
-  controllers: [AttendeeRegistrationController],
+  controllers: [AttendeeIdentityController],
   providers: [
     AttendeeRegistrationService,
     {
