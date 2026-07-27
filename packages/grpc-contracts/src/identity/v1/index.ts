@@ -15,4 +15,8 @@ export type {
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
 } from '../../generated/eventa/identity/v1/attendee_registration.generated';
+export type {
+  LoginAttendeeRequest,
+  LoginAttendeeResponse,
+} from '../../generated/eventa/identity/v1/attendee_login.generated';
 export * from './proto-paths';

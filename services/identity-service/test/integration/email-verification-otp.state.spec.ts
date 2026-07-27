@@ -2,6 +2,7 @@ import { createClient } from 'redis';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/redis/email-verification-otp.state';
+import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
 
 const testRedisUrl = process.env.TEST_REDIS_URL;
@@ -17,6 +18,7 @@ const administrativeClient = createClient({
 });
 const redis = new RedisClient(testRedisUrl, 1_000, 750);
 const otpState = new RedisEmailVerificationOtpState(redis);
+const sessionState = new RedisAttendeeSessionState(redis);
 
 describe('RedisEmailVerificationOtpState integration', () => {
   beforeAll(async () => {
@@ -133,5 +135,111 @@ describe('RedisEmailVerificationOtpState integration', () => {
 
     expect(decisions.filter((decision) => decision.allowed)).toHaveLength(1);
     expect(decisions.filter((decision) => !decision.allowed)).toHaveLength(9);
+  });
+
+  it('keeps session state only for its fixed lifetime', async () => {
+    const input = {
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'subject-1',
+      maxConcurrentSessions: 3,
+      sessionId: 'session-1',
+      tokenDigest: 'a'.repeat(64),
+      ttlMs: 500,
+    };
+
+    const created = await sessionState.create(input);
+
+    await expect(sessionState.read(input.tokenDigest)).resolves.toEqual(
+      created,
+    );
+    const remainingTtl = await administrativeClient.pTTL(
+      `identity:attendee-session:v1:${input.tokenDigest}`,
+    );
+    expect(remainingTtl).toBeGreaterThan(0);
+    expect(remainingTtl).toBeLessThanOrEqual(500);
+
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await expect(sessionState.read(input.tokenDigest)).resolves.toBeUndefined();
+  });
+
+  it('silently evicts the oldest session when a fourth is created', async () => {
+    const inputs = Array.from({ length: 4 }, (_, index) => ({
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'subject-1',
+      maxConcurrentSessions: 3,
+      sessionId: `session-${index + 1}`,
+      tokenDigest: String(index + 1)
+        .repeat(64)
+        .slice(0, 64),
+      ttlMs: 60_000,
+    }));
+
+    for (const input of inputs) {
+      await sessionState.create(input);
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+
+    await expect(sessionState.read(inputs[0]!.tokenDigest)).resolves.toBe(
+      undefined,
+    );
+    await expect(
+      Promise.all(
+        inputs
+          .slice(1)
+          .map(({ tokenDigest }) => sessionState.read(tokenDigest)),
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({ sessionId: 'session-2' }),
+      expect.objectContaining({ sessionId: 'session-3' }),
+      expect.objectContaining({ sessionId: 'session-4' }),
+    ]);
+  });
+
+  it('atomically preserves the three-session cap under concurrent creation', async () => {
+    const inputs = Array.from({ length: 8 }, (_, index) => ({
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'subject-1',
+      maxConcurrentSessions: 3,
+      sessionId: `session-${index + 1}`,
+      tokenDigest: String(index + 1)
+        .repeat(64)
+        .slice(0, 64),
+      ttlMs: 60_000 + index,
+    }));
+
+    await Promise.all(inputs.map((input) => sessionState.create(input)));
+
+    const liveSessions = await Promise.all(
+      inputs.map(({ tokenDigest }) => sessionState.read(tokenDigest)),
+    );
+    expect(liveSessions.filter(Boolean)).toHaveLength(3);
+    expect(
+      await administrativeClient.zCard(
+        'identity:attendee-session-account:v1:subject-1',
+      ),
+    ).toBe(3);
+  });
+
+  it('revokes one session or every session for an attendee', async () => {
+    const inputs = ['a', 'b'].map((prefix, index) => ({
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'subject-1',
+      maxConcurrentSessions: 3,
+      sessionId: `session-${index + 1}`,
+      tokenDigest: prefix.repeat(64),
+      ttlMs: 60_000,
+    }));
+    await Promise.all(inputs.map((input) => sessionState.create(input)));
+
+    await expect(sessionState.revoke(inputs[0]!.tokenDigest)).resolves.toBe(
+      true,
+    );
+    await expect(sessionState.read(inputs[0]!.tokenDigest)).resolves.toBe(
+      undefined,
+    );
+    await expect(sessionState.revokeAll('subject-1')).resolves.toBe(1);
+    await expect(sessionState.read(inputs[1]!.tokenDigest)).resolves.toBe(
+      undefined,
+    );
   });
 });

@@ -15,7 +15,15 @@ export const attendeeAccounts = pgTable(
     email: text('email').notNull(),
     username: text('username').notNull(),
     passwordHash: text('password_hash').notNull(),
+    status: text('status')
+      .$type<'active' | 'suspended'>()
+      .default('active')
+      .notNull(),
     emailVerifiedAt: timestamp('email_verified_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    deletedAt: timestamp('deleted_at', {
       mode: 'date',
       withTimezone: true,
     }),
@@ -36,6 +44,10 @@ export const attendeeAccounts = pgTable(
     check(
       'attendee_accounts_username_canonical',
       sql`${table.username} ~ '^[a-z0-9_]{3,30}$'`,
+    ),
+    check(
+      'attendee_accounts_status_allowed',
+      sql`${table.status} IN ('active', 'suspended')`,
     ),
   ],
 );

@@ -23,11 +23,17 @@ import {
 import { AttendeeEmailVerificationRateLimitService } from './rate-limit/services/attendee-email-verification-rate-limit.service';
 import { AttendeeRegistrationRateLimitGuard } from './rate-limit/guards/attendee-registration-rate-limit.guard';
 import { AttendeeRegistrationRateLimitService } from './rate-limit/services/attendee-registration-rate-limit.service';
+import { AttendeeLoginController } from './controllers/attendee-login.controller';
+import { AttendeeLoginService } from './services/attendee-login.service';
+import { AttendeeLoginRateLimitGuard } from './rate-limit/guards/attendee-login-rate-limit.guard';
+import { AttendeeLoginRateLimitService } from './rate-limit/services/attendee-login-rate-limit.service';
+import { ATTENDEE_SESSION_COOKIE_SECURE } from './constants/attendee-login.constants';
 
 interface AttendeesModuleOptions {
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
+  secureSessionCookie: boolean;
 }
 
 @Module({})
@@ -53,6 +59,7 @@ export class AttendeesModule {
       ],
       controllers: [
         AttendeeEmailVerificationController,
+        AttendeeLoginController,
         AttendeeRegistrationController,
       ],
       providers: [
@@ -61,7 +68,21 @@ export class AttendeesModule {
           useValue: options.identityGrpcDeadlineMs,
         },
         AttendeeEmailVerificationService,
+        AttendeeLoginService,
         AttendeeRegistrationService,
+        {
+          provide: ATTENDEE_SESSION_COOKIE_SECURE,
+          useValue: options.secureSessionCookie,
+        },
+        {
+          provide: AttendeeLoginRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AttendeeLoginRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
+        },
         {
           provide: AttendeeEmailVerificationRateLimitService,
           useFactory: (state: RateLimitState) =>
@@ -81,6 +102,7 @@ export class AttendeesModule {
           inject: [RATE_LIMIT_STATE],
         },
         AttendeeRegistrationRateLimitGuard,
+        AttendeeLoginRateLimitGuard,
         AttendeeEmailVerificationConfirmRateLimitGuard,
         AttendeeEmailVerificationResendRateLimitGuard,
       ],

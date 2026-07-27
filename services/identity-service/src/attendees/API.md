@@ -25,6 +25,17 @@ Successful response fields:
 
 The Gateway may forward `x-request-id` as gRPC metadata; direct clients may omit it. The service contract at [../../../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](../../../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto) and its imported registration messages are authoritative for service names, methods, wire fields, and field numbers.
 
+## LoginAttendee Command
+
+The request contains `email` and `password`. Success returns the active attendee projection, including `status = active`, plus one opaque session token and its absolute expiry for the Gateway transport boundary.
+
+| gRPC status           | Meaning                                                                     |
+| --------------------- | --------------------------------------------------------------------------- |
+| `INVALID_ARGUMENT`    | Identity validation rejected the command shape.                             |
+| `UNAUTHENTICATED`     | The email or password is incorrect.                                         |
+| `FAILED_PRECONDITION` | Correct credentials belong to an unverified, suspended, or deleted account. |
+| `UNAVAILABLE`         | Live session state could not be created.                                    |
+
 ## ConfirmAttendeeEmailVerification Command
 
 The request contains `email` and a six-digit `otp`. Success returns `email_verified = true`, including an exact replay of an already-confirmed OTP while its original Redis state remains valid.

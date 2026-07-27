@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message LoginAttendeeRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginAttendeeResponse {
+  string attendee_id = 1;
+  string email = 2;
+  string username = 3;
+  bool email_verified = 4;
+  string session_token = 5;
+  string session_expires_at = 6;
+  string status = 7;
+}

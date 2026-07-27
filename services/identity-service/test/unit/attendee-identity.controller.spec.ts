@@ -1,10 +1,15 @@
 import type { AttendeeRegistrar } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeIdentityController } from '../../src/attendees/controllers/attendee-identity.controller';
 import type { AttendeeEmailVerificationService } from '../../src/attendees/services/attendee-email-verification.service';
+import type { AttendeeLoginService } from '../../src/attendees/services/attendee-login.service';
 import {
   EmailVerificationOtpInvalidError,
   EmailVerificationResendRateLimitedError,
 } from '../../src/attendees/errors/attendee-email-verification.errors';
+import {
+  AttendeeAccountDeletedError,
+  AttendeeAccountSuspendedError,
+} from '../../src/attendees/errors/attendee-login.errors';
 import { Metadata, status } from '@grpc/grpc-js';
 import { RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -29,6 +34,11 @@ class RecordingEmailVerification {
 
 function createController(
   verification: RecordingEmailVerification,
+  login: Pick<AttendeeLoginService, 'login'> = {
+    login: () => {
+      throw new Error('Login is not exercised by this test');
+    },
+  },
 ): AttendeeIdentityController {
   const registrar: AttendeeRegistrar = {
     register: () => {
@@ -39,6 +49,7 @@ function createController(
   return new AttendeeIdentityController(
     registrar,
     verification as unknown as AttendeeEmailVerificationService,
+    login as AttendeeLoginService,
   );
 }
 
@@ -103,6 +114,28 @@ describe('AttendeeIdentityController email verification', () => {
         metadata instanceof Metadata &&
         metadata.get('retry-after')[0] === '37'
       );
+    });
+  });
+});
+
+describe('AttendeeIdentityController login lifecycle outcomes', () => {
+  it.each([
+    [new AttendeeAccountDeletedError(), 'ATTENDEE_ACCOUNT_DELETED'],
+    [new AttendeeAccountSuspendedError(), 'ATTENDEE_ACCOUNT_SUSPENDED'],
+  ])('returns FAILED_PRECONDITION for %s', async (error, message) => {
+    const controller = createController(new RecordingEmailVerification(), {
+      login: () => Promise.reject(error),
+    });
+
+    await expect(
+      firstValueFrom(
+        controller.loginAttendee({
+          email: 'attendee@example.com',
+          password: 'correct-password',
+        }),
+      ),
+    ).rejects.toMatchObject({
+      error: { code: status.FAILED_PRECONDITION, message },
     });
   });
 });

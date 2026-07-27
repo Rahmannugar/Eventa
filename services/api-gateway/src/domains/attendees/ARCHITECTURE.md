@@ -22,6 +22,14 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 5. Confirmation collapses all unusable OTP states into one public error. Resend preserves the same accepted response for unknown, verified, and unverified accounts.
 6. Identity cooldown metadata becomes the public `Retry-After` header without exposing account state.
 
+## Login Flow
+
+1. The login guard applies the route's client-IP and protected canonical-email limits.
+2. The DTO validates email and password independently of Identity.
+3. The login service forwards the credentials, request ID, and absolute gRPC deadline.
+4. Identity returns the attendee projection, opaque token, and absolute expiry after credential and session-state checks.
+5. The controller sets the host-only HttpOnly session cookie and omits the token from the JSON response.
+
 ## Invariants and Failure Behavior
 
 - Rate limiting fails closed with `503` when Redis cannot make an admission decision.
@@ -30,6 +38,7 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 - Malformed JSON maps to `400`, validation to `422`, uniqueness conflicts to `409`, denial to `429`, and unavailable dependencies to `503`.
 - Identity deadline expiry cancels the Gateway's gRPC call, returns the same safe `503` contract, and retains a deadline-specific internal diagnostic for logs and traces.
 - Confirm and resend quotas use separate keys, so one operation cannot consume the other's allowance.
+- Login has independent keys and stable `401`, `403`, `422`, `429`, and `503` translations.
 - Gateway rate-limit subjects and Identity OTP subjects are independently HMAC-protected before Redis storage.
 - Unsupported methods use the Gateway's ordinary unmatched-route behavior; there is no overlapping method catch-all.
 

@@ -1,1 +1,2 @@
 export const PASSWORD_HASHER = Symbol('PASSWORD_HASHER');
+export const PASSWORD_VERIFIER = Symbol('PASSWORD_VERIFIER');

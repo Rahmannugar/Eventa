@@ -15,6 +15,13 @@
       "when": 1784219222241,
       "tag": "0001_move_username_to_attendee_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785145957403,
+      "tag": "0002_add_attendee_account_lifecycle",
+      "breakpoints": true
     }
   ]
 }

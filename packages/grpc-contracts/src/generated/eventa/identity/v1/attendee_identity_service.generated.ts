@@ -14,6 +14,7 @@ import {
   ResendAttendeeEmailVerificationRequest,
   ResendAttendeeEmailVerificationResponse,
 } from "./attendee_email_verification.generated";
+import { LoginAttendeeRequest, LoginAttendeeResponse } from "./attendee_login.generated";
 import { RegisterAttendeeRequest, RegisterAttendeeResponse } from "./attendee_registration.generated";
 
 export const protobufPackage = "eventa.identity.v1";
@@ -22,6 +23,8 @@ export const EVENTA_IDENTITY_V1_PACKAGE_NAME = "eventa.identity.v1";
 
 export interface AttendeeIdentityServiceClient {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
+
+  loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
 
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
@@ -36,6 +39,8 @@ export interface AttendeeIdentityServiceClient {
 
 export interface AttendeeIdentityServiceController {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
+
+  loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
 
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
@@ -52,6 +57,7 @@ export function AttendeeIdentityServiceControllerMethods() {
   return function (constructor: Function) {
     const grpcMethods: string[] = [
       "registerAttendee",
+      "loginAttendee",
       "confirmAttendeeEmailVerification",
       "resendAttendeeEmailVerification",
     ];

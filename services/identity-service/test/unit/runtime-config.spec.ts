@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
+  ATTENDEE_SESSION_HMAC_SECRET: 'test-attendee-session-secret-32-characters',
   DATABASE_URL: 'postgresql://identity:test@localhost:5432/eventa_identity',
   EMAIL_VERIFICATION_HMAC_SECRET:
     'test-email-verification-secret-32-characters',
@@ -20,6 +21,7 @@ const validEnvironment = {
 describe('readRuntimeConfig', () => {
   it('returns the complete required configuration', () => {
     expect(readRuntimeConfig(validEnvironment)).toEqual({
+      attendeeSessionHmacSecret: validEnvironment.ATTENDEE_SESSION_HMAC_SECRET,
       databaseUrl: validEnvironment.DATABASE_URL,
       emailVerificationHmacSecret:
         validEnvironment.EMAIL_VERIFICATION_HMAC_SECRET,
@@ -36,6 +38,7 @@ describe('readRuntimeConfig', () => {
   });
 
   it.each([
+    'ATTENDEE_SESSION_HMAC_SECRET',
     'DATABASE_URL',
     'EMAIL_VERIFICATION_HMAC_SECRET',
     'GRPC_HOST',
@@ -103,6 +106,17 @@ describe('readRuntimeConfig', () => {
       }),
     ).toThrow(
       'EMAIL_VERIFICATION_HMAC_SECRET must contain at least 32 characters',
+    );
+  });
+
+  it('rejects a short attendee-session HMAC secret', () => {
+    expect(() =>
+      readRuntimeConfig({
+        ...validEnvironment,
+        ATTENDEE_SESSION_HMAC_SECRET: 'too-short',
+      }),
+    ).toThrow(
+      'ATTENDEE_SESSION_HMAC_SECRET must contain at least 32 characters',
     );
   });
 });

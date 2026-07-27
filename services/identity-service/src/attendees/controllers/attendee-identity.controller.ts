@@ -3,6 +3,7 @@ import {
   AttendeeIdentityServiceControllerMethods,
   type AttendeeIdentityServiceController,
   type ConfirmAttendeeEmailVerificationResponse,
+  type LoginAttendeeResponse,
   type RegisterAttendeeResponse,
   type ResendAttendeeEmailVerificationResponse,
 } from '@eventa/grpc-contracts';
@@ -25,8 +26,17 @@ import {
   ResendAttendeeEmailVerificationDto,
 } from '../dto/attendee-email-verification.dto';
 import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
+import { LoginAttendeeDto } from '../dto/login-attendee.dto';
 import { AttendeeEmailVerificationService } from '../services/attendee-email-verification.service';
+import { AttendeeLoginService } from '../services/attendee-login.service';
 import type { AttendeeRegistrar } from '../types/attendee-registration.types';
+import {
+  AttendeeAccountDeletedError,
+  AttendeeAccountSuspendedError,
+  AttendeeEmailVerificationRequiredError,
+  InvalidAttendeeCredentialsError,
+} from '../errors/attendee-login.errors';
+import { AttendeeSessionStateUnavailableError } from '../errors/attendee-session.errors';
 
 @Controller()
 @AttendeeIdentityServiceControllerMethods()
@@ -35,12 +45,17 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
     @Inject(ATTENDEE_REGISTRAR)
     private readonly attendeeRegistrar: AttendeeRegistrar,
     private readonly emailVerification: AttendeeEmailVerificationService,
+    private readonly attendeeLogin: AttendeeLoginService,
   ) {}
 
   registerAttendee(
     request: RegisterAttendeeDto,
   ): Observable<RegisterAttendeeResponse> {
     return from(this.handleRegistration(request));
+  }
+
+  loginAttendee(request: LoginAttendeeDto): Observable<LoginAttendeeResponse> {
+    return from(this.handleLogin(request));
   }
 
   confirmAttendeeEmailVerification(
@@ -67,6 +82,41 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
       ) {
         throw new RpcException({
           code: status.ALREADY_EXISTS,
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  private async handleLogin(
+    request: LoginAttendeeDto,
+  ): Promise<LoginAttendeeResponse> {
+    try {
+      return await this.attendeeLogin.login(request);
+    } catch (error: unknown) {
+      if (error instanceof InvalidAttendeeCredentialsError) {
+        throw new RpcException({
+          code: status.UNAUTHENTICATED,
+          message: error.message,
+        });
+      }
+
+      if (
+        error instanceof AttendeeEmailVerificationRequiredError ||
+        error instanceof AttendeeAccountDeletedError ||
+        error instanceof AttendeeAccountSuspendedError
+      ) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+
+      if (error instanceof AttendeeSessionStateUnavailableError) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
           message: error.message,
         });
       }

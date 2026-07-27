@@ -2,6 +2,8 @@ import type {
   AttendeeIdentityServiceClient,
   ConfirmAttendeeEmailVerificationRequest,
   ConfirmAttendeeEmailVerificationResponse,
+  LoginAttendeeRequest,
+  LoginAttendeeResponse,
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
   ResendAttendeeEmailVerificationRequest,
@@ -11,6 +13,11 @@ import type { CallOptions, Metadata } from '@grpc/grpc-js';
 import type { Observable } from 'rxjs';
 
 export interface DeadlineAwareAttendeeIdentityServiceClient extends AttendeeIdentityServiceClient {
+  loginAttendee(
+    request: LoginAttendeeRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<LoginAttendeeResponse>;
   registerAttendee(
     request: RegisterAttendeeRequest,
     metadata?: Metadata,

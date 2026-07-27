@@ -44,6 +44,14 @@ Errors use the Gateway-wide public envelope documented in the service [API.md](.
 
 The generated OpenAPI document is authoritative for exact HTTP schemas. This file explains the domain behavior without duplicating that machine-readable contract.
 
+## Login
+
+`POST /auth/attendees/login`
+
+The request contains `email` and `password`. A successful `200` response contains the attendee ID, canonical email and username, `emailVerified: true`, and `status: "active"`. The session token is returned only as the host-only `eventa_attendee_session` cookie with `HttpOnly`, `SameSite=Lax`, `Path=/`, the Identity-provided absolute expiry, and `Secure` when the public API uses HTTPS.
+
+Incorrect credentials return `401`. After a correct password, unverified, suspended, and deleted accounts return distinct `403` errors. Invalid fields return `422`; abuse-control denial returns `429`; unavailable rate-limit, Identity, or session state returns `503`. Login applies independent client-IP and canonical-email limits.
+
 ## Confirm Email Verification
 
 `POST /auth/attendees/email-verification/confirm`

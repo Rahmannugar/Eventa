@@ -15,16 +15,25 @@ import {
   ATTENDEE_ACCOUNT_REPOSITORY,
   ATTENDEE_REGISTRAR,
 } from './constants/attendee-registration.constants';
+import { ATTENDEE_SESSION_STATE } from './constants/attendee-session.constants';
+import { ATTENDEE_LOGIN_REPOSITORY } from './constants/attendee-login.constants';
 import { AttendeeEmailVerificationService } from './services/attendee-email-verification.service';
 import { AttendeeRegistrationService } from './services/attendee-registration.service';
+import { AttendeeSessionService } from './services/attendee-session.service';
+import { AttendeeLoginService } from './services/attendee-login.service';
 import { AttendeeIdentityController } from './controllers/attendee-identity.controller';
 import { ObservedAttendeeRegistrar } from './observability/observed-attendee-registrar';
 import { AttendeeAccountRepository } from './repositories/attendee-account.repository';
 import { RabbitMQEmailVerificationJobPublisher } from './adapters/job-queue/rabbitmq-email-verification-job.publisher';
 import { RedisEmailVerificationOtpState } from './adapters/redis/email-verification-otp.state';
+import { RedisAttendeeSessionState } from './adapters/redis/attendee-session.state';
+import type { AttendeeSessionState } from './types/attendee-session.types';
+import type { AttendeeLoginRepository } from './types/attendee-login.types';
 import type { AttendeeEmailVerificationRepository } from './types/attendee-email-verification.types';
 import type { EmailVerificationJobPublisher } from './ports/email-verification-job.publisher';
 import type { EmailVerificationOtpState } from './ports/email-verification-otp.state';
+import { PASSWORD_VERIFIER } from '../security/constants/security.constants';
+import type { PasswordVerifier } from '../security/types/password-verifier.types';
 
 @Module({
   imports: [DatabaseModule, SecurityModule],
@@ -46,6 +55,10 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
       useExisting: ATTENDEE_ACCOUNT_REPOSITORY,
     },
     {
+      provide: ATTENDEE_LOGIN_REPOSITORY,
+      useExisting: ATTENDEE_ACCOUNT_REPOSITORY,
+    },
+    {
       provide: RedisClient,
       useFactory: (config: RuntimeConfig) =>
         new RedisClient(
@@ -60,6 +73,30 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
       useFactory: (redis: RedisClient) =>
         new RedisEmailVerificationOtpState(redis),
       inject: [RedisClient],
+    },
+    {
+      provide: ATTENDEE_SESSION_STATE,
+      useFactory: (redis: RedisClient) => new RedisAttendeeSessionState(redis),
+      inject: [RedisClient],
+    },
+    {
+      provide: AttendeeSessionService,
+      useFactory: (state: AttendeeSessionState, config: RuntimeConfig) =>
+        new AttendeeSessionService(state, config.attendeeSessionHmacSecret),
+      inject: [ATTENDEE_SESSION_STATE, RUNTIME_CONFIG],
+    },
+    {
+      provide: AttendeeLoginService,
+      useFactory: (
+        repository: AttendeeLoginRepository,
+        passwordVerifier: PasswordVerifier,
+        sessions: AttendeeSessionService,
+      ) => new AttendeeLoginService(repository, passwordVerifier, sessions),
+      inject: [
+        ATTENDEE_LOGIN_REPOSITORY,
+        PASSWORD_VERIFIER,
+        AttendeeSessionService,
+      ],
     },
     {
       provide: RabbitMQClient,
@@ -98,6 +135,10 @@ import type { EmailVerificationOtpState } from './ports/email-verification-otp.s
       ],
     },
   ],
-  exports: [AttendeeEmailVerificationService],
+  exports: [
+    AttendeeEmailVerificationService,
+    AttendeeLoginService,
+    AttendeeSessionService,
+  ],
 })
 export class AttendeesModule {}

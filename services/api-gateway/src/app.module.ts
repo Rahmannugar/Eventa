@@ -30,6 +30,7 @@ export class AppModule implements NestModule {
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
+          secureSessionCookie: config.publicApiUrl.startsWith('https://'),
         }),
       ],
       providers: [HttpRequestTelemetryMiddleware, TelemetryLifecycleService],

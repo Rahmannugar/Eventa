@@ -1,14 +1,15 @@
 # Eventa Identity Service
 
-Identity owns Eventa's security principals, credentials, and verification state. Attendee and admin identities are separate namespaces. The current implementation contains attendee registration and the internal email-verification OTP lifecycle; registration is its only exposed business operation.
+Identity owns Eventa's security principals, credentials, verification state, account lifecycle, and sessions. Attendee and admin identities are separate namespaces. The Attendees domain exposes registration, email verification, and login.
 
 ## Runtime
 
 - gRPC application port: configured by `GRPC_PORT`; local Compose publishes `50051`.
 - HTTP health port: configured by `HEALTH_PORT`; local Compose publishes `3005`.
 - PostgreSQL: configured by `DATABASE_URL`; local Compose publishes the database on host port `55432` for development tools.
-- Redis temporary OTP state: configured by `REDIS_URL`; local Compose publishes the Identity-owned Redis instance on host port `57379` for development tools.
+- Redis temporary OTP and live attendee-session state: configured by `REDIS_URL`; local Compose publishes the Identity-owned Redis instance on host port `57379` for development tools.
 - RabbitMQ job queue: configured by `RABBITMQ_URL`; local Compose publishes AMQP on host port `5673`.
+- Session-token protection: configured by `ATTENDEE_SESSION_HMAC_SECRET`.
 - OTP subject and value protection: configured by `EMAIL_VERIFICATION_HMAC_SECRET`.
 - OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.
 - Deployment label: configured by `DEPLOYMENT_ENVIRONMENT`.
@@ -26,6 +27,6 @@ The local stack sends Identity metrics and traces through Alloy and collects its
 ## Further Documentation
 
 - [API.md](API.md): gRPC and health contracts.
-- [ARCHITECTURE.md](ARCHITECTURE.md): registration execution, schema ownership, constraints, and failure translation.
+- [ARCHITECTURE.md](ARCHITECTURE.md): registration, verification, session-state ownership, constraints, and failure behavior.
 - [commands.md](commands.md): service-owned database and validation commands.
-- [Attendees API](src/attendees/API.md) and [architecture](src/attendees/ARCHITECTURE.md): the domain-owned registration command, account state, and invariants.
+- [Attendees API](src/attendees/API.md) and [architecture](src/attendees/ARCHITECTURE.md): the domain-owned contracts, account/session state, and invariants.

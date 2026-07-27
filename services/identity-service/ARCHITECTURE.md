@@ -2,9 +2,9 @@
 
 ## Ownership
 
-Identity owns attendee and admin security principals, credentials, and verification state. Each implemented identity domain owns its application flow, state rules, and concise API and architecture documentation.
+Identity owns attendee and admin security principals, credentials, verification state, account lifecycle, and sessions. Each implemented identity domain owns its application flow, state rules, and concise API and architecture documentation.
 
-The current implementation contains the Attendees domain only. Its registration behavior and internal Redis-backed email-verification OTP lifecycle are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md). Registration remains the only exposed Identity gRPC operation.
+Identity contains the Attendees domain. Its registration, email verification, login, and session behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
 
 ## Service Composition
 
@@ -20,9 +20,11 @@ Drizzle schemas and migrations remain inside Identity and are organized by ownin
 
 Migration `0001_move_username_to_attendee_accounts` forwards already-migrated databases by copying usernames from the former profile table before enforcing non-null uniqueness and dropping that table.
 
+Migration `0002_add_attendee_account_lifecycle` adds active/suspended status and the permanent soft-deletion timestamp. Live sessions remain Identity-owned Redis state.
+
 ## Health and Failure
 
-Liveness confirms the process is running. Readiness queries PostgreSQL because registration, the currently exposed business capability, requires it. Redis is not a readiness dependency because no exposed operation currently uses the internal OTP capability.
+Liveness confirms the process is running. Readiness queries PostgreSQL because credential operations depend on it. Login and session authentication fail closed when Redis cannot read or change live session state.
 
 Unexpected infrastructure failures propagate as internal gRPC failures unless a domain deliberately defines a stable translation. Domain documents own those expected outcomes.
 

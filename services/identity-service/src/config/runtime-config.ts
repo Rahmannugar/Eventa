@@ -1,6 +1,7 @@
 export interface RuntimeConfig {
   databaseUrl: string;
   emailVerificationHmacSecret: string;
+  attendeeSessionHmacSecret: string;
   grpcHost: string;
   grpcPort: number;
   healthPort: number;
@@ -88,18 +89,14 @@ function readRabbitMqUrl(environment: NodeJS.ProcessEnv): string {
   return value;
 }
 
-function readEmailVerificationHmacSecret(
+function readHmacSecret(
   environment: NodeJS.ProcessEnv,
+  name: 'ATTENDEE_SESSION_HMAC_SECRET' | 'EMAIL_VERIFICATION_HMAC_SECRET',
 ): string {
-  const secret = readRequiredString(
-    environment,
-    'EMAIL_VERIFICATION_HMAC_SECRET',
-  );
+  const secret = readRequiredString(environment, name);
 
   if (secret.length < 32) {
-    throw new Error(
-      'EMAIL_VERIFICATION_HMAC_SECRET must contain at least 32 characters',
-    );
+    throw new Error(`${name} must contain at least 32 characters`);
   }
 
   return secret;
@@ -109,8 +106,15 @@ export function readRuntimeConfig(
   environment: NodeJS.ProcessEnv,
 ): RuntimeConfig {
   return {
+    attendeeSessionHmacSecret: readHmacSecret(
+      environment,
+      'ATTENDEE_SESSION_HMAC_SECRET',
+    ),
     databaseUrl: readDatabaseUrl(environment),
-    emailVerificationHmacSecret: readEmailVerificationHmacSecret(environment),
+    emailVerificationHmacSecret: readHmacSecret(
+      environment,
+      'EMAIL_VERIFICATION_HMAC_SECRET',
+    ),
     grpcHost: readRequiredString(environment, 'GRPC_HOST'),
     grpcPort: readPort(environment, 'GRPC_PORT'),
     healthPort: readPort(environment, 'HEALTH_PORT'),

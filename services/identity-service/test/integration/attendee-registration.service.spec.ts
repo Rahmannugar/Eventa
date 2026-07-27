@@ -258,4 +258,70 @@ describe('AttendeeRegistrationService integration', () => {
       },
     );
   });
+
+  it('excludes deleted attendees from active-account flows while reserving identifiers', async () => {
+    const registration = await service.register(
+      registrationInput(
+        'deleted@example.com',
+        'session-password',
+        'deleted_user',
+      ),
+    );
+    await repository.markEmailVerified(registration.attendeeId);
+    await database
+      .update(attendeeAccounts)
+      .set({ deletedAt: new Date() })
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+
+    await expect(repository.findByEmail('deleted@example.com')).resolves.toBe(
+      undefined,
+    );
+    await expect(
+      repository.markEmailVerified(registration.attendeeId),
+    ).resolves.toBe(false);
+    const deletedLoginAccount = await repository.findForLogin(
+      'deleted@example.com',
+    );
+    expect(deletedLoginAccount).toMatchObject({
+      attendeeId: registration.attendeeId,
+      status: 'active',
+    });
+    expect(deletedLoginAccount?.deletedAt).toBeInstanceOf(Date);
+    await expect(
+      service.register(
+        registrationInput(
+          'deleted@example.com',
+          'new-session-password',
+          'different_user',
+        ),
+      ),
+    ).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
+  });
+
+  it('persists active status and exposes a later suspension to login', async () => {
+    const registration = await service.register(
+      registrationInput(
+        'suspended@example.com',
+        'session-password',
+        'suspended_user',
+      ),
+    );
+
+    await expect(
+      repository.findForLogin('suspended@example.com'),
+    ).resolves.toMatchObject({
+      attendeeId: registration.attendeeId,
+      deletedAt: null,
+      status: 'active',
+    });
+
+    await database
+      .update(attendeeAccounts)
+      .set({ status: 'suspended' })
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+
+    await expect(
+      repository.findForLogin('suspended@example.com'),
+    ).resolves.toMatchObject({ status: 'suspended' });
+  });
 });

@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { IDENTITY_DATABASE } from '../../database/database.constants';
 import type { IdentityDatabase } from '../../database/database.types';
@@ -17,6 +17,10 @@ import type {
   AttendeeEmailVerificationAccount,
   AttendeeEmailVerificationRepository,
 } from '../types/attendee-email-verification.types';
+import type {
+  AttendeeLoginAccount,
+  AttendeeLoginRepository,
+} from '../types/attendee-login.types';
 import type { RegisteredAttendee } from '../types/attendee-registration.types';
 
 const UNIQUE_VIOLATION = '23505';
@@ -47,7 +51,10 @@ function readDatabaseErrorField(
 }
 
 export class AttendeeAccountRepository
-  implements AttendeeAccountRepositoryPort, AttendeeEmailVerificationRepository
+  implements
+    AttendeeAccountRepositoryPort,
+    AttendeeEmailVerificationRepository,
+    AttendeeLoginRepository
 {
   constructor(
     @Inject(IDENTITY_DATABASE)
@@ -116,7 +123,12 @@ export class AttendeeAccountRepository
         emailVerifiedAt: attendeeAccounts.emailVerifiedAt,
       })
       .from(attendeeAccounts)
-      .where(eq(attendeeAccounts.email, email))
+      .where(
+        and(
+          eq(attendeeAccounts.email, email),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
       .limit(1);
 
     if (account === undefined) {
@@ -135,9 +147,42 @@ export class AttendeeAccountRepository
       .set({
         emailVerifiedAt: sql`COALESCE(${attendeeAccounts.emailVerifiedAt}, NOW())`,
       })
-      .where(eq(attendeeAccounts.id, attendeeId))
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
       .returning({ attendeeId: attendeeAccounts.id });
 
     return account !== undefined;
+  }
+
+  async findForLogin(email: string): Promise<AttendeeLoginAccount | undefined> {
+    const [account] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        deletedAt: attendeeAccounts.deletedAt,
+        email: attendeeAccounts.email,
+        emailVerifiedAt: attendeeAccounts.emailVerifiedAt,
+        passwordHash: attendeeAccounts.passwordHash,
+        status: attendeeAccounts.status,
+        username: attendeeAccounts.username,
+      })
+      .from(attendeeAccounts)
+      .where(eq(attendeeAccounts.email, email))
+      .limit(1);
+
+    return account === undefined
+      ? undefined
+      : {
+          attendeeId: account.attendeeId,
+          deletedAt: account.deletedAt,
+          email: account.email,
+          emailVerified: account.emailVerifiedAt !== null,
+          passwordHash: account.passwordHash,
+          status: account.status,
+          username: account.username,
+        };
   }
 }
