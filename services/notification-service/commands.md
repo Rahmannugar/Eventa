@@ -36,6 +36,16 @@ Build the service.
 pnpm --filter @eventa/notification-service build
 ```
 
+## Performance validation
+
+Start the local read-only durable-delivery observer used by the single-workflow k6 scenarios.
+
+```bash
+pnpm --filter @eventa/notification-service performance:notifications:observe-deliveries
+```
+
+The observer binds to `127.0.0.1:3016` and uses `PERFORMANCE_DATABASE_URL`. It is not part of service startup or the production image.
+
 ## Local DB viewer
 
 | Host        | Port    | Database              | Username              | Password                       |

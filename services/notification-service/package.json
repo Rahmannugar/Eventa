@@ -10,12 +10,13 @@
     "build": "nest build",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "node dist/database/migrate.js",
-    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
+    "lint": "eslint src test performance drizzle.config.ts --max-warnings 0",
+    "performance:notifications:observe-deliveries": "dotenv -e .env -- tsx performance/notifications/email-verification-delivery-observer.ts",
     "start": "node dist/main.js",
     "test": "pnpm test:unit",
     "test:integration": "dotenv -e .env -- vitest run test/integration",
     "test:unit": "vitest run test/unit",
-    "typecheck": "tsc --noEmit --project tsconfig.json"
+    "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project performance/tsconfig.json"
   },
   "dependencies": {
     "@eventa/messaging-contracts": "workspace:*",
