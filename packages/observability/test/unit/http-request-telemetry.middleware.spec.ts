@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { trace, type Span } from '@opentelemetry/api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { HttpRequestTelemetryMiddleware } from '../../src/nest/http-request-telemetry.middleware';
 
@@ -12,6 +13,8 @@ interface TestResponse {
 }
 
 describe('HttpRequestTelemetryMiddleware', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('preserves a valid incoming request ID for downstream calls and the response', () => {
     const middleware = new HttpRequestTelemetryMiddleware();
     const request = {
@@ -44,6 +47,68 @@ describe('HttpRequestTelemetryMiddleware', () => {
     expect(response.headers.get('x-request-id')).toBe(
       request.headers['x-request-id'],
     );
+  });
+
+  it('names the active HTTP span from the normalized route after routing', () => {
+    const updateName = vi.fn();
+    const setAttribute = vi.fn();
+    vi.spyOn(trace, 'getActiveSpan').mockReturnValue({
+      setAttribute,
+      spanContext: () => ({
+        spanId: '0123456789abcdef',
+        traceFlags: 1,
+        traceId: '0123456789abcdef0123456789abcdef',
+      }),
+      updateName,
+    } as unknown as Span);
+    const middleware = new HttpRequestTelemetryMiddleware();
+    const request: {
+      headers: Record<string, string>;
+      method: string;
+      path: string;
+      route?: { path: string };
+    } = {
+      headers: {},
+      method: 'POST',
+      path: '/auth/attendees/email-verification/confirm',
+    };
+    const response = createMutableResponse();
+
+    middleware.use(request, response, () => {
+      request.route = {
+        path: '/auth/attendees/email-verification/confirm',
+      };
+    });
+
+    expect(updateName).toHaveBeenCalledWith(
+      'POST /auth/attendees/email-verification/confirm',
+    );
+    expect(setAttribute).toHaveBeenCalledWith(
+      'http.route',
+      '/auth/attendees/email-verification/confirm',
+    );
+  });
+
+  it('uses a bounded span name when no route matched', () => {
+    const updateName = vi.fn();
+    vi.spyOn(trace, 'getActiveSpan').mockReturnValue({
+      spanContext: () => ({
+        spanId: '0123456789abcdef',
+        traceFlags: 1,
+        traceId: '0123456789abcdef0123456789abcdef',
+      }),
+      updateName,
+    } as unknown as Span);
+    const middleware = new HttpRequestTelemetryMiddleware();
+    const request = {
+      headers: {},
+      method: 'GET',
+      path: '/arbitrary/high-cardinality/value',
+    };
+
+    middleware.use(request, createMutableResponse(), () => undefined);
+
+    expect(updateName).toHaveBeenCalledWith('GET unmatched');
   });
 });
 

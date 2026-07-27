@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { trace } from '@opentelemetry/api';
 import { Injectable, Logger, type NestMiddleware } from '@nestjs/common';
+import { ATTR_HTTP_ROUTE } from '@opentelemetry/semantic-conventions';
 
 import { recordRequestMetrics } from '../metrics/request-metrics';
 
 interface HttpRequest {
   headers: Record<string, string | string[] | undefined>;
   method: string;
-  originalUrl?: string;
   path?: string;
   route?: { path?: string };
 }
@@ -37,11 +37,7 @@ function readRequestId(request: HttpRequest): string {
 function readOperation(request: HttpRequest): string {
   const route = request.route?.path;
 
-  if (route !== undefined) {
-    return `${request.method} ${route}`;
-  }
-
-  return `${request.method} ${request.path ?? 'unmatched'}`;
+  return `${request.method} ${route ?? 'unmatched'}`;
 }
 
 function readOutcome(
@@ -65,7 +61,8 @@ export class HttpRequestTelemetryMiddleware implements NestMiddleware {
   use(request: HttpRequest, response: HttpResponse, next: () => void): void {
     const startedAt = process.hrtime.bigint();
     const requestId = readRequestId(request);
-    const traceId = trace.getActiveSpan()?.spanContext().traceId;
+    const activeSpan = trace.getActiveSpan();
+    const traceId = activeSpan?.spanContext().traceId;
 
     response.setHeader('x-request-id', requestId);
     request.headers['x-request-id'] = requestId;
@@ -110,5 +107,13 @@ export class HttpRequestTelemetryMiddleware implements NestMiddleware {
     });
 
     next();
+
+    const route = request.route?.path;
+    const operation = readOperation(request);
+    activeSpan?.updateName(operation);
+
+    if (route !== undefined) {
+      activeSpan?.setAttribute(ATTR_HTTP_ROUTE, route);
+    }
   }
 }
