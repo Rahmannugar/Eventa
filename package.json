@@ -8,6 +8,7 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
+    "admin:provision:identity": "sh services/identity-service/scripts/provision-admin.sh",
     "build": "turbo run build",
     "db:migrate:identity": "docker compose run --rm --build identity-migration",
     "db:migrate:notification": "docker compose run --rm --build notification-migration",

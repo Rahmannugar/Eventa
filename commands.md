@@ -123,6 +123,12 @@ pnpm db:reset:all
 
 ## Local operations
 
+Provision an inactive admin email in Identity. Repeating the command with the same email leaves the existing account unchanged.
+
+```bash
+pnpm admin:provision:identity admin@example.com
+```
+
 Open the shared RabbitMQ management interface.
 
 ```bash

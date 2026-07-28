@@ -4,6 +4,12 @@ Run commands from the repository root.
 
 ## Database
 
+Provision an inactive admin email. Running the command again with the same email leaves the existing account unchanged.
+
+```bash
+pnpm admin:provision:identity admin@example.com
+```
+
 Run Identity migrations in a temporary container.
 
 ```bash
