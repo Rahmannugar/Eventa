@@ -11,6 +11,11 @@ export function setupApiDocumentation(
     .setDescription('Public HTTP contract exposed by the Eventa API Gateway.')
     .setVersion('1.0.0')
     .addServer(publicApiUrl, 'Configured API Gateway')
+    .addCookieAuth(
+      'eventa_attendee_session',
+      { in: 'cookie', type: 'apiKey' },
+      'attendeeSession',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, documentConfig, {
     operationIdFactory: (_controllerKey, methodKey) => methodKey,

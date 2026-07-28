@@ -4,7 +4,6 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
-  Inject,
   Post,
   Res,
   UseGuards,
@@ -17,42 +16,29 @@ import {
 } from '../dto/login-attendee.dto';
 import { AttendeeLoginService } from '../services/attendee-login.service';
 import { AttendeeLoginRateLimitGuard } from '../rate-limit/guards/attendee-login-rate-limit.guard';
-import { ATTENDEE_SESSION_COOKIE_SECURE } from '../constants/attendee-login.constants';
 import { ApiLoginAttendee } from '../docs/attendee-login.docs';
-
-const SESSION_COOKIE = 'eventa_attendee_session';
-
-interface CookieResponse {
-  cookie(
-    name: string,
-    value: string,
-    options: {
-      expires: Date;
-      httpOnly: boolean;
-      path: string;
-      sameSite: 'lax';
-      secure: boolean;
-    },
-  ): void;
-}
+import {
+  AttendeeSessionCookie,
+  type AttendeeCookieResponse,
+} from '../services/attendee-session-cookie.service';
+import { AttendeeClientOriginGuard } from '../guards/attendee-client-origin.guard';
 
 @ApiTags('Attendee authentication')
 @Controller('auth/attendees')
 export class AttendeeLoginController {
   constructor(
     private readonly attendeeLogin: AttendeeLoginService,
-    @Inject(ATTENDEE_SESSION_COOKIE_SECURE)
-    private readonly secureCookie: boolean,
+    private readonly sessionCookie: AttendeeSessionCookie,
   ) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AttendeeLoginRateLimitGuard)
+  @UseGuards(AttendeeClientOriginGuard, AttendeeLoginRateLimitGuard)
   @ApiLoginAttendee()
   async login(
     @Body() request: LoginAttendeeDto,
     @Headers('x-request-id') requestId: string,
-    @Res({ passthrough: true }) response: CookieResponse,
+    @Res({ passthrough: true }) response: AttendeeCookieResponse,
   ): Promise<LoggedInAttendeeDto> {
     const result = await this.attendeeLogin.login({
       email: request.email,
@@ -60,13 +46,11 @@ export class AttendeeLoginController {
       requestId,
     });
 
-    response.cookie(SESSION_COOKIE, result.sessionToken, {
-      expires: new Date(result.sessionExpiresAt),
-      httpOnly: true,
-      path: '/',
-      sameSite: 'lax',
-      secure: this.secureCookie,
-    });
+    this.sessionCookie.set(
+      response,
+      result.sessionToken,
+      result.sessionExpiresAt,
+    );
 
     return {
       attendeeId: result.attendeeId,

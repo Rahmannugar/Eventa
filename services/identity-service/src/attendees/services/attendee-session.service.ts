@@ -10,6 +10,7 @@ import type {
   AttendeeSessionState,
   IssuedAttendeeSession,
 } from '../types/attendee-session.types';
+import { InvalidAttendeeSessionError } from '../errors/attendee-session.errors';
 
 const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -41,6 +42,16 @@ export class AttendeeSessionService {
     }
 
     return this.state.read(this.tokenDigest(token));
+  }
+
+  async require(token: string): Promise<AttendeeSession> {
+    const session = await this.authenticate(token);
+
+    if (session === undefined) {
+      throw new InvalidAttendeeSessionError();
+    }
+
+    return session;
   }
 
   revoke(token: string): Promise<boolean> {

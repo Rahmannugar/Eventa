@@ -34,6 +34,8 @@ import type { EmailVerificationJobPublisher } from './ports/email-verification-j
 import type { EmailVerificationOtpState } from './ports/email-verification-otp.state';
 import { PASSWORD_VERIFIER } from '../security/constants/security.constants';
 import type { PasswordVerifier } from '../security/types/password-verifier.types';
+import { AttendeeAccountService } from './services/attendee-account.service';
+import type { AttendeeAccountRepository as AttendeeAccountDetailsRepository } from './types/attendee-account.types';
 
 @Module({
   imports: [DatabaseModule, SecurityModule],
@@ -99,6 +101,12 @@ import type { PasswordVerifier } from '../security/types/password-verifier.types
       ],
     },
     {
+      provide: AttendeeAccountService,
+      useFactory: (repository: AttendeeAccountDetailsRepository) =>
+        new AttendeeAccountService(repository),
+      inject: [ATTENDEE_ACCOUNT_REPOSITORY],
+    },
+    {
       provide: RabbitMQClient,
       useFactory: (config: RuntimeConfig) =>
         new RabbitMQClient(config.rabbitMqUrl, config.rabbitMqConnectTimeoutMs),
@@ -138,6 +146,7 @@ import type { PasswordVerifier } from '../security/types/password-verifier.types
   exports: [
     AttendeeEmailVerificationService,
     AttendeeLoginService,
+    AttendeeAccountService,
     AttendeeSessionService,
   ],
 })

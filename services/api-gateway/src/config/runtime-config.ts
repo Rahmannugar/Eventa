@@ -1,5 +1,6 @@
 export interface RuntimeConfig {
   apiDocsEnabled: boolean;
+  attendeeClientOrigin: string;
   httpHeadersTimeoutMs: number;
   httpKeepAliveTimeoutMs: number;
   httpRequestTimeoutMs: number;
@@ -48,6 +49,27 @@ function readPositiveInteger(
   }
 
   return value;
+}
+
+function readOrigin(environment: NodeJS.ProcessEnv, name: string): string {
+  const value = readRequiredString(environment, name);
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid HTTP or HTTPS origin`);
+  }
+
+  if (
+    !['http:', 'https:'].includes(parsed.protocol) ||
+    parsed.origin !== value.replace(/\/$/, '') ||
+    parsed.pathname !== '/'
+  ) {
+    throw new Error(`${name} must be a valid HTTP or HTTPS origin`);
+  }
+
+  return parsed.origin;
 }
 
 export function readRuntimeConfig(
@@ -127,6 +149,7 @@ export function readRuntimeConfig(
 
   return {
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
+    attendeeClientOrigin: readOrigin(environment, 'ATTENDEE_CLIENT_ORIGIN'),
     httpHeadersTimeoutMs,
     httpKeepAliveTimeoutMs: readPositiveInteger(
       environment,

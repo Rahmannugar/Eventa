@@ -29,10 +29,11 @@ function errorResponse(
   });
 }
 
-function accountStateErrorResponse(): MethodDecorator {
+function forbiddenResponse(): MethodDecorator {
   return ApiResponse({
     status: 403,
-    description: 'The credentials are correct but the account cannot sign in.',
+    description:
+      'The request origin or authenticated account state does not allow sign in.',
     content: {
       'application/json': {
         schema: { $ref: getSchemaPath(ApiErrorResponseDto) },
@@ -58,6 +59,13 @@ function accountStateErrorResponse(): MethodDecorator {
               statusCode: 403,
             },
           },
+          untrustedOrigin: {
+            value: {
+              code: 'UNTRUSTED_ORIGIN',
+              message: 'Request origin is not allowed.',
+              statusCode: 403,
+            },
+          },
         },
       },
     },
@@ -73,6 +81,11 @@ export function ApiLoginAttendee(): MethodDecorator {
       name: 'x-request-id',
       required: false,
     }),
+    ApiHeader({
+      description: 'Must exactly match the configured attendee client origin.',
+      name: 'Origin',
+      required: true,
+    }),
     ApiOperation({ summary: 'Sign in an attendee' }),
     ApiOkResponse({
       description:
@@ -85,7 +98,7 @@ export function ApiLoginAttendee(): MethodDecorator {
       'INVALID_CREDENTIALS',
       'Email or password is incorrect.',
     ),
-    accountStateErrorResponse(),
+    forbiddenResponse(),
     errorResponse(
       422,
       'One or more login fields are invalid.',

@@ -27,9 +27,20 @@ import { AttendeeLoginController } from './controllers/attendee-login.controller
 import { AttendeeLoginService } from './services/attendee-login.service';
 import { AttendeeLoginRateLimitGuard } from './rate-limit/guards/attendee-login-rate-limit.guard';
 import { AttendeeLoginRateLimitService } from './rate-limit/services/attendee-login-rate-limit.service';
-import { ATTENDEE_SESSION_COOKIE_SECURE } from './constants/attendee-login.constants';
+import { ATTENDEE_CLIENT_ORIGIN } from './constants/attendee-login.constants';
+import { AttendeeSessionCookie } from './services/attendee-session-cookie.service';
+import { AttendeeClientOriginGuard } from './guards/attendee-client-origin.guard';
+import { AttendeeSessionController } from './controllers/attendee-session.controller';
+import { AttendeeSessionService } from './services/attendee-session.service';
+import { AttendeeAuthenticationGuard } from './guards/attendee-authentication.guard';
+import { AttendeeSessionRateLimitService } from './rate-limit/services/attendee-session-rate-limit.service';
+import {
+  AttendeeLogoutRateLimitGuard,
+  AttendeeAccountRateLimitGuard,
+} from './rate-limit/guards/attendee-session-rate-limit.guards';
 
 interface AttendeesModuleOptions {
+  attendeeClientOrigin: string;
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
@@ -61,6 +72,7 @@ export class AttendeesModule {
         AttendeeEmailVerificationController,
         AttendeeLoginController,
         AttendeeRegistrationController,
+        AttendeeSessionController,
       ],
       providers: [
         {
@@ -70,9 +82,24 @@ export class AttendeesModule {
         AttendeeEmailVerificationService,
         AttendeeLoginService,
         AttendeeRegistrationService,
+        AttendeeSessionService,
         {
-          provide: ATTENDEE_SESSION_COOKIE_SECURE,
-          useValue: options.secureSessionCookie,
+          provide: ATTENDEE_CLIENT_ORIGIN,
+          useValue: options.attendeeClientOrigin,
+        },
+        {
+          provide: AttendeeSessionCookie,
+          useFactory: () =>
+            new AttendeeSessionCookie(options.secureSessionCookie),
+        },
+        {
+          provide: AttendeeSessionRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AttendeeSessionRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
         },
         {
           provide: AttendeeLoginRateLimitService,
@@ -102,6 +129,10 @@ export class AttendeesModule {
           inject: [RATE_LIMIT_STATE],
         },
         AttendeeRegistrationRateLimitGuard,
+        AttendeeClientOriginGuard,
+        AttendeeAuthenticationGuard,
+        AttendeeAccountRateLimitGuard,
+        AttendeeLogoutRateLimitGuard,
         AttendeeLoginRateLimitGuard,
         AttendeeEmailVerificationConfirmRateLimitGuard,
         AttendeeEmailVerificationResendRateLimitGuard,

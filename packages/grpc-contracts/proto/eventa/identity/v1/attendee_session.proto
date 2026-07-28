@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message AuthenticateAttendeeSessionRequest {
+  string session_token = 1;
+}
+
+message AuthenticateAttendeeSessionResponse {
+  string attendee_id = 1;
+  string session_id = 2;
+  string session_expires_at = 3;
+}
+
+message GetCurrentAttendeeAccountRequest {
+  string attendee_id = 1;
+}
+
+message GetCurrentAttendeeAccountResponse {
+  string attendee_id = 1;
+  string email = 2;
+  string username = 3;
+  bool email_verified = 4;
+  string status = 5;
+}
+
+message LogoutAttendeeRequest {
+  string session_token = 1;
+}
+
+message LogoutAttendeeResponse {
+  bool revoked = 1;
+}

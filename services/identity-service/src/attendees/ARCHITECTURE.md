@@ -34,7 +34,9 @@ One Redis Lua command uses Redis time, removes expired entries, evicts the oldes
 
 Redis is the live session authority, so authentication is one protected-key lookup rather than a cache hit followed by PostgreSQL. A miss, expiry, or revocation rejects the session. Redis unavailability fails closed. No plaintext token, email, or username is stored in session keys or fields.
 
-The Gateway receives the raw token only across the internal login response and places it in the browser cookie. Public login responses contain only the attendee projection.
+The Gateway receives the raw token only across the internal login response and places it in the browser cookie. Public login responses contain only the attendee account details.
+
+Session authentication returns only Redis-owned session context. Account retrieval then reads PostgreSQL and accepts only a verified, active, non-deleted attendee account. Logout removes exactly the presented Redis session; a repeated logout is idempotent.
 
 ## Failure and Observability
 

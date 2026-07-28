@@ -27,8 +27,16 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 1. The login guard applies the route's client-IP and protected canonical-email limits.
 2. The DTO validates email and password independently of Identity.
 3. The login service forwards the credentials, request ID, and absolute gRPC deadline.
-4. Identity returns the attendee projection, opaque token, and absolute expiry after credential and session-state checks.
+4. Identity returns the attendee account details, opaque token, and absolute expiry after credential and session-state checks.
 5. The controller sets the host-only HttpOnly session cookie and omits the token from the JSON response.
+
+## Authenticated Session Flow
+
+1. The account endpoint applies its client-IP and protected-session limits.
+2. The authentication guard reads the single valid attendee cookie and asks Identity to resolve it from Redis.
+3. The guard attaches only attendee ID, session ID, and absolute expiry to request context.
+4. The account handler asks Identity for the verified active attendee account.
+5. Logout validates the exact attendee-client origin, applies its own abuse policy, revokes the presented Redis session, and only then clears the cookie.
 
 ## Invariants and Failure Behavior
 
@@ -39,6 +47,9 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 - Identity deadline expiry cancels the Gateway's gRPC call, returns the same safe `503` contract, and retains a deadline-specific internal diagnostic for logs and traces.
 - Confirm and resend quotas use separate keys, so one operation cannot consume the other's allowance.
 - Login has independent keys and stable `401`, `403`, `422`, `429`, and `503` translations.
+- Account retrieval and logout use separate rate-limit keys and quotas. Session subjects are HMAC-protected before entering Gateway Redis keys.
+- Credentialed CORS names one configured attendee-client origin. Login and logout require that same exact `Origin`; cookie attributes remain host-only, HttpOnly, `SameSite=Lax`, and `Secure` on HTTPS.
+- Logout without usable cookie state is idempotent. A revocation dependency failure keeps the cookie so the client can retry.
 - Gateway rate-limit subjects and Identity OTP subjects are independently HMAC-protected before Redis storage.
 - Unsupported methods use the Gateway's ordinary unmatched-route behavior; there is no overlapping method catch-all.
 

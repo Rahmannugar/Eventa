@@ -3,7 +3,10 @@ import {
   AttendeeIdentityServiceControllerMethods,
   type AttendeeIdentityServiceController,
   type ConfirmAttendeeEmailVerificationResponse,
+  type AuthenticateAttendeeSessionResponse,
+  type GetCurrentAttendeeAccountResponse,
   type LoginAttendeeResponse,
+  type LogoutAttendeeResponse,
   type RegisterAttendeeResponse,
   type ResendAttendeeEmailVerificationResponse,
 } from '@eventa/grpc-contracts';
@@ -37,6 +40,14 @@ import {
   InvalidAttendeeCredentialsError,
 } from '../errors/attendee-login.errors';
 import { AttendeeSessionStateUnavailableError } from '../errors/attendee-session.errors';
+import { InvalidAttendeeSessionError } from '../errors/attendee-session.errors';
+import {
+  AuthenticateAttendeeSessionDto,
+  GetCurrentAttendeeAccountDto,
+  LogoutAttendeeDto,
+} from '../dto/attendee-session.dto';
+import { AttendeeSessionService } from '../services/attendee-session.service';
+import { AttendeeAccountService } from '../services/attendee-account.service';
 
 @Controller()
 @AttendeeIdentityServiceControllerMethods()
@@ -46,6 +57,8 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
     private readonly attendeeRegistrar: AttendeeRegistrar,
     private readonly emailVerification: AttendeeEmailVerificationService,
     private readonly attendeeLogin: AttendeeLoginService,
+    private readonly attendeeSessions: AttendeeSessionService,
+    private readonly attendeeAccounts: AttendeeAccountService,
   ) {}
 
   registerAttendee(
@@ -56,6 +69,24 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
 
   loginAttendee(request: LoginAttendeeDto): Observable<LoginAttendeeResponse> {
     return from(this.handleLogin(request));
+  }
+
+  authenticateAttendeeSession(
+    request: AuthenticateAttendeeSessionDto,
+  ): Observable<AuthenticateAttendeeSessionResponse> {
+    return from(this.handleSessionAuthentication(request.sessionToken));
+  }
+
+  getCurrentAttendeeAccount(
+    request: GetCurrentAttendeeAccountDto,
+  ): Observable<GetCurrentAttendeeAccountResponse> {
+    return from(this.handleCurrentAccount(request.attendeeId));
+  }
+
+  logoutAttendee(
+    request: LogoutAttendeeDto,
+  ): Observable<LogoutAttendeeResponse> {
+    return from(this.handleLogout(request.sessionToken));
   }
 
   confirmAttendeeEmailVerification(
@@ -123,6 +154,57 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
 
       throw error;
     }
+  }
+
+  private async handleSessionAuthentication(
+    token: string,
+  ): Promise<AuthenticateAttendeeSessionResponse> {
+    try {
+      const session = await this.attendeeSessions.require(token);
+      return {
+        attendeeId: session.attendeeId,
+        sessionExpiresAt: session.expiresAt.toISOString(),
+        sessionId: session.sessionId,
+      };
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private async handleCurrentAccount(
+    attendeeId: string,
+  ): Promise<GetCurrentAttendeeAccountResponse> {
+    try {
+      return await this.attendeeAccounts.getCurrentAccount(attendeeId);
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private async handleLogout(token: string): Promise<LogoutAttendeeResponse> {
+    try {
+      return { revoked: await this.attendeeSessions.revoke(token) };
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private translateSessionError(error: unknown): never {
+    if (error instanceof InvalidAttendeeSessionError) {
+      throw new RpcException({
+        code: status.UNAUTHENTICATED,
+        message: error.message,
+      });
+    }
+
+    if (error instanceof AttendeeSessionStateUnavailableError) {
+      throw new RpcException({
+        code: status.UNAVAILABLE,
+        message: error.message,
+      });
+    }
+
+    throw error;
   }
 
   private async handleConfirmation(

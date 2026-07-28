@@ -7,6 +7,7 @@ import {
   ATTENDEE_SESSION_TTL_MS,
 } from '../../src/attendees/constants/attendee-session.constants';
 import { AttendeeSessionService } from '../../src/attendees/services/attendee-session.service';
+import { InvalidAttendeeSessionError } from '../../src/attendees/errors/attendee-session.errors';
 import type {
   AttendeeSession,
   AttendeeSessionState,
@@ -105,5 +106,15 @@ describe('AttendeeSessionService', () => {
     await expect(service.revoke('not-a-session')).resolves.toBe(false);
     expect(state.readDigest).toBeUndefined();
     expect(state.revokeDigest).toBeUndefined();
+  });
+
+  it('rejects authenticated operations when the session no longer exists', async () => {
+    const state = new RecordingSessionState();
+    const service = new AttendeeSessionService(state, HMAC_SECRET);
+    const issued = await service.issue('attendee-1');
+
+    await expect(service.require(issued.token)).rejects.toBeInstanceOf(
+      InvalidAttendeeSessionError,
+    );
   });
 });

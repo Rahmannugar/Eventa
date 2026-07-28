@@ -17,6 +17,18 @@ async function bootstrap(): Promise<void> {
   );
 
   app.set('trust proxy', config.trustProxyHops);
+  app.enableCors({
+    allowedHeaders: ['Content-Type', 'X-Request-ID'],
+    credentials: true,
+    exposedHeaders: [
+      'RateLimit',
+      'RateLimit-Policy',
+      'Retry-After',
+      'X-Request-ID',
+    ],
+    maxAge: 600,
+    origin: config.attendeeClientOrigin,
+  });
   app.useGlobalFilters(new ApiErrorFilter());
   app.useGlobalPipes(
     new ValidationPipe({

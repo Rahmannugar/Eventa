@@ -27,6 +27,7 @@ export class AppModule implements NestModule {
           redisUrl: config.redisUrl,
         }),
         AttendeesModule.register({
+          attendeeClientOrigin: config.attendeeClientOrigin,
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,

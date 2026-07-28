@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { IDENTITY_DATABASE } from '../../database/database.constants';
 import type { IdentityDatabase } from '../../database/database.types';
@@ -22,6 +22,10 @@ import type {
   AttendeeLoginRepository,
 } from '../types/attendee-login.types';
 import type { RegisteredAttendee } from '../types/attendee-registration.types';
+import type {
+  AttendeeAccount,
+  AttendeeAccountRepository as AttendeeAccountDetailsRepository,
+} from '../types/attendee-account.types';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -53,6 +57,7 @@ function readDatabaseErrorField(
 export class AttendeeAccountRepository
   implements
     AttendeeAccountRepositoryPort,
+    AttendeeAccountDetailsRepository,
     AttendeeEmailVerificationRepository,
     AttendeeLoginRepository
 {
@@ -183,6 +188,35 @@ export class AttendeeAccountRepository
           passwordHash: account.passwordHash,
           status: account.status,
           username: account.username,
+        };
+  }
+
+  async findActiveAccount(
+    attendeeId: string,
+  ): Promise<AttendeeAccount | undefined> {
+    const [account] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        email: attendeeAccounts.email,
+        username: attendeeAccounts.username,
+      })
+      .from(attendeeAccounts)
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          eq(attendeeAccounts.status, 'active'),
+          isNotNull(attendeeAccounts.emailVerifiedAt),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return account === undefined
+      ? undefined
+      : {
+          ...account,
+          emailVerified: true,
+          status: 'active',
         };
   }
 }

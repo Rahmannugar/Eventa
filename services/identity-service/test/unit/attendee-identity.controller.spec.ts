@@ -2,6 +2,8 @@ import type { AttendeeRegistrar } from '../../src/attendees/types/attendee-regis
 import { AttendeeIdentityController } from '../../src/attendees/controllers/attendee-identity.controller';
 import type { AttendeeEmailVerificationService } from '../../src/attendees/services/attendee-email-verification.service';
 import type { AttendeeLoginService } from '../../src/attendees/services/attendee-login.service';
+import type { AttendeeAccountService } from '../../src/attendees/services/attendee-account.service';
+import type { AttendeeSessionService } from '../../src/attendees/services/attendee-session.service';
 import {
   EmailVerificationOtpInvalidError,
   EmailVerificationResendRateLimitedError,
@@ -50,6 +52,8 @@ function createController(
     registrar,
     verification as unknown as AttendeeEmailVerificationService,
     login as AttendeeLoginService,
+    {} as AttendeeSessionService,
+    {} as AttendeeAccountService,
   );
 }
 

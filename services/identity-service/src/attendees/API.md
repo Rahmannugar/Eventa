@@ -27,7 +27,7 @@ The Gateway may forward `x-request-id` as gRPC metadata; direct clients may omit
 
 ## LoginAttendee Command
 
-The request contains `email` and `password`. Success returns the active attendee projection, including `status = active`, plus one opaque session token and its absolute expiry for the Gateway transport boundary.
+The request contains `email` and `password`. Success returns the active attendee account details, including `status = active`, plus one opaque session token and its absolute expiry for the Gateway transport boundary.
 
 | gRPC status           | Meaning                                                                     |
 | --------------------- | --------------------------------------------------------------------------- |
@@ -35,6 +35,14 @@ The request contains `email` and `password`. Success returns the active attendee
 | `UNAUTHENTICATED`     | The email or password is incorrect.                                         |
 | `FAILED_PRECONDITION` | Correct credentials belong to an unverified, suspended, or deleted account. |
 | `UNAVAILABLE`         | Live session state could not be created.                                    |
+
+## Attendee Session Operations
+
+`AuthenticateAttendeeSession` accepts one opaque session token. Success returns the attendee ID, session ID, and unchanged absolute expiry from Redis. Missing, malformed, expired, evicted, or revoked state returns `UNAUTHENTICATED`; unavailable Redis state returns `UNAVAILABLE`.
+
+`GetCurrentAttendeeAccount` accepts the authenticated attendee ID and returns that attendee's canonical email, username, verification state, and active status. It returns `UNAUTHENTICATED` when PostgreSQL no longer has a verified, active, non-deleted attendee.
+
+`LogoutAttendee` accepts the presented token and atomically removes that session from Redis. Success reports whether live state was removed; repeating logout safely reports `revoked = false`. Redis failure returns `UNAVAILABLE`.
 
 ## ConfirmAttendeeEmailVerification Command
 

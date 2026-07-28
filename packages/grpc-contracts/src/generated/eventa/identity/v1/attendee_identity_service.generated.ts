@@ -16,6 +16,14 @@ import {
 } from "./attendee_email_verification.generated";
 import { LoginAttendeeRequest, LoginAttendeeResponse } from "./attendee_login.generated";
 import { RegisterAttendeeRequest, RegisterAttendeeResponse } from "./attendee_registration.generated";
+import {
+  AuthenticateAttendeeSessionRequest,
+  AuthenticateAttendeeSessionResponse,
+  GetCurrentAttendeeAccountRequest,
+  GetCurrentAttendeeAccountResponse,
+  LogoutAttendeeRequest,
+  LogoutAttendeeResponse,
+} from "./attendee_session.generated";
 
 export const protobufPackage = "eventa.identity.v1";
 
@@ -25,6 +33,18 @@ export interface AttendeeIdentityServiceClient {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
 
   loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
+
+  authenticateAttendeeSession(
+    request: AuthenticateAttendeeSessionRequest,
+    metadata?: Metadata,
+  ): Observable<AuthenticateAttendeeSessionResponse>;
+
+  getCurrentAttendeeAccount(
+    request: GetCurrentAttendeeAccountRequest,
+    metadata?: Metadata,
+  ): Observable<GetCurrentAttendeeAccountResponse>;
+
+  logoutAttendee(request: LogoutAttendeeRequest, metadata?: Metadata): Observable<LogoutAttendeeResponse>;
 
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
@@ -42,6 +62,18 @@ export interface AttendeeIdentityServiceController {
 
   loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
 
+  authenticateAttendeeSession(
+    request: AuthenticateAttendeeSessionRequest,
+    metadata?: Metadata,
+  ): Observable<AuthenticateAttendeeSessionResponse>;
+
+  getCurrentAttendeeAccount(
+    request: GetCurrentAttendeeAccountRequest,
+    metadata?: Metadata,
+  ): Observable<GetCurrentAttendeeAccountResponse>;
+
+  logoutAttendee(request: LogoutAttendeeRequest, metadata?: Metadata): Observable<LogoutAttendeeResponse>;
+
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
     metadata?: Metadata,
@@ -58,6 +90,9 @@ export function AttendeeIdentityServiceControllerMethods() {
     const grpcMethods: string[] = [
       "registerAttendee",
       "loginAttendee",
+      "authenticateAttendeeSession",
+      "getCurrentAttendeeAccount",
+      "logoutAttendee",
       "confirmAttendeeEmailVerification",
       "resendAttendeeEmailVerification",
     ];

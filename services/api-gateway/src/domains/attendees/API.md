@@ -52,6 +52,20 @@ The request contains `email` and `password`. A successful `200` response contain
 
 Incorrect credentials return `401`. After a correct password, unverified, suspended, and deleted accounts return distinct `403` errors. Invalid fields return `422`; abuse-control denial returns `429`; unavailable rate-limit, Identity, or session state returns `503`. Login applies independent client-IP and canonical-email limits.
 
+## Current Attendee Account
+
+`GET /auth/attendees/me`
+
+The Gateway reads `eventa_attendee_session`, resolves it through Identity-owned Redis state, and returns the verified active attendee account. Missing, malformed, expired, evicted, revoked, suspended-account, or deleted-account state returns `401 SESSION_INVALID`. The endpoint has independent client-IP and protected-session limits.
+
+## Logout
+
+`POST /auth/attendees/logout`
+
+Logout requires the exact configured attendee-client `Origin`. It revokes only the presented session and then clears the matching host-only cookie. Success is `204`, including a request without a usable cookie. If Identity cannot confirm revocation, Gateway returns `503` and retains the cookie for retry.
+
+Credentialed CORS permits only `ATTENDEE_CLIENT_ORIGIN`. Login and logout reject a missing or different `Origin` with `403 UNTRUSTED_ORIGIN`.
+
 ## Confirm Email Verification
 
 `POST /auth/attendees/email-verification/confirm`

@@ -19,4 +19,12 @@ export type {
   LoginAttendeeRequest,
   LoginAttendeeResponse,
 } from '../../generated/eventa/identity/v1/attendee_login.generated';
+export type {
+  AuthenticateAttendeeSessionRequest,
+  AuthenticateAttendeeSessionResponse,
+  GetCurrentAttendeeAccountRequest,
+  GetCurrentAttendeeAccountResponse,
+  LogoutAttendeeRequest,
+  LogoutAttendeeResponse,
+} from '../../generated/eventa/identity/v1/attendee_session.generated';
 export * from './proto-paths';

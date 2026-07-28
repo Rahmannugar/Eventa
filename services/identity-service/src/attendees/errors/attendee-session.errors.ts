@@ -4,3 +4,10 @@ export class AttendeeSessionStateUnavailableError extends Error {
     this.name = 'AttendeeSessionStateUnavailableError';
   }
 }
+
+export class InvalidAttendeeSessionError extends Error {
+  constructor() {
+    super('ATTENDEE_SESSION_INVALID');
+    this.name = InvalidAttendeeSessionError.name;
+  }
+}

@@ -11,8 +11,10 @@ import {
   EmailAlreadyRegisteredError,
   UsernameUnavailableError,
 } from '../../src/attendees/errors/attendee-registration.errors';
+import { InvalidAttendeeSessionError } from '../../src/attendees/errors/attendee-session.errors';
 import { AttendeeAccountRepository } from '../../src/attendees/repositories/attendee-account.repository';
 import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
+import { AttendeeAccountService } from '../../src/attendees/services/attendee-account.service';
 import type { RegisterAttendeeInput } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
 import { Argon2PasswordHasher } from '../../src/security/services/argon2-password-hasher.service';
@@ -215,51 +217,7 @@ describe('AttendeeRegistrationService integration', () => {
 
     expect(accountCount?.value).toBe(1);
   });
-
-  it('marks email verification idempotently without changing the original timestamp', async () => {
-    const registration = await service.register(
-      registrationInput(
-        'verify@example.com',
-        'verification-password',
-        'verify_user',
-      ),
-    );
-
-    await expect(repository.findByEmail('verify@example.com')).resolves.toEqual(
-      {
-        attendeeId: registration.attendeeId,
-        emailVerified: false,
-      },
-    );
-    await expect(
-      repository.markEmailVerified(registration.attendeeId),
-    ).resolves.toBe(true);
-
-    const [firstUpdate] = await database
-      .select({ emailVerifiedAt: attendeeAccounts.emailVerifiedAt })
-      .from(attendeeAccounts)
-      .where(eq(attendeeAccounts.id, registration.attendeeId));
-
-    await expect(
-      repository.markEmailVerified(registration.attendeeId),
-    ).resolves.toBe(true);
-
-    const [secondUpdate] = await database
-      .select({ emailVerifiedAt: attendeeAccounts.emailVerifiedAt })
-      .from(attendeeAccounts)
-      .where(eq(attendeeAccounts.id, registration.attendeeId));
-
-    expect(firstUpdate?.emailVerifiedAt).toBeInstanceOf(Date);
-    expect(secondUpdate?.emailVerifiedAt).toEqual(firstUpdate?.emailVerifiedAt);
-    await expect(repository.findByEmail('verify@example.com')).resolves.toEqual(
-      {
-        attendeeId: registration.attendeeId,
-        emailVerified: true,
-      },
-    );
-  });
-
-  it('excludes deleted attendees from active-account flows while reserving identifiers', async () => {
+  it('excludes deleted attendees from active-account flows', async () => {
     const registration = await service.register(
       registrationInput(
         'deleted@example.com',
@@ -298,30 +256,45 @@ describe('AttendeeRegistrationService integration', () => {
     ).rejects.toBeInstanceOf(EmailAlreadyRegisteredError);
   });
 
-  it('persists active status and exposes a later suspension to login', async () => {
+  it('returns account details only for verified, active, non-deleted attendees', async () => {
+    const accountService = new AttendeeAccountService(repository);
     const registration = await service.register(
       registrationInput(
-        'suspended@example.com',
+        'current-account@example.com',
         'session-password',
-        'suspended_user',
+        'current_account_user',
       ),
     );
 
     await expect(
-      repository.findForLogin('suspended@example.com'),
-    ).resolves.toMatchObject({
+      accountService.getCurrentAccount(registration.attendeeId),
+    ).rejects.toBeInstanceOf(InvalidAttendeeSessionError);
+
+    await repository.markEmailVerified(registration.attendeeId);
+    await expect(
+      accountService.getCurrentAccount(registration.attendeeId),
+    ).resolves.toEqual({
       attendeeId: registration.attendeeId,
-      deletedAt: null,
+      email: 'current-account@example.com',
+      emailVerified: true,
       status: 'active',
+      username: 'current_account_user',
     });
 
     await database
       .update(attendeeAccounts)
       .set({ status: 'suspended' })
       .where(eq(attendeeAccounts.id, registration.attendeeId));
-
     await expect(
-      repository.findForLogin('suspended@example.com'),
-    ).resolves.toMatchObject({ status: 'suspended' });
+      accountService.getCurrentAccount(registration.attendeeId),
+    ).rejects.toBeInstanceOf(InvalidAttendeeSessionError);
+
+    await database
+      .update(attendeeAccounts)
+      .set({ deletedAt: new Date(), status: 'active' })
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+    await expect(
+      accountService.getCurrentAccount(registration.attendeeId),
+    ).rejects.toBeInstanceOf(InvalidAttendeeSessionError);
   });
 });

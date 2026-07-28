@@ -4,6 +4,7 @@ import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
   API_DOCS_ENABLED: 'true',
+  ATTENDEE_CLIENT_ORIGIN: 'http://localhost:5273',
   HTTP_HEADERS_TIMEOUT_MS: '10000',
   HTTP_KEEP_ALIVE_TIMEOUT_MS: '5000',
   HTTP_REQUEST_TIMEOUT_MS: '15000',
@@ -30,6 +31,7 @@ describe('readRuntimeConfig', () => {
       }),
     ).toEqual({
       apiDocsEnabled: true,
+      attendeeClientOrigin: 'http://localhost:5273',
       httpHeadersTimeoutMs: 10000,
       httpKeepAliveTimeoutMs: 5000,
       httpRequestTimeoutMs: 15000,
@@ -68,6 +70,20 @@ describe('readRuntimeConfig', () => {
       ).toThrow();
     },
   );
+
+  it.each([
+    'localhost:5273',
+    'redis://localhost:5273',
+    'http://localhost:5273/path',
+    'http://localhost:5273?query=value',
+  ])('rejects the invalid attendee client origin %s', (origin) => {
+    expect(() =>
+      readRuntimeConfig({
+        ...validEnvironment,
+        ATTENDEE_CLIENT_ORIGIN: origin,
+      }),
+    ).toThrow('ATTENDEE_CLIENT_ORIGIN must be a valid HTTP or HTTPS origin');
+  });
 
   it('requires the Identity Service endpoint', () => {
     expect(() =>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { AttendeeLoginController } from '../../src/domains/attendees/controllers/attendee-login.controller';
 import type { AttendeeLoginService } from '../../src/domains/attendees/services/attendee-login.service';
+import { AttendeeSessionCookie } from '../../src/domains/attendees/services/attendee-session-cookie.service';
 
 class RecordingLogin {
   login() {
@@ -22,7 +23,7 @@ describe('AttendeeLoginController', () => {
     const cookies: unknown[][] = [];
     const controller = new AttendeeLoginController(
       new RecordingLogin() as unknown as AttendeeLoginService,
-      true,
+      new AttendeeSessionCookie(true),
     );
 
     const result = await controller.login(
@@ -32,6 +33,7 @@ describe('AttendeeLoginController', () => {
       },
       'request-42',
       {
+        clearCookie: () => undefined,
         cookie: (...arguments_: unknown[]) => {
           cookies.push(arguments_);
         },

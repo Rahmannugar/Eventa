@@ -5,10 +5,14 @@ package eventa.identity.v1;
 import "eventa/identity/v1/attendee_email_verification.proto";
 import "eventa/identity/v1/attendee_login.proto";
 import "eventa/identity/v1/attendee_registration.proto";
+import "eventa/identity/v1/attendee_session.proto";
 
 service AttendeeIdentityService {
   rpc RegisterAttendee(RegisterAttendeeRequest) returns (RegisterAttendeeResponse);
   rpc LoginAttendee(LoginAttendeeRequest) returns (LoginAttendeeResponse);
+  rpc AuthenticateAttendeeSession(AuthenticateAttendeeSessionRequest) returns (AuthenticateAttendeeSessionResponse);
+  rpc GetCurrentAttendeeAccount(GetCurrentAttendeeAccountRequest) returns (GetCurrentAttendeeAccountResponse);
+  rpc LogoutAttendee(LogoutAttendeeRequest) returns (LogoutAttendeeResponse);
   rpc ConfirmAttendeeEmailVerification(ConfirmAttendeeEmailVerificationRequest) returns (ConfirmAttendeeEmailVerificationResponse);
   rpc ResendAttendeeEmailVerification(ResendAttendeeEmailVerificationRequest) returns (ResendAttendeeEmailVerificationResponse);
 }
