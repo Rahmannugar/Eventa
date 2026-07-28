@@ -43,7 +43,10 @@ export class AttendeeDeletionService {
     }
 
     try {
-      const deleted = await this.repository.deleteAccount(attendeeId);
+      const deleted = await this.repository.deleteAccount(
+        attendeeId,
+        account.passwordHash,
+      );
 
       if (deleted === undefined) {
         throw new InvalidAttendeeSessionError();

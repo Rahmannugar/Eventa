@@ -59,6 +59,25 @@ export class AdminSessionService implements AdminSessionIssuer {
     );
   }
 
+  cancelPasswordReset(adminId: string, resetId: string): Promise<void> {
+    return this.state.cancelPasswordReset(
+      this.digest('admin-session-account\0', adminId),
+      resetId,
+    );
+  }
+
+  startPasswordReset(
+    adminId: string,
+    resetId: string,
+    ttlMs: number,
+  ): Promise<number> {
+    return this.state.startPasswordReset(
+      this.digest('admin-session-account\0', adminId),
+      resetId,
+      ttlMs,
+    );
+  }
+
   private authenticate(token: string): Promise<AdminSession | undefined> {
     if (!AdminSessionService.TOKEN_PATTERN.test(token)) {
       return Promise.resolve(undefined);

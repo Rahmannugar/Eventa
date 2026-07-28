@@ -14,6 +14,7 @@ export const adminAccounts = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     email: text('email').notNull(),
     passwordHash: text('password_hash'),
+    passwordResetId: uuid('password_reset_id'),
     emailVerifiedAt: timestamp('email_verified_at', {
       mode: 'date',
       withTimezone: true,

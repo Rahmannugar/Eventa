@@ -1,5 +1,6 @@
 import type { PasswordVerifier } from '../../security/types/password-verifier.types';
 import { InvalidAdminCredentialsError } from '../errors/admin-login.errors';
+import { AdminSessionAccountBlockedError } from '../errors/admin-session.errors';
 import type {
   AdminLoginRepository,
   LoggedInAdmin,
@@ -30,7 +31,17 @@ export class AdminLoginService {
       throw new InvalidAdminCredentialsError();
     }
 
-    const session = await this.sessions.issue(account.adminId);
+    let session;
+
+    try {
+      session = await this.sessions.issue(account.adminId);
+    } catch (error: unknown) {
+      if (error instanceof AdminSessionAccountBlockedError) {
+        throw new InvalidAdminCredentialsError();
+      }
+
+      throw error;
+    }
 
     return {
       adminId: account.adminId,

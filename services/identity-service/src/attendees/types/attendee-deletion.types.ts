@@ -6,7 +6,10 @@ export interface AttendeeDeletionAccount {
 }
 
 export interface AttendeeDeletionRepository {
-  deleteAccount(attendeeId: string): Promise<AttendeeDeletedEvent | undefined>;
+  deleteAccount(
+    attendeeId: string,
+    expectedPasswordHash: string,
+  ): Promise<AttendeeDeletedEvent | undefined>;
   findAccountForDeletion(
     attendeeId: string,
   ): Promise<AttendeeDeletionAccount | undefined>;

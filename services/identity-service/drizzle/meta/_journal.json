@@ -36,6 +36,13 @@
       "when": 1785233493440,
       "tag": "0004_create_admin_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785252224623,
+      "tag": "0005_record_password_reset_completion",
+      "breakpoints": true
     }
   ]
 }

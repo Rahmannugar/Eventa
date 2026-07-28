@@ -10,7 +10,7 @@ Identity implements `eventa.identity.v1.AdminIdentityService`.
 - `GetCurrentAdminAccount` returns the activated admin ID and email.
 - `LogoutAdmin` revokes the presented session idempotently.
 - `ForgotAdminPassword` generically accepts an email and publishes reset work only for an activated admin.
-- `ResetAdminPassword` consumes an exact email/code/password completion, revokes every admin session, and replaces the password.
+- `ResetAdminPassword` consumes an exact email/code/password completion, blocks new login sessions, revokes every existing admin session, and replaces the password. 
 
 Invalid OTP or activation state uses `FAILED_PRECONDITION`. Redis unavailability uses `UNAVAILABLE`; registration cooldown uses `RESOURCE_EXHAUSTED` with retry metadata. DTO validation uses `INVALID_ARGUMENT`.
 

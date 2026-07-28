@@ -23,13 +23,13 @@ Verification protects email subjects and OTP values with purpose-separated HMACs
 
 Forgot-password reserves a protected-email Redis cooldown before PostgreSQL lookup, so account existence does not change admission behavior. Only a verified, active, non-deleted attendee receives delivery work. Identity stores a protected code digest with five guesses and a fixed 15-minute lifetime; publication failure removes the unusable code and its request cooldown while preserving the accepted client response.
 
-The first valid reset claim binds Redis state to a purpose-separated HMAC of the email, code, and replacement password. Another replacement password cannot take over that claim. Identity hashes the replacement, revokes every live session, conditionally updates the still-eligible PostgreSQL account, and marks the claim complete without extending its lifetime. Exact completion replay returns success without repeating password or session mutations.
+
 
 `AttendeeAuthJobPublisher` groups the cohesive attendee verification and password-reset delivery capabilities. Its RabbitMQ adapter owns queue-specific contracts and uses the process-long `RabbitMQClient`; application services do not depend on RabbitMQ.
 
 ## Login and Sessions
 
-Login canonicalizes the email, loads the account, and verifies the supplied password. Unknown accounts still perform Argon2id verification against a fixed dummy hash so they share the same credential failure. After a correct password, deleted and suspended accounts receive their distinct lifecycle outcomes; an unverified active account receives verification-required.
+Login canonicalizes the email, loads the account, and verifies the supplied password when the account exists. Unknown accounts and incorrect passwords receive the same credential failure. After a correct password, deleted and suspended accounts receive their distinct lifecycle outcomes; an unverified active account receives verification-required.
 
 After successful credential checks, the session service:
 
@@ -48,7 +48,7 @@ Session authentication returns only Redis-owned session context. Account retriev
 
 ## Account Deletion
 
-Deletion verifies the current password before mutation. One Redis command installs a short per-attendee deletion barrier and revokes every session; session creation checks the same barrier, closing the concurrent login race. A PostgreSQL transaction then sets `deleted_at` and inserts one `attendee.deleted.v1` outbox event. Failure cancels the preparation barrier when possible; its five-minute TTL bounds crash recovery. After commit, the barrier is retained for seven days while PostgreSQL remains the permanent login authority.
+Deletion verifies the current password before mutation. One Redis command installs a short per-attendee deletion barrier and revokes every session; session creation checks the same barrier, closing the concurrent login race. A PostgreSQL transaction changes the account only when its stored password hash still equals the hash that was verified, then sets `deleted_at` and inserts one `attendee.deleted.v1` outbox event. A concurrent password reset therefore prevents stale-password deletion. Failure cancels the preparation barrier when possible; its five-minute TTL bounds crash recovery. After commit, the barrier is retained for seven days while PostgreSQL remains the permanent login authority.
 
 The outbox relay claims records with leases and `SKIP LOCKED`, publishes them to `eventa.identity.attendee-lifecycle.v1` keyed by attendee ID, and records completion. Broker failure schedules bounded exponential retry without changing the successful deletion response. Event IDs support consumer deduplication under at-least-once delivery.
 

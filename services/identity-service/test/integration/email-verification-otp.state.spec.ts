@@ -8,6 +8,7 @@ import { RedisAdminActivationOtpState } from '../../src/admins/adapters/redis/ad
 import { RedisAdminSessionState } from '../../src/admins/adapters/redis/admin-session.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
 import { AttendeeSessionAccountBlockedError } from '../../src/attendees/errors/attendee-session.errors';
+import { AdminSessionAccountBlockedError } from '../../src/admins/errors/admin-session.errors';
 
 const testRedisUrl = process.env.TEST_REDIS_URL;
 
@@ -360,11 +361,91 @@ describe('RedisEmailVerificationOtpState integration', () => {
     ).resolves.toMatchObject({ sessionId: 'session-3' });
   });
 
+  it('revokes existing sessions and blocks new login sessions while a password reset owns the account', async () => {
+    const attendeeInput = {
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'attendee-subject',
+      maxConcurrentSessions: 3,
+      sessionId: 'attendee-session-1',
+      tokenDigest: 'g'.repeat(64),
+      ttlMs: 60_000,
+    };
+    const adminInput = {
+      adminId: 'admin-1',
+      adminSubject: 'admin-subject',
+      maxConcurrentSessions: 3,
+      sessionId: 'admin-session-1',
+      tokenDigest: 'admin-digest-1',
+      ttlMs: 60_000,
+    };
+    await sessionState.create(attendeeInput);
+    await adminSessionState.create(adminInput);
+
+    await expect(
+      sessionState.startPasswordReset(
+        attendeeInput.attendeeSubject,
+        'attendee-reset-1',
+        60_000,
+      ),
+    ).resolves.toBe(1);
+    await expect(
+      adminSessionState.startPasswordReset(
+        adminInput.adminSubject,
+        'admin-reset-1',
+        60_000,
+      ),
+    ).resolves.toBe(1);
+    await expect(
+      sessionState.read(attendeeInput.tokenDigest),
+    ).resolves.toBeUndefined();
+    await expect(
+      adminSessionState.read(adminInput.tokenDigest),
+    ).resolves.toBeUndefined();
+    await expect(
+      sessionState.create({
+        ...attendeeInput,
+        sessionId: 'attendee-session-2',
+        tokenDigest: 'h'.repeat(64),
+      }),
+    ).rejects.toBeInstanceOf(AttendeeSessionAccountBlockedError);
+    await expect(
+      adminSessionState.create({
+        ...adminInput,
+        sessionId: 'admin-session-2',
+        tokenDigest: 'admin-digest-2',
+      }),
+    ).rejects.toBeInstanceOf(AdminSessionAccountBlockedError);
+
+    await sessionState.cancelPasswordReset(
+      attendeeInput.attendeeSubject,
+      'attendee-reset-1',
+    );
+    await adminSessionState.cancelPasswordReset(
+      adminInput.adminSubject,
+      'admin-reset-1',
+    );
+    await expect(
+      sessionState.create({
+        ...attendeeInput,
+        sessionId: 'attendee-session-3',
+        tokenDigest: 'i'.repeat(64),
+      }),
+    ).resolves.toMatchObject({ sessionId: 'attendee-session-3' });
+    await expect(
+      adminSessionState.create({
+        ...adminInput,
+        sessionId: 'admin-session-3',
+        tokenDigest: 'admin-digest-3',
+      }),
+    ).resolves.toMatchObject({ sessionId: 'admin-session-3' });
+  });
+
   it('exhausts a password reset code after five incorrect guesses', async () => {
     await passwordResetState.save({
       accountId: 'attendee-1',
       attempts: 5,
       codeDigest: 'correct-digest',
+      resetId: 'c4e616b7-6904-4890-a818-dd8ed2f9e807',
       subject: 'attendee-subject',
       ttlMs: 60_000,
     });
@@ -396,6 +477,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
       accountId: 'attendee-1',
       attempts: 5,
       codeDigest: 'correct-digest',
+      resetId: 'c4e616b7-6904-4890-a818-dd8ed2f9e807',
       subject: 'attendee-subject',
       ttlMs: 60_000,
     });
@@ -410,7 +492,19 @@ describe('RedisEmailVerificationOtpState integration', () => {
       ),
     ).resolves.toEqual({
       accountId: 'attendee-1',
+      resetId: 'c4e616b7-6904-4890-a818-dd8ed2f9e807',
       status: 'claimed',
+    });
+    await expect(
+      passwordResetState.claim(
+        'attendee-subject',
+        'correct-digest',
+        'completion-one',
+      ),
+    ).resolves.toEqual({
+      accountId: 'attendee-1',
+      resetId: 'c4e616b7-6904-4890-a818-dd8ed2f9e807',
+      status: 'processing',
     });
     await expect(
       passwordResetState.claim(
@@ -434,6 +528,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
       ),
     ).resolves.toEqual({
       accountId: 'attendee-1',
+      resetId: 'c4e616b7-6904-4890-a818-dd8ed2f9e807',
       status: 'completed',
     });
     expect(await administrativeClient.pTTL(key)).toBeLessThanOrEqual(

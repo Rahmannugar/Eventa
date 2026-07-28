@@ -5,6 +5,13 @@ export class AdminSessionStateUnavailableError extends Error {
   }
 }
 
+export class AdminSessionAccountBlockedError extends Error {
+  constructor() {
+    super('ADMIN_SESSION_ACCOUNT_BLOCKED');
+    this.name = AdminSessionAccountBlockedError.name;
+  }
+}
+
 export class InvalidAdminSessionError extends Error {
   constructor() {
     super('ADMIN_SESSION_INVALID');

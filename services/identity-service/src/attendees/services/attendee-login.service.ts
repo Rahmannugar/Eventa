@@ -13,9 +13,6 @@ import type {
 import type { AttendeeSessionService } from './attendee-session.service';
 import { AttendeeSessionAccountBlockedError } from '../errors/attendee-session.errors';
 
-const INVALID_LOGIN_PASSWORD_HASH =
-  '$argon2id$v=19$m=65536,t=3,p=4$ZXZlbnRhLWxvZ2luLXNhbHQ$X1DCQPCT6hOJuXLJgazxWCP2S8h0TpQ2wFVxH4v5d1k';
-
 export class AttendeeLoginService {
   constructor(
     private readonly repository: AttendeeLoginRepository,
@@ -26,12 +23,17 @@ export class AttendeeLoginService {
   async login(input: LoginAttendeeInput): Promise<LoggedInAttendee> {
     const email = input.email.trim().toLowerCase();
     const account = await this.repository.findForLogin(email);
+
+    if (account === undefined) {
+      throw new InvalidAttendeeCredentialsError();
+    }
+
     const passwordMatches = await this.passwordVerifier.verify(
-      account?.passwordHash ?? INVALID_LOGIN_PASSWORD_HASH,
+      account.passwordHash,
       input.password,
     );
 
-    if (account === undefined || !passwordMatches) {
+    if (!passwordMatches) {
       throw new InvalidAttendeeCredentialsError();
     }
 
@@ -53,7 +55,12 @@ export class AttendeeLoginService {
       session = await this.sessions.issue(account.attendeeId);
     } catch (error: unknown) {
       if (error instanceof AttendeeSessionAccountBlockedError) {
-        throw new AttendeeAccountDeletedError();
+        switch (error.reason) {
+          case 'account-deletion':
+            throw new AttendeeAccountDeletedError();
+          case 'password-reset':
+            throw new InvalidAttendeeCredentialsError();
+        }
       }
 
       throw error;

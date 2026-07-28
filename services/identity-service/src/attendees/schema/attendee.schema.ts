@@ -15,6 +15,7 @@ export const attendeeAccounts = pgTable(
     email: text('email').notNull(),
     username: text('username').notNull(),
     passwordHash: text('password_hash').notNull(),
+    passwordResetId: uuid('password_reset_id'),
     status: text('status')
       .$type<'active' | 'suspended'>()
       .default('active')

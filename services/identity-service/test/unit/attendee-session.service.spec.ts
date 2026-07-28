@@ -36,6 +36,10 @@ class RecordingSessionState implements AttendeeSessionState {
     return Promise.resolve();
   }
 
+  cancelPasswordReset(): Promise<void> {
+    return Promise.resolve();
+  }
+
   completeAccountDeletion(): Promise<void> {
     return Promise.resolve();
   }
@@ -57,6 +61,10 @@ class RecordingSessionState implements AttendeeSessionState {
   revokeAll(attendeeSubject: string): Promise<number> {
     this.revokeSubject = attendeeSubject;
     return Promise.resolve(2);
+  }
+
+  startPasswordReset(): Promise<number> {
+    return Promise.resolve(0);
   }
 }
 

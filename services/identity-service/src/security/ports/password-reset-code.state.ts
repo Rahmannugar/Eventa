@@ -16,6 +16,11 @@ export interface PasswordResetCodeState {
     codeDigest: string,
     completionDigest: string,
   ): Promise<void>;
+  releaseClaim(
+    subject: string,
+    codeDigest: string,
+    completionDigest: string,
+  ): Promise<void>;
   reserve(
     subject: string,
     cooldownMs: number,

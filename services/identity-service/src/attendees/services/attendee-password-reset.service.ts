@@ -1,8 +1,10 @@
-import { createHmac, randomInt } from 'node:crypto';
+import { createHmac, randomInt, randomUUID } from 'node:crypto';
 
 import { Logger } from '@nestjs/common';
 
 import type { PasswordHasher } from '../../security/types/password-hasher.types';
+import { PASSWORD_RESET_SESSION_BLOCK_TTL_MS } from '../../security/constants/security.constants';
+import { PasswordResetStateUnavailableError } from '../../security/errors/password-reset.errors';
 import {
   PASSWORD_RESET_CODE_MAX_GUESSES,
   PASSWORD_RESET_CODE_TTL_MS,
@@ -16,6 +18,7 @@ import type { PasswordResetCodeState } from '../../security/ports/password-reset
 import type { AttendeeAuthJobPublisher } from '../ports/attendee-auth-job.publisher';
 import type { AttendeePasswordResetRepository } from '../types/attendee-password-reset.types';
 import type { AttendeeSessionService } from './attendee-session.service';
+import { AttendeeSessionAccountBlockedError } from '../errors/attendee-session.errors';
 
 export class AttendeePasswordResetService {
   private readonly logger = new Logger(AttendeePasswordResetService.name);
@@ -27,7 +30,7 @@ export class AttendeePasswordResetService {
     private readonly passwordHasher: PasswordHasher,
     private readonly attendeeSessions: Pick<
       AttendeeSessionService,
-      'revokeAll'
+      'cancelPasswordReset' | 'startPasswordReset'
     >,
     private readonly hmacSecret: string,
   ) {}
@@ -58,6 +61,7 @@ export class AttendeePasswordResetService {
       accountId: account.attendeeId,
       attempts: PASSWORD_RESET_CODE_MAX_GUESSES,
       codeDigest,
+      resetId: randomUUID(),
       subject,
       ttlMs: PASSWORD_RESET_CODE_TTL_MS,
     });
@@ -120,22 +124,115 @@ export class AttendeePasswordResetService {
       return { passwordReset: true };
     }
 
-    const passwordHash = await this.passwordHasher.hash(newPassword);
-
-    await this.attendeeSessions.revokeAll(claim.accountId);
-
-    const passwordReplaced = await this.attendeeAccounts.replacePassword(
-      claim.accountId,
-      passwordHash,
-    );
-
-    if (!passwordReplaced) {
-      throw new PasswordResetCodeInvalidError();
+    if (
+      await this.attendeeAccounts.completedPasswordReset(
+        claim.accountId,
+        claim.resetId,
+      )
+    ) {
+      await this.finishCommittedReset(
+        claim.accountId,
+        claim.resetId,
+        subject,
+        codeDigest,
+        completionDigest,
+      );
+      return { passwordReset: true };
     }
 
-    await this.codeState.markCompleted(subject, codeDigest, completionDigest);
+    if (claim.status === 'processing') {
+      throw new PasswordResetStateUnavailableError();
+    }
+
+    try {
+      await this.attendeeSessions.startPasswordReset(
+        claim.accountId,
+        claim.resetId,
+        PASSWORD_RESET_SESSION_BLOCK_TTL_MS,
+      );
+      const passwordHash = await this.passwordHasher.hash(newPassword);
+      const passwordReplaced = await this.attendeeAccounts.replacePassword(
+        claim.accountId,
+        passwordHash,
+        claim.resetId,
+      );
+
+      if (!passwordReplaced) {
+        throw new PasswordResetCodeInvalidError();
+      }
+    } catch (error: unknown) {
+      await this.cancelUncommittedReset(
+        claim.accountId,
+        claim.resetId,
+        subject,
+        codeDigest,
+        completionDigest,
+      );
+
+      if (error instanceof AttendeeSessionAccountBlockedError) {
+        throw new PasswordResetCodeInvalidError();
+      }
+
+      throw error;
+    }
+
+    await this.finishCommittedReset(
+      claim.accountId,
+      claim.resetId,
+      subject,
+      codeDigest,
+      completionDigest,
+    );
 
     return { passwordReset: true };
+  }
+
+  private async cancelUncommittedReset(
+    attendeeId: string,
+    resetId: string,
+    subject: string,
+    codeDigest: string,
+    completionDigest: string,
+  ): Promise<void> {
+    await Promise.allSettled([
+      this.attendeeSessions.cancelPasswordReset(attendeeId, resetId),
+      this.codeState.releaseClaim(subject, codeDigest, completionDigest),
+    ]);
+  }
+
+  private async finishCommittedReset(
+    attendeeId: string,
+    resetId: string,
+    subject: string,
+    codeDigest: string,
+    completionDigest: string,
+  ): Promise<void> {
+    const [completion, sessionBlock] = await Promise.allSettled([
+      this.codeState.markCompleted(subject, codeDigest, completionDigest),
+      this.attendeeSessions.cancelPasswordReset(attendeeId, resetId),
+    ]);
+
+    if (completion.status === 'rejected') {
+      this.logger.error({
+        attendee_id: attendeeId,
+        error_type:
+          completion.reason instanceof Error
+            ? completion.reason.name
+            : 'UnknownError',
+        event: 'attendee_password_reset_completion_recovery_required',
+      });
+    }
+
+    if (sessionBlock.status === 'rejected') {
+      this.logger.error({
+        attendee_id: attendeeId,
+        error_type:
+          sessionBlock.reason instanceof Error
+            ? sessionBlock.reason.name
+            : 'UnknownError',
+        event: 'attendee_password_reset_session_block_cleanup_failed',
+      });
+    }
   }
 
   private canonicalizeEmail(email: string): string {

@@ -22,6 +22,10 @@ class ResetState implements PasswordResetCodeState {
     return Promise.resolve();
   }
 
+  releaseClaim(): Promise<void> {
+    return Promise.resolve();
+  }
+
   reserve(): Promise<{ allowed: true; retryAfterSeconds: 0 }> {
     return Promise.resolve({ allowed: true, retryAfterSeconds: 0 });
   }
@@ -36,10 +40,11 @@ describe('admin password reset', () => {
     const events: string[] = [];
     const state = new ResetState();
     state.claims = [
-      { accountId: 'admin-1', status: 'claimed' },
-      { accountId: 'admin-1', status: 'completed' },
+      { accountId: 'admin-1', resetId: 'reset-1', status: 'claimed' },
+      { accountId: 'admin-1', resetId: 'reset-1', status: 'completed' },
     ];
     const repository: AdminPasswordResetRepository = {
+      completedPasswordReset: () => Promise.resolve(false),
       findActivatedForPasswordReset: () => Promise.resolve(undefined),
       replacePassword: () => {
         events.push('password-replaced');
@@ -56,8 +61,9 @@ describe('admin password reset', () => {
       },
     };
     const sessions = {
-      revokeAll: () => {
-        events.push('sessions-revoked');
+      cancelPasswordReset: () => Promise.resolve(),
+      startPasswordReset: () => {
+        events.push('sessions-blocked-and-revoked');
         return Promise.resolve(3);
       },
     };
@@ -82,8 +88,8 @@ describe('admin password reset', () => {
     );
 
     expect(events).toEqual([
+      'sessions-blocked-and-revoked',
       'password-hashed',
-      'sessions-revoked',
       'password-replaced',
     ]);
   });

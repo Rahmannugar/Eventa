@@ -96,7 +96,7 @@ describe('AttendeeLoginService', () => {
     expect(sessions.attendeeIds).toEqual(['attendee-1']);
   });
 
-  it('uses the same credential failure for an unknown account and does not issue a session', async () => {
+  it('rejects an unknown account without verifying a password or issuing a session', async () => {
     const { service, sessions, verifier } = setup();
 
     await expect(
@@ -105,8 +105,7 @@ describe('AttendeeLoginService', () => {
         password: 'wrong-password',
       }),
     ).rejects.toBeInstanceOf(InvalidAttendeeCredentialsError);
-    expect(verifier.calls).toHaveLength(1);
-    expect(verifier.calls[0]?.passwordHash).toMatch(/^\$argon2id\$/);
+    expect(verifier.calls).toEqual([]);
     expect(sessions.attendeeIds).toEqual([]);
   });
 

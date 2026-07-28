@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
-import { Logger } from '@nestjs/common';
+import { describe, expect, it } from 'vitest';
 
 import type { AdminAuthJobPublisher } from '../../src/admins/ports/admin-auth-job.publisher';
 import { AdminActivationService } from '../../src/admins/services/admin-activation.service';

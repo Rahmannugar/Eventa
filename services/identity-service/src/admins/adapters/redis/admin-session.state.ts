@@ -1,7 +1,10 @@
 import { runWithOperationSpan } from '@eventa/observability';
 
 import type { RedisClient } from '../../../infrastructure/clients/redis.client';
-import { AdminSessionStateUnavailableError } from '../../errors/admin-session.errors';
+import {
+  AdminSessionAccountBlockedError,
+  AdminSessionStateUnavailableError,
+} from '../../errors/admin-session.errors';
 import type {
   AdminSession,
   AdminSessionState,
@@ -9,6 +12,10 @@ import type {
 } from '../../types/admin-session.types';
 
 const CREATE_SESSION_SCRIPT = `
+if redis.call('EXISTS', KEYS[3]) == 1 then
+  return { 0 }
+end
+
 local now = redis.call('TIME')
 local now_us = (tonumber(now[1]) * 1000000) + tonumber(now[2])
 local expires_at = math.floor(now_us / 1000) + tonumber(ARGV[4])
@@ -43,6 +50,30 @@ redis.call('ZADD', KEYS[2], expiry_score, KEYS[1])
 redis.call('PEXPIREAT', KEYS[2], expires_at)
 
 return { ARGV[3], expires_at }
+`;
+
+const START_PASSWORD_RESET_SCRIPT = `
+local owner = 'password-reset:' .. ARGV[1]
+local current_owner = redis.call('GET', KEYS[2])
+
+if current_owner and current_owner ~= owner then
+  return -1
+end
+
+redis.call('SET', KEYS[2], owner, 'PX', ARGV[2])
+local sessions = redis.call('ZRANGE', KEYS[1], 0, -1)
+if #sessions > 0 then
+  redis.call('DEL', unpack(sessions))
+end
+redis.call('DEL', KEYS[1])
+return #sessions
+`;
+
+const CANCEL_PASSWORD_RESET_SCRIPT = `
+if redis.call('GET', KEYS[1]) == 'password-reset:' .. ARGV[1] then
+  redis.call('DEL', KEYS[1])
+end
+return 1
 `;
 
 const READ_SESSION_SCRIPT = `
@@ -92,6 +123,10 @@ function accountKey(adminSubject: string): string {
   return `${ACCOUNT_KEY_PREFIX}${adminSubject}`;
 }
 
+function passwordResetKey(adminSubject: string): string {
+  return `identity:admin-session-password-reset:v1:${adminSubject}`;
+}
+
 export class RedisAdminSessionState implements AdminSessionState {
   constructor(private readonly redis: RedisClient) {}
 
@@ -100,7 +135,11 @@ export class RedisAdminSessionState implements AdminSessionState {
       const result = await this.evaluate(
         'admin_session.create',
         CREATE_SESSION_SCRIPT,
-        [sessionKey(input.tokenDigest), accountKey(input.adminSubject)],
+        [
+          sessionKey(input.tokenDigest),
+          accountKey(input.adminSubject),
+          passwordResetKey(input.adminSubject),
+        ],
         [
           input.adminId,
           input.adminSubject,
@@ -109,6 +148,14 @@ export class RedisAdminSessionState implements AdminSessionState {
           String(input.maxConcurrentSessions),
         ],
       );
+
+      if (
+        Array.isArray(result) &&
+        result.length === 1 &&
+        Number(result[0]) === 0
+      ) {
+        throw new AdminSessionAccountBlockedError();
+      }
 
       if (!Array.isArray(result) || result.length !== 2) {
         throw new Error('INVALID_ADMIN_SESSION_STATE');
@@ -128,6 +175,26 @@ export class RedisAdminSessionState implements AdminSessionState {
       }
 
       return { adminId: input.adminId, expiresAt, sessionId };
+    } catch (error: unknown) {
+      if (error instanceof AdminSessionAccountBlockedError) {
+        throw error;
+      }
+
+      throw new AdminSessionStateUnavailableError();
+    }
+  }
+
+  async cancelPasswordReset(
+    adminSubject: string,
+    resetId: string,
+  ): Promise<void> {
+    try {
+      await this.evaluate(
+        'admin_session.cancel_password_reset',
+        CANCEL_PASSWORD_RESET_SCRIPT,
+        [passwordResetKey(adminSubject)],
+        [resetId],
+      );
     } catch {
       throw new AdminSessionStateUnavailableError();
     }
@@ -213,6 +280,39 @@ export class RedisAdminSessionState implements AdminSessionState {
 
       return result;
     } catch {
+      throw new AdminSessionStateUnavailableError();
+    }
+  }
+
+  async startPasswordReset(
+    adminSubject: string,
+    resetId: string,
+    ttlMs: number,
+  ): Promise<number> {
+    try {
+      const result = Number(
+        await this.evaluate(
+          'admin_session.start_password_reset',
+          START_PASSWORD_RESET_SCRIPT,
+          [accountKey(adminSubject), passwordResetKey(adminSubject)],
+          [resetId, String(ttlMs)],
+        ),
+      );
+
+      if (result === -1) {
+        throw new AdminSessionAccountBlockedError();
+      }
+
+      if (!Number.isSafeInteger(result) || result < 0) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof AdminSessionAccountBlockedError) {
+        throw error;
+      }
+
       throw new AdminSessionStateUnavailableError();
     }
   }

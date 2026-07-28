@@ -6,8 +6,11 @@ export class AttendeeSessionStateUnavailableError extends Error {
 }
 
 export class AttendeeSessionAccountBlockedError extends Error {
-  constructor() {
+  constructor(
+    readonly reason: 'account-deletion' | 'password-reset' = 'account-deletion',
+  ) {
     super('ATTENDEE_SESSION_ACCOUNT_BLOCKED');
+    this.name = AttendeeSessionAccountBlockedError.name;
   }
 }
 

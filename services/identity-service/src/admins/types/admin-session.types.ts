@@ -31,8 +31,14 @@ export interface AdminSessionIssuer {
 }
 
 export interface AdminSessionState {
+  cancelPasswordReset(adminSubject: string, resetId: string): Promise<void>;
   create(input: CreateAdminSession): Promise<AdminSession>;
   read(tokenDigest: string): Promise<AdminSession | undefined>;
   revoke(tokenDigest: string): Promise<boolean>;
   revokeAll(adminSubject: string): Promise<number>;
+  startPasswordReset(
+    adminSubject: string,
+    resetId: string,
+    ttlMs: number,
+  ): Promise<number>;
 }

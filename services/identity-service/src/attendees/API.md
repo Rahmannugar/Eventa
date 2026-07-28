@@ -87,8 +87,7 @@ The request contains `email`. Success returns `accepted = true` for unknown, ine
 
 ## ResetAttendeePassword Command
 
-The request contains `email`, a six-digit `code`, and `new_password`. Success returns `password_reset = true`. Identity binds the first valid claim to the exact code and replacement password, revokes all attendee sessions, and conditionally replaces the password for a verified, active, non-deleted account. Exact completion replay returns the same success without repeating the mutation.
-
+The request contains `email`, a six-digit `code`, and `new_password`. Success returns `password_reset = true`. Identity binds the first valid claim to the exact code and replacement password, blocks new login sessions, revokes all existing sessions, and conditionally replaces the password for a verified, active, non-deleted account.
 | gRPC status           | Meaning                                                               |
 | --------------------- | --------------------------------------------------------------------- |
 | `INVALID_ARGUMENT`    | Identity validation rejected one or more command fields.              |

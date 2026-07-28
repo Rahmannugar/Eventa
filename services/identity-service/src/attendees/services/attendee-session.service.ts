@@ -48,6 +48,13 @@ export class AttendeeSessionService {
     return this.state.cancelAccountDeletion(this.attendeeSubject(attendeeId));
   }
 
+  cancelPasswordReset(attendeeId: string, resetId: string): Promise<void> {
+    return this.state.cancelPasswordReset(
+      this.attendeeSubject(attendeeId),
+      resetId,
+    );
+  }
+
   completeAccountDeletion(attendeeId: string, ttlMs: number): Promise<void> {
     return this.state.completeAccountDeletion(
       this.attendeeSubject(attendeeId),
@@ -80,6 +87,18 @@ export class AttendeeSessionService {
   prepareAccountDeletion(attendeeId: string, ttlMs: number): Promise<number> {
     return this.state.prepareAccountDeletion(
       this.attendeeSubject(attendeeId),
+      ttlMs,
+    );
+  }
+
+  startPasswordReset(
+    attendeeId: string,
+    resetId: string,
+    ttlMs: number,
+  ): Promise<number> {
+    return this.state.startPasswordReset(
+      this.attendeeSubject(attendeeId),
+      resetId,
       ttlMs,
     );
   }

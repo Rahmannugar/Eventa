@@ -18,6 +18,10 @@ export interface IssuedAttendeeSession extends AttendeeSession {
 }
 
 export interface AttendeeSessionState {
+  cancelPasswordReset(
+    attendeeSubject: string,
+    resetId: string,
+  ): Promise<void>;
   cancelAccountDeletion(attendeeSubject: string): Promise<void>;
   completeAccountDeletion(
     attendeeSubject: string,
@@ -26,6 +30,11 @@ export interface AttendeeSessionState {
   create(input: CreateAttendeeSession): Promise<AttendeeSession>;
   prepareAccountDeletion(
     attendeeSubject: string,
+    ttlMs: number,
+  ): Promise<number>;
+  startPasswordReset(
+    attendeeSubject: string,
+    resetId: string,
     ttlMs: number,
   ): Promise<number>;
   read(tokenDigest: string): Promise<AttendeeSession | undefined>;

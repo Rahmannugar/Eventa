@@ -17,6 +17,7 @@ class RecordingCodeState implements PasswordResetCodeState {
   cancelled = false;
   claimResults: PasswordResetClaim[] = [];
   completed = false;
+  completionFailures = 0;
   saved?: PasswordResetCodeRecord;
 
   cancel(): Promise<void> {
@@ -29,7 +30,16 @@ class RecordingCodeState implements PasswordResetCodeState {
   }
 
   markCompleted(): Promise<void> {
+    if (this.completionFailures > 0) {
+      this.completionFailures -= 1;
+      return Promise.reject(new Error('redis unavailable'));
+    }
+
     this.completed = true;
+    return Promise.resolve();
+  }
+
+  releaseClaim(): Promise<void> {
     return Promise.resolve();
   }
 
@@ -53,14 +63,18 @@ function createService(options?: {
 } {
   const codeState = options?.codeState ?? new RecordingCodeState();
   const events = options?.events ?? [];
+  const completedResetIds = new Set<string>();
   const accounts: AttendeePasswordResetRepository = {
+    completedPasswordReset: (_attendeeId, resetId) =>
+      Promise.resolve(completedResetIds.has(resetId)),
     findAccountForPasswordReset: () =>
       Promise.resolve({
         attendeeId: 'attendee-1',
         email: 'attendee@example.com',
       }),
-    replacePassword: () => {
+    replacePassword: (_attendeeId, _passwordHash, resetId) => {
       events.push('password-replaced');
+      completedResetIds.add(resetId);
       return Promise.resolve(true);
     },
   };
@@ -78,11 +92,15 @@ function createService(options?: {
     },
   };
   const sessions = {
-    revokeAll: () => {
-      events.push('sessions-revoked');
+    cancelPasswordReset: () => Promise.resolve(),
+    startPasswordReset: () => {
+      events.push('sessions-blocked-and-revoked');
       return Promise.resolve(2);
     },
-  } satisfies Pick<AttendeeSessionService, 'revokeAll'>;
+  } satisfies Pick<
+    AttendeeSessionService,
+    'cancelPasswordReset' | 'startPasswordReset'
+  >;
 
   return {
     codeState,
@@ -113,13 +131,14 @@ describe('AttendeePasswordResetService', () => {
     expect(codeState.cancelled).toBe(true);
   });
 
-  it('revokes every session before replacing the password and makes exact completion replay mutation-free', async () => {
+  it('recovers an exact retry from the committed password reset without repeating the mutation', async () => {
     const events: string[] = [];
     const codeState = new RecordingCodeState();
     codeState.claimResults = [
-      { accountId: 'attendee-1', status: 'claimed' },
-      { accountId: 'attendee-1', status: 'completed' },
+      { accountId: 'attendee-1', resetId: 'reset-1', status: 'claimed' },
+      { accountId: 'attendee-1', resetId: 'reset-1', status: 'processing' },
     ];
+    codeState.completionFailures = 1;
     const { service } = createService({ codeState, events });
 
     await expect(
@@ -138,8 +157,8 @@ describe('AttendeePasswordResetService', () => {
     ).resolves.toEqual({ passwordReset: true });
 
     expect(events).toEqual([
+      'sessions-blocked-and-revoked',
       'password-hashed',
-      'sessions-revoked',
       'password-replaced',
     ]);
     expect(codeState.completed).toBe(true);

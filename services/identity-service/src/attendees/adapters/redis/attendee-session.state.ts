@@ -13,7 +13,7 @@ import {
 
 const CREATE_SESSION_SCRIPT = `
 if redis.call('EXISTS', KEYS[3]) == 1 then
-  return { 0 }
+  return { 0, redis.call('GET', KEYS[3]) }
 end
 
 local now = redis.call('TIME')
@@ -64,6 +64,30 @@ if #sessions > 0 then
 end
 redis.call('DEL', KEYS[1])
 return #sessions
+`;
+
+const START_PASSWORD_RESET_SCRIPT = `
+local owner = 'password-reset:' .. ARGV[1]
+local current_owner = redis.call('GET', KEYS[2])
+
+if current_owner and current_owner ~= owner then
+  return -1
+end
+
+redis.call('SET', KEYS[2], owner, 'PX', ARGV[2])
+local sessions = redis.call('ZRANGE', KEYS[1], 0, -1)
+if #sessions > 0 then
+  redis.call('DEL', unpack(sessions))
+end
+redis.call('DEL', KEYS[1])
+return #sessions
+`;
+
+const CANCEL_PASSWORD_RESET_SCRIPT = `
+if redis.call('GET', KEYS[1]) == 'password-reset:' .. ARGV[1] then
+  redis.call('DEL', KEYS[1])
+end
+return 1
 `;
 
 const COMPLETE_ACCOUNT_DELETION_SCRIPT = `
@@ -138,8 +162,13 @@ function parseSession(
     throw new Error('INVALID_ATTENDEE_SESSION_STATE');
   }
 
-  if (source === 'create' && result.length === 1 && Number(result[0]) === 0) {
-    throw new AttendeeSessionAccountBlockedError();
+  if (source === 'create' && result.length === 2 && Number(result[0]) === 0) {
+    const owner = String(result[1]);
+    throw new AttendeeSessionAccountBlockedError(
+      owner.startsWith('password-reset:')
+        ? 'password-reset'
+        : 'account-deletion',
+    );
   }
 
   if (source === 'read' && result.length === 0) {
@@ -279,6 +308,22 @@ export class RedisAttendeeSessionState implements AttendeeSessionState {
     }
   }
 
+  async cancelPasswordReset(
+    attendeeSubject: string,
+    resetId: string,
+  ): Promise<void> {
+    try {
+      await this.evaluate(
+        'attendee_session.cancel_password_reset',
+        CANCEL_PASSWORD_RESET_SCRIPT,
+        [deletionBarrierKey(attendeeSubject)],
+        [resetId],
+      );
+    } catch {
+      throw new AttendeeSessionStateUnavailableError();
+    }
+  }
+
   async read(tokenDigest: string): Promise<AttendeeSession | undefined> {
     try {
       const result = await this.evaluate(
@@ -320,6 +365,32 @@ export class RedisAttendeeSessionState implements AttendeeSessionState {
 
       return parseCount(result);
     } catch {
+      throw new AttendeeSessionStateUnavailableError();
+    }
+  }
+
+  async startPasswordReset(
+    attendeeSubject: string,
+    resetId: string,
+    ttlMs: number,
+  ): Promise<number> {
+    try {
+      const result = await this.evaluate(
+        'attendee_session.start_password_reset',
+        START_PASSWORD_RESET_SCRIPT,
+        [
+          accountKey(attendeeSubject),
+          deletionBarrierKey(attendeeSubject),
+        ],
+        [resetId, String(ttlMs)],
+      );
+
+      return parseDeletionPreparation(result);
+    } catch (error: unknown) {
+      if (error instanceof AttendeeSessionAccountBlockedError) {
+        throw error;
+      }
+
       throw new AttendeeSessionStateUnavailableError();
     }
   }

@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
 
 import type { RedisClient } from '../../../infrastructure/clients/redis.client';
+import { PASSWORD_RESET_CLAIM_LEASE_MS } from '../../constants/security.constants';
 import { PasswordResetStateUnavailableError } from '../../errors/password-reset.errors';
 import type { PasswordResetCodeState } from '../../ports/password-reset-code.state';
 import type {
@@ -27,10 +28,11 @@ redis.call(
   'account_id', ARGV[1],
   'code_digest', ARGV[2],
   'attempts_remaining', ARGV[3],
+  'reset_id', ARGV[4],
   'status', 'active'
 )
-redis.call('HDEL', KEYS[1], 'completion_digest')
-redis.call('PEXPIRE', KEYS[1], ARGV[4])
+redis.call('HDEL', KEYS[1], 'completion_digest', 'processing_until')
+redis.call('PEXPIRE', KEYS[1], ARGV[5])
 return 1
 `;
 
@@ -46,11 +48,16 @@ return 1
 const CLAIM_SCRIPT = `
 local stored_digest = redis.call('HGET', KEYS[1], 'code_digest')
 if not stored_digest then
-  return { 0, '' }
+  return { 0, '', '' }
 end
 
 local status = redis.call('HGET', KEYS[1], 'status')
 local account_id = redis.call('HGET', KEYS[1], 'account_id')
+local reset_id = redis.call('HGET', KEYS[1], 'reset_id')
+
+if not account_id or not reset_id then
+  return { 0, '', '' }
+end
 
 if stored_digest ~= ARGV[1] then
   if status == 'active' then
@@ -59,30 +66,39 @@ if stored_digest ~= ARGV[1] then
       redis.call('DEL', KEYS[1])
     end
   end
-  return { 0, '' }
+  return { 0, '', '' }
 end
 
 local stored_completion = redis.call('HGET', KEYS[1], 'completion_digest')
+local redis_time = redis.call('TIME')
+local now_ms = (tonumber(redis_time[1]) * 1000) + math.floor(tonumber(redis_time[2]) / 1000)
 
 if status == 'active' then
   redis.call(
     'HSET',
     KEYS[1],
     'status', 'processing',
-    'completion_digest', ARGV[2]
+    'completion_digest', ARGV[2],
+    'processing_until', now_ms + tonumber(ARGV[3])
   )
-  return { 1, account_id }
+  return { 1, account_id, reset_id }
 end
 
 if status == 'processing' and stored_completion == ARGV[2] then
-  return { 1, account_id }
+  local processing_until = tonumber(redis.call('HGET', KEYS[1], 'processing_until') or '0')
+  if processing_until > now_ms then
+    return { 3, account_id, reset_id }
+  end
+
+  redis.call('HSET', KEYS[1], 'processing_until', now_ms + tonumber(ARGV[3]))
+  return { 1, account_id, reset_id }
 end
 
 if status == 'completed' and stored_completion == ARGV[2] then
-  return { 2, account_id }
+  return { 2, account_id, reset_id }
 end
 
-return { 0, '' }
+return { 0, '', '' }
 `;
 
 const MARK_COMPLETED_SCRIPT = `
@@ -96,10 +112,27 @@ if
   and stored_completion == ARGV[2]
 then
   redis.call('HSET', KEYS[1], 'status', 'completed')
+  redis.call('HDEL', KEYS[1], 'processing_until')
   return 1
 end
 
 return 0
+`;
+
+const RELEASE_CLAIM_SCRIPT = `
+local stored_code = redis.call('HGET', KEYS[1], 'code_digest')
+local stored_completion = redis.call('HGET', KEYS[1], 'completion_digest')
+local status = redis.call('HGET', KEYS[1], 'status')
+
+if
+  status == 'processing'
+  and stored_code == ARGV[1]
+  and stored_completion == ARGV[2]
+then
+  redis.call('HSET', KEYS[1], 'processing_until', '0')
+end
+
+return 1
 `;
 
 function stateKey(namespace: string, subject: string): string {
@@ -134,27 +167,32 @@ function parseCooldownDecision(result: unknown): PasswordResetCooldownDecision {
 }
 
 function parseClaim(result: unknown): PasswordResetClaim {
-  if (!Array.isArray(result) || result.length !== 2) {
+  if (!Array.isArray(result) || result.length !== 3) {
     throw new PasswordResetStateUnavailableError();
   }
 
   const status = Number(result[0]);
   const accountId = String(result[1]);
+  const resetId = String(result[2]);
 
   if (status === 0) {
     return { status: 'invalid' };
   }
 
-  if (accountId === '') {
+  if (accountId === '' || resetId === '') {
     throw new PasswordResetStateUnavailableError();
   }
 
   if (status === 1) {
-    return { accountId, status: 'claimed' };
+    return { accountId, resetId, status: 'claimed' };
   }
 
   if (status === 2) {
-    return { accountId, status: 'completed' };
+    return { accountId, resetId, status: 'completed' };
+  }
+
+  if (status === 3) {
+    return { accountId, resetId, status: 'processing' };
   }
 
   throw new PasswordResetStateUnavailableError();
@@ -191,6 +229,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
         record.accountId,
         record.codeDigest,
         String(record.attempts),
+        record.resetId,
         String(record.ttlMs),
       ],
     );
@@ -214,7 +253,11 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
       'password_reset.claim',
       CLAIM_SCRIPT,
       [stateKey(this.namespace, subject)],
-      [codeDigest, completionDigest],
+      [
+        codeDigest,
+        completionDigest,
+        String(PASSWORD_RESET_CLAIM_LEASE_MS),
+      ],
     );
 
     return parseClaim(result);
@@ -225,9 +268,26 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     codeDigest: string,
     completionDigest: string,
   ): Promise<void> {
-    await this.evaluate(
+    const result = await this.evaluate(
       'password_reset.complete',
       MARK_COMPLETED_SCRIPT,
+      [stateKey(this.namespace, subject)],
+      [codeDigest, completionDigest],
+    );
+
+    if (Number(result) !== 1) {
+      throw new PasswordResetStateUnavailableError();
+    }
+  }
+
+  async releaseClaim(
+    subject: string,
+    codeDigest: string,
+    completionDigest: string,
+  ): Promise<void> {
+    await this.evaluate(
+      'password_reset.release_claim',
+      RELEASE_CLAIM_SCRIPT,
       [stateKey(this.namespace, subject)],
       [codeDigest, completionDigest],
     );

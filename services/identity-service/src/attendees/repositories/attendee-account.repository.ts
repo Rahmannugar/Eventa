@@ -253,6 +253,7 @@ export class AttendeeAccountRepository
 
   async deleteAccount(
     attendeeId: string,
+    expectedPasswordHash: string,
   ): Promise<AttendeeDeletedEvent | undefined> {
     return this.database.transaction(async (transaction) => {
       const [deleted] = await transaction
@@ -261,6 +262,7 @@ export class AttendeeAccountRepository
         .where(
           and(
             eq(attendeeAccounts.id, attendeeId),
+            eq(attendeeAccounts.passwordHash, expectedPasswordHash),
             eq(attendeeAccounts.status, 'active'),
             isNotNull(attendeeAccounts.emailVerifiedAt),
             isNull(attendeeAccounts.deletedAt),
@@ -297,10 +299,11 @@ export class AttendeeAccountRepository
   async replacePassword(
     attendeeId: string,
     passwordHash: string,
+    resetId: string,
   ): Promise<boolean> {
     const [account] = await this.database
       .update(attendeeAccounts)
-      .set({ passwordHash })
+      .set({ passwordHash, passwordResetId: resetId })
       .where(
         and(
           eq(attendeeAccounts.id, attendeeId),
@@ -310,6 +313,24 @@ export class AttendeeAccountRepository
         ),
       )
       .returning({ attendeeId: attendeeAccounts.id });
+
+    return account !== undefined;
+  }
+
+  async completedPasswordReset(
+    attendeeId: string,
+    resetId: string,
+  ): Promise<boolean> {
+    const [account] = await this.database
+      .select({ attendeeId: attendeeAccounts.id })
+      .from(attendeeAccounts)
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          eq(attendeeAccounts.passwordResetId, resetId),
+        ),
+      )
+      .limit(1);
 
     return account !== undefined;
   }

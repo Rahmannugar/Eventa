@@ -198,13 +198,14 @@ export class AdminAccountRepository
   async replacePassword(
     adminId: string,
     passwordHash: string,
+    resetId: string,
   ): Promise<boolean> {
     return runWithOperationSpan(
       'admin_account.replace_password',
       async () => {
         const [account] = await this.database
           .update(adminAccounts)
-          .set({ passwordHash })
+          .set({ passwordHash, passwordResetId: resetId })
           .where(
             and(
               eq(adminAccounts.id, adminId),
@@ -218,6 +219,27 @@ export class AdminAccountRepository
         return account !== undefined;
       },
       this.spanOptions('UPDATE'),
+    );
+  }
+
+  completedPasswordReset(adminId: string, resetId: string): Promise<boolean> {
+    return runWithOperationSpan(
+      'admin_account.password_reset_completed',
+      async () => {
+        const [account] = await this.database
+          .select({ adminId: adminAccounts.id })
+          .from(adminAccounts)
+          .where(
+            and(
+              eq(adminAccounts.id, adminId),
+              eq(adminAccounts.passwordResetId, resetId),
+            ),
+          )
+          .limit(1);
+
+        return account !== undefined;
+      },
+      this.spanOptions('SELECT'),
     );
   }
 

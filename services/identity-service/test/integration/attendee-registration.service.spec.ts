@@ -230,8 +230,26 @@ describe('AttendeeRegistrationService integration', () => {
       ),
     );
     await repository.markEmailVerified(registration.attendeeId);
+    const deletionAccount = await repository.findAccountForDeletion(
+      registration.attendeeId,
+    );
+    expect(deletionAccount).toBeDefined();
+    const replacementHash = await new Argon2PasswordHasher().hash(
+      'changed-before-deletion',
+    );
+    await database
+      .update(attendeeAccounts)
+      .set({ passwordHash: replacementHash })
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+    await expect(
+      repository.deleteAccount(
+        registration.attendeeId,
+        deletionAccount?.passwordHash ?? '',
+      ),
+    ).resolves.toBeUndefined();
     const deletionEvent = await repository.deleteAccount(
       registration.attendeeId,
+      replacementHash,
     );
     expect(deletionEvent).toMatchObject({
       attendeeId: registration.attendeeId,
@@ -263,7 +281,7 @@ describe('AttendeeRegistrationService integration', () => {
       .from(attendeeLifecycleOutbox);
     expect(publishedEvent?.publishedAt).toBeInstanceOf(Date);
     await expect(
-      repository.deleteAccount(registration.attendeeId),
+      repository.deleteAccount(registration.attendeeId, replacementHash),
     ).resolves.toBeUndefined();
 
     await expect(repository.findByEmail('deleted@example.com')).resolves.toBe(
@@ -358,7 +376,11 @@ describe('AttendeeRegistrationService integration', () => {
       'replacement-password',
     );
     await expect(
-      repository.replacePassword(registration.attendeeId, replacementHash),
+      repository.replacePassword(
+        registration.attendeeId,
+        replacementHash,
+        'd9e9f52a-bce1-4ab8-a64b-bf55593d762c',
+      ),
     ).resolves.toBe(true);
 
     await database
@@ -369,6 +391,7 @@ describe('AttendeeRegistrationService integration', () => {
       repository.replacePassword(
         registration.attendeeId,
         await new Argon2PasswordHasher().hash('forbidden-password'),
+        'b5f4ca85-994b-49c6-a677-53f83ed4a4e4',
       ),
     ).resolves.toBe(false);
 
