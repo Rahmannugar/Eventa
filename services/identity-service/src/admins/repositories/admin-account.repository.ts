@@ -17,9 +17,17 @@ import type {
   AdminAccount,
   AdminAccountRepository as AdminAccountReader,
 } from '../types/admin-session.types';
+import type {
+  AdminPasswordResetAccount,
+  AdminPasswordResetRepository,
+} from '../types/admin-password-reset.types';
 
 export class AdminAccountRepository
-  implements AdminActivationRepository, AdminLoginRepository, AdminAccountReader
+  implements
+    AdminActivationRepository,
+    AdminLoginRepository,
+    AdminAccountReader,
+    AdminPasswordResetRepository
 {
   constructor(
     @Inject(IDENTITY_DATABASE)
@@ -156,6 +164,60 @@ export class AdminAccountRepository
         return account;
       },
       this.spanOptions('SELECT'),
+    );
+  }
+
+  findActivatedForPasswordReset(
+    email: string,
+  ): Promise<AdminPasswordResetAccount | undefined> {
+    return runWithOperationSpan(
+      'admin_account.find_activated_for_password_reset',
+      async () => {
+        const [account] = await this.database
+          .select({
+            adminId: adminAccounts.id,
+            email: adminAccounts.email,
+          })
+          .from(adminAccounts)
+          .where(
+            and(
+              eq(adminAccounts.email, email),
+              isNotNull(adminAccounts.emailVerifiedAt),
+              isNotNull(adminAccounts.passwordHash),
+              isNotNull(adminAccounts.activatedAt),
+            ),
+          )
+          .limit(1);
+
+        return account;
+      },
+      this.spanOptions('SELECT'),
+    );
+  }
+
+  async replacePassword(
+    adminId: string,
+    passwordHash: string,
+  ): Promise<boolean> {
+    return runWithOperationSpan(
+      'admin_account.replace_password',
+      async () => {
+        const [account] = await this.database
+          .update(adminAccounts)
+          .set({ passwordHash })
+          .where(
+            and(
+              eq(adminAccounts.id, adminId),
+              isNotNull(adminAccounts.emailVerifiedAt),
+              isNotNull(adminAccounts.passwordHash),
+              isNotNull(adminAccounts.activatedAt),
+            ),
+          )
+          .returning({ adminId: adminAccounts.id });
+
+        return account !== undefined;
+      },
+      this.spanOptions('UPDATE'),
     );
   }
 

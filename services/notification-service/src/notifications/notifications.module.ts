@@ -1,4 +1,12 @@
 import { Module } from '@nestjs/common';
+import {
+  ADMIN_PASSWORD_RESET_JOB_TYPE,
+  ADMIN_PASSWORD_RESET_QUEUE,
+} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
+import {
+  ATTENDEE_PASSWORD_RESET_JOB_TYPE,
+  ATTENDEE_PASSWORD_RESET_QUEUE,
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 
 import type { RuntimeConfig } from '../config/runtime-config';
 import { RUNTIME_CONFIG } from '../config/runtime.constants';
@@ -7,11 +15,13 @@ import { RabbitMQClient } from '../infrastructure/clients/rabbitmq.client';
 import { ResendClient } from '../infrastructure/clients/resend.client';
 import {
   AUTH_EMAIL_DELIVERY_REPOSITORY,
+  ADMIN_PASSWORD_RESET_CONSUMER,
+  ATTENDEE_PASSWORD_RESET_CONSUMER,
   EMAIL_DELIVERY_PROVIDER,
 } from './constants/auth-email-delivery.constants';
-import { AdminActivationJobConsumer } from './job-queue/admin-activation-job.consumer';
-import { EmailVerificationJobConsumer } from './job-queue/email-verification-job.consumer';
-import { PasswordResetJobConsumer } from './job-queue/password-reset-job.consumer';
+import { AdminActivationJobConsumer } from './job-queue/auth/admin-activation-job.consumer';
+import { EmailVerificationJobConsumer } from './job-queue/auth/email-verification-job.consumer';
+import { PasswordResetJobConsumer } from './job-queue/auth/password-reset-job.consumer';
 import type { EmailDeliveryProvider } from './ports/email-delivery.provider';
 import { AuthEmailDeliveryRepository } from './repositories/auth-email-delivery.repository';
 import { AdminActivationDeliveryService } from './services/admin-activation-delivery.service';
@@ -101,13 +111,32 @@ import { PasswordResetDeliveryService } from './services/password-reset-delivery
       ) => new AdminActivationJobConsumer(rabbitMQ, deliveryService, config),
     },
     {
-      provide: PasswordResetJobConsumer,
+      provide: ATTENDEE_PASSWORD_RESET_CONSUMER,
       inject: [RabbitMQClient, PasswordResetDeliveryService, RUNTIME_CONFIG],
       useFactory: (
         rabbitMQ: RabbitMQClient,
         deliveryService: PasswordResetDeliveryService,
         config: RuntimeConfig,
-      ) => new PasswordResetJobConsumer(rabbitMQ, deliveryService, config),
+      ) =>
+        new PasswordResetJobConsumer(rabbitMQ, deliveryService, config, {
+          jobType: ATTENDEE_PASSWORD_RESET_JOB_TYPE,
+          operation: 'attendee.password_reset.delivery',
+          queue: ATTENDEE_PASSWORD_RESET_QUEUE,
+        }),
+    },
+    {
+      provide: ADMIN_PASSWORD_RESET_CONSUMER,
+      inject: [RabbitMQClient, PasswordResetDeliveryService, RUNTIME_CONFIG],
+      useFactory: (
+        rabbitMQ: RabbitMQClient,
+        deliveryService: PasswordResetDeliveryService,
+        config: RuntimeConfig,
+      ) =>
+        new PasswordResetJobConsumer(rabbitMQ, deliveryService, config, {
+          jobType: ADMIN_PASSWORD_RESET_JOB_TYPE,
+          operation: 'admin.password_reset.delivery',
+          queue: ADMIN_PASSWORD_RESET_QUEUE,
+        }),
     },
     {
       provide: EmailVerificationJobConsumer,

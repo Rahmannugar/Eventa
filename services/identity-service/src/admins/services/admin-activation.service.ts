@@ -26,7 +26,10 @@ export class AdminActivationService {
   constructor(
     private readonly admins: AdminActivationRepository,
     private readonly otpState: AdminActivationOtpState,
-    private readonly jobPublisher: AdminAuthJobPublisher,
+    private readonly jobPublisher: Pick<
+      AdminAuthJobPublisher,
+      'publishActivation'
+    >,
     private readonly passwordHasher: PasswordHasher,
     private readonly hmacSecret: string,
   ) {}

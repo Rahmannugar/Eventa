@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { PasswordHasher } from '../../src/security/types/password-hasher.types';
-import type { PasswordResetCodeState } from '../../src/attendees/ports/password-reset-code.state';
+import type { PasswordResetCodeState } from '../../src/security/ports/password-reset-code.state';
 import type { AttendeeAuthJobPublisher } from '../../src/attendees/ports/attendee-auth-job.publisher';
 import { AttendeePasswordResetService } from '../../src/attendees/services/attendee-password-reset.service';
 import type { AttendeeSessionService } from '../../src/attendees/services/attendee-session.service';
 import type {
-  AttendeePasswordResetRepository,
   PasswordResetClaim,
   PasswordResetCodeRecord,
-} from '../../src/attendees/types/attendee-password-reset.types';
+} from '../../src/security/types/password-reset-state.types';
+import type { AttendeePasswordResetRepository } from '../../src/attendees/types/attendee-password-reset.types';
 
 const HMAC_SECRET = 'unit-test-password-reset-secret-32-characters';
 
@@ -25,9 +25,7 @@ class RecordingCodeState implements PasswordResetCodeState {
   }
 
   claim(): Promise<PasswordResetClaim> {
-    return Promise.resolve(
-      this.claimResults.shift() ?? { status: 'invalid' },
-    );
+    return Promise.resolve(this.claimResults.shift() ?? { status: 'invalid' });
   }
 
   markCompleted(): Promise<void> {
@@ -109,7 +107,7 @@ describe('AttendeePasswordResetService', () => {
       service.forgotPassword(' Attendee@Example.com '),
     ).resolves.toEqual({ accepted: true });
     expect(codeState.saved).toMatchObject({
-      attendeeId: 'attendee-1',
+      accountId: 'attendee-1',
       attempts: 5,
     });
     expect(codeState.cancelled).toBe(true);
@@ -119,8 +117,8 @@ describe('AttendeePasswordResetService', () => {
     const events: string[] = [];
     const codeState = new RecordingCodeState();
     codeState.claimResults = [
-      { attendeeId: 'attendee-1', status: 'claimed' },
-      { attendeeId: 'attendee-1', status: 'completed' },
+      { accountId: 'attendee-1', status: 'claimed' },
+      { accountId: 'attendee-1', status: 'completed' },
     ];
     const { service } = createService({ codeState, events });
 

@@ -2,7 +2,7 @@ import type {
   PasswordResetClaim,
   PasswordResetCodeRecord,
   PasswordResetCooldownDecision,
-} from '../types/attendee-password-reset.types';
+} from '../types/password-reset-state.types';
 
 export interface PasswordResetCodeState {
   cancel(subject: string, codeDigest: string): Promise<void>;

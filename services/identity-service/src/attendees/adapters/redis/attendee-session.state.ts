@@ -236,10 +236,7 @@ export class RedisAttendeeSessionState implements AttendeeSessionState {
       const result = await this.evaluate(
         'attendee_session.prepare_account_deletion',
         PREPARE_ACCOUNT_DELETION_SCRIPT,
-        [
-          accountKey(attendeeSubject),
-          deletionBarrierKey(attendeeSubject),
-        ],
+        [accountKey(attendeeSubject), deletionBarrierKey(attendeeSubject)],
         [String(ttlMs)],
       );
 

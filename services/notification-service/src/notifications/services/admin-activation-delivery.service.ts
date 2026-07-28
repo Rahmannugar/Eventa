@@ -6,7 +6,7 @@ import {
 } from '../constants/admin-activation-delivery.constants';
 import { EmailDeliveryError } from '../errors/email-delivery.errors';
 import type { EmailDeliveryProvider } from '../ports/email-delivery.provider';
-import { adminActivationTemplate } from '../templates/admin-activation.template';
+import { adminActivationTemplate } from '../templates/auth/admin-activation.template';
 import type { AuthEmailDeliveryRepository } from '../types/auth-email-delivery.types';
 import type { AdminActivationDeliveryOutcome } from '../types/admin-activation-delivery.types';
 

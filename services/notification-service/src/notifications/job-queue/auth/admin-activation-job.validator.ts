@@ -1,11 +1,11 @@
 import {
-  ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
-  type AttendeeEmailVerificationJob,
-} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
+  ADMIN_ACTIVATION_JOB_TYPE,
+  type AdminActivationJob,
+} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
 import type { Message } from 'amqplib';
 import { isEmail, isUUID } from 'class-validator';
 
-import { EMAIL_VERIFICATION_JOB_MAX_BYTES } from '../constants/email-verification-delivery.constants';
+import { ADMIN_ACTIVATION_JOB_MAX_BYTES } from '../../constants/admin-activation-delivery.constants';
 
 interface SafeMessageProperties {
   contentType?: unknown;
@@ -13,20 +13,13 @@ interface SafeMessageProperties {
   type?: unknown;
 }
 
-export type EmailVerificationJobValidationResult =
-  | {
-      job: AttendeeEmailVerificationJob;
-      kind: 'valid';
-    }
-  | {
-      failureCode: string;
-      jobId?: string;
-      kind: 'invalid';
-    };
+export type AdminActivationJobValidationResult =
+  | { job: AdminActivationJob; kind: 'valid' }
+  | { failureCode: string; jobId?: string; kind: 'invalid' };
 
-export function validateAttendeeEmailVerificationJob(
+export function validateAdminActivationJob(
   message: Message,
-): EmailVerificationJobValidationResult {
+): AdminActivationJobValidationResult {
   const properties = message.properties as unknown as SafeMessageProperties;
   const propertyJobId =
     typeof properties.messageId === 'string' &&
@@ -34,7 +27,7 @@ export function validateAttendeeEmailVerificationJob(
       ? properties.messageId
       : undefined;
 
-  if (message.content.length > EMAIL_VERIFICATION_JOB_MAX_BYTES) {
+  if (message.content.length > ADMIN_ACTIVATION_JOB_MAX_BYTES) {
     return invalid('JOB_PAYLOAD_TOO_LARGE', propertyJobId);
   }
 
@@ -42,7 +35,7 @@ export function validateAttendeeEmailVerificationJob(
     return invalid('JOB_CONTENT_TYPE_INVALID', propertyJobId);
   }
 
-  if (properties.type !== ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE) {
+  if (properties.type !== ADMIN_ACTIVATION_JOB_TYPE) {
     return invalid('JOB_PROPERTY_TYPE_INVALID', propertyJobId);
   }
 
@@ -93,7 +86,7 @@ export function validateAttendeeEmailVerificationJob(
     return invalid('JOB_ID_MISMATCH', propertyJobId);
   }
 
-  if (type !== ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE) {
+  if (type !== ADMIN_ACTIVATION_JOB_TYPE) {
     return invalid('JOB_TYPE_INVALID', jobId);
   }
 
@@ -114,13 +107,7 @@ export function validateAttendeeEmailVerificationJob(
   }
 
   return {
-    job: {
-      expiresAt,
-      jobId,
-      otp,
-      recipientEmail,
-      type,
-    },
+    job: { expiresAt, jobId, otp, recipientEmail, type },
     kind: 'valid',
   };
 }
@@ -139,7 +126,7 @@ function isCanonicalIsoTimestamp(value: unknown): value is string {
 function invalid(
   failureCode: string,
   jobId?: string,
-): EmailVerificationJobValidationResult {
+): AdminActivationJobValidationResult {
   return {
     failureCode,
     ...(jobId === undefined ? {} : { jobId }),

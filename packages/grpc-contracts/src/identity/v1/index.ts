@@ -19,6 +19,12 @@ export type {
   LoginAdminResponse,
 } from '../../generated/eventa/identity/v1/admin_login.generated';
 export type {
+  ForgotAdminPasswordRequest,
+  ForgotAdminPasswordResponse,
+  ResetAdminPasswordRequest,
+  ResetAdminPasswordResponse,
+} from '../../generated/eventa/identity/v1/admin_password_reset.generated';
+export type {
   AuthenticateAdminSessionRequest,
   AuthenticateAdminSessionResponse,
   GetCurrentAdminAccountRequest,

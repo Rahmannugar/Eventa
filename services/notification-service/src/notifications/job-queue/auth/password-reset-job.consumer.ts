@@ -1,10 +1,13 @@
 import { Buffer } from 'node:buffer';
 
-import {
+import type {
   ATTENDEE_PASSWORD_RESET_JOB_TYPE,
-  ATTENDEE_PASSWORD_RESET_QUEUE,
-  type AttendeePasswordResetJob,
+  AttendeePasswordResetJob,
 } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
+import type {
+  ADMIN_PASSWORD_RESET_JOB_TYPE,
+  AdminPasswordResetJob,
+} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
 import {
   addJobInFlight,
   recordJobMetrics,
@@ -18,17 +21,15 @@ import {
 import { context, propagation } from '@opentelemetry/api';
 import type { Channel, Message } from 'amqplib';
 
-import type { RuntimeConfig } from '../../config/runtime-config';
-import type { RabbitMQClient } from '../../infrastructure/clients/rabbitmq.client';
+import type { RuntimeConfig } from '../../../config/runtime-config';
+import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.client';
 import {
   PASSWORD_RESET_CONSUMER_PREFETCH,
   PASSWORD_RESET_RETRY_DELAYS_MS,
-} from '../constants/password-reset-delivery.constants';
-import type { PasswordResetDeliveryService } from '../services/password-reset-delivery.service';
-import type {
-  PasswordResetDeliveryOutcome,
-} from '../types/password-reset-delivery.types';
-import { validateAttendeePasswordResetJob } from './attendee-password-reset-job.validator';
+} from '../../constants/password-reset-delivery.constants';
+import type { PasswordResetDeliveryService } from '../../services/password-reset-delivery.service';
+import type { PasswordResetDeliveryOutcome } from '../../types/password-reset-delivery.types';
+import { validatePasswordResetJob } from './password-reset-job.validator';
 
 interface RetryQueue {
   delayMs: number;
@@ -37,13 +38,15 @@ interface RetryQueue {
 
 type JobOutcome = PasswordResetDeliveryOutcome['kind'] | 'rejected';
 
-const JOB_OPERATION = 'attendee.password_reset.delivery';
+export interface PasswordResetConsumerDefinition {
+  jobType:
+    | typeof ADMIN_PASSWORD_RESET_JOB_TYPE
+    | typeof ATTENDEE_PASSWORD_RESET_JOB_TYPE;
+  operation: string;
+  queue: string;
+}
 
-const RETRY_QUEUES: readonly RetryQueue[] =
-  PASSWORD_RESET_RETRY_DELAYS_MS.map((delayMs) => ({
-    delayMs,
-    name: `${ATTENDEE_PASSWORD_RESET_QUEUE}.retry.${String(delayMs)}ms`,
-  }));
+type PasswordResetJob = AttendeePasswordResetJob | AdminPasswordResetJob;
 
 export class PasswordResetJobConsumer
   implements OnApplicationShutdown, OnModuleInit
@@ -52,13 +55,20 @@ export class PasswordResetJobConsumer
   private consumerTag: string | undefined;
   private readonly logger = new Logger(PasswordResetJobConsumer.name);
   private restartTimer: NodeJS.Timeout | undefined;
+  private readonly retryQueues: readonly RetryQueue[];
   private shuttingDown = false;
 
   constructor(
     private readonly rabbitMQ: RabbitMQClient,
     private readonly deliveryService: PasswordResetDeliveryService,
     private readonly config: RuntimeConfig,
-  ) {}
+    private readonly definition: PasswordResetConsumerDefinition,
+  ) {
+    this.retryQueues = PASSWORD_RESET_RETRY_DELAYS_MS.map((delayMs) => ({
+      delayMs,
+      name: `${definition.queue}.retry.${String(delayMs)}ms`,
+    }));
+  }
 
   async onModuleInit(): Promise<void> {
     await this.startConsumer();
@@ -80,14 +90,14 @@ export class PasswordResetJobConsumer
 
   private async startConsumer(): Promise<void> {
     const channel = await this.rabbitMQ.consumerChannel(
-      'password-reset-job-consumer',
+      `${this.definition.jobType}-consumer`,
     );
     await this.assertTopology(channel);
     await channel.prefetch(PASSWORD_RESET_CONSUMER_PREFETCH);
 
     this.consumerChannel = channel;
     const reply = await channel.consume(
-      ATTENDEE_PASSWORD_RESET_QUEUE,
+      this.definition.queue,
       (message) => {
         if (message !== null) {
           void this.handleMessage(channel, message);
@@ -100,13 +110,13 @@ export class PasswordResetJobConsumer
     this.logger.log({
       event: 'password_reset_consumer_ready',
       prefetch: PASSWORD_RESET_CONSUMER_PREFETCH,
-      queue_name: ATTENDEE_PASSWORD_RESET_QUEUE,
+      queue_name: this.definition.queue,
     });
     channel.once('close', () => this.scheduleRestart());
   }
 
   private async assertTopology(channel: Channel): Promise<void> {
-    await channel.assertQueue(ATTENDEE_PASSWORD_RESET_QUEUE, {
+    await channel.assertQueue(this.definition.queue, {
       durable: true,
       arguments: {
         'x-delivery-limit': -1,
@@ -114,12 +124,12 @@ export class PasswordResetJobConsumer
       },
     });
 
-    for (const retryQueue of RETRY_QUEUES) {
+    for (const retryQueue of this.retryQueues) {
       await channel.assertQueue(retryQueue.name, {
         durable: true,
         arguments: {
           'x-dead-letter-exchange': '',
-          'x-dead-letter-routing-key': ATTENDEE_PASSWORD_RESET_QUEUE,
+          'x-dead-letter-routing-key': this.definition.queue,
           'x-dead-letter-strategy': 'at-least-once',
           'x-message-ttl': retryQueue.delayMs,
           'x-overflow': 'reject-publish',
@@ -139,7 +149,7 @@ export class PasswordResetJobConsumer
       this.readTraceHeaders(message),
     );
 
-    addJobInFlight(1, { operation: JOB_OPERATION });
+    addJobInFlight(1, { operation: this.definition.operation });
 
     try {
       while (!this.shuttingDown && this.consumerChannel === channel) {
@@ -150,7 +160,7 @@ export class PasswordResetJobConsumer
               () => this.processMessage(channel, message),
               {
                 attributes: {
-                  'messaging.destination.name': ATTENDEE_PASSWORD_RESET_QUEUE,
+                  'messaging.destination.name': this.definition.queue,
                   'messaging.operation.name': 'process',
                   'messaging.system': 'rabbitmq',
                 },
@@ -160,7 +170,7 @@ export class PasswordResetJobConsumer
           );
           recordJobMetrics(
             Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-            { operation: JOB_OPERATION, outcome },
+            { operation: this.definition.operation, outcome },
           );
           return;
         } catch (error: unknown) {
@@ -172,7 +182,7 @@ export class PasswordResetJobConsumer
         }
       }
     } finally {
-      addJobInFlight(-1, { operation: JOB_OPERATION });
+      addJobInFlight(-1, { operation: this.definition.operation });
     }
   }
 
@@ -180,12 +190,16 @@ export class PasswordResetJobConsumer
     channel: Channel,
     message: Message,
   ): Promise<JobOutcome> {
-    const validation = validateAttendeePasswordResetJob(message);
+    const validation = validatePasswordResetJob(
+      message,
+      this.definition.jobType,
+    );
 
     if (validation.kind === 'invalid') {
       if (validation.jobId !== undefined) {
         await this.deliveryService.recordRejected(
           validation.jobId,
+          this.definition.jobType,
           validation.failureCode,
         );
       }
@@ -224,7 +238,7 @@ export class PasswordResetJobConsumer
   }
 
   private async publishRetry(
-    job: AttendeePasswordResetJob,
+    job: PasswordResetJob,
     outcome: Extract<PasswordResetDeliveryOutcome, { kind: 'retry' }>,
   ): Promise<void> {
     const queue = this.selectRetryQueue(outcome.retryAt.getTime() - Date.now());
@@ -244,11 +258,11 @@ export class PasswordResetJobConsumer
   }
 
   private async publishRetryConfirmed(
-    job: AttendeePasswordResetJob,
+    job: PasswordResetJob,
     queue: RetryQueue,
   ): Promise<void> {
     const channel = await this.rabbitMQ.confirmChannel(
-      'password-reset-retry-publisher',
+      `${this.definition.jobType}-retry-publisher`,
     );
     const traceHeaders: Record<string, string> = {};
     propagation.inject(context.active(), traceHeaders);
@@ -264,7 +278,7 @@ export class PasswordResetJobConsumer
             messageId: job.jobId,
             persistent: true,
             timestamp: Date.now(),
-            type: ATTENDEE_PASSWORD_RESET_JOB_TYPE,
+            type: this.definition.jobType,
           },
           (error: unknown) => {
             if (error === null || error === undefined) {
@@ -292,8 +306,8 @@ export class PasswordResetJobConsumer
 
   private selectRetryQueue(delayMs: number): RetryQueue {
     return (
-      RETRY_QUEUES.find((queue) => delayMs <= queue.delayMs) ??
-      RETRY_QUEUES.at(-1)!
+      this.retryQueues.find((queue) => delayMs <= queue.delayMs) ??
+      this.retryQueues.at(-1)!
     );
   }
 

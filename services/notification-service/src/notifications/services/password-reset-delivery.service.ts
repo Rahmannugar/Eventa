@@ -1,4 +1,8 @@
 import type { AttendeePasswordResetJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
+import {
+  ADMIN_PASSWORD_RESET_JOB_TYPE,
+  type AdminPasswordResetJob,
+} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
 
 import {
   PASSWORD_RESET_MAX_DELIVERY_ATTEMPTS,
@@ -6,7 +10,8 @@ import {
 } from '../constants/password-reset-delivery.constants';
 import { EmailDeliveryError } from '../errors/email-delivery.errors';
 import type { EmailDeliveryProvider } from '../ports/email-delivery.provider';
-import { attendeePasswordResetTemplate } from '../templates/attendee-password-reset.template';
+import { adminPasswordResetTemplate } from '../templates/auth/admin-password-reset.template';
+import { attendeePasswordResetTemplate } from '../templates/auth/attendee-password-reset.template';
 import type { AuthEmailDeliveryRepository } from '../types/auth-email-delivery.types';
 import type { PasswordResetDeliveryOutcome } from '../types/password-reset-delivery.types';
 
@@ -18,7 +23,7 @@ export class PasswordResetDeliveryService {
   ) {}
 
   async deliver(
-    job: AttendeePasswordResetJob,
+    job: AttendeePasswordResetJob | AdminPasswordResetJob,
   ): Promise<PasswordResetDeliveryOutcome> {
     const claim = await this.deliveries.claim(job);
 
@@ -37,7 +42,10 @@ export class PasswordResetDeliveryService {
     }
 
     try {
-      const content = attendeePasswordResetTemplate(job.code);
+      const content =
+        job.type === ADMIN_PASSWORD_RESET_JOB_TYPE
+          ? adminPasswordResetTemplate(job.code)
+          : attendeePasswordResetTemplate(job.code);
       const result = await this.emailDeliveryProvider.send({
         ...content,
         from: this.from,
@@ -61,16 +69,16 @@ export class PasswordResetDeliveryService {
     }
   }
 
-  async recordRejected(jobId: string, failureCode: string): Promise<void> {
-    await this.deliveries.recordRejected(
-      jobId,
-      'attendee.password-reset.v1',
-      failureCode,
-    );
+  async recordRejected(
+    jobId: string,
+    jobType: string,
+    failureCode: string,
+  ): Promise<void> {
+    await this.deliveries.recordRejected(jobId, jobType, failureCode);
   }
 
   private async handleFailure(
-    job: AttendeePasswordResetJob,
+    job: AttendeePasswordResetJob | AdminPasswordResetJob,
     claim: { attempt: number; claimToken: string },
     error: EmailDeliveryError,
   ): Promise<PasswordResetDeliveryOutcome> {

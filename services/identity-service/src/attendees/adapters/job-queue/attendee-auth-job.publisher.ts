@@ -128,7 +128,10 @@ export class RabbitMQAttendeeAuthJobPublisher implements AttendeeAuthJobPublishe
     );
   }
 
-  private ensureQueue(channel: ConfirmChannel, queue: string): Promise<unknown> {
+  private ensureQueue(
+    channel: ConfirmChannel,
+    queue: string,
+  ): Promise<unknown> {
     return channel.assertQueue(queue, {
       durable: true,
       arguments: {

@@ -2,12 +2,12 @@
 
 ## Runtime Flow
 
-1. We receive a persistent verification, password-reset, or admin-activation message in its dedicated consumer and main quorum queue through RabbitMQ's default direct exchange.
+1. We receive a persistent verification, attendee/admin password-reset, or admin-activation message in its domain queue through RabbitMQ's default direct exchange.
 2. We validate byte size, JSON shape, version, AMQP properties, UUID, email, six-digit OTP, and canonical expiry before application logic.
 3. We insert or lock the Notification-owned job row through the shared authentication-email delivery repository. A 30-second claim lease permits one provider attempt and recovery after a process crash.
 4. We acknowledge terminal duplicates without provider work and record expired work as `expired`.
 5. We pass valid claimed work through the matching delivery service.
-6. Pure templates under `notifications/templates` own each email's subject and HTML/text content. Delivery services pass provider-neutral requests through `EmailDeliveryProvider`.
+6. Pure authentication templates under `notifications/templates/auth` own each email's subject and HTML/text content. Authentication consumers and validators live under `notifications/job-queue/auth`. Delivery services pass provider-neutral requests through `EmailDeliveryProvider`.
 7. We apply Resend authentication, a bounded HTTP timeout, response translation, and job-ID idempotency in `ResendClient`.
 8. We record provider acceptance as `delivered`, including the provider message ID, before acknowledgement.
 
@@ -26,5 +26,7 @@ We record permanent provider rejection or the third failed attempt as `failed` b
 ## Data and Privacy
 
 We store only job type/ID, delivery status, attempt count, expiry, claim/retry timestamps, provider message ID, safe failure code, and lifecycle timestamps in `auth_email_deliveries`. The table has no recipient-email, OTP, or reset-code columns. Migration `0002_consolidate_auth_email_deliveries` preserves existing verification and password-reset history before removing their former tables.
+
+One password-reset consumer implementation operates separate attendee and admin queue definitions. Each instance owns its queue, retry topology, job type, operation metric, and lifecycle while sharing delivery policy and the durable ledger. Attendee and admin templates remain explicit.
 
 We use job/message IDs and bounded outcome codes in logs, traces, metrics, and alerts. We never include recipient addresses, OTPs, raw message bodies, provider response text, API keys, or arbitrary errors.

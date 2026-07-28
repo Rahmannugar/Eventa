@@ -4,8 +4,10 @@ import {
   type ConfirmAdminActivationResponse,
   type AuthenticateAdminSessionResponse,
   type GetCurrentAdminAccountResponse,
+  type ForgotAdminPasswordResponse,
   type LoginAdminResponse,
   type LogoutAdminResponse,
+  type ResetAdminPasswordResponse,
   type AdminIdentityServiceController,
   type RegisterAdminResponse,
 } from '@eventa/grpc-contracts';
@@ -38,6 +40,16 @@ import {
 } from '../dto/admin-session.dto';
 import { AdminSessionService } from '../services/admin-session.service';
 import { AdminAccountService } from '../services/admin-account.service';
+import {
+  ForgotAdminPasswordDto,
+  ResetAdminPasswordDto,
+} from '../dto/admin-password-reset.dto';
+import {
+  AdminPasswordResetCodeInvalidError,
+  AdminPasswordResetRateLimitedError,
+} from '../errors/admin-password-reset.errors';
+import { PasswordResetStateUnavailableError } from '../../security/errors/password-reset.errors';
+import { AdminPasswordResetService } from '../services/admin-password-reset.service';
 
 @Controller()
 @AdminIdentityServiceControllerMethods()
@@ -47,6 +59,7 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     private readonly adminLogin: AdminLoginService,
     private readonly adminSessions: AdminSessionService,
     private readonly adminAccounts: AdminAccountService,
+    private readonly adminPasswordReset: AdminPasswordResetService,
   ) {}
 
   registerAdmin(request: RegisterAdminDto): Observable<RegisterAdminResponse> {
@@ -83,6 +96,24 @@ export class AdminIdentityController implements AdminIdentityServiceController {
 
   logoutAdmin(request: LogoutAdminDto): Observable<LogoutAdminResponse> {
     return from(this.handleLogout(request.sessionToken));
+  }
+
+  forgotAdminPassword(
+    request: ForgotAdminPasswordDto,
+  ): Observable<ForgotAdminPasswordResponse> {
+    return from(this.handleForgotPassword(request.email));
+  }
+
+  resetAdminPassword(
+    request: ResetAdminPasswordDto,
+  ): Observable<ResetAdminPasswordResponse> {
+    return from(
+      this.handleResetPassword(
+        request.email,
+        request.code,
+        request.newPassword,
+      ),
+    );
   }
 
   private async handleRegistration(
@@ -229,5 +260,65 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     }
 
     throw error;
+  }
+
+  private async handleForgotPassword(
+    email: string,
+  ): Promise<ForgotAdminPasswordResponse> {
+    try {
+      return await this.adminPasswordReset.forgotPassword(email);
+    } catch (error: unknown) {
+      if (error instanceof AdminPasswordResetRateLimitedError) {
+        const metadata = new Metadata();
+        metadata.set('retry-after', String(error.retryAfterSeconds));
+        throw new RpcException({
+          code: status.RESOURCE_EXHAUSTED,
+          message: error.message,
+          metadata,
+        });
+      }
+
+      if (error instanceof PasswordResetStateUnavailableError) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  private async handleResetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<ResetAdminPasswordResponse> {
+    try {
+      return await this.adminPasswordReset.resetPassword(
+        email,
+        code,
+        newPassword,
+      );
+    } catch (error: unknown) {
+      if (error instanceof AdminPasswordResetCodeInvalidError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+
+      if (
+        error instanceof PasswordResetStateUnavailableError ||
+        error instanceof AdminSessionStateUnavailableError
+      ) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
   }
 }

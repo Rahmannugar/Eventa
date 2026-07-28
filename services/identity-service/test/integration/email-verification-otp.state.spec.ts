@@ -2,7 +2,7 @@ import { createClient } from 'redis';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/redis/email-verification-otp.state';
-import { RedisPasswordResetCodeState } from '../../src/attendees/adapters/redis/password-reset-code.state';
+import { RedisPasswordResetCodeState } from '../../src/security/adapters/redis/password-reset-code.state';
 import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
 import { RedisAdminActivationOtpState } from '../../src/admins/adapters/redis/admin-activation-otp.state';
 import { RedisAdminSessionState } from '../../src/admins/adapters/redis/admin-session.state';
@@ -22,7 +22,7 @@ const administrativeClient = createClient({
 });
 const redis = new RedisClient(testRedisUrl, 1_000, 750);
 const otpState = new RedisEmailVerificationOtpState(redis);
-const passwordResetState = new RedisPasswordResetCodeState(redis);
+const passwordResetState = new RedisPasswordResetCodeState(redis, 'attendee');
 const sessionState = new RedisAttendeeSessionState(redis);
 const adminActivationState = new RedisAdminActivationOtpState(redis);
 const adminSessionState = new RedisAdminSessionState(redis);
@@ -213,6 +213,9 @@ describe('RedisEmailVerificationOtpState integration', () => {
     await expect(adminSessionState.revoke('digest-2')).resolves.toBe(true);
     await expect(adminSessionState.read('digest-2')).resolves.toBeUndefined();
     await expect(adminSessionState.revoke('digest-2')).resolves.toBe(false);
+    await expect(adminSessionState.revokeAll('admin-subject')).resolves.toBe(2);
+    await expect(adminSessionState.read('digest-3')).resolves.toBeUndefined();
+    await expect(adminSessionState.read('digest-4')).resolves.toBeUndefined();
   });
 
   it('keeps session state only for its fixed lifetime', async () => {
@@ -359,7 +362,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
 
   it('exhausts a password reset code after five incorrect guesses', async () => {
     await passwordResetState.save({
-      attendeeId: 'attendee-1',
+      accountId: 'attendee-1',
       attempts: 5,
       codeDigest: 'correct-digest',
       subject: 'attendee-subject',
@@ -390,13 +393,13 @@ describe('RedisEmailVerificationOtpState integration', () => {
 
   it('binds password reset recovery to one exact completion without extending its lifetime', async () => {
     await passwordResetState.save({
-      attendeeId: 'attendee-1',
+      accountId: 'attendee-1',
       attempts: 5,
       codeDigest: 'correct-digest',
       subject: 'attendee-subject',
       ttlMs: 60_000,
     });
-    const key = 'identity:password-reset:{attendee-subject}:state';
+    const key = 'identity:attendee-password-reset:{attendee-subject}:state';
     const initialTtl = await administrativeClient.pTTL(key);
 
     await expect(
@@ -406,7 +409,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
         'completion-one',
       ),
     ).resolves.toEqual({
-      attendeeId: 'attendee-1',
+      accountId: 'attendee-1',
       status: 'claimed',
     });
     await expect(
@@ -430,7 +433,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
         'completion-one',
       ),
     ).resolves.toEqual({
-      attendeeId: 'attendee-1',
+      accountId: 'attendee-1',
       status: 'completed',
     });
     expect(await administrativeClient.pTTL(key)).toBeLessThanOrEqual(

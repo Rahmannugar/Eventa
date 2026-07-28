@@ -6,7 +6,7 @@ import {
 } from '../constants/email-verification-delivery.constants';
 import { EmailDeliveryError } from '../errors/email-delivery.errors';
 import type { EmailDeliveryProvider } from '../ports/email-delivery.provider';
-import { attendeeEmailVerificationTemplate } from '../templates/attendee-email-verification.template';
+import { attendeeEmailVerificationTemplate } from '../templates/auth/attendee-email-verification.template';
 import type { AuthEmailDeliveryRepository } from '../types/auth-email-delivery.types';
 import type { EmailVerificationDeliveryOutcome } from '../types/email-verification-delivery.types';
 

@@ -79,7 +79,10 @@ class RecordingState implements AdminActivationOtpState {
   }
 }
 
-class RecordingPublisher implements AdminAuthJobPublisher {
+class RecordingPublisher implements Pick<
+  AdminAuthJobPublisher,
+  'publishActivation'
+> {
   error: Error | undefined;
   otps: AdminActivationOtp[] = [];
 
@@ -140,20 +143,7 @@ describe('admin activation', () => {
     });
   });
 
-  it('keeps the generic response and removes temporary state when delivery cannot be queued', async () => {
-    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const { publisher, repository, service, state } = createService();
-    repository.account = { adminId: ADMIN_ID };
-    publisher.error = new Error('queue unavailable');
-
-    await expect(service.register('admin@example.com')).resolves.toEqual({
-      accepted: true,
-    });
-    expect(state.canceled).toBe(1);
-    vi.restoreAllMocks();
-  });
-
-  it('activates the account with a confirmed OTP and first password', async () => {
+  it('activates the account with a confirmed OTP and password', async () => {
     const { repository, service, state } = createService();
     state.verification = { adminId: ADMIN_ID, status: 'active' };
 

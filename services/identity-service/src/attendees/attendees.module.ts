@@ -31,7 +31,7 @@ import { AttendeeAccountRepository } from './repositories/attendee-account.repos
 import { RabbitMQAttendeeAuthJobPublisher } from './adapters/job-queue/attendee-auth-job.publisher';
 import { RedisEmailVerificationOtpState } from './adapters/redis/email-verification-otp.state';
 import { RedisAttendeeSessionState } from './adapters/redis/attendee-session.state';
-import { RedisPasswordResetCodeState } from './adapters/redis/password-reset-code.state';
+import { RedisPasswordResetCodeState } from '../security/adapters/redis/password-reset-code.state';
 import type { AttendeeSessionState } from './types/attendee-session.types';
 import type { AttendeeLoginRepository } from './types/attendee-login.types';
 import type { AttendeeEmailVerificationRepository } from './types/attendee-email-verification.types';
@@ -45,7 +45,7 @@ import type { PasswordVerifier } from '../security/types/password-verifier.types
 import type { PasswordHasher } from '../security/types/password-hasher.types';
 import { AttendeeAccountService } from './services/attendee-account.service';
 import type { AttendeeAccountRepository as AttendeeAccountDetailsRepository } from './types/attendee-account.types';
-import type { PasswordResetCodeState } from './ports/password-reset-code.state';
+import type { PasswordResetCodeState } from '../security/ports/password-reset-code.state';
 import { AttendeePasswordResetService } from './services/attendee-password-reset.service';
 import type { AttendeePasswordResetRepository } from './types/attendee-password-reset.types';
 import { ATTENDEE_DELETION_REPOSITORY } from './constants/attendee-deletion.constants';
@@ -128,7 +128,7 @@ import { InfrastructureClientsModule } from '../infrastructure/infrastructure-cl
     {
       provide: PASSWORD_RESET_CODE_STATE,
       useFactory: (redis: RedisClient) =>
-        new RedisPasswordResetCodeState(redis),
+        new RedisPasswordResetCodeState(redis, 'attendee'),
       inject: [RedisClient],
     },
     {

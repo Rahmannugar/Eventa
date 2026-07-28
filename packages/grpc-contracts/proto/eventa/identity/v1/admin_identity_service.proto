@@ -5,6 +5,7 @@ package eventa.identity.v1;
 import "eventa/identity/v1/admin_registration.proto";
 import "eventa/identity/v1/admin_activation.proto";
 import "eventa/identity/v1/admin_login.proto";
+import "eventa/identity/v1/admin_password_reset.proto";
 import "eventa/identity/v1/admin_session.proto";
 
 service AdminIdentityService {
@@ -12,6 +13,8 @@ service AdminIdentityService {
   rpc ConfirmAdminActivation(ConfirmAdminActivationRequest) returns (ConfirmAdminActivationResponse);
   rpc CompleteAdminActivation(CompleteAdminActivationRequest) returns (CompleteAdminActivationResponse);
   rpc LoginAdmin(LoginAdminRequest) returns (LoginAdminResponse);
+  rpc ForgotAdminPassword(ForgotAdminPasswordRequest) returns (ForgotAdminPasswordResponse);
+  rpc ResetAdminPassword(ResetAdminPasswordRequest) returns (ResetAdminPasswordResponse);
   rpc AuthenticateAdminSession(AuthenticateAdminSessionRequest) returns (AuthenticateAdminSessionResponse);
   rpc GetCurrentAdminAccount(GetCurrentAdminAccountRequest) returns (GetCurrentAdminAccountResponse);
   rpc LogoutAdmin(LogoutAdminRequest) returns (LogoutAdminResponse);

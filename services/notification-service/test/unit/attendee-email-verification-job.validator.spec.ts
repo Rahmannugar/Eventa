@@ -5,7 +5,7 @@ import {
 import type { Message } from 'amqplib';
 import { describe, expect, it } from 'vitest';
 
-import { validateAttendeeEmailVerificationJob } from '../../src/notifications/job-queue/attendee-email-verification-job.validator';
+import { validateAttendeeEmailVerificationJob } from '../../src/notifications/job-queue/auth/attendee-email-verification-job.validator';
 
 const job: AttendeeEmailVerificationJob = {
   expiresAt: '2026-07-23T12:15:00.000Z',

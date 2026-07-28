@@ -2,10 +2,14 @@ import {
   ATTENDEE_PASSWORD_RESET_JOB_TYPE,
   type AttendeePasswordResetJob,
 } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
+import {
+  ADMIN_PASSWORD_RESET_JOB_TYPE,
+  type AdminPasswordResetJob,
+} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
 import type { Message } from 'amqplib';
 import { isEmail, isUUID } from 'class-validator';
 
-import { PASSWORD_RESET_JOB_MAX_BYTES } from '../constants/password-reset-delivery.constants';
+import { PASSWORD_RESET_JOB_MAX_BYTES } from '../../constants/password-reset-delivery.constants';
 
 interface SafeMessageProperties {
   contentType?: unknown;
@@ -15,7 +19,7 @@ interface SafeMessageProperties {
 
 export type PasswordResetJobValidationResult =
   | {
-      job: AttendeePasswordResetJob;
+      job: AttendeePasswordResetJob | AdminPasswordResetJob;
       kind: 'valid';
     }
   | {
@@ -24,8 +28,13 @@ export type PasswordResetJobValidationResult =
       kind: 'invalid';
     };
 
-export function validateAttendeePasswordResetJob(
+type PasswordResetJobType =
+  | typeof ADMIN_PASSWORD_RESET_JOB_TYPE
+  | typeof ATTENDEE_PASSWORD_RESET_JOB_TYPE;
+
+export function validatePasswordResetJob(
   message: Message,
+  expectedType: PasswordResetJobType,
 ): PasswordResetJobValidationResult {
   const properties = message.properties as unknown as SafeMessageProperties;
   const propertyJobId =
@@ -42,7 +51,7 @@ export function validateAttendeePasswordResetJob(
     return invalid('JOB_CONTENT_TYPE_INVALID', propertyJobId);
   }
 
-  if (properties.type !== ATTENDEE_PASSWORD_RESET_JOB_TYPE) {
+  if (properties.type !== expectedType) {
     return invalid('JOB_PROPERTY_TYPE_INVALID', propertyJobId);
   }
 
@@ -93,7 +102,7 @@ export function validateAttendeePasswordResetJob(
     return invalid('JOB_ID_MISMATCH', propertyJobId);
   }
 
-  if (type !== ATTENDEE_PASSWORD_RESET_JOB_TYPE) {
+  if (type !== expectedType) {
     return invalid('JOB_TYPE_INVALID', jobId);
   }
 
@@ -113,16 +122,17 @@ export function validateAttendeePasswordResetJob(
     return invalid('JOB_EXPIRY_INVALID', jobId);
   }
 
-  return {
-    job: {
-      code,
-      expiresAt,
-      jobId,
-      recipientEmail,
-      type,
-    },
-    kind: 'valid',
-  };
+  const shared = { code, expiresAt, jobId, recipientEmail };
+
+  return expectedType === ADMIN_PASSWORD_RESET_JOB_TYPE
+    ? {
+        job: { ...shared, type: ADMIN_PASSWORD_RESET_JOB_TYPE },
+        kind: 'valid',
+      }
+    : {
+        job: { ...shared, type: ATTENDEE_PASSWORD_RESET_JOB_TYPE },
+        kind: 'valid',
+      };
 }
 
 function isCanonicalIsoTimestamp(value: unknown): value is string {

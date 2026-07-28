@@ -9,11 +9,15 @@ Identity implements `eventa.identity.v1.AdminIdentityService`.
 - `AuthenticateAdminSession` resolves a live opaque session into bounded admin and session identity.
 - `GetCurrentAdminAccount` returns the activated admin ID and email.
 - `LogoutAdmin` revokes the presented session idempotently.
+- `ForgotAdminPassword` generically accepts an email and publishes reset work only for an activated admin.
+- `ResetAdminPassword` consumes an exact email/code/password completion, revokes every admin session, and replaces the password.
 
 Invalid OTP or activation state uses `FAILED_PRECONDITION`. Redis unavailability uses `UNAVAILABLE`; registration cooldown uses `RESOURCE_EXHAUSTED` with retry metadata. DTO validation uses `INVALID_ARGUMENT`.
 
 Unknown, unactivated, and wrong-password login attempts use the same `UNAUTHENTICATED` result. Session-state failure uses `UNAVAILABLE`.
 
 Missing, malformed, expired, revoked, or no-longer-eligible sessions use `UNAUTHENTICATED`. Logout returns whether a live session was revoked; repeating it returns `revoked = false`.
+
+Password-reset cooldown uses `RESOURCE_EXHAUSTED` with retry metadata. Invalid reset state uses `FAILED_PRECONDITION`; Redis or session-state failure uses `UNAVAILABLE`.
 
 Business operations are gRPC-only. `sql/provision-admin.sql` is the reviewed operator entry point for creating an inactive admin email.

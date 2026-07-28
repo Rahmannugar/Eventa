@@ -1,10 +1,10 @@
 import { Buffer } from 'node:buffer';
 
 import {
-  ADMIN_ACTIVATION_JOB_TYPE,
-  ADMIN_ACTIVATION_QUEUE,
-  type AdminActivationJob,
-} from '@eventa/messaging-contracts/identity/admin-auth.jobs';
+  ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
+  ATTENDEE_EMAIL_VERIFICATION_QUEUE,
+  type AttendeeEmailVerificationJob,
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import {
   addJobInFlight,
   recordJobMetrics,
@@ -18,43 +18,44 @@ import {
 import { context, propagation } from '@opentelemetry/api';
 import type { Channel, Message } from 'amqplib';
 
-import type { RuntimeConfig } from '../../config/runtime-config';
-import type { RabbitMQClient } from '../../infrastructure/clients/rabbitmq.client';
+import type { RuntimeConfig } from '../../../config/runtime-config';
+import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.client';
 import {
-  ADMIN_ACTIVATION_CONSUMER_PREFETCH,
-  ADMIN_ACTIVATION_RETRY_DELAYS_MS,
-} from '../constants/admin-activation-delivery.constants';
-import type { AdminActivationDeliveryService } from '../services/admin-activation-delivery.service';
-import type { AdminActivationDeliveryOutcome } from '../types/admin-activation-delivery.types';
-import { validateAdminActivationJob } from './admin-activation-job.validator';
+  EMAIL_VERIFICATION_CONSUMER_PREFETCH,
+  EMAIL_VERIFICATION_RETRY_DELAYS_MS,
+} from '../../constants/email-verification-delivery.constants';
+import type { EmailVerificationDeliveryService } from '../../services/email-verification-delivery.service';
+import type { EmailVerificationDeliveryOutcome } from '../../types/email-verification-delivery.types';
+import { validateAttendeeEmailVerificationJob } from './attendee-email-verification-job.validator';
 
 interface RetryQueue {
   delayMs: number;
   name: string;
 }
 
-type JobOutcome = AdminActivationDeliveryOutcome['kind'] | 'rejected';
+type JobProcessingOutcome =
+  EmailVerificationDeliveryOutcome['kind'] | 'rejected';
 
-const JOB_OPERATION = 'admin.activation.delivery';
+const EMAIL_VERIFICATION_JOB_OPERATION = 'attendee.email_verification.delivery';
 
 const RETRY_QUEUES: readonly RetryQueue[] =
-  ADMIN_ACTIVATION_RETRY_DELAYS_MS.map((delayMs) => ({
+  EMAIL_VERIFICATION_RETRY_DELAYS_MS.map((delayMs) => ({
     delayMs,
-    name: `${ADMIN_ACTIVATION_QUEUE}.retry.${String(delayMs)}ms`,
+    name: `${ATTENDEE_EMAIL_VERIFICATION_QUEUE}.retry.${String(delayMs)}ms`,
   }));
 
-export class AdminActivationJobConsumer
+export class EmailVerificationJobConsumer
   implements OnApplicationShutdown, OnModuleInit
 {
   private consumerChannel: Channel | undefined;
   private consumerTag: string | undefined;
-  private readonly logger = new Logger(AdminActivationJobConsumer.name);
+  private readonly logger = new Logger(EmailVerificationJobConsumer.name);
   private restartTimer: NodeJS.Timeout | undefined;
   private shuttingDown = false;
 
   constructor(
     private readonly rabbitMQ: RabbitMQClient,
-    private readonly deliveryService: AdminActivationDeliveryService,
+    private readonly deliveryService: EmailVerificationDeliveryService,
     private readonly config: RuntimeConfig,
   ) {}
 
@@ -78,14 +79,14 @@ export class AdminActivationJobConsumer
 
   private async startConsumer(): Promise<void> {
     const channel = await this.rabbitMQ.consumerChannel(
-      'admin-activation-job-consumer',
+      'email-verification-job-consumer',
     );
     await this.assertTopology(channel);
-    await channel.prefetch(ADMIN_ACTIVATION_CONSUMER_PREFETCH);
+    await channel.prefetch(EMAIL_VERIFICATION_CONSUMER_PREFETCH);
 
     this.consumerChannel = channel;
     const reply = await channel.consume(
-      ADMIN_ACTIVATION_QUEUE,
+      ATTENDEE_EMAIL_VERIFICATION_QUEUE,
       (message) => {
         if (message !== null) {
           void this.handleMessage(channel, message);
@@ -96,15 +97,15 @@ export class AdminActivationJobConsumer
 
     this.consumerTag = reply.consumerTag;
     this.logger.log({
-      event: 'admin_activation_consumer_ready',
-      prefetch: ADMIN_ACTIVATION_CONSUMER_PREFETCH,
-      queue_name: ADMIN_ACTIVATION_QUEUE,
+      event: 'email_verification_consumer_ready',
+      prefetch: EMAIL_VERIFICATION_CONSUMER_PREFETCH,
+      queue_name: ATTENDEE_EMAIL_VERIFICATION_QUEUE,
     });
     channel.once('close', () => this.scheduleRestart());
   }
 
   private async assertTopology(channel: Channel): Promise<void> {
-    await channel.assertQueue(ADMIN_ACTIVATION_QUEUE, {
+    await channel.assertQueue(ATTENDEE_EMAIL_VERIFICATION_QUEUE, {
       durable: true,
       arguments: {
         'x-delivery-limit': -1,
@@ -117,7 +118,7 @@ export class AdminActivationJobConsumer
         durable: true,
         arguments: {
           'x-dead-letter-exchange': '',
-          'x-dead-letter-routing-key': ADMIN_ACTIVATION_QUEUE,
+          'x-dead-letter-routing-key': ATTENDEE_EMAIL_VERIFICATION_QUEUE,
           'x-dead-letter-strategy': 'at-least-once',
           'x-message-ttl': retryQueue.delayMs,
           'x-overflow': 'reject-publish',
@@ -137,18 +138,19 @@ export class AdminActivationJobConsumer
       this.readTraceHeaders(message),
     );
 
-    addJobInFlight(1, { operation: JOB_OPERATION });
+    addJobInFlight(1, { operation: EMAIL_VERIFICATION_JOB_OPERATION });
 
     try {
       while (!this.shuttingDown && this.consumerChannel === channel) {
         try {
           const outcome = await context.with(parentContext, () =>
             runWithOperationSpan(
-              'admin_activation_job.process',
+              'email_verification_job.process',
               () => this.processMessage(channel, message),
               {
                 attributes: {
-                  'messaging.destination.name': ADMIN_ACTIVATION_QUEUE,
+                  'messaging.destination.name':
+                    ATTENDEE_EMAIL_VERIFICATION_QUEUE,
                   'messaging.operation.name': 'process',
                   'messaging.system': 'rabbitmq',
                 },
@@ -156,29 +158,31 @@ export class AdminActivationJobConsumer
               },
             ),
           );
-          recordJobMetrics(
-            Number(process.hrtime.bigint() - startedAt) / 1_000_000,
-            { operation: JOB_OPERATION, outcome },
-          );
+          const durationMilliseconds =
+            Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+          recordJobMetrics(durationMilliseconds, {
+            operation: EMAIL_VERIFICATION_JOB_OPERATION,
+            outcome,
+          });
           return;
         } catch (error: unknown) {
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
-            event: 'admin_activation_job_consumer_error',
+            event: 'email_verification_job_consumer_error',
           });
           await this.delay(1_000);
         }
       }
     } finally {
-      addJobInFlight(-1, { operation: JOB_OPERATION });
+      addJobInFlight(-1, { operation: EMAIL_VERIFICATION_JOB_OPERATION });
     }
   }
 
   private async processMessage(
     channel: Channel,
     message: Message,
-  ): Promise<JobOutcome> {
-    const validation = validateAdminActivationJob(message);
+  ): Promise<JobProcessingOutcome> {
+    const validation = validateAttendeeEmailVerificationJob(message);
 
     if (validation.kind === 'invalid') {
       if (validation.jobId !== undefined) {
@@ -190,7 +194,7 @@ export class AdminActivationJobConsumer
 
       this.logger.error({
         error_code: validation.failureCode,
-        event: 'admin_activation_job_rejected',
+        event: 'email_verification_job_rejected',
         ...(validation.jobId === undefined
           ? {}
           : {
@@ -207,7 +211,7 @@ export class AdminActivationJobConsumer
     if (outcome.kind === 'retry') {
       await this.publishRetry(validation.job, outcome);
       this.logger.log({
-        event: 'admin_activation_delivery_retry_scheduled',
+        event: 'email_verification_delivery_retry_scheduled',
         job_id: validation.job.jobId,
         message_id: validation.job.jobId,
         outcome: 'retry',
@@ -222,13 +226,13 @@ export class AdminActivationJobConsumer
   }
 
   private async publishRetry(
-    job: AdminActivationJob,
-    outcome: Extract<AdminActivationDeliveryOutcome, { kind: 'retry' }>,
+    job: AttendeeEmailVerificationJob,
+    outcome: Extract<EmailVerificationDeliveryOutcome, { kind: 'retry' }>,
   ): Promise<void> {
     const queue = this.selectRetryQueue(outcome.retryAt.getTime() - Date.now());
 
     await runWithOperationSpan(
-      'admin_activation_job.retry_publish',
+      'email_verification_job.retry_publish',
       () => this.publishRetryConfirmed(job, queue),
       {
         attributes: {
@@ -242,11 +246,11 @@ export class AdminActivationJobConsumer
   }
 
   private async publishRetryConfirmed(
-    job: AdminActivationJob,
+    job: AttendeeEmailVerificationJob,
     queue: RetryQueue,
   ): Promise<void> {
     const channel = await this.rabbitMQ.confirmChannel(
-      'admin-activation-retry-publisher',
+      'email-verification-retry-publisher',
     );
     const traceHeaders: Record<string, string> = {};
     propagation.inject(context.active(), traceHeaders);
@@ -262,7 +266,7 @@ export class AdminActivationJobConsumer
             messageId: job.jobId,
             persistent: true,
             timestamp: Date.now(),
-            type: ADMIN_ACTIVATION_JOB_TYPE,
+            type: ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
           },
           (error: unknown) => {
             if (error === null || error === undefined) {
@@ -273,7 +277,7 @@ export class AdminActivationJobConsumer
             reject(
               error instanceof Error
                 ? error
-                : new Error('ADMIN_ACTIVATION_RETRY_NOT_CONFIRMED'),
+                : new Error('EMAIL_VERIFICATION_RETRY_NOT_CONFIRMED'),
             );
           },
         );
@@ -297,10 +301,10 @@ export class AdminActivationJobConsumer
 
   private logTerminalOutcome(
     jobId: string,
-    outcome: Exclude<AdminActivationDeliveryOutcome, { kind: 'retry' }>,
+    outcome: Exclude<EmailVerificationDeliveryOutcome, { kind: 'retry' }>,
   ): void {
     const fields = {
-      event: 'admin_activation_delivery_completed',
+      event: 'email_verification_delivery_completed',
       job_id: jobId,
       message_id: jobId,
       outcome: outcome.kind,
@@ -347,7 +351,7 @@ export class AdminActivationJobConsumer
       void this.startConsumer().catch((error: unknown) => {
         this.logger.error({
           error_type: error instanceof Error ? error.name : 'UnknownError',
-          event: 'admin_activation_consumer_restart_failed',
+          event: 'email_verification_consumer_restart_failed',
         });
         this.scheduleRestart();
       });
@@ -365,7 +369,7 @@ export class AdminActivationJobConsumer
         operation,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(
-            () => reject(new Error('ADMIN_ACTIVATION_RETRY_CONFIRM_TIMEOUT')),
+            () => reject(new Error('EMAIL_VERIFICATION_RETRY_CONFIRM_TIMEOUT')),
             timeoutMs,
           );
         }),

@@ -4,9 +4,7 @@ import type { KafkaClient } from '../../../infrastructure/clients/kafka.client';
 import type { AttendeeLifecycleEventPublisher } from '../../ports/attendee-lifecycle-event.publisher';
 import type { AttendeeDeletedEvent } from '@eventa/messaging-contracts/identity/attendee-lifecycle.events';
 
-export class KafkaAttendeeLifecycleEventPublisher
-  implements AttendeeLifecycleEventPublisher
-{
+export class KafkaAttendeeLifecycleEventPublisher implements AttendeeLifecycleEventPublisher {
   constructor(private readonly kafka: KafkaClient) {}
 
   publishDeleted(event: AttendeeDeletedEvent): Promise<void> {

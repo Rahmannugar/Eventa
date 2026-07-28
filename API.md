@@ -13,6 +13,8 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST` | `/auth/admins/login`                         | Signs in an activated admin and sets a server-backed seven-day session cookie.                   |
 | `GET`  | `/auth/admins/me`                            | Returns the activated account for a live admin session.                                          |
 | `POST` | `/auth/admins/logout`                        | Revokes the current admin session before clearing its cookie.                                    |
+| `POST` | `/auth/admins/forgot-password`               | Generically accepts an admin password-reset email request.                                       |
+| `POST` | `/auth/admins/reset-password`                | Replaces an activated admin password and revokes every admin session.                            |
 | `POST` | `/auth/attendees/email-verification/confirm` | Confirms email ownership with a valid six-digit OTP.                                             |
 | `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 
@@ -33,6 +35,6 @@ The protobuf schemas are authoritative. Buf validates and generates the TypeScri
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Identity publishes versioned attendee verification, attendee password-reset, and admin-activation email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
+Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 
 Each service documents its owned internal surface in its own `API.md`.

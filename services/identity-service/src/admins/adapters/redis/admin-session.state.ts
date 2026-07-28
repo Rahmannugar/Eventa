@@ -73,6 +73,15 @@ end
 return 1
 `;
 
+const REVOKE_ALL_SESSIONS_SCRIPT = `
+local sessions = redis.call('ZRANGE', KEYS[1], 0, -1)
+if #sessions > 0 then
+  redis.call('DEL', unpack(sessions))
+end
+redis.call('DEL', KEYS[1])
+return #sessions
+`;
+
 const ACCOUNT_KEY_PREFIX = 'identity:admin-session-account:v1:';
 
 function sessionKey(tokenDigest: string): string {
@@ -182,6 +191,27 @@ export class RedisAdminSessionState implements AdminSessionState {
       }
 
       return result === 1;
+    } catch {
+      throw new AdminSessionStateUnavailableError();
+    }
+  }
+
+  async revokeAll(adminSubject: string): Promise<number> {
+    try {
+      const result = Number(
+        await this.evaluate(
+          'admin_session.revoke_all',
+          REVOKE_ALL_SESSIONS_SCRIPT,
+          [accountKey(adminSubject)],
+          [],
+        ),
+      );
+
+      if (!Number.isSafeInteger(result) || result < 0) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      return result;
     } catch {
       throw new AdminSessionStateUnavailableError();
     }

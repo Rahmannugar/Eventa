@@ -53,6 +53,12 @@ export class AdminSessionService implements AdminSessionIssuer {
     return this.state.revoke(this.tokenDigest(token));
   }
 
+  revokeAll(adminId: string): Promise<number> {
+    return this.state.revokeAll(
+      this.digest('admin-session-account\0', adminId),
+    );
+  }
+
   private authenticate(token: string): Promise<AdminSession | undefined> {
     if (!AdminSessionService.TOKEN_PATTERN.test(token)) {
       return Promise.resolve(undefined);

@@ -13,9 +13,7 @@ interface ClaimedRow {
   payload: ClaimedAttendeeLifecycleEvent['event'];
 }
 
-export class AttendeeLifecycleOutboxRepository
-  implements AttendeeLifecycleOutbox
-{
+export class AttendeeLifecycleOutboxRepository implements AttendeeLifecycleOutbox {
   constructor(
     @Inject(POSTGRES_CLIENT)
     private readonly postgres: PostgresClient,

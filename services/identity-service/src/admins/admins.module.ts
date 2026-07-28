@@ -12,23 +12,28 @@ import type { PasswordHasher } from '../security/types/password-hasher.types';
 import { RabbitMQAdminAuthJobPublisher } from './adapters/job-queue/admin-auth-job.publisher';
 import { RedisAdminActivationOtpState } from './adapters/redis/admin-activation-otp.state';
 import { RedisAdminSessionState } from './adapters/redis/admin-session.state';
+import { RedisPasswordResetCodeState } from '../security/adapters/redis/password-reset-code.state';
 import {
   ADMIN_ACTIVATION_OTP_STATE,
   ADMIN_AUTH_JOB_PUBLISHER,
 } from './constants/admin-activation.constants';
 import { ADMIN_SESSION_STATE } from './constants/admin-session.constants';
+import { ADMIN_PASSWORD_RESET_STATE } from './constants/admin-password-reset.constants';
 import { AdminIdentityController } from './controllers/admin-identity.controller';
 import { AdminAccountRepository } from './repositories/admin-account.repository';
 import { AdminActivationService } from './services/admin-activation.service';
 import { AdminAccountService } from './services/admin-account.service';
 import { AdminLoginService } from './services/admin-login.service';
 import { AdminSessionService } from './services/admin-session.service';
+import { AdminPasswordResetService } from './services/admin-password-reset.service';
 import type { AdminLoginRepository } from './types/admin-login.types';
 import type {
   AdminAccountRepository as AdminAccountReader,
   AdminSessionState,
 } from './types/admin-session.types';
 import type { AdminActivationRepository } from './types/admin-activation.types';
+import type { AdminPasswordResetRepository } from './types/admin-password-reset.types';
+import type { PasswordResetCodeState } from '../security/ports/password-reset-code.state';
 import { PASSWORD_VERIFIER } from '../security/constants/security.constants';
 import type { PasswordVerifier } from '../security/types/password-verifier.types';
 
@@ -46,6 +51,12 @@ import type { PasswordVerifier } from '../security/types/password-verifier.types
     {
       provide: ADMIN_SESSION_STATE,
       useFactory: (redis: RedisClient) => new RedisAdminSessionState(redis),
+      inject: [RedisClient],
+    },
+    {
+      provide: ADMIN_PASSWORD_RESET_STATE,
+      useFactory: (redis: RedisClient) =>
+        new RedisPasswordResetCodeState(redis, 'admin'),
       inject: [RedisClient],
     },
     {
@@ -68,6 +79,33 @@ import type { PasswordVerifier } from '../security/types/password-verifier.types
       useFactory: (repository: AdminAccountReader) =>
         new AdminAccountService(repository),
       inject: [AdminAccountRepository],
+    },
+    {
+      provide: AdminPasswordResetService,
+      useFactory: (
+        repository: AdminPasswordResetRepository,
+        state: PasswordResetCodeState,
+        publisher: RabbitMQAdminAuthJobPublisher,
+        passwordHasher: PasswordHasher,
+        sessions: AdminSessionService,
+        config: RuntimeConfig,
+      ) =>
+        new AdminPasswordResetService(
+          repository,
+          state,
+          publisher,
+          passwordHasher,
+          sessions,
+          config.adminAuthHmacSecret,
+        ),
+      inject: [
+        AdminAccountRepository,
+        ADMIN_PASSWORD_RESET_STATE,
+        ADMIN_AUTH_JOB_PUBLISHER,
+        PASSWORD_HASHER,
+        AdminSessionService,
+        RUNTIME_CONFIG,
+      ],
     },
     {
       provide: ADMIN_AUTH_JOB_PUBLISHER,

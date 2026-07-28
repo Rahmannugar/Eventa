@@ -16,6 +16,7 @@ import {
 import { AdminActivationController } from './controllers/admin-activation.controller';
 import { AdminLoginController } from './controllers/admin-login.controller';
 import { AdminSessionController } from './controllers/admin-session.controller';
+import { AdminPasswordResetController } from './controllers/admin-password-reset.controller';
 import { AdminClientOriginGuard } from './guards/admin-client-origin.guard';
 import { AdminAuthenticationGuard } from './guards/admin-authentication.guard';
 import {
@@ -36,11 +37,17 @@ import {
 import { AdminLoginService } from './services/admin-login.service';
 import { AdminSessionCookie } from './services/admin-session-cookie.service';
 import { AdminSessionService } from './services/admin-session.service';
+import { AdminPasswordResetService } from './services/admin-password-reset.service';
 import {
   AdminAccountRateLimitGuard,
   AdminLogoutRateLimitGuard,
   AdminSessionRateLimitService,
 } from './rate-limit/admin-session-rate-limit';
+import {
+  AdminForgotPasswordRateLimitGuard,
+  AdminPasswordResetRateLimitService,
+  AdminResetPasswordRateLimitGuard,
+} from './rate-limit/admin-password-reset-rate-limit';
 
 interface AdminsModuleOptions {
   adminClientOrigin: string;
@@ -72,6 +79,7 @@ export class AdminsModule {
       controllers: [
         AdminActivationController,
         AdminLoginController,
+        AdminPasswordResetController,
         AdminSessionController,
       ],
       providers: [
@@ -85,7 +93,17 @@ export class AdminsModule {
         },
         AdminActivationService,
         AdminLoginService,
+        AdminPasswordResetService,
         AdminSessionService,
+        {
+          provide: AdminPasswordResetRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AdminPasswordResetRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
+        },
         {
           provide: AdminSessionRateLimitService,
           useFactory: (state: RateLimitState) =>
@@ -126,6 +144,8 @@ export class AdminsModule {
         },
         AdminClientOriginGuard,
         AdminAuthenticationGuard,
+        AdminForgotPasswordRateLimitGuard,
+        AdminResetPasswordRateLimitGuard,
         AdminAccountRateLimitGuard,
         AdminLogoutRateLimitGuard,
         AdminActivationConfirmRateLimitGuard,

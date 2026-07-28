@@ -34,4 +34,5 @@ export interface AdminSessionState {
   create(input: CreateAdminSession): Promise<AdminSession>;
   read(tokenDigest: string): Promise<AdminSession | undefined>;
   revoke(tokenDigest: string): Promise<boolean>;
+  revokeAll(adminSubject: string): Promise<number>;
 }

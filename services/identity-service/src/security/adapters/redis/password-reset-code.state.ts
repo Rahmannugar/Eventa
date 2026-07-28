@@ -2,13 +2,13 @@ import { Logger } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
 
 import type { RedisClient } from '../../../infrastructure/clients/redis.client';
-import { PasswordResetStateUnavailableError } from '../../errors/attendee-password-reset.errors';
+import { PasswordResetStateUnavailableError } from '../../errors/password-reset.errors';
 import type { PasswordResetCodeState } from '../../ports/password-reset-code.state';
 import type {
   PasswordResetClaim,
   PasswordResetCodeRecord,
   PasswordResetCooldownDecision,
-} from '../../types/attendee-password-reset.types';
+} from '../../types/password-reset-state.types';
 
 const RESERVE_SCRIPT = `
 local cooldown_ttl_ms = redis.call('PTTL', KEYS[1])
@@ -24,7 +24,7 @@ const SAVE_SCRIPT = `
 redis.call(
   'HSET',
   KEYS[1],
-  'attendee_id', ARGV[1],
+  'account_id', ARGV[1],
   'code_digest', ARGV[2],
   'attempts_remaining', ARGV[3],
   'status', 'active'
@@ -50,7 +50,7 @@ if not stored_digest then
 end
 
 local status = redis.call('HGET', KEYS[1], 'status')
-local attendee_id = redis.call('HGET', KEYS[1], 'attendee_id')
+local account_id = redis.call('HGET', KEYS[1], 'account_id')
 
 if stored_digest ~= ARGV[1] then
   if status == 'active' then
@@ -71,15 +71,15 @@ if status == 'active' then
     'status', 'processing',
     'completion_digest', ARGV[2]
   )
-  return { 1, attendee_id }
+  return { 1, account_id }
 end
 
 if status == 'processing' and stored_completion == ARGV[2] then
-  return { 1, attendee_id }
+  return { 1, account_id }
 end
 
 if status == 'completed' and stored_completion == ARGV[2] then
-  return { 2, attendee_id }
+  return { 2, account_id }
 end
 
 return { 0, '' }
@@ -102,17 +102,15 @@ end
 return 0
 `;
 
-function stateKey(subject: string): string {
-  return `identity:password-reset:{${subject}}:state`;
+function stateKey(namespace: string, subject: string): string {
+  return `identity:${namespace}-password-reset:{${subject}}:state`;
 }
 
-function cooldownKey(subject: string): string {
-  return `identity:password-reset:{${subject}}:cooldown`;
+function cooldownKey(namespace: string, subject: string): string {
+  return `identity:${namespace}-password-reset:{${subject}}:cooldown`;
 }
 
-function parseCooldownDecision(
-  result: unknown,
-): PasswordResetCooldownDecision {
+function parseCooldownDecision(result: unknown): PasswordResetCooldownDecision {
   if (!Array.isArray(result) || result.length !== 2) {
     throw new PasswordResetStateUnavailableError();
   }
@@ -141,22 +139,22 @@ function parseClaim(result: unknown): PasswordResetClaim {
   }
 
   const status = Number(result[0]);
-  const attendeeId = String(result[1]);
+  const accountId = String(result[1]);
 
   if (status === 0) {
     return { status: 'invalid' };
   }
 
-  if (attendeeId === '') {
+  if (accountId === '') {
     throw new PasswordResetStateUnavailableError();
   }
 
   if (status === 1) {
-    return { attendeeId, status: 'claimed' };
+    return { accountId, status: 'claimed' };
   }
 
   if (status === 2) {
-    return { attendeeId, status: 'completed' };
+    return { accountId, status: 'completed' };
   }
 
   throw new PasswordResetStateUnavailableError();
@@ -165,7 +163,10 @@ function parseClaim(result: unknown): PasswordResetClaim {
 export class RedisPasswordResetCodeState implements PasswordResetCodeState {
   private readonly logger = new Logger(RedisPasswordResetCodeState.name);
 
-  constructor(private readonly redis: RedisClient) {}
+  constructor(
+    private readonly redis: RedisClient,
+    private readonly namespace: 'admin' | 'attendee',
+  ) {}
 
   async reserve(
     subject: string,
@@ -174,7 +175,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     const result = await this.evaluate(
       'password_reset.reserve',
       RESERVE_SCRIPT,
-      [cooldownKey(subject)],
+      [cooldownKey(this.namespace, subject)],
       [String(cooldownMs)],
     );
 
@@ -185,9 +186,9 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     await this.evaluate(
       'password_reset.save',
       SAVE_SCRIPT,
-      [stateKey(record.subject)],
+      [stateKey(this.namespace, record.subject)],
       [
-        record.attendeeId,
+        record.accountId,
         record.codeDigest,
         String(record.attempts),
         String(record.ttlMs),
@@ -199,7 +200,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     await this.evaluate(
       'password_reset.cancel',
       CANCEL_SCRIPT,
-      [stateKey(subject), cooldownKey(subject)],
+      [stateKey(this.namespace, subject), cooldownKey(this.namespace, subject)],
       [codeDigest],
     );
   }
@@ -212,7 +213,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     const result = await this.evaluate(
       'password_reset.claim',
       CLAIM_SCRIPT,
-      [stateKey(subject)],
+      [stateKey(this.namespace, subject)],
       [codeDigest, completionDigest],
     );
 
@@ -227,7 +228,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     await this.evaluate(
       'password_reset.complete',
       MARK_COMPLETED_SCRIPT,
-      [stateKey(subject)],
+      [stateKey(this.namespace, subject)],
       [codeDigest, completionDigest],
     );
   }
@@ -239,7 +240,7 @@ export class RedisPasswordResetCodeState implements PasswordResetCodeState {
     arguments_: string[],
   ): Promise<unknown> {
     return runWithOperationSpan(
-      operation,
+      `${this.namespace}_${operation}`,
       async () => {
         try {
           return await this.redis.evaluate(script, keys, arguments_);

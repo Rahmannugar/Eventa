@@ -33,3 +33,11 @@ Success sets `eventa_admin_session` as a host-only HttpOnly, `SameSite=Lax`, `Pa
 `POST /auth/admins/logout` revokes the presented Redis session before clearing the cookie and returns `204`. Missing or malformed cookies are cleared idempotently. Identity failure returns `503` and leaves a valid cookie intact.
 
 Current-account and logout requests have separate IP and protected-session abuse controls. Authentication dependency failures return `503 ADMIN_AUTHENTICATION_UNAVAILABLE`.
+
+## Password recovery
+
+`POST /auth/admins/forgot-password` accepts an email and always returns `202` with `{ "accepted": true }` after its cooldown check. Unknown, inactive, and activated emails are indistinguishable; only an activated admin receives a code.
+
+`POST /auth/admins/reset-password` accepts email, six-digit code, and a replacement password. Success returns `{ "passwordReset": true }` after Identity replaces the password and revokes every admin session. Invalid, expired, or mismatched completion returns `400 ADMIN_PASSWORD_RESET_INVALID`.
+
+Both routes require the exact admin-client origin and have separate IP plus protected-email abuse controls. Validation returns `422`, abuse controls return `429`, and dependency failure returns `503`.

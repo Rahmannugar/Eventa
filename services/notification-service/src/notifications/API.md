@@ -34,4 +34,6 @@ We apply the same strict AMQP-property, field, size, expiry, retry, acknowledgem
 
 We consume `admin.activation.v1` from the durable quorum queue `eventa.notification.admin-activation.v1`. Its payload carries a UUID job ID, in-memory recipient email, six-digit OTP, canonical expiry, and exact type. The same validation, confirmed retry, bounded-attempt, expiry, idempotency, and privacy rules apply.
 
-All three job types record outcomes in `auth_email_deliveries`. Job type and expiry must match an existing job ID exactly.
+We consume `admin.password-reset.v1` from `eventa.notification.admin-password-reset.v1`. It uses the shared password-reset delivery capability with admin-owned validation, queue topology, template, metrics operation, and retry path.
+
+All four job types record outcomes in `auth_email_deliveries`. Job type and expiry must match an existing job ID exactly.

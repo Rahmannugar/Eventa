@@ -15,6 +15,12 @@ import {
   ConfirmAdminActivationResponse,
 } from "./admin_activation.generated";
 import { LoginAdminRequest, LoginAdminResponse } from "./admin_login.generated";
+import {
+  ForgotAdminPasswordRequest,
+  ForgotAdminPasswordResponse,
+  ResetAdminPasswordRequest,
+  ResetAdminPasswordResponse,
+} from "./admin_password_reset.generated";
 import { RegisterAdminRequest, RegisterAdminResponse } from "./admin_registration.generated";
 import {
   AuthenticateAdminSessionRequest,
@@ -44,6 +50,13 @@ export interface AdminIdentityServiceClient {
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 
+  forgotAdminPassword(
+    request: ForgotAdminPasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ForgotAdminPasswordResponse>;
+
+  resetAdminPassword(request: ResetAdminPasswordRequest, metadata?: Metadata): Observable<ResetAdminPasswordResponse>;
+
   authenticateAdminSession(
     request: AuthenticateAdminSessionRequest,
     metadata?: Metadata,
@@ -72,6 +85,13 @@ export interface AdminIdentityServiceController {
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 
+  forgotAdminPassword(
+    request: ForgotAdminPasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ForgotAdminPasswordResponse>;
+
+  resetAdminPassword(request: ResetAdminPasswordRequest, metadata?: Metadata): Observable<ResetAdminPasswordResponse>;
+
   authenticateAdminSession(
     request: AuthenticateAdminSessionRequest,
     metadata?: Metadata,
@@ -92,6 +112,8 @@ export function AdminIdentityServiceControllerMethods() {
       "confirmAdminActivation",
       "completeAdminActivation",
       "loginAdmin",
+      "forgotAdminPassword",
+      "resetAdminPassword",
       "authenticateAdminSession",
       "getCurrentAdminAccount",
       "logoutAdmin",

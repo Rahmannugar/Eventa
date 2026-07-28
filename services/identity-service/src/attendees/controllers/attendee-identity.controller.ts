@@ -58,8 +58,8 @@ import {
 import {
   PasswordResetCodeInvalidError,
   PasswordResetRateLimitedError,
-  PasswordResetStateUnavailableError,
 } from '../errors/attendee-password-reset.errors';
+import { PasswordResetStateUnavailableError } from '../../security/errors/password-reset.errors';
 import { AttendeePasswordResetService } from '../services/attendee-password-reset.service';
 import { DeleteAttendeeAccountDto } from '../dto/attendee-deletion.dto';
 import { AttendeeDeletionService } from '../services/attendee-deletion.service';
