@@ -17,9 +17,9 @@ We document the Notifications domain in [src/notifications/ARCHITECTURE.md](src/
 
 ## Database and Migrations
 
-We own `email_verification_deliveries` and `password_reset_deliveries`. Each job ID has one operation-specific row containing status, bounded attempt count, expiry, processing lease, retry timing, provider message ID, safe failure code, and terminal timestamps. We never persist recipient addresses, OTP values, or reset codes.
+We own `auth_email_deliveries`. Each authentication email job ID has one row containing its exact job type, status, bounded attempt count, expiry, processing lease, retry timing, provider message ID, safe failure code, and terminal timestamps. We never persist recipient addresses, OTP values, or reset codes.
 
-Migrations `0000_create_email_verification_deliveries` and `0001_create_password_reset_deliveries` are the deployment authority. We close runtime and migration connections through their owning lifecycle.
+Versioned migrations are the deployment authority. `0002_consolidate_auth_email_deliveries` preserves earlier delivery history while moving all authentication emails into the shared ledger. We close runtime and migration connections through their owning lifecycle.
 
 ## Health and Shutdown
 

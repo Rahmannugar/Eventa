@@ -11,6 +11,10 @@
     "./identity/attendee-lifecycle.events": {
       "types": "./dist/identity/attendee-lifecycle.events.d.ts",
       "default": "./dist/identity/attendee-lifecycle.events.js"
+    },
+    "./identity/admin-auth.jobs": {
+      "types": "./dist/identity/admin-auth.jobs.d.ts",
+      "default": "./dist/identity/admin-auth.jobs.js"
     }
   },
   "typesVersions": {
@@ -20,6 +24,9 @@
       ],
       "identity/attendee-lifecycle.events": [
         "dist/identity/attendee-lifecycle.events.d.ts"
+      ],
+      "identity/admin-auth.jobs": [
+        "dist/identity/admin-auth.jobs.d.ts"
       ]
     }
   },

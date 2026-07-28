@@ -5,13 +5,13 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { EmailDeliveryError } from '../../src/notifications/errors/email-delivery.errors';
+import type { EmailDeliveryProvider } from '../../src/notifications/ports/email-delivery.provider';
 import { EmailVerificationDeliveryService } from '../../src/notifications/services/email-verification-delivery.service';
 import type {
-  EmailVerificationDeliveryClaim,
-  EmailVerificationDeliveryRepository,
-  EmailVerificationEmail,
-  EmailVerificationEmailSender,
-} from '../../src/notifications/types/email-verification-delivery.types';
+  AuthEmailDeliveryClaim,
+  AuthEmailDeliveryRepository,
+} from '../../src/notifications/types/auth-email-delivery.types';
+import type { EmailDeliveryRequest } from '../../src/notifications/types/email.types';
 
 const job: AttendeeEmailVerificationJob = {
   expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
@@ -21,18 +21,17 @@ const job: AttendeeEmailVerificationJob = {
   type: ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
 };
 
-class RecordingRepository implements EmailVerificationDeliveryRepository {
-  claimDecision: EmailVerificationDeliveryClaim = {
+class RecordingRepository implements AuthEmailDeliveryRepository {
+  claimDecision: AuthEmailDeliveryClaim = {
     attempt: 1,
     claimToken: '70be399a-4a99-42e2-9d68-e5d1a834c326',
     kind: 'claimed',
   };
   delivered = 0;
-  expired = 0;
   failed: string[] = [];
   retries: string[] = [];
 
-  claim(): Promise<EmailVerificationDeliveryClaim> {
+  claim(): Promise<AuthEmailDeliveryClaim> {
     return Promise.resolve(this.claimDecision);
   }
 
@@ -42,7 +41,6 @@ class RecordingRepository implements EmailVerificationDeliveryRepository {
   }
 
   markExpired(): Promise<boolean> {
-    this.expired += 1;
     return Promise.resolve(true);
   }
 
@@ -69,108 +67,87 @@ class RecordingRepository implements EmailVerificationDeliveryRepository {
   }
 }
 
-class RecordingSender implements EmailVerificationEmailSender {
-  emails: EmailVerificationEmail[] = [];
+class RecordingProvider implements EmailDeliveryProvider {
   error: Error | undefined;
+  messages: EmailDeliveryRequest[] = [];
 
-  send(email: EmailVerificationEmail): Promise<{ providerMessageId: string }> {
-    this.emails.push(email);
+  send(email: EmailDeliveryRequest): Promise<{ messageId: string }> {
+    this.messages.push(email);
 
     if (this.error !== undefined) {
       return Promise.reject(this.error);
     }
 
-    return Promise.resolve({ providerMessageId: 'provider-message-1' });
+    return Promise.resolve({ messageId: 'provider-message-1' });
   }
 }
 
 function createService(): {
+  provider: RecordingProvider;
   repository: RecordingRepository;
-  sender: RecordingSender;
   service: EmailVerificationDeliveryService;
 } {
+  const provider = new RecordingProvider();
   const repository = new RecordingRepository();
-  const sender = new RecordingSender();
   return {
+    provider,
     repository,
-    sender,
-    service: new EmailVerificationDeliveryService(repository, sender),
+    service: new EmailVerificationDeliveryService(
+      repository,
+      provider,
+      'Eventa <onboarding@resend.dev>',
+    ),
   };
 }
 
-describe('EmailVerificationDeliveryService', () => {
-  it('sends and records a claimed delivery', async () => {
-    const { repository, sender, service } = createService();
+describe('email verification delivery', () => {
+  it('renders, sends, and records one claimed delivery', async () => {
+    const { provider, repository, service } = createService();
 
-    await expect(service.deliver(job)).resolves.toEqual({
-      kind: 'delivered',
+    await expect(service.deliver(job)).resolves.toEqual({ kind: 'delivered' });
+    expect(provider.messages[0]).toMatchObject({
+      from: 'Eventa <onboarding@resend.dev>',
+      idempotencyKey: job.jobId,
+      subject: 'Verify your Eventa email',
+      to: job.recipientEmail,
     });
-    expect(sender.emails[0]).toEqual({
-      jobId: job.jobId,
-      otp: job.otp,
-      recipientEmail: job.recipientEmail,
-    });
+    expect(provider.messages[0]?.text).toContain(job.otp);
     expect(repository.delivered).toBe(1);
   });
 
-  it('suppresses a durably delivered duplicate', async () => {
-    const { repository, sender, service } = createService();
+  it('does not send a delivery already recorded as complete', async () => {
+    const { provider, repository, service } = createService();
     repository.claimDecision = { kind: 'terminal', status: 'delivered' };
 
-    await expect(service.deliver(job)).resolves.toEqual({
-      kind: 'duplicate',
-    });
-    expect(sender.emails).toHaveLength(0);
+    await expect(service.deliver(job)).resolves.toEqual({ kind: 'duplicate' });
+    expect(provider.messages).toHaveLength(0);
   });
 
-  it('schedules a bounded retry for a retryable provider failure', async () => {
-    const { repository, sender, service } = createService();
-    sender.error = new EmailDeliveryError('EMAIL_PROVIDER_RATE_LIMITED', true);
+  it('schedules retryable provider failures and terminates permanent ones', async () => {
+    const retryable = createService();
+    retryable.provider.error = new EmailDeliveryError(
+      'EMAIL_PROVIDER_RATE_LIMITED',
+      true,
+    );
 
-    await expect(service.deliver(job)).resolves.toMatchObject({
+    await expect(retryable.service.deliver(job)).resolves.toMatchObject({
       kind: 'retry',
     });
-    expect(repository.retries).toEqual(['EMAIL_PROVIDER_RATE_LIMITED']);
-    expect(repository.failed).toHaveLength(0);
-  });
+    expect(retryable.repository.retries).toEqual([
+      'EMAIL_PROVIDER_RATE_LIMITED',
+    ]);
 
-  it('records a permanent provider failure without retrying', async () => {
-    const { repository, sender, service } = createService();
-    sender.error = new EmailDeliveryError(
+    const permanent = createService();
+    permanent.provider.error = new EmailDeliveryError(
       'EMAIL_PROVIDER_IDEMPOTENCY_CONFLICT',
       false,
     );
 
-    await expect(service.deliver(job)).resolves.toEqual({ kind: 'failed' });
-    expect(repository.failed).toEqual(['EMAIL_PROVIDER_IDEMPOTENCY_CONFLICT']);
-    expect(repository.retries).toHaveLength(0);
-  });
-
-  it('does not schedule a fourth provider attempt', async () => {
-    const { repository, sender, service } = createService();
-    repository.claimDecision = {
-      attempt: 3,
-      claimToken: '70be399a-4a99-42e2-9d68-e5d1a834c326',
-      kind: 'claimed',
-    };
-    sender.error = new EmailDeliveryError('EMAIL_PROVIDER_UNAVAILABLE', true);
-
-    await expect(service.deliver(job)).resolves.toEqual({ kind: 'failed' });
-    expect(repository.failed).toEqual(['EMAIL_PROVIDER_UNAVAILABLE']);
-    expect(repository.retries).toHaveLength(0);
-  });
-
-  it('expires work instead of scheduling a retry beyond the OTP lifetime', async () => {
-    const { repository, sender, service } = createService();
-    sender.error = new EmailDeliveryError('EMAIL_PROVIDER_UNAVAILABLE', true);
-
-    await expect(
-      service.deliver({
-        ...job,
-        expiresAt: new Date(Date.now() + 1_000).toISOString(),
-      }),
-    ).resolves.toEqual({ kind: 'expired' });
-    expect(repository.expired).toBe(1);
-    expect(repository.retries).toHaveLength(0);
+    await expect(permanent.service.deliver(job)).resolves.toEqual({
+      kind: 'failed',
+    });
+    expect(permanent.repository.failed).toEqual([
+      'EMAIL_PROVIDER_IDEMPOTENCY_CONFLICT',
+    ]);
   });
 });

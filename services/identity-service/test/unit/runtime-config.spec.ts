@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
+  ADMIN_ACTIVATION_HMAC_SECRET: 'test-admin-activation-secret-32-characters',
   ATTENDEE_SESSION_HMAC_SECRET: 'test-attendee-session-secret-32-characters',
   DATABASE_URL: 'postgresql://identity:test@localhost:5432/eventa_identity',
   EMAIL_VERIFICATION_HMAC_SECRET:
@@ -25,6 +26,7 @@ const validEnvironment = {
 describe('readRuntimeConfig', () => {
   it('returns the complete required configuration', () => {
     expect(readRuntimeConfig(validEnvironment)).toEqual({
+      adminActivationHmacSecret: validEnvironment.ADMIN_ACTIVATION_HMAC_SECRET,
       attendeeSessionHmacSecret: validEnvironment.ATTENDEE_SESSION_HMAC_SECRET,
       databaseUrl: validEnvironment.DATABASE_URL,
       emailVerificationHmacSecret:
@@ -46,6 +48,7 @@ describe('readRuntimeConfig', () => {
   });
 
   it.each([
+    'ADMIN_ACTIVATION_HMAC_SECRET',
     'ATTENDEE_SESSION_HMAC_SECRET',
     'DATABASE_URL',
     'EMAIL_VERIFICATION_HMAC_SECRET',
@@ -134,14 +137,23 @@ describe('readRuntimeConfig', () => {
     );
   });
 
+  it('rejects a short admin-activation HMAC secret', () => {
+    expect(() =>
+      readRuntimeConfig({
+        ...validEnvironment,
+        ADMIN_ACTIVATION_HMAC_SECRET: 'too-short',
+      }),
+    ).toThrow(
+      'ADMIN_ACTIVATION_HMAC_SECRET must contain at least 32 characters',
+    );
+  });
+
   it('rejects a short password-reset HMAC secret', () => {
     expect(() =>
       readRuntimeConfig({
         ...validEnvironment,
         PASSWORD_RESET_HMAC_SECRET: 'too-short',
       }),
-    ).toThrow(
-      'PASSWORD_RESET_HMAC_SECRET must contain at least 32 characters',
-    );
+    ).toThrow('PASSWORD_RESET_HMAC_SECRET must contain at least 32 characters');
   });
 });

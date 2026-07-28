@@ -6,34 +6,24 @@ import { DatabaseModule } from '../database/database.module';
 import { RabbitMQClient } from '../infrastructure/clients/rabbitmq.client';
 import { ResendClient } from '../infrastructure/clients/resend.client';
 import {
+  AUTH_EMAIL_DELIVERY_REPOSITORY,
   EMAIL_DELIVERY_PROVIDER,
-  EMAIL_VERIFICATION_DELIVERY_REPOSITORY,
-  EMAIL_VERIFICATION_EMAIL_SENDER,
-} from './constants/email-verification-delivery.constants';
+} from './constants/auth-email-delivery.constants';
+import { AdminActivationJobConsumer } from './job-queue/admin-activation-job.consumer';
 import { EmailVerificationJobConsumer } from './job-queue/email-verification-job.consumer';
-import type { EmailDeliveryProvider } from './ports/email-delivery.provider';
-import { EmailVerificationDeliveryRepository } from './repositories/email-verification-delivery.repository';
-import { EmailVerificationDeliveryService } from './services/email-verification-delivery.service';
-import { EmailVerificationEmailSender } from './services/email-verification-email.sender';
-import {
-  PASSWORD_RESET_DELIVERY_REPOSITORY,
-  PASSWORD_RESET_EMAIL_SENDER,
-} from './constants/password-reset-delivery.constants';
 import { PasswordResetJobConsumer } from './job-queue/password-reset-job.consumer';
-import { PasswordResetDeliveryRepository } from './repositories/password-reset-delivery.repository';
+import type { EmailDeliveryProvider } from './ports/email-delivery.provider';
+import { AuthEmailDeliveryRepository } from './repositories/auth-email-delivery.repository';
+import { AdminActivationDeliveryService } from './services/admin-activation-delivery.service';
+import { EmailVerificationDeliveryService } from './services/email-verification-delivery.service';
 import { PasswordResetDeliveryService } from './services/password-reset-delivery.service';
-import { PasswordResetEmailSender } from './services/password-reset-email.sender';
 
 @Module({
   imports: [DatabaseModule],
   providers: [
     {
-      provide: EMAIL_VERIFICATION_DELIVERY_REPOSITORY,
-      useClass: EmailVerificationDeliveryRepository,
-    },
-    {
-      provide: PASSWORD_RESET_DELIVERY_REPOSITORY,
-      useClass: PasswordResetDeliveryRepository,
+      provide: AUTH_EMAIL_DELIVERY_REPOSITORY,
+      useClass: AuthEmailDeliveryRepository,
     },
     {
       provide: RabbitMQClient,
@@ -48,28 +38,68 @@ import { PasswordResetEmailSender } from './services/password-reset-email.sender
         new ResendClient(config.resendApiKey, config.resendRequestTimeoutMs),
     },
     {
-      provide: EMAIL_VERIFICATION_EMAIL_SENDER,
-      inject: [EMAIL_DELIVERY_PROVIDER, RUNTIME_CONFIG],
+      provide: EmailVerificationDeliveryService,
+      inject: [
+        AUTH_EMAIL_DELIVERY_REPOSITORY,
+        EMAIL_DELIVERY_PROVIDER,
+        RUNTIME_CONFIG,
+      ],
       useFactory: (
+        deliveries: AuthEmailDeliveryRepository,
         emailDeliveryProvider: EmailDeliveryProvider,
         config: RuntimeConfig,
       ) =>
-        new EmailVerificationEmailSender(
+        new EmailVerificationDeliveryService(
+          deliveries,
           emailDeliveryProvider,
           config.resendFrom,
         ),
     },
     {
-      provide: PASSWORD_RESET_EMAIL_SENDER,
-      inject: [EMAIL_DELIVERY_PROVIDER, RUNTIME_CONFIG],
+      provide: PasswordResetDeliveryService,
+      inject: [
+        AUTH_EMAIL_DELIVERY_REPOSITORY,
+        EMAIL_DELIVERY_PROVIDER,
+        RUNTIME_CONFIG,
+      ],
       useFactory: (
+        deliveries: AuthEmailDeliveryRepository,
         emailDeliveryProvider: EmailDeliveryProvider,
         config: RuntimeConfig,
       ) =>
-        new PasswordResetEmailSender(emailDeliveryProvider, config.resendFrom),
+        new PasswordResetDeliveryService(
+          deliveries,
+          emailDeliveryProvider,
+          config.resendFrom,
+        ),
     },
-    EmailVerificationDeliveryService,
-    PasswordResetDeliveryService,
+    {
+      provide: AdminActivationDeliveryService,
+      inject: [
+        AUTH_EMAIL_DELIVERY_REPOSITORY,
+        EMAIL_DELIVERY_PROVIDER,
+        RUNTIME_CONFIG,
+      ],
+      useFactory: (
+        deliveries: AuthEmailDeliveryRepository,
+        emailDeliveryProvider: EmailDeliveryProvider,
+        config: RuntimeConfig,
+      ) =>
+        new AdminActivationDeliveryService(
+          deliveries,
+          emailDeliveryProvider,
+          config.resendFrom,
+        ),
+    },
+    {
+      provide: AdminActivationJobConsumer,
+      inject: [RabbitMQClient, AdminActivationDeliveryService, RUNTIME_CONFIG],
+      useFactory: (
+        rabbitMQ: RabbitMQClient,
+        deliveryService: AdminActivationDeliveryService,
+        config: RuntimeConfig,
+      ) => new AdminActivationJobConsumer(rabbitMQ, deliveryService, config),
+    },
     {
       provide: PasswordResetJobConsumer,
       inject: [RabbitMQClient, PasswordResetDeliveryService, RUNTIME_CONFIG],

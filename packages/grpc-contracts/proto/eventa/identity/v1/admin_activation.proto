@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message ConfirmAdminActivationRequest {
+  string email = 1;
+  string otp = 2;
+}
+
+message ConfirmAdminActivationResponse {
+  string activation_token = 1;
+  string expires_at = 2;
+}
+
+message CompleteAdminActivationRequest {
+  string activation_token = 1;
+  string password = 2;
+}
+
+message CompleteAdminActivationResponse {
+  bool activated = 1;
+}

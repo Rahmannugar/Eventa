@@ -2,7 +2,7 @@ import { Module, type DynamicModule } from '@nestjs/common';
 import {
   EVENTA_IDENTITY_V1_PACKAGE_NAME,
   getIdentityProtoIncludeDirs,
-  getIdentityProtoPath,
+  getIdentityProtoPaths,
 } from '@eventa/grpc-contracts';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
@@ -67,7 +67,7 @@ export class AttendeesModule {
             transport: Transport.GRPC,
             options: {
               package: EVENTA_IDENTITY_V1_PACKAGE_NAME,
-              protoPath: getIdentityProtoPath(),
+              protoPath: getIdentityProtoPaths(),
               loader: {
                 includeDirs: getIdentityProtoIncludeDirs(),
               },

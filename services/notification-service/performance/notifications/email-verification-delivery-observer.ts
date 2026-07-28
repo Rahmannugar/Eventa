@@ -102,7 +102,8 @@ async function handleRequest(
         MAX(created_at),
         TIMESTAMPTZ '1970-01-01T00:00:00.000Z'
       ) AS cutoff
-      FROM email_verification_deliveries
+      FROM auth_email_deliveries
+      WHERE job_type = 'attendee.email-verification.v1'
     `;
 
     if (snapshot === undefined) {
@@ -129,8 +130,9 @@ async function handleRequest(
 
     const [delivery] = await database<DeliveryRow[]>`
       SELECT created_at, status, terminal_at
-      FROM email_verification_deliveries
+      FROM auth_email_deliveries
       WHERE created_at > ${afterTimestamp.toISOString()}
+        AND job_type = 'attendee.email-verification.v1'
       ORDER BY created_at ASC
       LIMIT 1
     `;

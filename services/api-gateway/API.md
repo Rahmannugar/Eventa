@@ -4,6 +4,7 @@
 
 | Domain    | Public surface                     | Documentation                                 |
 | --------- | ---------------------------------- | --------------------------------------------- |
+| Admins    | `/auth/admins/*` HTTP endpoints    | [Admins API](src/domains/admins/API.md)       |
 | Attendees | `/auth/attendees/*` HTTP endpoints | [Attendees API](src/domains/attendees/API.md) |
 
 The generated OpenAPI document is authoritative for exact public HTTP schemas. Domain API files explain behavior, errors, and transport policy without duplicating that contract.

@@ -1,7 +1,7 @@
 import {
   EVENTA_IDENTITY_V1_PACKAGE_NAME,
   getIdentityProtoIncludeDirs,
-  getIdentityProtoPath,
+  getIdentityProtoPaths,
 } from '@eventa/grpc-contracts';
 import { status } from '@grpc/grpc-js';
 import { ValidationPipe } from '@nestjs/common';
@@ -39,7 +39,7 @@ async function bootstrap(): Promise<void> {
       transport: Transport.GRPC,
       options: {
         package: EVENTA_IDENTITY_V1_PACKAGE_NAME,
-        protoPath: getIdentityProtoPath(),
+        protoPath: getIdentityProtoPaths(),
         loader: {
           includeDirs: getIdentityProtoIncludeDirs(),
         },

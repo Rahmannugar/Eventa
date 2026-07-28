@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/redis/email-verification-otp.state';
 import { RedisPasswordResetCodeState } from '../../src/attendees/adapters/redis/password-reset-code.state';
 import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
+import { RedisAdminActivationOtpState } from '../../src/admins/adapters/redis/admin-activation-otp.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
 import { AttendeeSessionAccountBlockedError } from '../../src/attendees/errors/attendee-session.errors';
 
@@ -22,6 +23,7 @@ const redis = new RedisClient(testRedisUrl, 1_000, 750);
 const otpState = new RedisEmailVerificationOtpState(redis);
 const passwordResetState = new RedisPasswordResetCodeState(redis);
 const sessionState = new RedisAttendeeSessionState(redis);
+const adminActivationState = new RedisAdminActivationOtpState(redis);
 
 describe('RedisEmailVerificationOtpState integration', () => {
   beforeAll(async () => {
@@ -138,6 +140,44 @@ describe('RedisEmailVerificationOtpState integration', () => {
 
     expect(decisions.filter((decision) => decision.allowed)).toHaveLength(1);
     expect(decisions.filter((decision) => !decision.allowed)).toHaveLength(9);
+  });
+
+  it('moves admin activation from OTP confirmation to one-time grant cleanup', async () => {
+    await adminActivationState.save({
+      adminId: 'admin-1',
+      attempts: 5,
+      otpDigest: 'correct-digest',
+      subject: 'admin-subject',
+      ttlMs: 60_000,
+    });
+
+    await expect(
+      adminActivationState.verify('admin-subject', 'correct-digest'),
+    ).resolves.toEqual({ adminId: 'admin-1', status: 'active' });
+    await expect(
+      adminActivationState.verify('admin-subject', 'correct-digest'),
+    ).resolves.toEqual({ adminId: 'admin-1', status: 'confirmed' });
+
+    await adminActivationState.saveGrant({
+      adminId: 'admin-1',
+      grantDigest: 'grant-digest',
+      subject: 'admin-subject',
+      ttlMs: 60_000,
+    });
+    await expect(
+      adminActivationState.readGrant('grant-digest'),
+    ).resolves.toEqual({
+      adminId: 'admin-1',
+      subject: 'admin-subject',
+    });
+
+    await adminActivationState.completeGrant('grant-digest', 'admin-subject');
+    await expect(
+      adminActivationState.readGrant('grant-digest'),
+    ).resolves.toBeUndefined();
+    await expect(
+      adminActivationState.verify('admin-subject', 'correct-digest'),
+    ).resolves.toEqual({ status: 'invalid' });
   });
 
   it('keeps session state only for its fixed lifetime', async () => {
@@ -321,8 +361,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
       subject: 'attendee-subject',
       ttlMs: 60_000,
     });
-    const key =
-      'identity:password-reset:{attendee-subject}:state';
+    const key = 'identity:password-reset:{attendee-subject}:state';
     const initialTtl = await administrativeClient.pTTL(key);
 
     await expect(

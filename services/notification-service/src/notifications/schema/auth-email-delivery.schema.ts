@@ -9,8 +9,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-export const passwordResetDeliveries = pgTable(
-  'password_reset_deliveries',
+export const authEmailDeliveries = pgTable(
+  'auth_email_deliveries',
   {
     jobId: uuid('job_id').primaryKey(),
     jobType: text('job_type').notNull(),
@@ -54,16 +54,14 @@ export const passwordResetDeliveries = pgTable(
   },
   (table) => [
     check(
-      'password_reset_deliveries_status_valid',
+      'auth_email_deliveries_status_valid',
       sql`${table.status} IN ('pending', 'processing', 'retry_scheduled', 'delivered', 'failed', 'expired', 'rejected')`,
     ),
     check(
-      'password_reset_deliveries_attempt_count_valid',
+      'auth_email_deliveries_attempt_count_valid',
       sql`${table.attemptCount} >= 0 AND ${table.attemptCount} <= 3`,
     ),
-    index('password_reset_deliveries_status_idx').on(table.status),
-    index('password_reset_deliveries_next_attempt_idx').on(
-      table.nextAttemptAt,
-    ),
+    index('auth_email_deliveries_status_idx').on(table.status),
+    index('auth_email_deliveries_next_attempt_idx').on(table.nextAttemptAt),
   ],
 );

@@ -7,6 +7,9 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | Method | Path                                         | Outcome                                                                                          |
 | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `POST` | `/auth/attendees/register`                   | Creates an unverified attendee account after registration rate limiting and Identity validation. |
+| `POST` | `/auth/admins/register`                      | Generically accepts an activation request for a SQL-provisioned admin.                           |
+| `POST` | `/auth/admins/activation/confirm`            | Confirms an admin activation OTP and sets a short-lived activation cookie.                       |
+| `POST` | `/auth/admins/activation/complete`           | Sets the first password and activates the admin without creating a login session.                |
 | `POST` | `/auth/attendees/email-verification/confirm` | Confirms email ownership with a valid six-digit OTP.                                             |
 | `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 
@@ -21,12 +24,12 @@ This root file remains a compact map as Eventa grows; it does not duplicate ever
 
 ## Internal Contracts
 
-Synchronous service commands and queries use gRPC. `eventa.identity.v1.AttendeeIdentityService` is defined in [packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto).
+Synchronous service commands and queries use the attendee and admin gRPC services in `eventa.identity.v1`.
 
 The protobuf schemas are authoritative. Buf validates and generates the TypeScript message, client, controller, package, and service declarations exported by `@eventa/grpc-contracts`; consumers do not hand-maintain protobuf-derived TypeScript shapes.
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-We publish `AttendeeEmailVerificationJob` version `1` from Identity and consume it in Notification. `@eventa/messaging-contracts` owns the contract. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
+Identity publishes versioned attendee verification, attendee password-reset, and admin-activation email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 
 Each service documents its owned internal surface in its own `API.md`.

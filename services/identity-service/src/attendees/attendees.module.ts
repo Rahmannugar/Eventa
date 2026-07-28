@@ -48,9 +48,7 @@ import type { AttendeeAccountRepository as AttendeeAccountDetailsRepository } fr
 import type { PasswordResetCodeState } from './ports/password-reset-code.state';
 import { AttendeePasswordResetService } from './services/attendee-password-reset.service';
 import type { AttendeePasswordResetRepository } from './types/attendee-password-reset.types';
-import {
-  ATTENDEE_DELETION_REPOSITORY,
-} from './constants/attendee-deletion.constants';
+import { ATTENDEE_DELETION_REPOSITORY } from './constants/attendee-deletion.constants';
 import type { AttendeeDeletionRepository } from './types/attendee-deletion.types';
 import { AttendeeDeletionService } from './services/attendee-deletion.service';
 import {
@@ -61,9 +59,10 @@ import { KafkaClient } from '../infrastructure/clients/kafka.client';
 import { KafkaAttendeeLifecycleEventPublisher } from './adapters/event-bus/attendee-lifecycle-event.publisher';
 import { AttendeeLifecycleOutboxRepository } from './repositories/attendee-lifecycle-outbox.repository';
 import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outbox-relay';
+import { InfrastructureClientsModule } from '../infrastructure/infrastructure-clients.module';
 
 @Module({
-  imports: [DatabaseModule, SecurityModule],
+  imports: [DatabaseModule, InfrastructureClientsModule, SecurityModule],
   controllers: [AttendeeIdentityController],
   providers: [
     AttendeeRegistrationService,
@@ -116,16 +115,6 @@ import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outb
       useExisting: ATTENDEE_ACCOUNT_REPOSITORY,
     },
     {
-      provide: RedisClient,
-      useFactory: (config: RuntimeConfig) =>
-        new RedisClient(
-          config.redisUrl,
-          config.redisConnectTimeoutMs,
-          config.redisOperationTimeoutMs,
-        ),
-      inject: [RUNTIME_CONFIG],
-    },
-    {
       provide: EMAIL_VERIFICATION_OTP_STATE,
       useFactory: (redis: RedisClient) =>
         new RedisEmailVerificationOtpState(redis),
@@ -138,7 +127,8 @@ import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outb
     },
     {
       provide: PASSWORD_RESET_CODE_STATE,
-      useFactory: (redis: RedisClient) => new RedisPasswordResetCodeState(redis),
+      useFactory: (redis: RedisClient) =>
+        new RedisPasswordResetCodeState(redis),
       inject: [RedisClient],
     },
     {
@@ -165,12 +155,6 @@ import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outb
       useFactory: (repository: AttendeeAccountDetailsRepository) =>
         new AttendeeAccountService(repository),
       inject: [ATTENDEE_ACCOUNT_REPOSITORY],
-    },
-    {
-      provide: RabbitMQClient,
-      useFactory: (config: RuntimeConfig) =>
-        new RabbitMQClient(config.rabbitMqUrl, config.rabbitMqConnectTimeoutMs),
-      inject: [RUNTIME_CONFIG],
     },
     {
       provide: ATTENDEE_AUTH_JOB_PUBLISHER,
@@ -214,8 +198,7 @@ import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outb
         repository: AttendeeDeletionRepository,
         passwordVerifier: PasswordVerifier,
         sessions: AttendeeSessionService,
-      ) =>
-        new AttendeeDeletionService(repository, passwordVerifier, sessions),
+      ) => new AttendeeDeletionService(repository, passwordVerifier, sessions),
       inject: [
         ATTENDEE_DELETION_REPOSITORY,
         PASSWORD_VERIFIER,

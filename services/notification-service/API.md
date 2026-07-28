@@ -2,9 +2,9 @@
 
 ## Business Domains
 
-| Domain        | Internal surface                                              | Documentation                                 |
-| ------------- | ------------------------------------------------------------- | --------------------------------------------- |
-| Notifications | `AttendeeEmailVerificationJob` RabbitMQ consumer, version `1` | [Notifications API](src/notifications/API.md) |
+| Domain        | Internal surface                                      | Documentation                                 |
+| ------------- | ----------------------------------------------------- | --------------------------------------------- |
+| Notifications | Versioned attendee and admin auth-email job consumers | [Notifications API](src/notifications/API.md) |
 
 We expose no client-facing business HTTP routes and no gRPC service.
 

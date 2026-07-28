@@ -29,6 +29,13 @@
       "when": 1785227765865,
       "tag": "0003_create_attendee_lifecycle_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785233493440,
+      "tag": "0004_create_admin_accounts",
+      "breakpoints": true
     }
   ]
 }

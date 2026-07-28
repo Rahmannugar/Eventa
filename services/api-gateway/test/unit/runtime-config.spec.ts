@@ -4,6 +4,7 @@ import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
   API_DOCS_ENABLED: 'true',
+  ADMIN_CLIENT_ORIGIN: 'http://localhost:5274',
   ATTENDEE_CLIENT_ORIGIN: 'http://localhost:5273',
   HTTP_HEADERS_TIMEOUT_MS: '10000',
   HTTP_KEEP_ALIVE_TIMEOUT_MS: '5000',
@@ -31,6 +32,7 @@ describe('readRuntimeConfig', () => {
       }),
     ).toEqual({
       apiDocsEnabled: true,
+      adminClientOrigin: 'http://localhost:5274',
       attendeeClientOrigin: 'http://localhost:5273',
       httpHeadersTimeoutMs: 10000,
       httpKeepAliveTimeoutMs: 5000,

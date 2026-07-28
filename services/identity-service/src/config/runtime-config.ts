@@ -1,4 +1,5 @@
 export interface RuntimeConfig {
+  adminActivationHmacSecret: string;
   databaseUrl: string;
   emailVerificationHmacSecret: string;
   passwordResetHmacSecret: string;
@@ -109,6 +110,7 @@ function readKafkaBrokers(environment: NodeJS.ProcessEnv): string[] {
 function readHmacSecret(
   environment: NodeJS.ProcessEnv,
   name:
+    | 'ADMIN_ACTIVATION_HMAC_SECRET'
     | 'ATTENDEE_SESSION_HMAC_SECRET'
     | 'EMAIL_VERIFICATION_HMAC_SECRET'
     | 'PASSWORD_RESET_HMAC_SECRET',
@@ -126,6 +128,10 @@ export function readRuntimeConfig(
   environment: NodeJS.ProcessEnv,
 ): RuntimeConfig {
   return {
+    adminActivationHmacSecret: readHmacSecret(
+      environment,
+      'ADMIN_ACTIVATION_HMAC_SECRET',
+    ),
     attendeeSessionHmacSecret: readHmacSecret(
       environment,
       'ATTENDEE_SESSION_HMAC_SECRET',

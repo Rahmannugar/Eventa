@@ -28,4 +28,10 @@ The versioned JSON payload contains:
 - `expiresAt`: canonical absolute ISO timestamp;
 - `type`: exact versioned job type.
 
-We apply the same strict AMQP-property, field, size, expiry, retry, acknowledgement, and no-terminal-DLQ rules as verification delivery. Password-reset jobs have their own queue, retry queues, consumer, sender, and durable delivery table.
+We apply the same strict AMQP-property, field, size, expiry, retry, acknowledgement, and no-terminal-DLQ rules as verification delivery.
+
+## Admin Activation Job
+
+We consume `admin.activation.v1` from the durable quorum queue `eventa.notification.admin-activation.v1`. Its payload carries a UUID job ID, in-memory recipient email, six-digit OTP, canonical expiry, and exact type. The same validation, confirmed retry, bounded-attempt, expiry, idempotency, and privacy rules apply.
+
+All three job types record outcomes in `auth_email_deliveries`. Job type and expiry must match an existing job ID exactly.

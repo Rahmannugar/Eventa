@@ -1,4 +1,20 @@
 export {
+  ADMIN_IDENTITY_SERVICE_NAME,
+  AdminIdentityServiceControllerMethods,
+  type AdminIdentityServiceClient,
+  type AdminIdentityServiceController,
+} from '../../generated/eventa/identity/v1/admin_identity_service.generated';
+export type {
+  RegisterAdminRequest,
+  RegisterAdminResponse,
+} from '../../generated/eventa/identity/v1/admin_registration.generated';
+export type {
+  CompleteAdminActivationRequest,
+  CompleteAdminActivationResponse,
+  ConfirmAdminActivationRequest,
+  ConfirmAdminActivationResponse,
+} from '../../generated/eventa/identity/v1/admin_activation.generated';
+export {
   ATTENDEE_IDENTITY_SERVICE_NAME,
   AttendeeIdentityServiceControllerMethods,
   EVENTA_IDENTITY_V1_PACKAGE_NAME,

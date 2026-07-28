@@ -1,5 +1,6 @@
 export interface RuntimeConfig {
   apiDocsEnabled: boolean;
+  adminClientOrigin: string;
   attendeeClientOrigin: string;
   httpHeadersTimeoutMs: number;
   httpKeepAliveTimeoutMs: number;
@@ -148,6 +149,7 @@ export function readRuntimeConfig(
   }
 
   return {
+    adminClientOrigin: readOrigin(environment, 'ADMIN_CLIENT_ORIGIN'),
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
     attendeeClientOrigin: readOrigin(environment, 'ATTENDEE_CLIENT_ORIGIN'),
     httpHeadersTimeoutMs,

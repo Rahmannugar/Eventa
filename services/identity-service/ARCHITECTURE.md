@@ -4,7 +4,7 @@
 
 Identity owns attendee and admin security principals, credentials, verification state, account lifecycle, and sessions. Each implemented identity domain owns its application flow, state rules, and concise API and architecture documentation.
 
-Identity contains the Attendees domain. Its registration, email verification, login, session, and password-recovery behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
+Identity contains separate Admins and Attendees domains. Their behavior is documented in [src/admins/ARCHITECTURE.md](src/admins/ARCHITECTURE.md) and [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
 
 ## Service Composition
 
@@ -21,6 +21,8 @@ Drizzle schemas and migrations remain inside Identity and are organized by ownin
 Migration `0001_move_username_to_attendee_accounts` forwards already-migrated databases by copying usernames from the former profile table before enforcing non-null uniqueness and dropping that table.
 
 Migration `0002_add_attendee_account_lifecycle` adds active/suspended status and the permanent soft-deletion timestamp. Live sessions remain Identity-owned Redis state.
+
+Migration `0004_create_admin_accounts` adds the separate inherently-admin account model. Reviewed operator SQL provisions inactive canonical emails; public activation cannot create rows.
 
 ## Health and Failure
 

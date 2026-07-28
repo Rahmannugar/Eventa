@@ -1,25 +1,20 @@
 import type { AttendeeEmailVerificationJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
-import { Inject } from '@nestjs/common';
 
 import {
-  EMAIL_VERIFICATION_DELIVERY_REPOSITORY,
-  EMAIL_VERIFICATION_EMAIL_SENDER,
   EMAIL_VERIFICATION_MAX_DELIVERY_ATTEMPTS,
   EMAIL_VERIFICATION_RETRY_DELAYS_MS,
 } from '../constants/email-verification-delivery.constants';
 import { EmailDeliveryError } from '../errors/email-delivery.errors';
-import type {
-  EmailVerificationDeliveryOutcome,
-  EmailVerificationDeliveryRepository,
-  EmailVerificationEmailSender,
-} from '../types/email-verification-delivery.types';
+import type { EmailDeliveryProvider } from '../ports/email-delivery.provider';
+import { attendeeEmailVerificationTemplate } from '../templates/attendee-email-verification.template';
+import type { AuthEmailDeliveryRepository } from '../types/auth-email-delivery.types';
+import type { EmailVerificationDeliveryOutcome } from '../types/email-verification-delivery.types';
 
 export class EmailVerificationDeliveryService {
   constructor(
-    @Inject(EMAIL_VERIFICATION_DELIVERY_REPOSITORY)
-    private readonly deliveries: EmailVerificationDeliveryRepository,
-    @Inject(EMAIL_VERIFICATION_EMAIL_SENDER)
-    private readonly emailSender: EmailVerificationEmailSender,
+    private readonly deliveries: AuthEmailDeliveryRepository,
+    private readonly emailDeliveryProvider: EmailDeliveryProvider,
+    private readonly from: string,
   ) {}
 
   async deliver(
@@ -42,15 +37,17 @@ export class EmailVerificationDeliveryService {
     }
 
     try {
-      const result = await this.emailSender.send({
-        jobId: job.jobId,
-        otp: job.otp,
-        recipientEmail: job.recipientEmail,
+      const content = attendeeEmailVerificationTemplate(job.otp);
+      const result = await this.emailDeliveryProvider.send({
+        ...content,
+        from: this.from,
+        idempotencyKey: job.jobId,
+        to: job.recipientEmail,
       });
       const recorded = await this.deliveries.markDelivered(
         job.jobId,
         claim.claimToken,
-        result.providerMessageId,
+        result.messageId,
       );
 
       return recorded ? { kind: 'delivered' } : this.recoveryRetryOutcome();
@@ -65,7 +62,11 @@ export class EmailVerificationDeliveryService {
   }
 
   async recordRejected(jobId: string, failureCode: string): Promise<void> {
-    await this.deliveries.recordRejected(jobId, failureCode);
+    await this.deliveries.recordRejected(
+      jobId,
+      'attendee.email-verification.v1',
+      failureCode,
+    );
   }
 
   private async handleDeliveryFailure(

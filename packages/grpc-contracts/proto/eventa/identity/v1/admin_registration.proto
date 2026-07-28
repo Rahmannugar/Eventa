@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message RegisterAdminRequest {
+  string email = 1;
+}
+
+message RegisterAdminResponse {
+  bool accepted = 1;
+}

@@ -2,10 +2,11 @@
 
 ## Business Domains
 
-Identity implements `eventa.identity.v1.AttendeeIdentityService` from [../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto](../../packages/grpc-contracts/proto/eventa/identity/v1/attendee_identity_service.proto).
+Identity implements the attendee and admin services in `eventa.identity.v1`.
 
 | Domain    | Internal surface                          | Documentation                         |
 | --------- | ----------------------------------------- | ------------------------------------- |
+| Admins    | `AdminIdentityService` gRPC operations    | [Admins API](src/admins/API.md)       |
 | Attendees | `AttendeeIdentityService` gRPC operations | [Attendees API](src/attendees/API.md) |
 
 The protobuf file is authoritative for service names, method names, wire fields, and field numbers. Domain API files explain command/query behavior and failures without duplicating the machine-readable contract.

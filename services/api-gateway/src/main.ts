@@ -27,7 +27,7 @@ async function bootstrap(): Promise<void> {
       'X-Request-ID',
     ],
     maxAge: 600,
-    origin: config.attendeeClientOrigin,
+    origin: [config.adminClientOrigin, config.attendeeClientOrigin],
   });
   app.useGlobalFilters(new ApiErrorFilter());
   app.useGlobalPipes(
