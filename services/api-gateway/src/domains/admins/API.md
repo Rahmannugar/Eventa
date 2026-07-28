@@ -23,3 +23,13 @@ Missing, expired, reused, or otherwise invalid activation state returns `400`. A
 `POST /auth/admins/login` accepts email and password. Only an activated admin with matching credentials receives `200` with admin ID and canonical email. Unknown, unactivated, and wrong-password attempts share `401 INVALID_CREDENTIALS`.
 
 Success sets `eventa_admin_session` as a host-only HttpOnly, `SameSite=Lax`, `Path=/` cookie with Identity's fixed seven-day expiry. A fourth concurrent login silently replaces the oldest admin session. Login never refreshes another session.
+
+## Current account
+
+`GET /auth/admins/me` requires the admin session cookie and returns the activated admin ID and email. Missing, malformed, expired, revoked, or ineligible sessions return `401 ADMIN_SESSION_INVALID`.
+
+## Logout
+
+`POST /auth/admins/logout` revokes the presented Redis session before clearing the cookie and returns `204`. Missing or malformed cookies are cleared idempotently. Identity failure returns `503` and leaves a valid cookie intact.
+
+Current-account and logout requests have separate IP and protected-session abuse controls. Authentication dependency failures return `503 ADMIN_AUTHENTICATION_UNAVAILABLE`.

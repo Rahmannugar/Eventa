@@ -2,7 +2,10 @@ import {
   AdminIdentityServiceControllerMethods,
   type CompleteAdminActivationResponse,
   type ConfirmAdminActivationResponse,
+  type AuthenticateAdminSessionResponse,
+  type GetCurrentAdminAccountResponse,
   type LoginAdminResponse,
+  type LogoutAdminResponse,
   type AdminIdentityServiceController,
   type RegisterAdminResponse,
 } from '@eventa/grpc-contracts';
@@ -24,11 +27,17 @@ import {
   AdminActivationStateUnavailableError,
 } from '../errors/admin-activation.errors';
 import { AdminActivationService } from '../services/admin-activation.service';
-import {
-  AdminSessionStateUnavailableError,
-  InvalidAdminCredentialsError,
-} from '../errors/admin-login.errors';
+import { InvalidAdminCredentialsError } from '../errors/admin-login.errors';
+import { AdminSessionStateUnavailableError } from '../errors/admin-session.errors';
+import { InvalidAdminSessionError } from '../errors/admin-session.errors';
 import { AdminLoginService } from '../services/admin-login.service';
+import {
+  AuthenticateAdminSessionDto,
+  GetCurrentAdminAccountDto,
+  LogoutAdminDto,
+} from '../dto/admin-session.dto';
+import { AdminSessionService } from '../services/admin-session.service';
+import { AdminAccountService } from '../services/admin-account.service';
 
 @Controller()
 @AdminIdentityServiceControllerMethods()
@@ -36,6 +45,8 @@ export class AdminIdentityController implements AdminIdentityServiceController {
   constructor(
     private readonly adminActivation: AdminActivationService,
     private readonly adminLogin: AdminLoginService,
+    private readonly adminSessions: AdminSessionService,
+    private readonly adminAccounts: AdminAccountService,
   ) {}
 
   registerAdmin(request: RegisterAdminDto): Observable<RegisterAdminResponse> {
@@ -56,6 +67,22 @@ export class AdminIdentityController implements AdminIdentityServiceController {
 
   loginAdmin(request: LoginAdminDto): Observable<LoginAdminResponse> {
     return from(this.handleLogin(request));
+  }
+
+  authenticateAdminSession(
+    request: AuthenticateAdminSessionDto,
+  ): Observable<AuthenticateAdminSessionResponse> {
+    return from(this.handleSessionAuthentication(request.sessionToken));
+  }
+
+  getCurrentAdminAccount(
+    request: GetCurrentAdminAccountDto,
+  ): Observable<GetCurrentAdminAccountResponse> {
+    return from(this.handleCurrentAccount(request.adminId));
+  }
+
+  logoutAdmin(request: LogoutAdminDto): Observable<LogoutAdminResponse> {
+    return from(this.handleLogout(request.sessionToken));
   }
 
   private async handleRegistration(
@@ -151,5 +178,56 @@ export class AdminIdentityController implements AdminIdentityServiceController {
 
       throw error;
     }
+  }
+
+  private async handleSessionAuthentication(
+    token: string,
+  ): Promise<AuthenticateAdminSessionResponse> {
+    try {
+      const session = await this.adminSessions.require(token);
+      return {
+        adminId: session.adminId,
+        sessionExpiresAt: session.expiresAt.toISOString(),
+        sessionId: session.sessionId,
+      };
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private async handleCurrentAccount(
+    adminId: string,
+  ): Promise<GetCurrentAdminAccountResponse> {
+    try {
+      return await this.adminAccounts.getCurrentAccount(adminId);
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private async handleLogout(token: string): Promise<LogoutAdminResponse> {
+    try {
+      return { revoked: await this.adminSessions.revoke(token) };
+    } catch (error: unknown) {
+      this.translateSessionError(error);
+    }
+  }
+
+  private translateSessionError(error: unknown): never {
+    if (error instanceof InvalidAdminSessionError) {
+      throw new RpcException({
+        code: status.UNAUTHENTICATED,
+        message: error.message,
+      });
+    }
+
+    if (error instanceof AdminSessionStateUnavailableError) {
+      throw new RpcException({
+        code: status.UNAVAILABLE,
+        message: error.message,
+      });
+    }
+
+    throw error;
   }
 }

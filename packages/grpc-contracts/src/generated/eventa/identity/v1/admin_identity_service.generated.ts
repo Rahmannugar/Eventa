@@ -16,6 +16,14 @@ import {
 } from "./admin_activation.generated";
 import { LoginAdminRequest, LoginAdminResponse } from "./admin_login.generated";
 import { RegisterAdminRequest, RegisterAdminResponse } from "./admin_registration.generated";
+import {
+  AuthenticateAdminSessionRequest,
+  AuthenticateAdminSessionResponse,
+  GetCurrentAdminAccountRequest,
+  GetCurrentAdminAccountResponse,
+  LogoutAdminRequest,
+  LogoutAdminResponse,
+} from "./admin_session.generated";
 
 export const protobufPackage = "eventa.identity.v1";
 
@@ -35,6 +43,18 @@ export interface AdminIdentityServiceClient {
   ): Observable<CompleteAdminActivationResponse>;
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
+
+  authenticateAdminSession(
+    request: AuthenticateAdminSessionRequest,
+    metadata?: Metadata,
+  ): Observable<AuthenticateAdminSessionResponse>;
+
+  getCurrentAdminAccount(
+    request: GetCurrentAdminAccountRequest,
+    metadata?: Metadata,
+  ): Observable<GetCurrentAdminAccountResponse>;
+
+  logoutAdmin(request: LogoutAdminRequest, metadata?: Metadata): Observable<LogoutAdminResponse>;
 }
 
 export interface AdminIdentityServiceController {
@@ -51,11 +71,31 @@ export interface AdminIdentityServiceController {
   ): Observable<CompleteAdminActivationResponse>;
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
+
+  authenticateAdminSession(
+    request: AuthenticateAdminSessionRequest,
+    metadata?: Metadata,
+  ): Observable<AuthenticateAdminSessionResponse>;
+
+  getCurrentAdminAccount(
+    request: GetCurrentAdminAccountRequest,
+    metadata?: Metadata,
+  ): Observable<GetCurrentAdminAccountResponse>;
+
+  logoutAdmin(request: LogoutAdminRequest, metadata?: Metadata): Observable<LogoutAdminResponse>;
 }
 
 export function AdminIdentityServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["registerAdmin", "confirmAdminActivation", "completeAdminActivation", "loginAdmin"];
+    const grpcMethods: string[] = [
+      "registerAdmin",
+      "confirmAdminActivation",
+      "completeAdminActivation",
+      "loginAdmin",
+      "authenticateAdminSession",
+      "getCurrentAdminAccount",
+      "logoutAdmin",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AdminIdentityService", method)(constructor.prototype[method], method, descriptor);

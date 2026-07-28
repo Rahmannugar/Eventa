@@ -4,10 +4,3 @@ export class InvalidAdminCredentialsError extends Error {
     this.name = InvalidAdminCredentialsError.name;
   }
 }
-
-export class AdminSessionStateUnavailableError extends Error {
-  constructor() {
-    super('ADMIN_SESSION_STATE_UNAVAILABLE');
-    this.name = AdminSessionStateUnavailableError.name;
-  }
-}

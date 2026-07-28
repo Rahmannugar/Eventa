@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message AuthenticateAdminSessionRequest {
+  string session_token = 1;
+}
+
+message AuthenticateAdminSessionResponse {
+  string admin_id = 1;
+  string session_id = 2;
+  string session_expires_at = 3;
+}
+
+message GetCurrentAdminAccountRequest {
+  string admin_id = 1;
+}
+
+message GetCurrentAdminAccountResponse {
+  string admin_id = 1;
+  string email = 2;
+}
+
+message LogoutAdminRequest {
+  string session_token = 1;
+}
+
+message LogoutAdminResponse {
+  bool revoked = 1;
+}

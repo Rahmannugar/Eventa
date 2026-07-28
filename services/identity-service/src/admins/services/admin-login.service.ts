@@ -2,12 +2,9 @@ import type { PasswordVerifier } from '../../security/types/password-verifier.ty
 import { InvalidAdminCredentialsError } from '../errors/admin-login.errors';
 import type {
   AdminLoginRepository,
-  AdminSessionIssuer,
   LoggedInAdmin,
 } from '../types/admin-login.types';
-
-const INVALID_LOGIN_PASSWORD_HASH =
-  '$argon2id$v=19$m=65536,t=3,p=4$ZXZlbnRhLWxvZ2luLXNhbHQ$X1DCQPCT6hOJuXLJgazxWCP2S8h0TpQ2wFVxH4v5d1k';
+import type { AdminSessionIssuer } from '../types/admin-session.types';
 
 export class AdminLoginService {
   constructor(
@@ -18,18 +15,18 @@ export class AdminLoginService {
 
   async login(email: string, password: string): Promise<LoggedInAdmin> {
     const canonicalEmail = email.trim().toLowerCase();
-    const account = await this.repository.findForLogin(canonicalEmail);
+    const account = await this.repository.findActivatedForLogin(canonicalEmail);
+
+    if (account === undefined) {
+      throw new InvalidAdminCredentialsError();
+    }
+
     const passwordMatches = await this.passwordVerifier.verify(
-      account?.passwordHash ?? INVALID_LOGIN_PASSWORD_HASH,
+      account.passwordHash,
       password,
     );
 
-    if (
-      account === undefined ||
-      !account.activated ||
-      account.passwordHash === null ||
-      !passwordMatches
-    ) {
+    if (!passwordMatches) {
       throw new InvalidAdminCredentialsError();
     }
 

@@ -1,15 +1,12 @@
 import { createHmac, randomBytes, randomInt } from 'node:crypto';
 
-import { Inject, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 
 import {
   ADMIN_ACTIVATION_OTP_MAX_GUESSES,
-  ADMIN_ACTIVATION_OTP_STATE,
   ADMIN_ACTIVATION_OTP_TTL_MS,
   ADMIN_ACTIVATION_GRANT_TTL_MS,
-  ADMIN_ACTIVATION_REPOSITORY,
   ADMIN_ACTIVATION_REQUEST_COOLDOWN_MS,
-  ADMIN_AUTH_JOB_PUBLISHER,
 } from '../constants/admin-activation.constants';
 import {
   AdminActivationGrantInvalidError,
@@ -27,11 +24,8 @@ export class AdminActivationService {
   private readonly logger = new Logger(AdminActivationService.name);
 
   constructor(
-    @Inject(ADMIN_ACTIVATION_REPOSITORY)
     private readonly admins: AdminActivationRepository,
-    @Inject(ADMIN_ACTIVATION_OTP_STATE)
     private readonly otpState: AdminActivationOtpState,
-    @Inject(ADMIN_AUTH_JOB_PUBLISHER)
     private readonly jobPublisher: AdminAuthJobPublisher,
     private readonly passwordHasher: PasswordHasher,
     private readonly hmacSecret: string,

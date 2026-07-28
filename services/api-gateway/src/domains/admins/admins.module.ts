@@ -15,7 +15,9 @@ import {
 } from './constants/admin-registration.constants';
 import { AdminActivationController } from './controllers/admin-activation.controller';
 import { AdminLoginController } from './controllers/admin-login.controller';
+import { AdminSessionController } from './controllers/admin-session.controller';
 import { AdminClientOriginGuard } from './guards/admin-client-origin.guard';
+import { AdminAuthenticationGuard } from './guards/admin-authentication.guard';
 import {
   AdminRegistrationRateLimitGuard,
   AdminRegistrationRateLimitService,
@@ -33,6 +35,12 @@ import {
 } from './rate-limit/admin-login-rate-limit';
 import { AdminLoginService } from './services/admin-login.service';
 import { AdminSessionCookie } from './services/admin-session-cookie.service';
+import { AdminSessionService } from './services/admin-session.service';
+import {
+  AdminAccountRateLimitGuard,
+  AdminLogoutRateLimitGuard,
+  AdminSessionRateLimitService,
+} from './rate-limit/admin-session-rate-limit';
 
 interface AdminsModuleOptions {
   adminClientOrigin: string;
@@ -61,7 +69,11 @@ export class AdminsModule {
           },
         ]),
       ],
-      controllers: [AdminActivationController, AdminLoginController],
+      controllers: [
+        AdminActivationController,
+        AdminLoginController,
+        AdminSessionController,
+      ],
       providers: [
         {
           provide: ADMIN_CLIENT_ORIGIN,
@@ -73,6 +85,13 @@ export class AdminsModule {
         },
         AdminActivationService,
         AdminLoginService,
+        AdminSessionService,
+        {
+          provide: AdminSessionRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AdminSessionRateLimitService(state, options.rateLimitKeySecret),
+          inject: [RATE_LIMIT_STATE],
+        },
         {
           provide: AdminActivationCookie,
           useFactory: () => new AdminActivationCookie(options.secureCookies),
@@ -106,6 +125,9 @@ export class AdminsModule {
           inject: [RATE_LIMIT_STATE],
         },
         AdminClientOriginGuard,
+        AdminAuthenticationGuard,
+        AdminAccountRateLimitGuard,
+        AdminLogoutRateLimitGuard,
         AdminActivationConfirmRateLimitGuard,
         AdminActivationCompleteRateLimitGuard,
         AdminLoginRateLimitGuard,

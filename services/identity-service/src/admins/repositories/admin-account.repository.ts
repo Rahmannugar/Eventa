@@ -13,9 +13,13 @@ import type {
   AdminLoginAccount,
   AdminLoginRepository,
 } from '../types/admin-login.types';
+import type {
+  AdminAccount,
+  AdminAccountRepository as AdminAccountReader,
+} from '../types/admin-session.types';
 
 export class AdminAccountRepository
-  implements AdminActivationRepository, AdminLoginRepository
+  implements AdminActivationRepository, AdminLoginRepository, AdminAccountReader
 {
   constructor(
     @Inject(IDENTITY_DATABASE)
@@ -96,29 +100,60 @@ export class AdminAccountRepository
     );
   }
 
-  findForLogin(email: string): Promise<AdminLoginAccount | undefined> {
+  findActivatedForLogin(email: string): Promise<AdminLoginAccount | undefined> {
     return runWithOperationSpan(
-      'admin_account.find_for_login',
+      'admin_account.find_activated_for_login',
       async () => {
         const [account] = await this.database
           .select({
-            activatedAt: adminAccounts.activatedAt,
             adminId: adminAccounts.id,
             email: adminAccounts.email,
-            passwordHash: adminAccounts.passwordHash,
+            passwordHash: sql<string>`${adminAccounts.passwordHash}`,
           })
           .from(adminAccounts)
-          .where(eq(adminAccounts.email, email))
+          .where(
+            and(
+              eq(adminAccounts.email, email),
+              isNotNull(adminAccounts.emailVerifiedAt),
+              isNotNull(adminAccounts.passwordHash),
+              isNotNull(adminAccounts.activatedAt),
+            ),
+          )
           .limit(1);
 
         return account === undefined
           ? undefined
           : {
-              activated: account.activatedAt !== null,
               adminId: account.adminId,
               email: account.email,
               passwordHash: account.passwordHash,
             };
+      },
+      this.spanOptions('SELECT'),
+    );
+  }
+
+  findActivatedAccount(adminId: string): Promise<AdminAccount | undefined> {
+    return runWithOperationSpan(
+      'admin_account.find_activated',
+      async () => {
+        const [account] = await this.database
+          .select({
+            adminId: adminAccounts.id,
+            email: adminAccounts.email,
+          })
+          .from(adminAccounts)
+          .where(
+            and(
+              eq(adminAccounts.id, adminId),
+              isNotNull(adminAccounts.emailVerifiedAt),
+              isNotNull(adminAccounts.passwordHash),
+              isNotNull(adminAccounts.activatedAt),
+            ),
+          )
+          .limit(1);
+
+        return account;
       },
       this.spanOptions('SELECT'),
     );

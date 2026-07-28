@@ -4,8 +4,14 @@ import type {
   CompleteAdminActivationResponse,
   ConfirmAdminActivationRequest,
   ConfirmAdminActivationResponse,
+  AuthenticateAdminSessionRequest,
+  AuthenticateAdminSessionResponse,
+  GetCurrentAdminAccountRequest,
+  GetCurrentAdminAccountResponse,
   LoginAdminRequest,
   LoginAdminResponse,
+  LogoutAdminRequest,
+  LogoutAdminResponse,
   RegisterAdminRequest,
   RegisterAdminResponse,
 } from '@eventa/grpc-contracts';
@@ -33,4 +39,19 @@ export interface DeadlineAwareAdminIdentityServiceClient extends AdminIdentitySe
     metadata?: Metadata,
     options?: CallOptions,
   ): Observable<LoginAdminResponse>;
+  authenticateAdminSession(
+    request: AuthenticateAdminSessionRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<AuthenticateAdminSessionResponse>;
+  getCurrentAdminAccount(
+    request: GetCurrentAdminAccountRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<GetCurrentAdminAccountResponse>;
+  logoutAdmin(
+    request: LogoutAdminRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<LogoutAdminResponse>;
 }

@@ -13,7 +13,7 @@ const ADMIN_ID = '8d6773a0-5ad9-4cba-9b3b-099e37d91655';
 class LoginRepository implements AdminLoginRepository {
   account: AdminLoginAccount | undefined;
 
-  findForLogin(): Promise<AdminLoginAccount | undefined> {
+  findActivatedForLogin(): Promise<AdminLoginAccount | undefined> {
     return Promise.resolve(this.account);
   }
 }
@@ -57,7 +57,6 @@ describe('admin login', () => {
   it('creates a seven-day session only after activated credentials match', async () => {
     const { repository, service, sessions } = setup();
     repository.account = {
-      activated: true,
       adminId: ADMIN_ID,
       email: 'admin@example.com',
       passwordHash: 'valid-hash',
@@ -74,21 +73,11 @@ describe('admin login', () => {
     expect(sessions.issued).toEqual([ADMIN_ID]);
   });
 
-  it('keeps unknown and unactivated accounts behind the same credential failure', async () => {
-    const { repository, service, sessions } = setup();
+  it('rejects an unavailable account without creating a session', async () => {
+    const { service, sessions } = setup();
 
     await expect(
       service.login('missing@example.com', 'password-1'),
-    ).rejects.toBeInstanceOf(InvalidAdminCredentialsError);
-
-    repository.account = {
-      activated: false,
-      adminId: ADMIN_ID,
-      email: 'admin@example.com',
-      passwordHash: null,
-    };
-    await expect(
-      service.login('admin@example.com', 'password-1'),
     ).rejects.toBeInstanceOf(InvalidAdminCredentialsError);
     expect(sessions.issued).toHaveLength(0);
   });

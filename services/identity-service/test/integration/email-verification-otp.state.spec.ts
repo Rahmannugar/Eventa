@@ -205,6 +205,14 @@ describe('RedisEmailVerificationOtpState integration', () => {
       expect(ttl).toBeGreaterThan(6 * 24 * 60 * 60 * 1_000);
       expect(ttl).toBeLessThanOrEqual(7 * 24 * 60 * 60 * 1_000);
     }
+
+    await expect(adminSessionState.read('digest-2')).resolves.toMatchObject({
+      adminId: 'admin-1',
+      sessionId: 'session-2',
+    });
+    await expect(adminSessionState.revoke('digest-2')).resolves.toBe(true);
+    await expect(adminSessionState.read('digest-2')).resolves.toBeUndefined();
+    await expect(adminSessionState.revoke('digest-2')).resolves.toBe(false);
   });
 
   it('keeps session state only for its fixed lifetime', async () => {

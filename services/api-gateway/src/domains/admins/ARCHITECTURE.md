@@ -7,3 +7,5 @@ The activation credential is an opaque 32-byte value carried only in a host-only
 Gateway contains no admin eligibility or activation business rules. Identity decides whether a provisioned account may receive an OTP, verifies temporary state, and performs the activation transition.
 
 Admin login has independent client-IP and protected-email abuse controls. Gateway forwards the validated command with a bounded Identity deadline and places the opaque Identity-issued token only in `eventa_admin_session`; the response body contains no session credential.
+
+Gateway authenticates the admin cookie through Identity before requesting account data. Identity returns only bounded session identity from Redis; a separate account query supplies the activated admin ID and email. Logout asks Identity to revoke the session before Gateway clears the cookie, so dependency failure cannot look like a successful sign-out.

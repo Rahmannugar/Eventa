@@ -1,11 +1,12 @@
 import { runWithOperationSpan } from '@eventa/observability';
 
 import type { RedisClient } from '../../../infrastructure/clients/redis.client';
-import { AdminSessionStateUnavailableError } from '../../errors/admin-login.errors';
+import { AdminSessionStateUnavailableError } from '../../errors/admin-session.errors';
 import type {
   AdminSession,
   AdminSessionState,
-} from '../../types/admin-login.types';
+  CreateAdminSession,
+} from '../../types/admin-session.types';
 
 const CREATE_SESSION_SCRIPT = `
 local now = redis.call('TIME')
@@ -44,47 +45,60 @@ redis.call('PEXPIREAT', KEYS[2], expires_at)
 return { ARGV[3], expires_at }
 `;
 
+const READ_SESSION_SCRIPT = `
+local admin_id = redis.call('HGET', KEYS[1], 'admin_id')
+if not admin_id then
+  return {}
+end
+
+return {
+  admin_id,
+  redis.call('HGET', KEYS[1], 'session_id'),
+  redis.call('HGET', KEYS[1], 'expires_at')
+}
+`;
+
+const REVOKE_SESSION_SCRIPT = `
+local admin_subject = redis.call('HGET', KEYS[1], 'admin_subject')
+if not admin_subject then
+  return 0
+end
+
+local account_key = ARGV[1] .. admin_subject
+redis.call('DEL', KEYS[1])
+redis.call('ZREM', account_key, KEYS[1])
+if redis.call('ZCARD', account_key) == 0 then
+  redis.call('DEL', account_key)
+end
+return 1
+`;
+
+const ACCOUNT_KEY_PREFIX = 'identity:admin-session-account:v1:';
+
 function sessionKey(tokenDigest: string): string {
   return `identity:admin-session:v1:${tokenDigest}`;
 }
 
 function accountKey(adminSubject: string): string {
-  return `identity:admin-session-account:v1:${adminSubject}`;
+  return `${ACCOUNT_KEY_PREFIX}${adminSubject}`;
 }
 
 export class RedisAdminSessionState implements AdminSessionState {
   constructor(private readonly redis: RedisClient) {}
 
-  async create(input: {
-    adminId: string;
-    adminSubject: string;
-    maxConcurrentSessions: number;
-    sessionId: string;
-    tokenDigest: string;
-    ttlMs: number;
-  }): Promise<AdminSession> {
+  async create(input: CreateAdminSession): Promise<AdminSession> {
     try {
-      const result = await runWithOperationSpan(
+      const result = await this.evaluate(
         'admin_session.create',
-        () =>
-          this.redis.evaluate(
-            CREATE_SESSION_SCRIPT,
-            [sessionKey(input.tokenDigest), accountKey(input.adminSubject)],
-            [
-              input.adminId,
-              input.adminSubject,
-              input.sessionId,
-              String(input.ttlMs),
-              String(input.maxConcurrentSessions),
-            ],
-          ),
-        {
-          attributes: {
-            'db.operation.name': 'EVAL',
-            'db.system.name': 'redis',
-          },
-          kind: 'client',
-        },
+        CREATE_SESSION_SCRIPT,
+        [sessionKey(input.tokenDigest), accountKey(input.adminSubject)],
+        [
+          input.adminId,
+          input.adminSubject,
+          input.sessionId,
+          String(input.ttlMs),
+          String(input.maxConcurrentSessions),
+        ],
       );
 
       if (!Array.isArray(result) || result.length !== 2) {
@@ -108,5 +122,87 @@ export class RedisAdminSessionState implements AdminSessionState {
     } catch {
       throw new AdminSessionStateUnavailableError();
     }
+  }
+
+  async read(tokenDigest: string): Promise<AdminSession | undefined> {
+    try {
+      const result = await this.evaluate(
+        'admin_session.read',
+        READ_SESSION_SCRIPT,
+        [sessionKey(tokenDigest)],
+        [],
+      );
+
+      if (!Array.isArray(result)) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      if (result.length === 0) {
+        return undefined;
+      }
+
+      if (result.length !== 3) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      const adminId = String(result[0]);
+      const sessionId = String(result[1]);
+      const expiresAtMs = Number(result[2]);
+      const expiresAt = new Date(expiresAtMs);
+
+      if (
+        adminId === '' ||
+        sessionId === '' ||
+        !Number.isSafeInteger(expiresAtMs) ||
+        expiresAtMs <= 0 ||
+        Number.isNaN(expiresAt.getTime())
+      ) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      return { adminId, expiresAt, sessionId };
+    } catch {
+      throw new AdminSessionStateUnavailableError();
+    }
+  }
+
+  async revoke(tokenDigest: string): Promise<boolean> {
+    try {
+      const result = Number(
+        await this.evaluate(
+          'admin_session.revoke',
+          REVOKE_SESSION_SCRIPT,
+          [sessionKey(tokenDigest)],
+          [ACCOUNT_KEY_PREFIX],
+        ),
+      );
+
+      if (result !== 0 && result !== 1) {
+        throw new Error('INVALID_ADMIN_SESSION_STATE');
+      }
+
+      return result === 1;
+    } catch {
+      throw new AdminSessionStateUnavailableError();
+    }
+  }
+
+  private evaluate(
+    operation: string,
+    script: string,
+    keys: string[],
+    arguments_: string[],
+  ): Promise<unknown> {
+    return runWithOperationSpan(
+      operation,
+      () => this.redis.evaluate(script, keys, arguments_),
+      {
+        attributes: {
+          'db.operation.name': 'EVAL',
+          'db.system.name': 'redis',
+        },
+        kind: 'client',
+      },
+    );
   }
 }

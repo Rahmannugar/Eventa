@@ -18,6 +18,14 @@ export type {
   LoginAdminRequest,
   LoginAdminResponse,
 } from '../../generated/eventa/identity/v1/admin_login.generated';
+export type {
+  AuthenticateAdminSessionRequest,
+  AuthenticateAdminSessionResponse,
+  GetCurrentAdminAccountRequest,
+  GetCurrentAdminAccountResponse,
+  LogoutAdminRequest,
+  LogoutAdminResponse,
+} from '../../generated/eventa/identity/v1/admin_session.generated';
 export {
   ATTENDEE_IDENTITY_SERVICE_NAME,
   AttendeeIdentityServiceControllerMethods,

@@ -1,6 +1,16 @@
 const SESSION_COOKIE_NAME = 'eventa_admin_session';
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 export interface AdminSessionCookieResponse {
+  clearCookie(
+    name: string,
+    options: {
+      httpOnly: boolean;
+      path: string;
+      sameSite: 'lax';
+      secure: boolean;
+    },
+  ): void;
   cookie(
     name: string,
     value: string,
@@ -17,6 +27,24 @@ export interface AdminSessionCookieResponse {
 export class AdminSessionCookie {
   constructor(private readonly secure: boolean) {}
 
+  read(cookieHeader: string | undefined): string | undefined {
+    if (cookieHeader === undefined) {
+      return undefined;
+    }
+
+    const values = cookieHeader
+      .split(';')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.startsWith(`${SESSION_COOKIE_NAME}=`))
+      .map((entry) => entry.slice(SESSION_COOKIE_NAME.length + 1));
+
+    if (values.length !== 1 || !SESSION_TOKEN_PATTERN.test(values[0] ?? '')) {
+      return undefined;
+    }
+
+    return values[0];
+  }
+
   set(
     response: AdminSessionCookieResponse,
     token: string,
@@ -24,10 +52,20 @@ export class AdminSessionCookie {
   ): void {
     response.cookie(SESSION_COOKIE_NAME, token, {
       expires: new Date(expiresAt),
+      ...this.options(),
+    });
+  }
+
+  clear(response: AdminSessionCookieResponse): void {
+    response.clearCookie(SESSION_COOKIE_NAME, this.options());
+  }
+
+  private options() {
+    return {
       httpOnly: true,
       path: '/',
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       secure: this.secure,
-    });
+    };
   }
 }
