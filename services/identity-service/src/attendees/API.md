@@ -63,3 +63,23 @@ The request contains `email`. Success returns `accepted = true` without disclosi
 | `INVALID_ARGUMENT`   | Identity validation rejected the command shape.  |
 | `RESOURCE_EXHAUSTED` | The per-email resend cooldown is active.         |
 | `UNAVAILABLE`        | Verification state could not be read or changed. |
+
+## ForgotAttendeePassword Command
+
+The request contains `email`. Success returns `accepted = true` for unknown, ineligible, and eligible attendees alike. Identity reserves the 60-second request cooldown before account lookup. Only a verified, active, non-deleted attendee receives a new six-digit code.
+
+| gRPC status          | Meaning                                                |
+| -------------------- | ------------------------------------------------------ |
+| `INVALID_ARGUMENT`   | Identity validation rejected the email shape.          |
+| `RESOURCE_EXHAUSTED` | The per-email password-reset request cooldown is active. |
+| `UNAVAILABLE`        | Password-reset state could not be read or changed.     |
+
+## ResetAttendeePassword Command
+
+The request contains `email`, a six-digit `code`, and `new_password`. Success returns `password_reset = true`. Identity binds the first valid claim to the exact code and replacement password, revokes all attendee sessions, and conditionally replaces the password for a verified, active, non-deleted account. Exact completion replay returns the same success without repeating the mutation.
+
+| gRPC status           | Meaning                                                               |
+| --------------------- | --------------------------------------------------------------------- |
+| `INVALID_ARGUMENT`    | Identity validation rejected one or more command fields.              |
+| `FAILED_PRECONDITION` | The code or account state cannot authorize this password replacement. |
+| `UNAVAILABLE`         | Reset or session state could not complete the operation safely.       |

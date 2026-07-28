@@ -1,6 +1,7 @@
 export interface RuntimeConfig {
   databaseUrl: string;
   emailVerificationHmacSecret: string;
+  passwordResetHmacSecret: string;
   attendeeSessionHmacSecret: string;
   grpcHost: string;
   grpcPort: number;
@@ -91,7 +92,10 @@ function readRabbitMqUrl(environment: NodeJS.ProcessEnv): string {
 
 function readHmacSecret(
   environment: NodeJS.ProcessEnv,
-  name: 'ATTENDEE_SESSION_HMAC_SECRET' | 'EMAIL_VERIFICATION_HMAC_SECRET',
+  name:
+    | 'ATTENDEE_SESSION_HMAC_SECRET'
+    | 'EMAIL_VERIFICATION_HMAC_SECRET'
+    | 'PASSWORD_RESET_HMAC_SECRET',
 ): string {
   const secret = readRequiredString(environment, name);
 
@@ -114,6 +118,10 @@ export function readRuntimeConfig(
     emailVerificationHmacSecret: readHmacSecret(
       environment,
       'EMAIL_VERIFICATION_HMAC_SECRET',
+    ),
+    passwordResetHmacSecret: readHmacSecret(
+      environment,
+      'PASSWORD_RESET_HMAC_SECRET',
     ),
     grpcHost: readRequiredString(environment, 'GRPC_HOST'),
     grpcPort: readPort(environment, 'GRPC_PORT'),

@@ -4,6 +4,8 @@ import type {
   AuthenticateAttendeeSessionResponse,
   ConfirmAttendeeEmailVerificationRequest,
   ConfirmAttendeeEmailVerificationResponse,
+  ForgotAttendeePasswordRequest,
+  ForgotAttendeePasswordResponse,
   LoginAttendeeRequest,
   LoginAttendeeResponse,
   GetCurrentAttendeeAccountRequest,
@@ -14,6 +16,8 @@ import type {
   RegisterAttendeeResponse,
   ResendAttendeeEmailVerificationRequest,
   ResendAttendeeEmailVerificationResponse,
+  ResetAttendeePasswordRequest,
+  ResetAttendeePasswordResponse,
 } from '@eventa/grpc-contracts';
 import type { CallOptions, Metadata } from '@grpc/grpc-js';
 import type { Observable } from 'rxjs';
@@ -49,9 +53,19 @@ export interface DeadlineAwareAttendeeIdentityServiceClient extends AttendeeIden
     metadata?: Metadata,
     options?: CallOptions,
   ): Observable<ConfirmAttendeeEmailVerificationResponse>;
+  forgotAttendeePassword(
+    request: ForgotAttendeePasswordRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<ForgotAttendeePasswordResponse>;
   resendAttendeeEmailVerification(
     request: ResendAttendeeEmailVerificationRequest,
     metadata?: Metadata,
     options?: CallOptions,
   ): Observable<ResendAttendeeEmailVerificationResponse>;
+  resetAttendeePassword(
+    request: ResetAttendeePasswordRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<ResetAttendeePasswordResponse>;
 }

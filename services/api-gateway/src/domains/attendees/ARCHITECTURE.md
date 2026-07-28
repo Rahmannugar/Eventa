@@ -30,6 +30,14 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 4. Identity returns the attendee account details, opaque token, and absolute expiry after credential and session-state checks.
 5. The controller sets the host-only HttpOnly session cookie and omits the token from the JSON response.
 
+## Password-Recovery Flow
+
+1. Forgot-password and reset-password guards enforce independent client-IP and protected canonical-email policies.
+2. The exact attendee-client origin is required before either credential-changing request reaches Identity.
+3. Forgot-password returns one accepted shape regardless of account existence or lifecycle eligibility.
+4. Reset-password forwards the email, six-digit code, and validated replacement password through a bounded gRPC call.
+5. Identity maps every unusable reset state to one public invalid-code response and reports dependency failure without exposing infrastructure details.
+
 ## Authenticated Session Flow
 
 1. The account endpoint applies its client-IP and protected-session limits.
@@ -46,9 +54,10 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 - Malformed JSON maps to `400`, validation to `422`, uniqueness conflicts to `409`, denial to `429`, and unavailable dependencies to `503`.
 - Identity deadline expiry cancels the Gateway's gRPC call, returns the same safe `503` contract, and retains a deadline-specific internal diagnostic for logs and traces.
 - Confirm and resend quotas use separate keys, so one operation cannot consume the other's allowance.
+- Forgot-password and reset-password quotas use separate keys from registration, verification, login, account retrieval, and logout.
 - Login has independent keys and stable `401`, `403`, `422`, `429`, and `503` translations.
 - Account retrieval and logout use separate rate-limit keys and quotas. Session subjects are HMAC-protected before entering Gateway Redis keys.
-- Credentialed CORS names one configured attendee-client origin. Login and logout require that same exact `Origin`; cookie attributes remain host-only, HttpOnly, `SameSite=Lax`, and `Secure` on HTTPS.
+- Credentialed CORS names one configured attendee-client origin. Login, logout, forgot-password, and reset-password require that same exact `Origin`; cookie attributes remain host-only, HttpOnly, `SameSite=Lax`, and `Secure` on HTTPS.
 - Logout without usable cookie state is idempotent. A revocation dependency failure keeps the cookie so the client can retry.
 - Gateway rate-limit subjects and Identity OTP subjects are independently HMAC-protected before Redis storage.
 - Unsupported methods use the Gateway's ordinary unmatched-route behavior; there is no overlapping method catch-all.

@@ -26,6 +26,10 @@ import type {
   AttendeeAccount,
   AttendeeAccountRepository as AttendeeAccountDetailsRepository,
 } from '../types/attendee-account.types';
+import type {
+  AttendeePasswordResetAccount,
+  AttendeePasswordResetRepository,
+} from '../types/attendee-password-reset.types';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -59,7 +63,8 @@ export class AttendeeAccountRepository
     AttendeeAccountRepositoryPort,
     AttendeeAccountDetailsRepository,
     AttendeeEmailVerificationRepository,
-    AttendeeLoginRepository
+    AttendeeLoginRepository,
+    AttendeePasswordResetRepository
 {
   constructor(
     @Inject(IDENTITY_DATABASE)
@@ -189,6 +194,48 @@ export class AttendeeAccountRepository
           status: account.status,
           username: account.username,
         };
+  }
+
+  async findAccountForPasswordReset(
+    email: string,
+  ): Promise<AttendeePasswordResetAccount | undefined> {
+    const [account] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        email: attendeeAccounts.email,
+      })
+      .from(attendeeAccounts)
+      .where(
+        and(
+          eq(attendeeAccounts.email, email),
+          eq(attendeeAccounts.status, 'active'),
+          isNotNull(attendeeAccounts.emailVerifiedAt),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return account;
+  }
+
+  async replacePassword(
+    attendeeId: string,
+    passwordHash: string,
+  ): Promise<boolean> {
+    const [account] = await this.database
+      .update(attendeeAccounts)
+      .set({ passwordHash })
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          eq(attendeeAccounts.status, 'active'),
+          isNotNull(attendeeAccounts.emailVerifiedAt),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
+      .returning({ attendeeId: attendeeAccounts.id });
+
+    return account !== undefined;
   }
 
   async findActiveAccount(

@@ -10,16 +10,16 @@ We document the Notifications domain in [src/notifications/ARCHITECTURE.md](src/
 
 - We compose validated runtime configuration, health, database lifecycle, and the Notifications domain in `AppModule`.
 - We keep one process-long RabbitMQ connection in `RabbitMQClient` and use purpose-specific consumer and confirm channels.
-- We keep queue topology, acknowledgements, trace extraction, boundary validation, and retry publication in `EmailVerificationJobConsumer`.
-- We coordinate claims, delivery, expiry, retries, and terminal outcomes in `EmailVerificationDeliveryService`.
-- We keep verification-email content in `EmailVerificationEmailSender` so a provider change does not move product-email behavior.
+- We keep queue topology, acknowledgements, trace extraction, boundary validation, and retry publication in the verification and password-reset consumers.
+- We coordinate claims, delivery, expiry, retries, and terminal outcomes in operation-specific delivery services.
+- We keep verification and password-reset content in operation-specific senders so a provider change does not move product-email behavior.
 - We isolate Resend in the replaceable `ResendClient`.
 
 ## Database and Migrations
 
-We own `email_verification_deliveries`. Each job ID has one row containing status, bounded attempt count, expiry, processing lease, retry timing, provider message ID, safe failure code, and terminal timestamps. We never persist recipient addresses or OTP values.
+We own `email_verification_deliveries` and `password_reset_deliveries`. Each job ID has one operation-specific row containing status, bounded attempt count, expiry, processing lease, retry timing, provider message ID, safe failure code, and terminal timestamps. We never persist recipient addresses, OTP values, or reset codes.
 
-Migration `0000_create_email_verification_deliveries` is the deployment authority. We close runtime and migration connections through their owning lifecycle.
+Migrations `0000_create_email_verification_deliveries` and `0001_create_password_reset_deliveries` are the deployment authority. We close runtime and migration connections through their owning lifecycle.
 
 ## Health and Shutdown
 

@@ -1,6 +1,6 @@
 # Eventa Notification Service
 
-Notification owns application-email delivery and durable delivery history. It consumes attendee email-verification jobs from RabbitMQ and sends them through the configured email provider.
+Notification owns application-email delivery and durable delivery history. It consumes attendee email-verification and password-reset jobs from RabbitMQ and sends them through the configured email provider.
 
 ## Runtime
 

@@ -79,3 +79,17 @@ The request contains a canonicalizable email address and a six-digit `otp`. Succ
 The request contains an email address. Accepted requests return `202 { "accepted": true }` for unknown, already-verified, and unverified accounts alike. Identity applies the 60-second per-email resend cooldown before account lookup.
 
 Both endpoints apply independent Gateway token-bucket and hourly limits by client IP and canonical email before DTO validation. Validation returns `422`, endpoint or cooldown denial returns `429` with `Retry-After`, and unavailable dependencies return `503`. Responses include `RateLimit-Policy`, `RateLimit`, and `x-request-id`.
+
+## Forgot Password
+
+`POST /auth/attendees/forgot-password`
+
+The request contains `email`. Accepted requests return `202 { "accepted": true }` for unknown, ineligible, and eligible attendees alike. Identity reserves the 60-second per-email request cooldown before account lookup and sends a six-digit reset code only for a verified, active, non-deleted attendee.
+
+## Reset Password
+
+`POST /auth/attendees/reset-password`
+
+The request contains `email`, a six-digit `code`, and `newPassword`. Success returns `200 { "passwordReset": true }`. A successful reset revokes every attendee session before replacing the password. An exact replay of the same code and new password returns the same success without repeating those mutations. A different password cannot reuse a claimed or completed code.
+
+Both endpoints require the exact configured attendee-client `Origin` and apply separate client-IP and protected-email abuse controls. Invalid fields return `422`; invalid, expired, replaced, or exhausted codes return `400 PASSWORD_RESET_INVALID`; route or per-email request cooldown denial returns `429`; unavailable rate-limit, Identity, reset-state, session-state, or delivery infrastructure returns `503`.

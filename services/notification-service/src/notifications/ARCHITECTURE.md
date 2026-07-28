@@ -2,11 +2,11 @@
 
 ## Runtime Flow
 
-1. We receive a persistent message in `EmailVerificationJobConsumer` from the main quorum queue through RabbitMQ's default direct exchange.
+1. We receive a persistent verification or password-reset message in its dedicated consumer and main quorum queue through RabbitMQ's default direct exchange.
 2. We validate byte size, JSON shape, version, AMQP properties, UUID, email, six-digit OTP, and canonical expiry before application logic.
-3. We insert or lock the Notification-owned job row in `EmailVerificationDeliveryRepository.claim()`. A 30-second claim lease permits one provider attempt and recovery after a process crash.
+3. We insert or lock the Notification-owned job row through its delivery repository. A 30-second claim lease permits one provider attempt and recovery after a process crash.
 4. We acknowledge terminal duplicates without provider work and record expired work as `expired`.
-5. We pass valid claimed work from `EmailVerificationDeliveryService` to `EmailVerificationEmailSender`.
+5. We pass valid claimed work through the matching verification or password-reset delivery service and sender.
 6. We keep subject and HTML/text content in the sender and pass a provider-neutral request through `EmailDeliveryProvider`.
 7. We apply Resend authentication, a bounded HTTP timeout, response translation, and job-ID idempotency in `ResendClient`.
 8. We record provider acceptance as `delivered`, including the provider message ID, before acknowledgement.
@@ -21,10 +21,10 @@ The payload's `expiresAt` is authoritative. We do not set a broker TTL on the ma
 
 We publish retries through a confirm channel and acknowledge the active message only after RabbitMQ confirms its retry copy. If publication or persistence fails, the original remains recoverable. Every provider call uses the same job ID; Resend retains idempotency keys for 24 hours.
 
-We record permanent provider rejection or the third failed attempt as `failed` before acknowledgement. A replacement OTP creates a new job ID through the existing resend flow. We never replay stale verification email from a DLQ.
+We record permanent provider rejection or the third failed attempt as `failed` before acknowledgement. A replacement verification OTP or reset code creates a new job ID through its request flow. We never replay stale auth email from a DLQ.
 
 ## Data and Privacy
 
-We store only job type/ID, delivery status, attempt count, expiry, claim/retry timestamps, provider message ID, safe failure code, and lifecycle timestamps in `email_verification_deliveries`. We have no email or OTP column.
+We store only job type/ID, delivery status, attempt count, expiry, claim/retry timestamps, provider message ID, safe failure code, and lifecycle timestamps in `email_verification_deliveries` and `password_reset_deliveries`. Neither table has recipient-email, OTP, or reset-code columns.
 
 We use job/message IDs and bounded outcome codes in logs, traces, metrics, and alerts. We never include recipient addresses, OTPs, raw message bodies, provider response text, API keys, or arbitrary errors.

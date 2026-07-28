@@ -4,7 +4,7 @@
 
 Identity owns attendee and admin security principals, credentials, verification state, account lifecycle, and sessions. Each implemented identity domain owns its application flow, state rules, and concise API and architecture documentation.
 
-Identity contains the Attendees domain. Its registration, email verification, login, and session behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
+Identity contains the Attendees domain. Its registration, email verification, login, session, and password-recovery behavior are documented in [src/attendees/ARCHITECTURE.md](src/attendees/ARCHITECTURE.md).
 
 ## Service Composition
 

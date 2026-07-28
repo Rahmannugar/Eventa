@@ -1,0 +1,3 @@
+export const ATTENDEE_AUTH_JOB_PUBLISHER = Symbol(
+  'ATTENDEE_AUTH_JOB_PUBLISHER',
+);

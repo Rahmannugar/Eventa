@@ -2,6 +2,7 @@ import { createClient } from 'redis';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/redis/email-verification-otp.state';
+import { RedisPasswordResetCodeState } from '../../src/attendees/adapters/redis/password-reset-code.state';
 import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
 
@@ -18,6 +19,7 @@ const administrativeClient = createClient({
 });
 const redis = new RedisClient(testRedisUrl, 1_000, 750);
 const otpState = new RedisEmailVerificationOtpState(redis);
+const passwordResetState = new RedisPasswordResetCodeState(redis);
 const sessionState = new RedisAttendeeSessionState(redis);
 
 describe('RedisEmailVerificationOtpState integration', () => {
@@ -240,6 +242,88 @@ describe('RedisEmailVerificationOtpState integration', () => {
     await expect(sessionState.revokeAll('subject-1')).resolves.toBe(1);
     await expect(sessionState.read(inputs[1]!.tokenDigest)).resolves.toBe(
       undefined,
+    );
+  });
+
+  it('exhausts a password reset code after five incorrect guesses', async () => {
+    await passwordResetState.save({
+      attendeeId: 'attendee-1',
+      attempts: 5,
+      codeDigest: 'correct-digest',
+      subject: 'attendee-subject',
+      ttlMs: 60_000,
+    });
+
+    const wrongAttempts = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        passwordResetState.claim(
+          'attendee-subject',
+          'wrong-digest',
+          'completion-digest',
+        ),
+      ),
+    );
+
+    expect(wrongAttempts).toEqual(
+      Array.from({ length: 5 }, () => ({ status: 'invalid' })),
+    );
+    await expect(
+      passwordResetState.claim(
+        'attendee-subject',
+        'correct-digest',
+        'completion-digest',
+      ),
+    ).resolves.toEqual({ status: 'invalid' });
+  });
+
+  it('binds password reset recovery to one exact completion without extending its lifetime', async () => {
+    await passwordResetState.save({
+      attendeeId: 'attendee-1',
+      attempts: 5,
+      codeDigest: 'correct-digest',
+      subject: 'attendee-subject',
+      ttlMs: 60_000,
+    });
+    const key =
+      'identity:password-reset:{attendee-subject}:state';
+    const initialTtl = await administrativeClient.pTTL(key);
+
+    await expect(
+      passwordResetState.claim(
+        'attendee-subject',
+        'correct-digest',
+        'completion-one',
+      ),
+    ).resolves.toEqual({
+      attendeeId: 'attendee-1',
+      status: 'claimed',
+    });
+    await expect(
+      passwordResetState.claim(
+        'attendee-subject',
+        'correct-digest',
+        'completion-two',
+      ),
+    ).resolves.toEqual({ status: 'invalid' });
+
+    await passwordResetState.markCompleted(
+      'attendee-subject',
+      'correct-digest',
+      'completion-one',
+    );
+
+    await expect(
+      passwordResetState.claim(
+        'attendee-subject',
+        'correct-digest',
+        'completion-one',
+      ),
+    ).resolves.toEqual({
+      attendeeId: 'attendee-1',
+      status: 'completed',
+    });
+    expect(await administrativeClient.pTTL(key)).toBeLessThanOrEqual(
+      initialTtl,
     );
   });
 });

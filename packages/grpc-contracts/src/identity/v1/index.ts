@@ -20,6 +20,12 @@ export type {
   LoginAttendeeResponse,
 } from '../../generated/eventa/identity/v1/attendee_login.generated';
 export type {
+  ForgotAttendeePasswordRequest,
+  ForgotAttendeePasswordResponse,
+  ResetAttendeePasswordRequest,
+  ResetAttendeePasswordResponse,
+} from '../../generated/eventa/identity/v1/attendee_password_reset.generated';
+export type {
   AuthenticateAttendeeSessionRequest,
   AuthenticateAttendeeSessionResponse,
   GetCurrentAttendeeAccountRequest,

@@ -19,7 +19,7 @@ import type {
   EmailVerificationResendDecision,
   EmailVerificationOtp,
 } from '../../src/attendees/types/attendee-email-verification.types';
-import type { EmailVerificationJobPublisher } from '../../src/attendees/ports/email-verification-job.publisher';
+import type { AttendeeAuthJobPublisher } from '../../src/attendees/ports/attendee-auth-job.publisher';
 import type { EmailVerificationOtpState } from '../../src/attendees/ports/email-verification-otp.state';
 
 const HMAC_SECRET = 'unit-test-email-verification-secret-32-characters';
@@ -82,11 +82,15 @@ class RecordingOtpState implements EmailVerificationOtpState {
   }
 }
 
-class RecordingPublisher implements EmailVerificationJobPublisher {
+class RecordingPublisher implements AttendeeAuthJobPublisher {
   otps: EmailVerificationOtp[] = [];
 
-  publish(otp: EmailVerificationOtp): Promise<void> {
+  publishEmailVerification(otp: EmailVerificationOtp): Promise<void> {
     this.otps.push(otp);
+    return Promise.resolve();
+  }
+
+  publishPasswordReset(): Promise<void> {
     return Promise.resolve();
   }
 }
@@ -189,7 +193,8 @@ describe('AttendeeEmailVerificationService', () => {
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const { publisher, service } = createService();
-    publisher.publish = () => Promise.reject(new Error('queue unavailable'));
+    publisher.publishEmailVerification = () =>
+      Promise.reject(new Error('queue unavailable'));
 
     await expect(
       service.start('attendee-1', 'attendee@example.com'),

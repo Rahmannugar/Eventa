@@ -1,6 +1,6 @@
 # Eventa Identity Service
 
-Identity owns Eventa's security principals, credentials, verification state, account lifecycle, and sessions. Attendee and admin identities are separate namespaces. The Attendees domain exposes registration, email verification, and login.
+Identity owns Eventa's security principals, credentials, verification state, account lifecycle, and sessions. Attendee and admin identities are separate namespaces. The Attendees domain exposes registration, email verification, login, sessions, and password recovery.
 
 ## Runtime
 

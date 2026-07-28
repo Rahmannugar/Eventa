@@ -7,6 +7,7 @@ const validEnvironment = {
   DATABASE_URL: 'postgresql://identity:test@localhost:5432/eventa_identity',
   EMAIL_VERIFICATION_HMAC_SECRET:
     'test-email-verification-secret-32-characters',
+  PASSWORD_RESET_HMAC_SECRET: 'test-password-reset-secret-32-characters',
   GRPC_HOST: '0.0.0.0',
   GRPC_PORT: '50051',
   HEALTH_PORT: '3005',
@@ -25,6 +26,7 @@ describe('readRuntimeConfig', () => {
       databaseUrl: validEnvironment.DATABASE_URL,
       emailVerificationHmacSecret:
         validEnvironment.EMAIL_VERIFICATION_HMAC_SECRET,
+      passwordResetHmacSecret: validEnvironment.PASSWORD_RESET_HMAC_SECRET,
       grpcHost: validEnvironment.GRPC_HOST,
       grpcPort: 50_051,
       healthPort: 3005,
@@ -44,6 +46,7 @@ describe('readRuntimeConfig', () => {
     'GRPC_HOST',
     'GRPC_PORT',
     'HEALTH_PORT',
+    'PASSWORD_RESET_HMAC_SECRET',
     'RABBITMQ_CONNECT_TIMEOUT_MS',
     'RABBITMQ_PUBLISH_TIMEOUT_MS',
     'RABBITMQ_URL',
@@ -117,6 +120,17 @@ describe('readRuntimeConfig', () => {
       }),
     ).toThrow(
       'ATTENDEE_SESSION_HMAC_SECRET must contain at least 32 characters',
+    );
+  });
+
+  it('rejects a short password-reset HMAC secret', () => {
+    expect(() =>
+      readRuntimeConfig({
+        ...validEnvironment,
+        PASSWORD_RESET_HMAC_SECRET: 'too-short',
+      }),
+    ).toThrow(
+      'PASSWORD_RESET_HMAC_SECRET must contain at least 32 characters',
     );
   });
 });

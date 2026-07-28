@@ -297,4 +297,52 @@ describe('AttendeeRegistrationService integration', () => {
       accountService.getCurrentAccount(registration.attendeeId),
     ).rejects.toBeInstanceOf(InvalidAttendeeSessionError);
   });
+
+  it('replaces a password only while the attendee remains verified and active', async () => {
+    const registration = await service.register(
+      registrationInput(
+        'password-reset@example.com',
+        'original-password',
+        'password_reset_user',
+      ),
+    );
+
+    await expect(
+      repository.findAccountForPasswordReset('password-reset@example.com'),
+    ).resolves.toBeUndefined();
+
+    await repository.markEmailVerified(registration.attendeeId);
+    await expect(
+      repository.findAccountForPasswordReset('password-reset@example.com'),
+    ).resolves.toEqual({
+      attendeeId: registration.attendeeId,
+      email: 'password-reset@example.com',
+    });
+
+    const replacementHash = await new Argon2PasswordHasher().hash(
+      'replacement-password',
+    );
+    await expect(
+      repository.replacePassword(registration.attendeeId, replacementHash),
+    ).resolves.toBe(true);
+
+    await database
+      .update(attendeeAccounts)
+      .set({ status: 'suspended' })
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+    await expect(
+      repository.replacePassword(
+        registration.attendeeId,
+        await new Argon2PasswordHasher().hash('forbidden-password'),
+      ),
+    ).resolves.toBe(false);
+
+    const [persisted] = await database
+      .select({ passwordHash: attendeeAccounts.passwordHash })
+      .from(attendeeAccounts)
+      .where(eq(attendeeAccounts.id, registration.attendeeId));
+    await expect(
+      verify(persisted?.passwordHash ?? '', 'replacement-password'),
+    ).resolves.toBe(true);
+  });
 });

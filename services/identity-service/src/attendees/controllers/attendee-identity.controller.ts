@@ -3,12 +3,14 @@ import {
   AttendeeIdentityServiceControllerMethods,
   type AttendeeIdentityServiceController,
   type ConfirmAttendeeEmailVerificationResponse,
+  type ForgotAttendeePasswordResponse,
   type AuthenticateAttendeeSessionResponse,
   type GetCurrentAttendeeAccountResponse,
   type LoginAttendeeResponse,
   type LogoutAttendeeResponse,
   type RegisterAttendeeResponse,
   type ResendAttendeeEmailVerificationResponse,
+  type ResetAttendeePasswordResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
 import { RpcException } from '@nestjs/microservices';
@@ -48,6 +50,16 @@ import {
 } from '../dto/attendee-session.dto';
 import { AttendeeSessionService } from '../services/attendee-session.service';
 import { AttendeeAccountService } from '../services/attendee-account.service';
+import {
+  ForgotAttendeePasswordDto,
+  ResetAttendeePasswordDto,
+} from '../dto/attendee-password-reset.dto';
+import {
+  PasswordResetCodeInvalidError,
+  PasswordResetRateLimitedError,
+  PasswordResetStateUnavailableError,
+} from '../errors/attendee-password-reset.errors';
+import { AttendeePasswordResetService } from '../services/attendee-password-reset.service';
 
 @Controller()
 @AttendeeIdentityServiceControllerMethods()
@@ -59,6 +71,7 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
     private readonly attendeeLogin: AttendeeLoginService,
     private readonly attendeeSessions: AttendeeSessionService,
     private readonly attendeeAccounts: AttendeeAccountService,
+    private readonly attendeePasswordReset: AttendeePasswordResetService,
   ) {}
 
   registerAttendee(
@@ -69,6 +82,24 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
 
   loginAttendee(request: LoginAttendeeDto): Observable<LoginAttendeeResponse> {
     return from(this.handleLogin(request));
+  }
+
+  forgotAttendeePassword(
+    request: ForgotAttendeePasswordDto,
+  ): Observable<ForgotAttendeePasswordResponse> {
+    return from(this.handleForgotPassword(request.email));
+  }
+
+  resetAttendeePassword(
+    request: ResetAttendeePasswordDto,
+  ): Observable<ResetAttendeePasswordResponse> {
+    return from(
+      this.handleResetPassword(
+        request.email,
+        request.code,
+        request.newPassword,
+      ),
+    );
   }
 
   authenticateAttendeeSession(
@@ -168,6 +199,66 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
       };
     } catch (error: unknown) {
       this.translateSessionError(error);
+    }
+  }
+
+  private async handleForgotPassword(
+    email: string,
+  ): Promise<ForgotAttendeePasswordResponse> {
+    try {
+      return await this.attendeePasswordReset.forgotPassword(email);
+    } catch (error: unknown) {
+      if (error instanceof PasswordResetRateLimitedError) {
+        const metadata = new Metadata();
+        metadata.set('retry-after', String(error.retryAfterSeconds));
+        throw new RpcException({
+          code: status.RESOURCE_EXHAUSTED,
+          message: error.message,
+          metadata,
+        });
+      }
+
+      if (error instanceof PasswordResetStateUnavailableError) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  private async handleResetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<ResetAttendeePasswordResponse> {
+    try {
+      return await this.attendeePasswordReset.resetPassword(
+        email,
+        code,
+        newPassword,
+      );
+    } catch (error: unknown) {
+      if (error instanceof PasswordResetCodeInvalidError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+
+      if (
+        error instanceof PasswordResetStateUnavailableError ||
+        error instanceof AttendeeSessionStateUnavailableError
+      ) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
+          message: error.message,
+        });
+      }
+
+      throw error;
     }
   }
 

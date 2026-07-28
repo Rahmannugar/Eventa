@@ -15,6 +15,14 @@ import type { EmailDeliveryProvider } from './ports/email-delivery.provider';
 import { EmailVerificationDeliveryRepository } from './repositories/email-verification-delivery.repository';
 import { EmailVerificationDeliveryService } from './services/email-verification-delivery.service';
 import { EmailVerificationEmailSender } from './services/email-verification-email.sender';
+import {
+  PASSWORD_RESET_DELIVERY_REPOSITORY,
+  PASSWORD_RESET_EMAIL_SENDER,
+} from './constants/password-reset-delivery.constants';
+import { PasswordResetJobConsumer } from './job-queue/password-reset-job.consumer';
+import { PasswordResetDeliveryRepository } from './repositories/password-reset-delivery.repository';
+import { PasswordResetDeliveryService } from './services/password-reset-delivery.service';
+import { PasswordResetEmailSender } from './services/password-reset-email.sender';
 
 @Module({
   imports: [DatabaseModule],
@@ -22,6 +30,10 @@ import { EmailVerificationEmailSender } from './services/email-verification-emai
     {
       provide: EMAIL_VERIFICATION_DELIVERY_REPOSITORY,
       useClass: EmailVerificationDeliveryRepository,
+    },
+    {
+      provide: PASSWORD_RESET_DELIVERY_REPOSITORY,
+      useClass: PasswordResetDeliveryRepository,
     },
     {
       provide: RabbitMQClient,
@@ -47,7 +59,26 @@ import { EmailVerificationEmailSender } from './services/email-verification-emai
           config.resendFrom,
         ),
     },
+    {
+      provide: PASSWORD_RESET_EMAIL_SENDER,
+      inject: [EMAIL_DELIVERY_PROVIDER, RUNTIME_CONFIG],
+      useFactory: (
+        emailDeliveryProvider: EmailDeliveryProvider,
+        config: RuntimeConfig,
+      ) =>
+        new PasswordResetEmailSender(emailDeliveryProvider, config.resendFrom),
+    },
     EmailVerificationDeliveryService,
+    PasswordResetDeliveryService,
+    {
+      provide: PasswordResetJobConsumer,
+      inject: [RabbitMQClient, PasswordResetDeliveryService, RUNTIME_CONFIG],
+      useFactory: (
+        rabbitMQ: RabbitMQClient,
+        deliveryService: PasswordResetDeliveryService,
+        config: RuntimeConfig,
+      ) => new PasswordResetJobConsumer(rabbitMQ, deliveryService, config),
+    },
     {
       provide: EmailVerificationJobConsumer,
       inject: [

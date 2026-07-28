@@ -4,12 +4,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
   ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,
-  EMAIL_VERIFICATION_JOB_PUBLISHER,
   EMAIL_VERIFICATION_OTP_MAX_GUESSES,
   EMAIL_VERIFICATION_OTP_STATE,
   EMAIL_VERIFICATION_OTP_TTL_MS,
   EMAIL_VERIFICATION_RESEND_COOLDOWN_MS,
 } from '../constants/attendee-email-verification.constants';
+import { ATTENDEE_AUTH_JOB_PUBLISHER } from '../constants/attendee-auth-job.constants';
 import {
   EmailVerificationOtpInvalidError,
   EmailVerificationResendRateLimitedError,
@@ -19,7 +19,7 @@ import type {
   EmailVerificationOtp,
   ResendAttendeeEmailVerificationResult,
 } from '../types/attendee-email-verification.types';
-import type { EmailVerificationJobPublisher } from '../ports/email-verification-job.publisher';
+import type { AttendeeAuthJobPublisher } from '../ports/attendee-auth-job.publisher';
 import type { EmailVerificationOtpState } from '../ports/email-verification-otp.state';
 
 @Injectable()
@@ -31,8 +31,8 @@ export class AttendeeEmailVerificationService {
     private readonly attendeeAccounts: AttendeeEmailVerificationRepository,
     @Inject(EMAIL_VERIFICATION_OTP_STATE)
     private readonly otpState: EmailVerificationOtpState,
-    @Inject(EMAIL_VERIFICATION_JOB_PUBLISHER)
-    private readonly jobPublisher: EmailVerificationJobPublisher,
+    @Inject(ATTENDEE_AUTH_JOB_PUBLISHER)
+    private readonly jobPublisher: AttendeeAuthJobPublisher,
     private readonly hmacSecret: string,
   ) {}
 
@@ -43,7 +43,7 @@ export class AttendeeEmailVerificationService {
         this.canonicalizeEmail(email),
         true,
       );
-      await this.jobPublisher.publish(otp);
+      await this.jobPublisher.publishEmailVerification(otp);
     } catch (error: unknown) {
       this.logDeliveryFailure(attendeeId, error);
     }
@@ -75,7 +75,7 @@ export class AttendeeEmailVerificationService {
         canonicalEmail,
         false,
       );
-      await this.jobPublisher.publish(otp);
+      await this.jobPublisher.publishEmailVerification(otp);
     } catch (error: unknown) {
       this.logDeliveryFailure(account.attendeeId, error);
     }

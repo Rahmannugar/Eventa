@@ -38,6 +38,13 @@ import {
   AttendeeLogoutRateLimitGuard,
   AttendeeAccountRateLimitGuard,
 } from './rate-limit/guards/attendee-session-rate-limit.guards';
+import { AttendeePasswordResetController } from './controllers/attendee-password-reset.controller';
+import { AttendeePasswordResetService } from './services/attendee-password-reset.service';
+import { AttendeePasswordResetRateLimitService } from './rate-limit/services/attendee-password-reset-rate-limit.service';
+import {
+  AttendeeForgotPasswordRateLimitGuard,
+  AttendeeResetPasswordRateLimitGuard,
+} from './rate-limit/guards/attendee-password-reset-rate-limit.guards';
 
 interface AttendeesModuleOptions {
   attendeeClientOrigin: string;
@@ -71,6 +78,7 @@ export class AttendeesModule {
       controllers: [
         AttendeeEmailVerificationController,
         AttendeeLoginController,
+        AttendeePasswordResetController,
         AttendeeRegistrationController,
         AttendeeSessionController,
       ],
@@ -81,6 +89,7 @@ export class AttendeesModule {
         },
         AttendeeEmailVerificationService,
         AttendeeLoginService,
+        AttendeePasswordResetService,
         AttendeeRegistrationService,
         AttendeeSessionService,
         {
@@ -91,6 +100,15 @@ export class AttendeesModule {
           provide: AttendeeSessionCookie,
           useFactory: () =>
             new AttendeeSessionCookie(options.secureSessionCookie),
+        },
+        {
+          provide: AttendeePasswordResetRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AttendeePasswordResetRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
         },
         {
           provide: AttendeeSessionRateLimitService,
@@ -128,12 +146,14 @@ export class AttendeesModule {
             ),
           inject: [RATE_LIMIT_STATE],
         },
-        AttendeeRegistrationRateLimitGuard,
         AttendeeClientOriginGuard,
         AttendeeAuthenticationGuard,
         AttendeeAccountRateLimitGuard,
+        AttendeeForgotPasswordRateLimitGuard,
         AttendeeLogoutRateLimitGuard,
         AttendeeLoginRateLimitGuard,
+        AttendeeRegistrationRateLimitGuard,
+        AttendeeResetPasswordRateLimitGuard,
         AttendeeEmailVerificationConfirmRateLimitGuard,
         AttendeeEmailVerificationResendRateLimitGuard,
       ],

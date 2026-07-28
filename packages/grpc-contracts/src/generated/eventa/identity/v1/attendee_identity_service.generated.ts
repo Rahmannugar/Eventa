@@ -15,6 +15,12 @@ import {
   ResendAttendeeEmailVerificationResponse,
 } from "./attendee_email_verification.generated";
 import { LoginAttendeeRequest, LoginAttendeeResponse } from "./attendee_login.generated";
+import {
+  ForgotAttendeePasswordRequest,
+  ForgotAttendeePasswordResponse,
+  ResetAttendeePasswordRequest,
+  ResetAttendeePasswordResponse,
+} from "./attendee_password_reset.generated";
 import { RegisterAttendeeRequest, RegisterAttendeeResponse } from "./attendee_registration.generated";
 import {
   AuthenticateAttendeeSessionRequest,
@@ -33,6 +39,16 @@ export interface AttendeeIdentityServiceClient {
   registerAttendee(request: RegisterAttendeeRequest, metadata?: Metadata): Observable<RegisterAttendeeResponse>;
 
   loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
+
+  forgotAttendeePassword(
+    request: ForgotAttendeePasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ForgotAttendeePasswordResponse>;
+
+  resetAttendeePassword(
+    request: ResetAttendeePasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ResetAttendeePasswordResponse>;
 
   authenticateAttendeeSession(
     request: AuthenticateAttendeeSessionRequest,
@@ -62,6 +78,16 @@ export interface AttendeeIdentityServiceController {
 
   loginAttendee(request: LoginAttendeeRequest, metadata?: Metadata): Observable<LoginAttendeeResponse>;
 
+  forgotAttendeePassword(
+    request: ForgotAttendeePasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ForgotAttendeePasswordResponse>;
+
+  resetAttendeePassword(
+    request: ResetAttendeePasswordRequest,
+    metadata?: Metadata,
+  ): Observable<ResetAttendeePasswordResponse>;
+
   authenticateAttendeeSession(
     request: AuthenticateAttendeeSessionRequest,
     metadata?: Metadata,
@@ -90,6 +116,8 @@ export function AttendeeIdentityServiceControllerMethods() {
     const grpcMethods: string[] = [
       "registerAttendee",
       "loginAttendee",
+      "forgotAttendeePassword",
+      "resetAttendeePassword",
       "authenticateAttendeeSession",
       "getCurrentAttendeeAccount",
       "logoutAttendee",
