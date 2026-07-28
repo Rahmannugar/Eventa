@@ -4,7 +4,7 @@ import {
   ATTENDEE_PASSWORD_RESET_JOB_TYPE,
   ATTENDEE_PASSWORD_RESET_QUEUE,
   type AttendeePasswordResetJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import {
   addJobInFlight,
   recordJobMetrics,

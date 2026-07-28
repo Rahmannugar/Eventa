@@ -4,7 +4,7 @@ import {
   ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
   ATTENDEE_EMAIL_VERIFICATION_QUEUE,
   type AttendeeEmailVerificationJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import {
   addJobInFlight,
   recordJobMetrics,

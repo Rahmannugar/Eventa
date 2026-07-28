@@ -48,12 +48,47 @@ import type { AttendeeAccountRepository as AttendeeAccountDetailsRepository } fr
 import type { PasswordResetCodeState } from './ports/password-reset-code.state';
 import { AttendeePasswordResetService } from './services/attendee-password-reset.service';
 import type { AttendeePasswordResetRepository } from './types/attendee-password-reset.types';
+import {
+  ATTENDEE_DELETION_REPOSITORY,
+} from './constants/attendee-deletion.constants';
+import type { AttendeeDeletionRepository } from './types/attendee-deletion.types';
+import { AttendeeDeletionService } from './services/attendee-deletion.service';
+import {
+  ATTENDEE_LIFECYCLE_EVENT_PUBLISHER,
+  ATTENDEE_LIFECYCLE_OUTBOX,
+} from './constants/attendee-deletion.constants';
+import { KafkaClient } from '../infrastructure/clients/kafka.client';
+import { KafkaAttendeeLifecycleEventPublisher } from './adapters/event-bus/attendee-lifecycle-event.publisher';
+import { AttendeeLifecycleOutboxRepository } from './repositories/attendee-lifecycle-outbox.repository';
+import { AttendeeLifecycleOutboxRelay } from './services/attendee-lifecycle-outbox-relay';
 
 @Module({
   imports: [DatabaseModule, SecurityModule],
   controllers: [AttendeeIdentityController],
   providers: [
     AttendeeRegistrationService,
+    {
+      provide: KafkaClient,
+      useFactory: (config: RuntimeConfig) =>
+        new KafkaClient(
+          config.kafkaBrokers,
+          'eventa-identity-service',
+          config.kafkaConnectionTimeoutMs,
+          config.kafkaRequestTimeoutMs,
+        ),
+      inject: [RUNTIME_CONFIG],
+    },
+    {
+      provide: ATTENDEE_LIFECYCLE_OUTBOX,
+      useClass: AttendeeLifecycleOutboxRepository,
+    },
+    {
+      provide: ATTENDEE_LIFECYCLE_EVENT_PUBLISHER,
+      useFactory: (kafka: KafkaClient) =>
+        new KafkaAttendeeLifecycleEventPublisher(kafka),
+      inject: [KafkaClient],
+    },
+    AttendeeLifecycleOutboxRelay,
     {
       provide: ATTENDEE_REGISTRAR,
       useFactory: (registration: AttendeeRegistrationService) =>
@@ -74,6 +109,10 @@ import type { AttendeePasswordResetRepository } from './types/attendee-password-
     },
     {
       provide: ATTENDEE_PASSWORD_RESET_REPOSITORY,
+      useExisting: ATTENDEE_ACCOUNT_REPOSITORY,
+    },
+    {
+      provide: ATTENDEE_DELETION_REPOSITORY,
       useExisting: ATTENDEE_ACCOUNT_REPOSITORY,
     },
     {
@@ -170,6 +209,20 @@ import type { AttendeePasswordResetRepository } from './types/attendee-password-
       ],
     },
     {
+      provide: AttendeeDeletionService,
+      useFactory: (
+        repository: AttendeeDeletionRepository,
+        passwordVerifier: PasswordVerifier,
+        sessions: AttendeeSessionService,
+      ) =>
+        new AttendeeDeletionService(repository, passwordVerifier, sessions),
+      inject: [
+        ATTENDEE_DELETION_REPOSITORY,
+        PASSWORD_VERIFIER,
+        AttendeeSessionService,
+      ],
+    },
+    {
       provide: AttendeeEmailVerificationService,
       useFactory: (
         repository: AttendeeEmailVerificationRepository,
@@ -196,6 +249,7 @@ import type { AttendeePasswordResetRepository } from './types/attendee-password-
     AttendeeLoginService,
     AttendeeAccountService,
     AttendeePasswordResetService,
+    AttendeeDeletionService,
     AttendeeSessionService,
   ],
 })

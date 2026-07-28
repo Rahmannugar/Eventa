@@ -13,7 +13,9 @@ import {
 } from '../../src/attendees/errors/attendee-registration.errors';
 import { InvalidAttendeeSessionError } from '../../src/attendees/errors/attendee-session.errors';
 import { AttendeeAccountRepository } from '../../src/attendees/repositories/attendee-account.repository';
+import { AttendeeLifecycleOutboxRepository } from '../../src/attendees/repositories/attendee-lifecycle-outbox.repository';
 import { attendeeAccounts } from '../../src/attendees/schema/attendee.schema';
+import { attendeeLifecycleOutbox } from '../../src/attendees/schema/attendee-lifecycle-outbox.schema';
 import { AttendeeAccountService } from '../../src/attendees/services/attendee-account.service';
 import type { RegisterAttendeeInput } from '../../src/attendees/types/attendee-registration.types';
 import { AttendeeRegistrationService } from '../../src/attendees/services/attendee-registration.service';
@@ -71,6 +73,7 @@ const client = postgres(requiredTestDatabaseUrl, {
 });
 const database = drizzle(client);
 const repository = new AttendeeAccountRepository(database);
+const lifecycleOutbox = new AttendeeLifecycleOutboxRepository(client);
 const service = new AttendeeRegistrationService(
   repository,
   new Argon2PasswordHasher(),
@@ -96,6 +99,7 @@ describe('AttendeeRegistrationService integration', () => {
   });
 
   beforeEach(async () => {
+    await database.delete(attendeeLifecycleOutbox);
     await database.delete(attendeeAccounts);
   });
 
@@ -217,7 +221,7 @@ describe('AttendeeRegistrationService integration', () => {
 
     expect(accountCount?.value).toBe(1);
   });
-  it('excludes deleted attendees from active-account flows', async () => {
+  it('deletes an account once, reserves its identifiers, and records a recoverable lifecycle fact', async () => {
     const registration = await service.register(
       registrationInput(
         'deleted@example.com',
@@ -226,10 +230,41 @@ describe('AttendeeRegistrationService integration', () => {
       ),
     );
     await repository.markEmailVerified(registration.attendeeId);
-    await database
-      .update(attendeeAccounts)
-      .set({ deletedAt: new Date() })
-      .where(eq(attendeeAccounts.id, registration.attendeeId));
+    const deletionEvent = await repository.deleteAccount(
+      registration.attendeeId,
+    );
+    expect(deletionEvent).toMatchObject({
+      attendeeId: registration.attendeeId,
+      type: 'attendee.deleted.v1',
+    });
+    const [recordedEvent] = await database
+      .select({ payload: attendeeLifecycleOutbox.payload })
+      .from(attendeeLifecycleOutbox);
+    expect(recordedEvent?.payload).toEqual(deletionEvent);
+
+    const [firstClaim] = await lifecycleOutbox.claimBatch(1, 30_000);
+    expect(firstClaim?.event).toEqual(deletionEvent);
+    await lifecycleOutbox.scheduleRetry(
+      deletionEvent?.eventId ?? '',
+      firstClaim?.claimToken ?? '',
+      'EVENT_BUS_PUBLISH_FAILED',
+      new Date(0),
+    );
+    const [recoveredClaim] = await lifecycleOutbox.claimBatch(1, 30_000);
+    await expect(
+      lifecycleOutbox.markPublished(
+        deletionEvent?.eventId ?? '',
+        recoveredClaim?.claimToken ?? '',
+      ),
+    ).resolves.toBe(true);
+
+    const [publishedEvent] = await database
+      .select({ publishedAt: attendeeLifecycleOutbox.publishedAt })
+      .from(attendeeLifecycleOutbox);
+    expect(publishedEvent?.publishedAt).toBeInstanceOf(Date);
+    await expect(
+      repository.deleteAccount(registration.attendeeId),
+    ).resolves.toBeUndefined();
 
     await expect(repository.findByEmail('deleted@example.com')).resolves.toBe(
       undefined,

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AttendeePasswordResetJob } from '@eventa/messaging-contracts';
+import type { AttendeePasswordResetJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import { runWithOperationSpan } from '@eventa/observability';
 import { Inject } from '@nestjs/common';
 

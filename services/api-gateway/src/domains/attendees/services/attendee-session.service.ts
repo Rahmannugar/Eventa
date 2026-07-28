@@ -106,6 +106,48 @@ export class AttendeeSessionService implements OnModuleInit {
     }
   }
 
+  async deleteAccount(
+    attendeeId: string,
+    password: string,
+    requestId: string,
+  ): Promise<void> {
+    const identity = this.requireClient();
+
+    try {
+      await firstValueFrom(
+        identity.deleteAttendeeAccount(
+          { attendeeId, password },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+    } catch (error: unknown) {
+      if (readErrorCode(error) === status.PERMISSION_DENIED) {
+        throw new ApiHttpException(
+          HttpStatus.FORBIDDEN,
+          'CURRENT_PASSWORD_INCORRECT',
+          'The current password is incorrect.',
+        );
+      }
+
+      if (readErrorCode(error) === status.UNAUTHENTICATED) {
+        throw this.invalid();
+      }
+
+      throw new ApiHttpException(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'ACCOUNT_DELETION_UNAVAILABLE',
+        'Account deletion is temporarily unavailable. Try again later.',
+        {
+          diagnosticCode:
+            readErrorCode(error) === status.DEADLINE_EXCEEDED
+              ? 'IDENTITY_RPC_DEADLINE_EXCEEDED'
+              : 'IDENTITY_RPC_UNAVAILABLE',
+        },
+      );
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }

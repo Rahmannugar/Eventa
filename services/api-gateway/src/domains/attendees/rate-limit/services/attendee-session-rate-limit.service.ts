@@ -8,9 +8,10 @@ import type {
 import {
   ATTENDEE_LOGOUT_RATE_LIMIT_RULES,
   ATTENDEE_ACCOUNT_RATE_LIMIT_RULES,
+  ATTENDEE_DELETION_RATE_LIMIT_RULES,
 } from '../rules/attendee-session-rate-limit.rules';
 
-type AttendeeSessionOperation = 'account' | 'logout';
+type AttendeeSessionOperation = 'account' | 'deletion' | 'logout';
 
 interface AttendeeSessionRateLimitAttempt {
   clientIp: string;
@@ -54,6 +55,8 @@ export class AttendeeSessionRateLimitService {
   private rules(operation: AttendeeSessionOperation): HybridRateLimitRules {
     return operation === 'account'
       ? ATTENDEE_ACCOUNT_RATE_LIMIT_RULES
-      : ATTENDEE_LOGOUT_RATE_LIMIT_RULES;
+      : operation === 'deletion'
+        ? ATTENDEE_DELETION_RATE_LIMIT_RULES
+        : ATTENDEE_LOGOUT_RATE_LIMIT_RULES;
   }
 }

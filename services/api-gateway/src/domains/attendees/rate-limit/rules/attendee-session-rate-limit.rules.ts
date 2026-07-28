@@ -37,3 +37,22 @@ export const ATTENDEE_LOGOUT_RATE_LIMIT_RULES = {
     windowMs: 60 * 60 * 1_000,
   },
 } as const satisfies HybridRateLimitRules;
+
+export const ATTENDEE_DELETION_RATE_LIMIT_RULES = {
+  routeKey: 'attendee-deletion',
+  tokenBucket: {
+    capacity: 5,
+    name: 'ip-burst',
+    refillIntervalMs: 12_000,
+  },
+  primarySlidingWindow: {
+    limit: 20,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 10,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;

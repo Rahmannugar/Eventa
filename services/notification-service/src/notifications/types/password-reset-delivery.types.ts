@@ -1,4 +1,4 @@
-import type { AttendeePasswordResetJob } from '@eventa/messaging-contracts';
+import type { AttendeePasswordResetJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 
 export type PasswordResetDeliveryStatus =
   | 'delivered'

@@ -12,6 +12,10 @@ export type {
   ResendAttendeeEmailVerificationResponse,
 } from '../../generated/eventa/identity/v1/attendee_email_verification.generated';
 export type {
+  DeleteAttendeeAccountRequest,
+  DeleteAttendeeAccountResponse,
+} from '../../generated/eventa/identity/v1/attendee_deletion.generated';
+export type {
   RegisterAttendeeRequest,
   RegisterAttendeeResponse,
 } from '../../generated/eventa/identity/v1/attendee_registration.generated';

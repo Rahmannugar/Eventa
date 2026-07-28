@@ -1,7 +1,7 @@
 import {
   ATTENDEE_PASSWORD_RESET_JOB_TYPE,
   type AttendeePasswordResetJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import type { Message } from 'amqplib';
 import { isEmail, isUUID } from 'class-validator';
 

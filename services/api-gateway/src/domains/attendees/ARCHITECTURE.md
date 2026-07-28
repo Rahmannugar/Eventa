@@ -56,8 +56,8 @@ The Gateway attendees domain owns the public attendee transport boundary: reques
 - Confirm and resend quotas use separate keys, so one operation cannot consume the other's allowance.
 - Forgot-password and reset-password quotas use separate keys from registration, verification, login, account retrieval, and logout.
 - Login has independent keys and stable `401`, `403`, `422`, `429`, and `503` translations.
-- Account retrieval and logout use separate rate-limit keys and quotas. Session subjects are HMAC-protected before entering Gateway Redis keys.
-- Credentialed CORS names one configured attendee-client origin. Login, logout, forgot-password, and reset-password require that same exact `Origin`; cookie attributes remain host-only, HttpOnly, `SameSite=Lax`, and `Secure` on HTTPS.
+- Account retrieval, logout, and deletion use separate rate-limit keys and quotas. Session subjects are HMAC-protected before entering Gateway Redis keys.
+- Credentialed CORS names one configured attendee-client origin. Login, logout, deletion, forgot-password, and reset-password require that same exact `Origin`; cookie attributes remain host-only, HttpOnly, `SameSite=Lax`, and `Secure` on HTTPS.
 - Logout without usable cookie state is idempotent. A revocation dependency failure keeps the cookie so the client can retry.
 - Gateway rate-limit subjects and Identity OTP subjects are independently HMAC-protected before Redis storage.
 - Unsupported methods use the Gateway's ordinary unmatched-route behavior; there is no overlapping method catch-all.

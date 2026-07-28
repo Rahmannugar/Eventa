@@ -1,7 +1,7 @@
 import {
   ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
   type AttendeeEmailVerificationJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import type { Message } from 'amqplib';
 import { describe, expect, it } from 'vitest';
 

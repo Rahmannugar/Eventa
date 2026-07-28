@@ -18,7 +18,16 @@ export interface IssuedAttendeeSession extends AttendeeSession {
 }
 
 export interface AttendeeSessionState {
+  cancelAccountDeletion(attendeeSubject: string): Promise<void>;
+  completeAccountDeletion(
+    attendeeSubject: string,
+    ttlMs: number,
+  ): Promise<void>;
   create(input: CreateAttendeeSession): Promise<AttendeeSession>;
+  prepareAccountDeletion(
+    attendeeSubject: string,
+    ttlMs: number,
+  ): Promise<number>;
   read(tokenDigest: string): Promise<AttendeeSession | undefined>;
   revoke(tokenDigest: string): Promise<boolean>;
   revokeAll(attendeeSubject: string): Promise<number>;

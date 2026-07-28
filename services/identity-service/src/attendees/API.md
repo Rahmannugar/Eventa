@@ -44,6 +44,17 @@ The request contains `email` and `password`. Success returns the active attendee
 
 `LogoutAttendee` accepts the presented token and atomically removes that session from Redis. Success reports whether live state was removed; repeating logout safely reports `revoked = false`. Redis failure returns `UNAVAILABLE`.
 
+## DeleteAttendeeAccount Command
+
+The request contains the authenticated `attendee_id` and current `password`. Identity accepts only a verified, active, non-deleted attendee with the correct password. Success returns `account_deleted = true` after all sessions are revoked, `deleted_at` is recorded, and the attendee-deleted lifecycle event is stored in the same PostgreSQL transaction.
+
+| gRPC status        | Meaning                                              |
+| ------------------ | ---------------------------------------------------- |
+| `INVALID_ARGUMENT` | Identity validation rejected a command field.        |
+| `UNAUTHENTICATED`  | The attendee is no longer eligible for the operation. |
+| `PERMISSION_DENIED` | The current password is incorrect.                  |
+| `UNAVAILABLE`      | Session state could not safely begin the operation.  |
+
 ## ConfirmAttendeeEmailVerification Command
 
 The request contains `email` and a six-digit `otp`. Success returns `email_verified = true`, including an exact replay of an already-confirmed OTP while its original Redis state remains valid.

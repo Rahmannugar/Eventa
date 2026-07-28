@@ -44,6 +44,17 @@ export class AttendeeSessionService {
     return this.state.read(this.tokenDigest(token));
   }
 
+  cancelAccountDeletion(attendeeId: string): Promise<void> {
+    return this.state.cancelAccountDeletion(this.attendeeSubject(attendeeId));
+  }
+
+  completeAccountDeletion(attendeeId: string, ttlMs: number): Promise<void> {
+    return this.state.completeAccountDeletion(
+      this.attendeeSubject(attendeeId),
+      ttlMs,
+    );
+  }
+
   async require(token: string): Promise<AttendeeSession> {
     const session = await this.authenticate(token);
 
@@ -64,6 +75,13 @@ export class AttendeeSessionService {
 
   revokeAll(attendeeId: string): Promise<number> {
     return this.state.revokeAll(this.attendeeSubject(attendeeId));
+  }
+
+  prepareAccountDeletion(attendeeId: string, ttlMs: number): Promise<number> {
+    return this.state.prepareAccountDeletion(
+      this.attendeeSubject(attendeeId),
+      ttlMs,
+    );
   }
 
   private attendeeSubject(attendeeId: string): string {

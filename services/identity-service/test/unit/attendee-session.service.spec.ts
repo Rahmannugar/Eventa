@@ -32,6 +32,18 @@ class RecordingSessionState implements AttendeeSessionState {
     });
   }
 
+  cancelAccountDeletion(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  completeAccountDeletion(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  prepareAccountDeletion(): Promise<number> {
+    return Promise.resolve(0);
+  }
+
   read(tokenDigest: string): Promise<AttendeeSession | undefined> {
     this.readDigest = tokenDigest;
     return Promise.resolve(this.readResult);

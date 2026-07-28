@@ -5,6 +5,7 @@ import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/red
 import { RedisPasswordResetCodeState } from '../../src/attendees/adapters/redis/password-reset-code.state';
 import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
+import { AttendeeSessionAccountBlockedError } from '../../src/attendees/errors/attendee-session.errors';
 
 const testRedisUrl = process.env.TEST_REDIS_URL;
 
@@ -243,6 +244,42 @@ describe('RedisEmailVerificationOtpState integration', () => {
     await expect(sessionState.read(inputs[1]!.tokenDigest)).resolves.toBe(
       undefined,
     );
+  });
+
+  it('blocks new sessions while account deletion revokes every existing session', async () => {
+    const input = {
+      attendeeId: 'attendee-1',
+      attendeeSubject: 'subject-1',
+      maxConcurrentSessions: 3,
+      sessionId: 'session-1',
+      tokenDigest: 'd'.repeat(64),
+      ttlMs: 60_000,
+    };
+    await sessionState.create(input);
+
+    await expect(
+      sessionState.prepareAccountDeletion('subject-1', 60_000),
+    ).resolves.toBe(1);
+    await expect(sessionState.read(input.tokenDigest)).resolves.toBeUndefined();
+    await expect(
+      sessionState.create({
+        ...input,
+        sessionId: 'session-2',
+        tokenDigest: 'e'.repeat(64),
+      }),
+    ).rejects.toBeInstanceOf(AttendeeSessionAccountBlockedError);
+    await expect(
+      sessionState.prepareAccountDeletion('subject-1', 60_000),
+    ).rejects.toBeInstanceOf(AttendeeSessionAccountBlockedError);
+
+    await sessionState.cancelAccountDeletion('subject-1');
+    await expect(
+      sessionState.create({
+        ...input,
+        sessionId: 'session-3',
+        tokenDigest: 'f'.repeat(64),
+      }),
+    ).resolves.toMatchObject({ sessionId: 'session-3' });
   });
 
   it('exhausts a password reset code after five incorrect guesses', async () => {

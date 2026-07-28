@@ -21,7 +21,7 @@ interface SessionResponse {
   setHeader(name: string, value: string): void;
 }
 
-type SessionOperation = 'account' | 'logout';
+type SessionOperation = 'account' | 'deletion' | 'logout';
 
 function setHeaders(
   response: SessionResponse,
@@ -77,10 +77,14 @@ abstract class AttendeeSessionRateLimitGuard implements CanActivate {
         HttpStatus.TOO_MANY_REQUESTS,
         this.operation === 'account'
           ? 'ACCOUNT_RATE_LIMITED'
-          : 'LOGOUT_RATE_LIMITED',
+          : this.operation === 'deletion'
+            ? 'ACCOUNT_DELETION_RATE_LIMITED'
+            : 'LOGOUT_RATE_LIMITED',
         this.operation === 'account'
           ? 'Wait before requesting your account again.'
-          : 'Wait before trying to sign out again.',
+          : this.operation === 'deletion'
+            ? 'Wait before trying to delete your account again.'
+            : 'Wait before trying to sign out again.',
       );
     } catch (error: unknown) {
       if (error instanceof RateLimitStateUnavailableError) {
@@ -112,6 +116,18 @@ export class AttendeeAccountRateLimitGuard extends AttendeeSessionRateLimitGuard
 @Injectable()
 export class AttendeeLogoutRateLimitGuard extends AttendeeSessionRateLimitGuard {
   protected readonly operation = 'logout' as const;
+
+  constructor(
+    rateLimits: AttendeeSessionRateLimitService,
+    sessionCookie: AttendeeSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AttendeeDeletionRateLimitGuard extends AttendeeSessionRateLimitGuard {
+  protected readonly operation = 'deletion' as const;
 
   constructor(
     rateLimits: AttendeeSessionRateLimitService,

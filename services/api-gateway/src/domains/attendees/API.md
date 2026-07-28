@@ -66,6 +66,12 @@ Logout requires the exact configured attendee-client `Origin`. It revokes only t
 
 Credentialed CORS permits only `ATTENDEE_CLIENT_ORIGIN`. Login and logout reject a missing or different `Origin` with `403 UNTRUSTED_ORIGIN`.
 
+## Delete Account
+
+`POST /auth/attendees/delete-account`
+
+The signed-in attendee supplies the current password. Success atomically marks the account deleted, records its lifecycle event, revokes every session, and clears the browser cookie with `204`. Deleted email and username values remain reserved. A missing or stale session returns `401`; an incorrect password or untrusted origin returns `403`; dedicated client-IP or protected-session limits return `429`; unavailable correctness dependencies return `503`.
+
 ## Confirm Email Verification
 
 `POST /auth/attendees/email-verification/confirm`

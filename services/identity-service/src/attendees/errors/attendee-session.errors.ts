@@ -5,6 +5,12 @@ export class AttendeeSessionStateUnavailableError extends Error {
   }
 }
 
+export class AttendeeSessionAccountBlockedError extends Error {
+  constructor() {
+    super('ATTENDEE_SESSION_ACCOUNT_BLOCKED');
+  }
+}
+
 export class InvalidAttendeeSessionError extends Error {
   constructor() {
     super('ATTENDEE_SESSION_INVALID');

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message DeleteAttendeeAccountRequest {
+  string attendee_id = 1;
+  string password = 2;
+}
+
+message DeleteAttendeeAccountResponse {
+  bool account_deleted = 1;
+}

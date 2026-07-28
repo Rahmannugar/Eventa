@@ -8,7 +8,7 @@ import {
   ATTENDEE_PASSWORD_RESET_QUEUE,
   type AttendeeEmailVerificationJob,
   type AttendeePasswordResetJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import { runWithOperationSpan } from '@eventa/observability';
 import { context, propagation } from '@opentelemetry/api';
 import type { ConfirmChannel } from 'amqplib';

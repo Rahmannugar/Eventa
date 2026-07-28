@@ -37,6 +37,7 @@ import { AttendeeSessionRateLimitService } from './rate-limit/services/attendee-
 import {
   AttendeeLogoutRateLimitGuard,
   AttendeeAccountRateLimitGuard,
+  AttendeeDeletionRateLimitGuard,
 } from './rate-limit/guards/attendee-session-rate-limit.guards';
 import { AttendeePasswordResetController } from './controllers/attendee-password-reset.controller';
 import { AttendeePasswordResetService } from './services/attendee-password-reset.service';
@@ -149,6 +150,7 @@ export class AttendeesModule {
         AttendeeClientOriginGuard,
         AttendeeAuthenticationGuard,
         AttendeeAccountRateLimitGuard,
+        AttendeeDeletionRateLimitGuard,
         AttendeeForgotPasswordRateLimitGuard,
         AttendeeLogoutRateLimitGuard,
         AttendeeLoginRateLimitGuard,

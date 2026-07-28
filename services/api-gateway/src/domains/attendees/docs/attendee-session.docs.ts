@@ -76,3 +76,35 @@ export function ApiLogoutAttendee(): MethodDecorator {
     ),
   );
 }
+
+export function ApiDeleteAttendeeAccount(): MethodDecorator {
+  return applyDecorators(
+    ApiCookieAuth('attendeeSession'),
+    ApiExtraModels(ApiErrorResponseDto),
+    ApiHeader({
+      description: 'Must exactly match the configured attendee client origin.',
+      name: 'Origin',
+      required: true,
+    }),
+    ApiOperation({ summary: 'Delete the signed-in attendee account' }),
+    ApiNoContentResponse({
+      description: 'The attendee account was deleted and all sessions revoked.',
+    }),
+    errorResponse(401, 'SESSION_INVALID', 'Sign in to continue.'),
+    errorResponse(
+      403,
+      'CURRENT_PASSWORD_INCORRECT',
+      'The current password is incorrect.',
+    ),
+    errorResponse(
+      429,
+      'ACCOUNT_DELETION_RATE_LIMITED',
+      'Wait before trying to delete your account again.',
+    ),
+    errorResponse(
+      503,
+      'ACCOUNT_DELETION_UNAVAILABLE',
+      'Account deletion is temporarily unavailable. Try again later.',
+    ),
+  );
+}

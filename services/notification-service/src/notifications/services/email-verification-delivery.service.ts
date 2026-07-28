@@ -1,4 +1,4 @@
-import type { AttendeeEmailVerificationJob } from '@eventa/messaging-contracts';
+import type { AttendeeEmailVerificationJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import { Inject } from '@nestjs/common';
 
 import {

@@ -1,5 +1,10 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
+import {
+  ATTENDEE_DELETED_EVENT_TYPE,
+  type AttendeeDeletedEvent,
+} from '@eventa/messaging-contracts/identity/attendee-lifecycle.events';
+import { randomUUID } from 'node:crypto';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { IDENTITY_DATABASE } from '../../database/database.constants';
@@ -30,6 +35,11 @@ import type {
   AttendeePasswordResetAccount,
   AttendeePasswordResetRepository,
 } from '../types/attendee-password-reset.types';
+import type {
+  AttendeeDeletionAccount,
+  AttendeeDeletionRepository,
+} from '../types/attendee-deletion.types';
+import { attendeeLifecycleOutbox } from '../schema/attendee-lifecycle-outbox.schema';
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -63,6 +73,7 @@ export class AttendeeAccountRepository
     AttendeeAccountRepositoryPort,
     AttendeeAccountDetailsRepository,
     AttendeeEmailVerificationRepository,
+    AttendeeDeletionRepository,
     AttendeeLoginRepository,
     AttendeePasswordResetRepository
 {
@@ -216,6 +227,71 @@ export class AttendeeAccountRepository
       .limit(1);
 
     return account;
+  }
+
+  async findAccountForDeletion(
+    attendeeId: string,
+  ): Promise<AttendeeDeletionAccount | undefined> {
+    const [account] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        passwordHash: attendeeAccounts.passwordHash,
+      })
+      .from(attendeeAccounts)
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          eq(attendeeAccounts.status, 'active'),
+          isNotNull(attendeeAccounts.emailVerifiedAt),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return account;
+  }
+
+  async deleteAccount(
+    attendeeId: string,
+  ): Promise<AttendeeDeletedEvent | undefined> {
+    return this.database.transaction(async (transaction) => {
+      const [deleted] = await transaction
+        .update(attendeeAccounts)
+        .set({ deletedAt: sql`NOW()` })
+        .where(
+          and(
+            eq(attendeeAccounts.id, attendeeId),
+            eq(attendeeAccounts.status, 'active'),
+            isNotNull(attendeeAccounts.emailVerifiedAt),
+            isNull(attendeeAccounts.deletedAt),
+          ),
+        )
+        .returning({
+          attendeeId: attendeeAccounts.id,
+          deletedAt: attendeeAccounts.deletedAt,
+        });
+
+      if (deleted?.deletedAt === null || deleted === undefined) {
+        return undefined;
+      }
+
+      const event: AttendeeDeletedEvent = {
+        attendeeId: deleted.attendeeId,
+        deletedAt: deleted.deletedAt.toISOString(),
+        eventId: randomUUID(),
+        type: ATTENDEE_DELETED_EVENT_TYPE,
+      };
+
+      await transaction.insert(attendeeLifecycleOutbox).values({
+        attendeeId: event.attendeeId,
+        eventId: event.eventId,
+        eventType: event.type,
+        occurredAt: deleted.deletedAt,
+        payload: event,
+      });
+
+      return event;
+    });
   }
 
   async replacePassword(

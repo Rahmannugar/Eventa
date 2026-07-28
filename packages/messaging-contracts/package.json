@@ -3,8 +3,26 @@
   "version": "0.0.0",
   "private": true,
   "type": "commonjs",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    "./identity/attendee-auth.jobs": {
+      "types": "./dist/identity/attendee-auth.jobs.d.ts",
+      "default": "./dist/identity/attendee-auth.jobs.js"
+    },
+    "./identity/attendee-lifecycle.events": {
+      "types": "./dist/identity/attendee-lifecycle.events.d.ts",
+      "default": "./dist/identity/attendee-lifecycle.events.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "identity/attendee-auth.jobs": [
+        "dist/identity/attendee-auth.jobs.d.ts"
+      ],
+      "identity/attendee-lifecycle.events": [
+        "dist/identity/attendee-lifecycle.events.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],

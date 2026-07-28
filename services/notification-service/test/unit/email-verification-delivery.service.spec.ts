@@ -1,7 +1,7 @@
 import {
   ATTENDEE_EMAIL_VERIFICATION_JOB_TYPE,
   type AttendeeEmailVerificationJob,
-} from '@eventa/messaging-contracts';
+} from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 import { describe, expect, it } from 'vitest';
 
 import { EmailDeliveryError } from '../../src/notifications/errors/email-delivery.errors';

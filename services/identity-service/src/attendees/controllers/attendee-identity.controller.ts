@@ -11,6 +11,7 @@ import {
   type RegisterAttendeeResponse,
   type ResendAttendeeEmailVerificationResponse,
   type ResetAttendeePasswordResponse,
+  type DeleteAttendeeAccountResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
 import { RpcException } from '@nestjs/microservices';
@@ -60,6 +61,9 @@ import {
   PasswordResetStateUnavailableError,
 } from '../errors/attendee-password-reset.errors';
 import { AttendeePasswordResetService } from '../services/attendee-password-reset.service';
+import { DeleteAttendeeAccountDto } from '../dto/attendee-deletion.dto';
+import { AttendeeDeletionService } from '../services/attendee-deletion.service';
+import { AttendeeDeletionPasswordInvalidError } from '../errors/attendee-deletion.errors';
 
 @Controller()
 @AttendeeIdentityServiceControllerMethods()
@@ -72,7 +76,14 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
     private readonly attendeeSessions: AttendeeSessionService,
     private readonly attendeeAccounts: AttendeeAccountService,
     private readonly attendeePasswordReset: AttendeePasswordResetService,
+    private readonly attendeeDeletion: AttendeeDeletionService,
   ) {}
+
+  deleteAttendeeAccount(
+    request: DeleteAttendeeAccountDto,
+  ): Observable<DeleteAttendeeAccountResponse> {
+    return from(this.handleAccountDeletion(request));
+  }
 
   registerAttendee(
     request: RegisterAttendeeDto,
@@ -149,6 +160,27 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
       }
 
       throw error;
+    }
+  }
+
+  private async handleAccountDeletion(
+    request: DeleteAttendeeAccountDto,
+  ): Promise<DeleteAttendeeAccountResponse> {
+    try {
+      await this.attendeeDeletion.deleteAccount(
+        request.attendeeId,
+        request.password,
+      );
+      return { accountDeleted: true };
+    } catch (error: unknown) {
+      if (error instanceof AttendeeDeletionPasswordInvalidError) {
+        throw new RpcException({
+          code: status.PERMISSION_DENIED,
+          message: error.message,
+        });
+      }
+
+      this.translateSessionError(error);
     }
   }
 

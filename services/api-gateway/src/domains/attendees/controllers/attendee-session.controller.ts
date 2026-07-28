@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Headers,
@@ -22,12 +23,15 @@ import type { AttendeeAuthenticatedRequest } from '../types/authenticated-attend
 import { CurrentAttendeeAccountDto } from '../dto/current-attendee-account.dto';
 import {
   AttendeeAccountRateLimitGuard,
+  AttendeeDeletionRateLimitGuard,
   AttendeeLogoutRateLimitGuard,
 } from '../rate-limit/guards/attendee-session-rate-limit.guards';
 import {
   ApiGetCurrentAttendeeAccount,
+  ApiDeleteAttendeeAccount,
   ApiLogoutAttendee,
 } from '../docs/attendee-session.docs';
+import { DeleteAttendeeAccountDto } from '../dto/delete-attendee-account.dto';
 
 interface SessionRequest {
   headers: { cookie?: string };
@@ -69,6 +73,28 @@ export class AttendeeSessionController {
       await this.sessions.logout(token, requestId);
     }
 
+    this.sessionCookie.clear(response);
+  }
+
+  @Post('delete-account')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(
+    AttendeeClientOriginGuard,
+    AttendeeDeletionRateLimitGuard,
+    AttendeeAuthenticationGuard,
+  )
+  @ApiDeleteAttendeeAccount()
+  async deleteAccount(
+    @Body() body: DeleteAttendeeAccountDto,
+    @Req() request: AttendeeAuthenticatedRequest,
+    @Headers('x-request-id') requestId: string,
+    @Res({ passthrough: true }) response: AttendeeCookieResponse,
+  ): Promise<void> {
+    await this.sessions.deleteAccount(
+      request.attendeeSession.attendeeId,
+      body.password,
+      requestId,
+    );
     this.sessionCookie.clear(response);
   }
 }

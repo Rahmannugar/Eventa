@@ -11,6 +11,7 @@ import type {
   LoginAttendeeInput,
 } from '../types/attendee-login.types';
 import type { AttendeeSessionService } from './attendee-session.service';
+import { AttendeeSessionAccountBlockedError } from '../errors/attendee-session.errors';
 
 const INVALID_LOGIN_PASSWORD_HASH =
   '$argon2id$v=19$m=65536,t=3,p=4$ZXZlbnRhLWxvZ2luLXNhbHQ$X1DCQPCT6hOJuXLJgazxWCP2S8h0TpQ2wFVxH4v5d1k';
@@ -46,7 +47,17 @@ export class AttendeeLoginService {
       throw new AttendeeEmailVerificationRequiredError();
     }
 
-    const session = await this.sessions.issue(account.attendeeId);
+    let session;
+
+    try {
+      session = await this.sessions.issue(account.attendeeId);
+    } catch (error: unknown) {
+      if (error instanceof AttendeeSessionAccountBlockedError) {
+        throw new AttendeeAccountDeletedError();
+      }
+
+      throw error;
+    }
 
     return {
       attendeeId: account.attendeeId,

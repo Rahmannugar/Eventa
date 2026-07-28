@@ -18,11 +18,18 @@ import type {
   ResendAttendeeEmailVerificationResponse,
   ResetAttendeePasswordRequest,
   ResetAttendeePasswordResponse,
+  DeleteAttendeeAccountRequest,
+  DeleteAttendeeAccountResponse,
 } from '@eventa/grpc-contracts';
 import type { CallOptions, Metadata } from '@grpc/grpc-js';
 import type { Observable } from 'rxjs';
 
 export interface DeadlineAwareAttendeeIdentityServiceClient extends AttendeeIdentityServiceClient {
+  deleteAttendeeAccount(
+    request: DeleteAttendeeAccountRequest,
+    metadata?: Metadata,
+    options?: CallOptions,
+  ): Observable<DeleteAttendeeAccountResponse>;
   authenticateAttendeeSession(
     request: AuthenticateAttendeeSessionRequest,
     metadata?: Metadata,

@@ -3,6 +3,7 @@ syntax = "proto3";
 package eventa.identity.v1;
 
 import "eventa/identity/v1/attendee_email_verification.proto";
+import "eventa/identity/v1/attendee_deletion.proto";
 import "eventa/identity/v1/attendee_login.proto";
 import "eventa/identity/v1/attendee_password_reset.proto";
 import "eventa/identity/v1/attendee_registration.proto";
@@ -13,6 +14,7 @@ service AttendeeIdentityService {
   rpc LoginAttendee(LoginAttendeeRequest) returns (LoginAttendeeResponse);
   rpc ForgotAttendeePassword(ForgotAttendeePasswordRequest) returns (ForgotAttendeePasswordResponse);
   rpc ResetAttendeePassword(ResetAttendeePasswordRequest) returns (ResetAttendeePasswordResponse);
+  rpc DeleteAttendeeAccount(DeleteAttendeeAccountRequest) returns (DeleteAttendeeAccountResponse);
   rpc AuthenticateAttendeeSession(AuthenticateAttendeeSessionRequest) returns (AuthenticateAttendeeSessionResponse);
   rpc GetCurrentAttendeeAccount(GetCurrentAttendeeAccountRequest) returns (GetCurrentAttendeeAccountResponse);
   rpc LogoutAttendee(LogoutAttendeeRequest) returns (LogoutAttendeeResponse);

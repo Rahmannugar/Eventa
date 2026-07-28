@@ -79,6 +79,59 @@ services:
       - job-queue-data:/var/lib/rabbitmq
     logging: *local-logging
 
+  event-bus:
+    image: apache/kafka:4.1.0
+    ports:
+      - '59092:19092'
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:29093,INTERNAL://:9092,HOST://:19092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://event-bus:9092,HOST://127.0.0.1:59092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@event-bus:29093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    volumes:
+      - event-bus-data:/var/lib/kafka/data
+    logging: *local-logging
+
+  event-bus-init:
+    image: apache/kafka:4.1.0
+    command:
+      [
+        '/opt/kafka/bin/kafka-topics.sh',
+        '--bootstrap-server',
+        'event-bus:9092',
+        '--create',
+        '--if-not-exists',
+        '--topic',
+        'eventa.identity.attendee-lifecycle.v1',
+        '--partitions',
+        '3',
+        '--replication-factor',
+        '1',
+      ]
+    depends_on:
+      event-bus:
+        condition: service_healthy
+    restart: 'no'
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -251,6 +304,7 @@ services:
     logging: *local-logging
 
 volumes:
+  event-bus-data:
   identity-database-data:
   notification-database-data:
   job-queue-data:

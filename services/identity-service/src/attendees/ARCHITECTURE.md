@@ -46,6 +46,12 @@ The Gateway receives the raw token only across the internal login response and p
 
 Session authentication returns only Redis-owned session context. Account retrieval then reads PostgreSQL and accepts only a verified, active, non-deleted attendee account. Logout removes exactly the presented Redis session; a repeated logout is idempotent.
 
+## Account Deletion
+
+Deletion verifies the current password before mutation. One Redis command installs a short per-attendee deletion barrier and revokes every session; session creation checks the same barrier, closing the concurrent login race. A PostgreSQL transaction then sets `deleted_at` and inserts one `attendee.deleted.v1` outbox event. Failure cancels the preparation barrier when possible; its five-minute TTL bounds crash recovery. After commit, the barrier is retained for seven days while PostgreSQL remains the permanent login authority.
+
+The outbox relay claims records with leases and `SKIP LOCKED`, publishes them to `eventa.identity.attendee-lifecycle.v1` keyed by attendee ID, and records completion. Broker failure schedules bounded exponential retry without changing the successful deletion response. Event IDs support consumer deduplication under at-least-once delivery.
+
 ## Failure and Observability
 
 Expected credential, verification, uniqueness, and unavailable-state outcomes receive deliberate gRPC translations. Unexpected failures remain internal.

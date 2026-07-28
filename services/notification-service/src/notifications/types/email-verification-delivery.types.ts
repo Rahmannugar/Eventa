@@ -1,4 +1,4 @@
-import type { AttendeeEmailVerificationJob } from '@eventa/messaging-contracts';
+import type { AttendeeEmailVerificationJob } from '@eventa/messaging-contracts/identity/attendee-auth.jobs';
 
 export type EmailVerificationDeliveryStatus =
   | 'delivered'
