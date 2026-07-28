@@ -14,6 +14,7 @@ import {
   ADMIN_IDENTITY_GRPC_DEADLINE_MS,
 } from './constants/admin-registration.constants';
 import { AdminActivationController } from './controllers/admin-activation.controller';
+import { AdminLoginController } from './controllers/admin-login.controller';
 import { AdminClientOriginGuard } from './guards/admin-client-origin.guard';
 import {
   AdminRegistrationRateLimitGuard,
@@ -26,13 +27,19 @@ import {
 } from './rate-limit/admin-activation-rate-limit';
 import { AdminActivationCookie } from './services/admin-activation-cookie.service';
 import { AdminActivationService } from './services/admin-activation.service';
+import {
+  AdminLoginRateLimitGuard,
+  AdminLoginRateLimitService,
+} from './rate-limit/admin-login-rate-limit';
+import { AdminLoginService } from './services/admin-login.service';
+import { AdminSessionCookie } from './services/admin-session-cookie.service';
 
 interface AdminsModuleOptions {
   adminClientOrigin: string;
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
-  secureActivationCookie: boolean;
+  secureCookies: boolean;
 }
 
 @Module({})
@@ -54,7 +61,7 @@ export class AdminsModule {
           },
         ]),
       ],
-      controllers: [AdminActivationController],
+      controllers: [AdminActivationController, AdminLoginController],
       providers: [
         {
           provide: ADMIN_CLIENT_ORIGIN,
@@ -65,10 +72,20 @@ export class AdminsModule {
           useValue: options.identityGrpcDeadlineMs,
         },
         AdminActivationService,
+        AdminLoginService,
         {
           provide: AdminActivationCookie,
-          useFactory: () =>
-            new AdminActivationCookie(options.secureActivationCookie),
+          useFactory: () => new AdminActivationCookie(options.secureCookies),
+        },
+        {
+          provide: AdminSessionCookie,
+          useFactory: () => new AdminSessionCookie(options.secureCookies),
+        },
+        {
+          provide: AdminLoginRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AdminLoginRateLimitService(state, options.rateLimitKeySecret),
+          inject: [RATE_LIMIT_STATE],
         },
         {
           provide: AdminActivationRateLimitService,
@@ -91,6 +108,7 @@ export class AdminsModule {
         AdminClientOriginGuard,
         AdminActivationConfirmRateLimitGuard,
         AdminActivationCompleteRateLimitGuard,
+        AdminLoginRateLimitGuard,
         AdminRegistrationRateLimitGuard,
       ],
     };

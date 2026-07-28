@@ -9,8 +9,14 @@ import type {
   AdminActivationAccount,
   AdminActivationRepository,
 } from '../types/admin-activation.types';
+import type {
+  AdminLoginAccount,
+  AdminLoginRepository,
+} from '../types/admin-login.types';
 
-export class AdminAccountRepository implements AdminActivationRepository {
+export class AdminAccountRepository
+  implements AdminActivationRepository, AdminLoginRepository
+{
   constructor(
     @Inject(IDENTITY_DATABASE)
     private readonly database: IdentityDatabase,
@@ -87,6 +93,34 @@ export class AdminAccountRepository implements AdminActivationRepository {
         return account !== undefined;
       },
       this.spanOptions('UPDATE'),
+    );
+  }
+
+  findForLogin(email: string): Promise<AdminLoginAccount | undefined> {
+    return runWithOperationSpan(
+      'admin_account.find_for_login',
+      async () => {
+        const [account] = await this.database
+          .select({
+            activatedAt: adminAccounts.activatedAt,
+            adminId: adminAccounts.id,
+            email: adminAccounts.email,
+            passwordHash: adminAccounts.passwordHash,
+          })
+          .from(adminAccounts)
+          .where(eq(adminAccounts.email, email))
+          .limit(1);
+
+        return account === undefined
+          ? undefined
+          : {
+              activated: account.activatedAt !== null,
+              adminId: account.adminId,
+              email: account.email,
+              passwordHash: account.passwordHash,
+            };
+      },
+      this.spanOptions('SELECT'),
     );
   }
 

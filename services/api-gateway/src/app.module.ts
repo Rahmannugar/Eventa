@@ -32,7 +32,7 @@ export class AppModule implements NestModule {
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
-          secureActivationCookie: config.publicApiUrl.startsWith('https://'),
+          secureCookies: config.publicApiUrl.startsWith('https://'),
         }),
         AttendeesModule.register({
           attendeeClientOrigin: config.attendeeClientOrigin,

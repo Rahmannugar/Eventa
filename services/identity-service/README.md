@@ -9,8 +9,8 @@ Identity owns Eventa's security principals, credentials, verification state, acc
 - PostgreSQL: configured by `DATABASE_URL`; local Compose publishes the database on host port `55432` for development tools.
 - Redis temporary OTP and live attendee-session state: configured by `REDIS_URL`; local Compose publishes the Identity-owned Redis instance on host port `57379` for development tools.
 - RabbitMQ job queue: configured by `RABBITMQ_URL`; local Compose publishes AMQP on host port `5673`.
-- Session-token protection: configured by `ATTENDEE_SESSION_HMAC_SECRET`.
-- OTP subject and value protection: configured by `EMAIL_VERIFICATION_HMAC_SECRET`.
+- Attendee-auth state protection: configured by `AUTH_HMAC_SECRET`.
+- Admin-auth state protection: configured by `ADMIN_AUTH_HMAC_SECRET`.
 - OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.
 - Deployment label: configured by `DEPLOYMENT_ENVIRONMENT`.
 

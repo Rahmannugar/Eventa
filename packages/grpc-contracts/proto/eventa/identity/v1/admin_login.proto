@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message LoginAdminRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginAdminResponse {
+  string admin_id = 1;
+  string email = 2;
+  string session_token = 3;
+  string session_expires_at = 4;
+}

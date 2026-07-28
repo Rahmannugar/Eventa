@@ -2,6 +2,7 @@ import {
   AdminIdentityServiceControllerMethods,
   type CompleteAdminActivationResponse,
   type ConfirmAdminActivationResponse,
+  type LoginAdminResponse,
   type AdminIdentityServiceController,
   type RegisterAdminResponse,
 } from '@eventa/grpc-contracts';
@@ -11,6 +12,7 @@ import { RpcException } from '@nestjs/microservices';
 import { from, type Observable } from 'rxjs';
 
 import { RegisterAdminDto } from '../dto/register-admin.dto';
+import { LoginAdminDto } from '../dto/login-admin.dto';
 import {
   CompleteAdminActivationDto,
   ConfirmAdminActivationDto,
@@ -22,11 +24,19 @@ import {
   AdminActivationStateUnavailableError,
 } from '../errors/admin-activation.errors';
 import { AdminActivationService } from '../services/admin-activation.service';
+import {
+  AdminSessionStateUnavailableError,
+  InvalidAdminCredentialsError,
+} from '../errors/admin-login.errors';
+import { AdminLoginService } from '../services/admin-login.service';
 
 @Controller()
 @AdminIdentityServiceControllerMethods()
 export class AdminIdentityController implements AdminIdentityServiceController {
-  constructor(private readonly adminActivation: AdminActivationService) {}
+  constructor(
+    private readonly adminActivation: AdminActivationService,
+    private readonly adminLogin: AdminLoginService,
+  ) {}
 
   registerAdmin(request: RegisterAdminDto): Observable<RegisterAdminResponse> {
     return from(this.handleRegistration(request.email));
@@ -42,6 +52,10 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     request: CompleteAdminActivationDto,
   ): Observable<CompleteAdminActivationResponse> {
     return from(this.handleCompletion(request));
+  }
+
+  loginAdmin(request: LoginAdminDto): Observable<LoginAdminResponse> {
+    return from(this.handleLogin(request));
   }
 
   private async handleRegistration(
@@ -113,5 +127,29 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     }
 
     throw error;
+  }
+
+  private async handleLogin(
+    request: LoginAdminDto,
+  ): Promise<LoginAdminResponse> {
+    try {
+      return await this.adminLogin.login(request.email, request.password);
+    } catch (error: unknown) {
+      if (error instanceof InvalidAdminCredentialsError) {
+        throw new RpcException({
+          code: status.UNAUTHENTICATED,
+          message: error.message,
+        });
+      }
+
+      if (error instanceof AdminSessionStateUnavailableError) {
+        throw new RpcException({
+          code: status.UNAVAILABLE,
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
   }
 }

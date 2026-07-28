@@ -4,9 +4,11 @@ package eventa.identity.v1;
 
 import "eventa/identity/v1/admin_registration.proto";
 import "eventa/identity/v1/admin_activation.proto";
+import "eventa/identity/v1/admin_login.proto";
 
 service AdminIdentityService {
   rpc RegisterAdmin(RegisterAdminRequest) returns (RegisterAdminResponse);
   rpc ConfirmAdminActivation(ConfirmAdminActivationRequest) returns (ConfirmAdminActivationResponse);
   rpc CompleteAdminActivation(CompleteAdminActivationRequest) returns (CompleteAdminActivationResponse);
+  rpc LoginAdmin(LoginAdminRequest) returns (LoginAdminResponse);
 }

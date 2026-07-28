@@ -154,7 +154,7 @@ export class AdminActivationService {
 
   private protect(purpose: 'grant' | 'otp' | 'subject', value: string): string {
     return createHmac('sha256', this.hmacSecret)
-      .update(`${purpose}\0${value}`)
+      .update(`admin-activation-${purpose}\0${value}`)
       .digest('hex');
   }
 }

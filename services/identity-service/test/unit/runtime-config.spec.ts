@@ -3,12 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { readRuntimeConfig } from '../../src/config/runtime-config';
 
 const validEnvironment = {
-  ADMIN_ACTIVATION_HMAC_SECRET: 'test-admin-activation-secret-32-characters',
-  ATTENDEE_SESSION_HMAC_SECRET: 'test-attendee-session-secret-32-characters',
+  ADMIN_AUTH_HMAC_SECRET: 'test-admin-auth-secret-32-characters',
+  AUTH_HMAC_SECRET: 'test-auth-secret-at-least-32-characters',
   DATABASE_URL: 'postgresql://identity:test@localhost:5432/eventa_identity',
-  EMAIL_VERIFICATION_HMAC_SECRET:
-    'test-email-verification-secret-32-characters',
-  PASSWORD_RESET_HMAC_SECRET: 'test-password-reset-secret-32-characters',
   GRPC_HOST: '0.0.0.0',
   GRPC_PORT: '50051',
   HEALTH_PORT: '3005',
@@ -26,12 +23,9 @@ const validEnvironment = {
 describe('readRuntimeConfig', () => {
   it('returns the complete required configuration', () => {
     expect(readRuntimeConfig(validEnvironment)).toEqual({
-      adminActivationHmacSecret: validEnvironment.ADMIN_ACTIVATION_HMAC_SECRET,
-      attendeeSessionHmacSecret: validEnvironment.ATTENDEE_SESSION_HMAC_SECRET,
+      adminAuthHmacSecret: validEnvironment.ADMIN_AUTH_HMAC_SECRET,
+      authHmacSecret: validEnvironment.AUTH_HMAC_SECRET,
       databaseUrl: validEnvironment.DATABASE_URL,
-      emailVerificationHmacSecret:
-        validEnvironment.EMAIL_VERIFICATION_HMAC_SECRET,
-      passwordResetHmacSecret: validEnvironment.PASSWORD_RESET_HMAC_SECRET,
       grpcHost: validEnvironment.GRPC_HOST,
       grpcPort: 50_051,
       healthPort: 3005,
@@ -48,17 +42,15 @@ describe('readRuntimeConfig', () => {
   });
 
   it.each([
-    'ADMIN_ACTIVATION_HMAC_SECRET',
-    'ATTENDEE_SESSION_HMAC_SECRET',
+    'ADMIN_AUTH_HMAC_SECRET',
+    'AUTH_HMAC_SECRET',
     'DATABASE_URL',
-    'EMAIL_VERIFICATION_HMAC_SECRET',
     'GRPC_HOST',
     'GRPC_PORT',
     'HEALTH_PORT',
     'KAFKA_BROKERS',
     'KAFKA_CONNECTION_TIMEOUT_MS',
     'KAFKA_REQUEST_TIMEOUT_MS',
-    'PASSWORD_RESET_HMAC_SECRET',
     'RABBITMQ_CONNECT_TIMEOUT_MS',
     'RABBITMQ_PUBLISH_TIMEOUT_MS',
     'RABBITMQ_URL',
@@ -115,45 +107,15 @@ describe('readRuntimeConfig', () => {
     ).toThrow('RABBITMQ_URL must be a valid amqp:// or amqps:// URL');
   });
 
-  it('rejects a short email-verification HMAC secret', () => {
-    expect(() =>
-      readRuntimeConfig({
-        ...validEnvironment,
-        EMAIL_VERIFICATION_HMAC_SECRET: 'too-short',
-      }),
-    ).toThrow(
-      'EMAIL_VERIFICATION_HMAC_SECRET must contain at least 32 characters',
-    );
-  });
-
-  it('rejects a short attendee-session HMAC secret', () => {
-    expect(() =>
-      readRuntimeConfig({
-        ...validEnvironment,
-        ATTENDEE_SESSION_HMAC_SECRET: 'too-short',
-      }),
-    ).toThrow(
-      'ATTENDEE_SESSION_HMAC_SECRET must contain at least 32 characters',
-    );
-  });
-
-  it('rejects a short admin-activation HMAC secret', () => {
-    expect(() =>
-      readRuntimeConfig({
-        ...validEnvironment,
-        ADMIN_ACTIVATION_HMAC_SECRET: 'too-short',
-      }),
-    ).toThrow(
-      'ADMIN_ACTIVATION_HMAC_SECRET must contain at least 32 characters',
-    );
-  });
-
-  it('rejects a short password-reset HMAC secret', () => {
-    expect(() =>
-      readRuntimeConfig({
-        ...validEnvironment,
-        PASSWORD_RESET_HMAC_SECRET: 'too-short',
-      }),
-    ).toThrow('PASSWORD_RESET_HMAC_SECRET must contain at least 32 characters');
-  });
+  it.each(['ADMIN_AUTH_HMAC_SECRET', 'AUTH_HMAC_SECRET'] as const)(
+    'rejects a short %s',
+    (name) => {
+      expect(() =>
+        readRuntimeConfig({
+          ...validEnvironment,
+          [name]: 'too-short',
+        }),
+      ).toThrow(`${name} must contain at least 32 characters`);
+    },
+  );
 });

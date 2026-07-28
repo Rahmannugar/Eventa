@@ -17,3 +17,9 @@ Invalid or expired OTPs return `400`. Validation failures return `422`; abuse co
 `POST /auth/admins/activation/complete` accepts the first password and requires the activation cookie. Success atomically sets the password and activates the admin, clears the activation cookie, and returns `{ "activated": true }`.
 
 Missing, expired, reused, or otherwise invalid activation state returns `400`. Activation never logs the admin in.
+
+## Login
+
+`POST /auth/admins/login` accepts email and password. Only an activated admin with matching credentials receives `200` with admin ID and canonical email. Unknown, unactivated, and wrong-password attempts share `401 INVALID_CREDENTIALS`.
+
+Success sets `eventa_admin_session` as a host-only HttpOnly, `SameSite=Lax`, `Path=/` cookie with Identity's fixed seven-day expiry. A fourth concurrent login silently replaces the oldest admin session. Login never refreshes another session.

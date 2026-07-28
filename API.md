@@ -10,6 +10,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST` | `/auth/admins/register`                      | Generically accepts an activation request for a SQL-provisioned admin.                           |
 | `POST` | `/auth/admins/activation/confirm`            | Confirms an admin activation OTP and sets a short-lived activation cookie.                       |
 | `POST` | `/auth/admins/activation/complete`           | Sets the first password and activates the admin without creating a login session.                |
+| `POST` | `/auth/admins/login`                         | Signs in an activated admin and sets a server-backed seven-day session cookie.                   |
 | `POST` | `/auth/attendees/email-verification/confirm` | Confirms email ownership with a valid six-digit OTP.                                             |
 | `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 

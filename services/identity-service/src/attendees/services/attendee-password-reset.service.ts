@@ -25,7 +25,10 @@ export class AttendeePasswordResetService {
     private readonly codeState: PasswordResetCodeState,
     private readonly jobPublisher: AttendeeAuthJobPublisher,
     private readonly passwordHasher: PasswordHasher,
-    private readonly attendeeSessions: Pick<AttendeeSessionService, 'revokeAll'>,
+    private readonly attendeeSessions: Pick<
+      AttendeeSessionService,
+      'revokeAll'
+    >,
     private readonly hmacSecret: string,
   ) {}
 
@@ -78,9 +81,7 @@ export class AttendeePasswordResetService {
         this.logger.error({
           attendee_id: account.attendeeId,
           error_type:
-            cleanupError instanceof Error
-              ? cleanupError.name
-              : 'UnknownError',
+            cleanupError instanceof Error ? cleanupError.name : 'UnknownError',
           event: 'password_reset_state_cleanup_failed',
         });
       }
@@ -132,11 +133,7 @@ export class AttendeePasswordResetService {
       throw new PasswordResetCodeInvalidError();
     }
 
-    await this.codeState.markCompleted(
-      subject,
-      codeDigest,
-      completionDigest,
-    );
+    await this.codeState.markCompleted(subject, codeDigest, completionDigest);
 
     return { passwordReset: true };
   }
@@ -150,7 +147,7 @@ export class AttendeePasswordResetService {
     value: string,
   ): string {
     return createHmac('sha256', this.hmacSecret)
-      .update(`${purpose}\0${value}`)
+      .update(`attendee-password-reset-${purpose}\0${value}`)
       .digest('hex');
   }
 }

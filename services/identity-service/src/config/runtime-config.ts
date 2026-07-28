@@ -1,9 +1,7 @@
 export interface RuntimeConfig {
-  adminActivationHmacSecret: string;
+  adminAuthHmacSecret: string;
+  authHmacSecret: string;
   databaseUrl: string;
-  emailVerificationHmacSecret: string;
-  passwordResetHmacSecret: string;
-  attendeeSessionHmacSecret: string;
   grpcHost: string;
   grpcPort: number;
   healthPort: number;
@@ -109,11 +107,7 @@ function readKafkaBrokers(environment: NodeJS.ProcessEnv): string[] {
 
 function readHmacSecret(
   environment: NodeJS.ProcessEnv,
-  name:
-    | 'ADMIN_ACTIVATION_HMAC_SECRET'
-    | 'ATTENDEE_SESSION_HMAC_SECRET'
-    | 'EMAIL_VERIFICATION_HMAC_SECRET'
-    | 'PASSWORD_RESET_HMAC_SECRET',
+  name: 'ADMIN_AUTH_HMAC_SECRET' | 'AUTH_HMAC_SECRET',
 ): string {
   const secret = readRequiredString(environment, name);
 
@@ -128,23 +122,9 @@ export function readRuntimeConfig(
   environment: NodeJS.ProcessEnv,
 ): RuntimeConfig {
   return {
-    adminActivationHmacSecret: readHmacSecret(
-      environment,
-      'ADMIN_ACTIVATION_HMAC_SECRET',
-    ),
-    attendeeSessionHmacSecret: readHmacSecret(
-      environment,
-      'ATTENDEE_SESSION_HMAC_SECRET',
-    ),
+    adminAuthHmacSecret: readHmacSecret(environment, 'ADMIN_AUTH_HMAC_SECRET'),
+    authHmacSecret: readHmacSecret(environment, 'AUTH_HMAC_SECRET'),
     databaseUrl: readDatabaseUrl(environment),
-    emailVerificationHmacSecret: readHmacSecret(
-      environment,
-      'EMAIL_VERIFICATION_HMAC_SECRET',
-    ),
-    passwordResetHmacSecret: readHmacSecret(
-      environment,
-      'PASSWORD_RESET_HMAC_SECRET',
-    ),
     grpcHost: readRequiredString(environment, 'GRPC_HOST'),
     grpcPort: readPort(environment, 'GRPC_PORT'),
     healthPort: readPort(environment, 'HEALTH_PORT'),

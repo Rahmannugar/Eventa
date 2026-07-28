@@ -1,0 +1,5 @@
+export const ADMIN_SESSION_STATE = Symbol('ADMIN_SESSION_STATE');
+
+export const ADMIN_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
+export const ADMIN_SESSION_MAX_CONCURRENT = 3;
+export const ADMIN_SESSION_TOKEN_BYTES = 32;

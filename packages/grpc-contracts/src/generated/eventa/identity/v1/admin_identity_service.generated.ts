@@ -14,6 +14,7 @@ import {
   ConfirmAdminActivationRequest,
   ConfirmAdminActivationResponse,
 } from "./admin_activation.generated";
+import { LoginAdminRequest, LoginAdminResponse } from "./admin_login.generated";
 import { RegisterAdminRequest, RegisterAdminResponse } from "./admin_registration.generated";
 
 export const protobufPackage = "eventa.identity.v1";
@@ -32,6 +33,8 @@ export interface AdminIdentityServiceClient {
     request: CompleteAdminActivationRequest,
     metadata?: Metadata,
   ): Observable<CompleteAdminActivationResponse>;
+
+  loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 }
 
 export interface AdminIdentityServiceController {
@@ -46,11 +49,13 @@ export interface AdminIdentityServiceController {
     request: CompleteAdminActivationRequest,
     metadata?: Metadata,
   ): Observable<CompleteAdminActivationResponse>;
+
+  loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 }
 
 export function AdminIdentityServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["registerAdmin", "confirmAdminActivation", "completeAdminActivation"];
+    const grpcMethods: string[] = ["registerAdmin", "confirmAdminActivation", "completeAdminActivation", "loginAdmin"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AdminIdentityService", method)(constructor.prototype[method], method, descriptor);

@@ -141,7 +141,7 @@ export class AttendeeEmailVerificationService {
 
   private protect(purpose: 'otp' | 'subject', value: string): string {
     return createHmac('sha256', this.hmacSecret)
-      .update(`${purpose}\0${value}`)
+      .update(`attendee-email-verification-${purpose}\0${value}`)
       .digest('hex');
   }
 

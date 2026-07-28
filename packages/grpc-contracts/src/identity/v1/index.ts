@@ -14,6 +14,10 @@ export type {
   ConfirmAdminActivationRequest,
   ConfirmAdminActivationResponse,
 } from '../../generated/eventa/identity/v1/admin_activation.generated';
+export type {
+  LoginAdminRequest,
+  LoginAdminResponse,
+} from '../../generated/eventa/identity/v1/admin_login.generated';
 export {
   ATTENDEE_IDENTITY_SERVICE_NAME,
   AttendeeIdentityServiceControllerMethods,

@@ -5,6 +5,7 @@ import { RedisEmailVerificationOtpState } from '../../src/attendees/adapters/red
 import { RedisPasswordResetCodeState } from '../../src/attendees/adapters/redis/password-reset-code.state';
 import { RedisAttendeeSessionState } from '../../src/attendees/adapters/redis/attendee-session.state';
 import { RedisAdminActivationOtpState } from '../../src/admins/adapters/redis/admin-activation-otp.state';
+import { RedisAdminSessionState } from '../../src/admins/adapters/redis/admin-session.state';
 import { RedisClient } from '../../src/infrastructure/clients/redis.client';
 import { AttendeeSessionAccountBlockedError } from '../../src/attendees/errors/attendee-session.errors';
 
@@ -24,6 +25,7 @@ const otpState = new RedisEmailVerificationOtpState(redis);
 const passwordResetState = new RedisPasswordResetCodeState(redis);
 const sessionState = new RedisAttendeeSessionState(redis);
 const adminActivationState = new RedisAdminActivationOtpState(redis);
+const adminSessionState = new RedisAdminSessionState(redis);
 
 describe('RedisEmailVerificationOtpState integration', () => {
   beforeAll(async () => {
@@ -178,6 +180,31 @@ describe('RedisEmailVerificationOtpState integration', () => {
     await expect(
       adminActivationState.verify('admin-subject', 'correct-digest'),
     ).resolves.toEqual({ status: 'invalid' });
+  });
+
+  it('keeps three admin sessions for seven days and removes the oldest fourth-login victim', async () => {
+    for (let index = 1; index <= 4; index += 1) {
+      await adminSessionState.create({
+        adminId: 'admin-1',
+        adminSubject: 'admin-subject',
+        maxConcurrentSessions: 3,
+        sessionId: `session-${String(index)}`,
+        tokenDigest: `digest-${String(index)}`,
+        ttlMs: 7 * 24 * 60 * 60 * 1_000,
+      });
+    }
+
+    await expect(
+      administrativeClient.exists('identity:admin-session:v1:digest-1'),
+    ).resolves.toBe(0);
+
+    for (let index = 2; index <= 4; index += 1) {
+      const key = `identity:admin-session:v1:digest-${String(index)}`;
+      await expect(administrativeClient.exists(key)).resolves.toBe(1);
+      const ttl = await administrativeClient.pTTL(key);
+      expect(ttl).toBeGreaterThan(6 * 24 * 60 * 60 * 1_000);
+      expect(ttl).toBeLessThanOrEqual(7 * 24 * 60 * 60 * 1_000);
+    }
   });
 
   it('keeps session state only for its fixed lifetime', async () => {

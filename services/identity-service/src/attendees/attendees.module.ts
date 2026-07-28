@@ -134,7 +134,7 @@ import { InfrastructureClientsModule } from '../infrastructure/infrastructure-cl
     {
       provide: AttendeeSessionService,
       useFactory: (state: AttendeeSessionState, config: RuntimeConfig) =>
-        new AttendeeSessionService(state, config.attendeeSessionHmacSecret),
+        new AttendeeSessionService(state, config.authHmacSecret),
       inject: [ATTENDEE_SESSION_STATE, RUNTIME_CONFIG],
     },
     {
@@ -181,7 +181,7 @@ import { InfrastructureClientsModule } from '../infrastructure/infrastructure-cl
           jobPublisher,
           passwordHasher,
           sessions,
-          config.passwordResetHmacSecret,
+          config.authHmacSecret,
         ),
       inject: [
         ATTENDEE_PASSWORD_RESET_REPOSITORY,
@@ -217,7 +217,7 @@ import { InfrastructureClientsModule } from '../infrastructure/infrastructure-cl
           repository,
           otpState,
           jobPublisher,
-          config.emailVerificationHmacSecret,
+          config.authHmacSecret,
         ),
       inject: [
         ATTENDEE_EMAIL_VERIFICATION_REPOSITORY,

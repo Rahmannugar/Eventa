@@ -60,29 +60,29 @@ export class AdminActivationService implements OnModuleInit {
         ),
       );
     } catch (error: unknown) {
-      if (readErrorField(error, 'code') === status.RESOURCE_EXHAUSTED) {
-        const metadata = readErrorField(error, 'metadata');
-        const retryAfter =
-          metadata instanceof Metadata
-            ? metadata.get('retry-after')[0]
-            : undefined;
-        throw new ApiHttpException(
-          HttpStatus.TOO_MANY_REQUESTS,
-          'ADMIN_REGISTRATION_RATE_LIMITED',
-          'Wait before requesting another admin activation email.',
-          {
-            ...(typeof retryAfter === 'string'
-              ? { headers: { 'Retry-After': retryAfter } }
-              : {}),
-          },
-        );
+      switch (readErrorField(error, 'code')) {
+        case status.RESOURCE_EXHAUSTED: {
+          const metadata = readErrorField(error, 'metadata');
+          const retryAfter =
+            metadata instanceof Metadata
+              ? metadata.get('retry-after')[0]
+              : undefined;
+          throw new ApiHttpException(
+            HttpStatus.TOO_MANY_REQUESTS,
+            'ADMIN_REGISTRATION_RATE_LIMITED',
+            'Wait before requesting another admin activation email.',
+            {
+              ...(typeof retryAfter === 'string'
+                ? { headers: { 'Retry-After': retryAfter } }
+                : {}),
+            },
+          );
+        }
+        case status.DEADLINE_EXCEEDED:
+          throw this.unavailable('IDENTITY_RPC_DEADLINE_EXCEEDED');
+        default:
+          throw this.unavailable('IDENTITY_RPC_UNAVAILABLE');
       }
-
-      throw this.unavailable(
-        readErrorField(error, 'code') === status.DEADLINE_EXCEEDED
-          ? 'IDENTITY_RPC_DEADLINE_EXCEEDED'
-          : 'IDENTITY_RPC_UNAVAILABLE',
-      );
     }
   }
 
@@ -102,27 +102,24 @@ export class AdminActivationService implements OnModuleInit {
         ),
       );
     } catch (error: unknown) {
-      if (readErrorField(error, 'code') === status.FAILED_PRECONDITION) {
-        throw new ApiHttpException(
-          HttpStatus.BAD_REQUEST,
-          'ADMIN_ACTIVATION_OTP_INVALID',
-          'The activation code is invalid or has expired.',
-        );
+      switch (readErrorField(error, 'code')) {
+        case status.FAILED_PRECONDITION:
+          throw new ApiHttpException(
+            HttpStatus.BAD_REQUEST,
+            'ADMIN_ACTIVATION_OTP_INVALID',
+            'The activation code is invalid or has expired.',
+          );
+        case status.INVALID_ARGUMENT:
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'VALIDATION_FAILED',
+            'Check the email and activation code and try again.',
+          );
+        case status.DEADLINE_EXCEEDED:
+          throw this.unavailable('IDENTITY_RPC_DEADLINE_EXCEEDED');
+        default:
+          throw this.unavailable('IDENTITY_RPC_UNAVAILABLE');
       }
-
-      if (readErrorField(error, 'code') === status.INVALID_ARGUMENT) {
-        throw new ApiHttpException(
-          HttpStatus.UNPROCESSABLE_ENTITY,
-          'VALIDATION_FAILED',
-          'Check the email and activation code and try again.',
-        );
-      }
-
-      throw this.unavailable(
-        readErrorField(error, 'code') === status.DEADLINE_EXCEEDED
-          ? 'IDENTITY_RPC_DEADLINE_EXCEEDED'
-          : 'IDENTITY_RPC_UNAVAILABLE',
-      );
     }
   }
 
@@ -150,27 +147,24 @@ export class AdminActivationService implements OnModuleInit {
         ),
       );
     } catch (error: unknown) {
-      if (readErrorField(error, 'code') === status.FAILED_PRECONDITION) {
-        throw new ApiHttpException(
-          HttpStatus.BAD_REQUEST,
-          'ADMIN_ACTIVATION_REQUIRED',
-          'Confirm the activation code before setting a password.',
-        );
+      switch (readErrorField(error, 'code')) {
+        case status.FAILED_PRECONDITION:
+          throw new ApiHttpException(
+            HttpStatus.BAD_REQUEST,
+            'ADMIN_ACTIVATION_REQUIRED',
+            'Confirm the activation code before setting a password.',
+          );
+        case status.INVALID_ARGUMENT:
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'VALIDATION_FAILED',
+            'Check the password and try again.',
+          );
+        case status.DEADLINE_EXCEEDED:
+          throw this.unavailable('IDENTITY_RPC_DEADLINE_EXCEEDED');
+        default:
+          throw this.unavailable('IDENTITY_RPC_UNAVAILABLE');
       }
-
-      if (readErrorField(error, 'code') === status.INVALID_ARGUMENT) {
-        throw new ApiHttpException(
-          HttpStatus.UNPROCESSABLE_ENTITY,
-          'VALIDATION_FAILED',
-          'Check the password and try again.',
-        );
-      }
-
-      throw this.unavailable(
-        readErrorField(error, 'code') === status.DEADLINE_EXCEEDED
-          ? 'IDENTITY_RPC_DEADLINE_EXCEEDED'
-          : 'IDENTITY_RPC_UNAVAILABLE',
-      );
     }
   }
 
