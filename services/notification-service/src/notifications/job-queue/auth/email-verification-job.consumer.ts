@@ -169,6 +169,7 @@ export class EmailVerificationJobConsumer
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
             event: 'email_verification_job_consumer_error',
+            operation: EMAIL_VERIFICATION_JOB_OPERATION,
           });
           await this.delay(1_000);
         }
@@ -195,6 +196,7 @@ export class EmailVerificationJobConsumer
       this.logger.error({
         error_code: validation.failureCode,
         event: 'email_verification_job_rejected',
+        operation: EMAIL_VERIFICATION_JOB_OPERATION,
         ...(validation.jobId === undefined
           ? {}
           : {
@@ -214,6 +216,7 @@ export class EmailVerificationJobConsumer
         event: 'email_verification_delivery_retry_scheduled',
         job_id: validation.job.jobId,
         message_id: validation.job.jobId,
+        operation: EMAIL_VERIFICATION_JOB_OPERATION,
         outcome: 'retry',
       });
       channel.ack(message);
@@ -307,6 +310,7 @@ export class EmailVerificationJobConsumer
       event: 'email_verification_delivery_completed',
       job_id: jobId,
       message_id: jobId,
+      operation: EMAIL_VERIFICATION_JOB_OPERATION,
       outcome: outcome.kind,
     };
 

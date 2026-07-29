@@ -177,6 +177,7 @@ export class PasswordResetJobConsumer
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
             event: 'password_reset_job_consumer_error',
+            operation: this.definition.operation,
           });
           await this.delay(1_000);
         }
@@ -207,6 +208,7 @@ export class PasswordResetJobConsumer
       this.logger.error({
         error_code: validation.failureCode,
         event: 'password_reset_job_rejected',
+        operation: this.definition.operation,
         ...(validation.jobId === undefined
           ? {}
           : {
@@ -226,6 +228,7 @@ export class PasswordResetJobConsumer
         event: 'password_reset_delivery_retry_scheduled',
         job_id: validation.job.jobId,
         message_id: validation.job.jobId,
+        operation: this.definition.operation,
         outcome: 'retry',
       });
       channel.ack(message);
@@ -319,6 +322,7 @@ export class PasswordResetJobConsumer
       event: 'password_reset_delivery_completed',
       job_id: jobId,
       message_id: jobId,
+      operation: this.definition.operation,
       outcome: outcome.kind,
     };
 

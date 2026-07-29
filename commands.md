@@ -6,10 +6,16 @@ Create each service-owned `.env` and the Grafana `.env` before running these com
 
 ## Services
 
-Build and start Eventa, run migrations, then remove the completed migration container.
+Build and start Eventa, wait for migrations and event-bus initialization, then remove their completed containers.
 
 ```bash
 pnpm services:start
+```
+
+Start Eventa from existing images, wait for migrations and event-bus initialization, then remove their completed containers.
+
+```bash
+pnpm services:start:no-build
 ```
 
 Stop Eventa without deleting database data.

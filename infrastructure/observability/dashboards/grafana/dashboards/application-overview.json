@@ -494,6 +494,108 @@
       ],
       "title": "Recent application failures",
       "type": "logs"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Terminal background jobs that failed, expired, or were rejected in the selected range. Scheduled retries are excluded.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 38 },
+      "id": 16,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum(increase(eventa_job_count_total{service_name=~\"$service_name\", outcome=~\"failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=~\"$service_name\", outcome=~\"failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=~\"$service_name\", outcome=~\"failed|expired|rejected\"} offset $__range)) or vector(0)",
+          "instant": true,
+          "legendFormat": "terminal failures",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Background job terminal failures",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 38 },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (service_name, operation, outcome) ((increase(eventa_job_count_total{service_name=~\"$service_name\"}[1m]) + (last_over_time(eventa_job_count_total{service_name=~\"$service_name\"}[1m]) unless eventa_job_count_total{service_name=~\"$service_name\"} offset 1m)) / 60)",
+          "legendFormat": "{{service_name}} · {{operation}} · {{outcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Background job traffic",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",

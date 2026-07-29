@@ -86,7 +86,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "100 * ((sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"failed|expired|rejected\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\", outcome=~\"delivered|failed|expired|rejected\"} offset $__range)), 1))",
+          "expr": "100 * ((sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"failed|expired|rejected\"} offset $__range)) or vector(0)) / clamp_min(sum(increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"delivered|failed|expired|rejected\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\", outcome=~\"delivered|failed|expired|rejected\"} offset $__range)), 1))",
           "instant": true,
           "legendFormat": "terminal failures",
           "range": false,
@@ -125,7 +125,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset $__range)))",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"} offset $__range)))",
           "instant": true,
           "legendFormat": "p95",
           "range": false,
@@ -133,7 +133,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset $__range)))",
+          "expr": "histogram_quantile(0.99, sum by (le) (increase(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[$__range]) + (last_over_time(eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[$__range]) unless eventa_job_duration_milliseconds_bucket{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"} offset $__range)))",
           "instant": true,
           "legendFormat": "p99",
           "range": false,
@@ -180,7 +180,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(eventa_job_in_flight{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}) or vector(0)",
+          "expr": "sum(eventa_job_in_flight{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}) or vector(0)",
           "instant": true,
           "legendFormat": "active of 8",
           "range": false,
@@ -221,8 +221,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (outcome) ((increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[1m]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"}[1m]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=\"attendee.email_verification.delivery\"} offset 1m)) / 60)",
-          "legendFormat": "{{outcome}}",
+          "expr": "sum by (operation, outcome) ((increase(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[1m]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"}[1m]) unless eventa_job_count_total{service_name=\"eventa-notification-service\", operation=~\"attendee[.]email_verification[.]delivery|attendee[.]password_reset[.]delivery|admin[.]activation[.]delivery|admin[.]password_reset[.]delivery\"} offset 1m)) / 60)",
+          "legendFormat": "{{operation}} · {{outcome}}",
           "range": true,
           "refId": "A"
         }
@@ -274,7 +274,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "{project=\"eventa\", service_group=\"worker\", service_name=\"eventa-notification-service\"} | json | event=\"email_verification_delivery_completed\" | outcome=~\"failed|expired|rejected\"",
+          "expr": "{project=\"eventa\", service_group=\"worker\", service_name=\"eventa-notification-service\"} | json | operation=~\"attendee\\\\.email_verification\\\\.delivery|attendee\\\\.password_reset\\\\.delivery|admin\\\\.activation\\\\.delivery|admin\\\\.password_reset\\\\.delivery\" | outcome=~\"failed|expired|rejected\"",
           "queryType": "range",
           "refId": "A"
         },

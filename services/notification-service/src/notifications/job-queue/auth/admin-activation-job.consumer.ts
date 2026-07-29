@@ -165,6 +165,7 @@ export class AdminActivationJobConsumer
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
             event: 'admin_activation_job_consumer_error',
+            operation: JOB_OPERATION,
           });
           await this.delay(1_000);
         }
@@ -191,6 +192,7 @@ export class AdminActivationJobConsumer
       this.logger.error({
         error_code: validation.failureCode,
         event: 'admin_activation_job_rejected',
+        operation: JOB_OPERATION,
         ...(validation.jobId === undefined
           ? {}
           : {
@@ -210,6 +212,7 @@ export class AdminActivationJobConsumer
         event: 'admin_activation_delivery_retry_scheduled',
         job_id: validation.job.jobId,
         message_id: validation.job.jobId,
+        operation: JOB_OPERATION,
         outcome: 'retry',
       });
       channel.ack(message);
@@ -303,6 +306,7 @@ export class AdminActivationJobConsumer
       event: 'admin_activation_delivery_completed',
       job_id: jobId,
       message_id: jobId,
+      operation: JOB_OPERATION,
       outcome: outcome.kind,
     };
 
