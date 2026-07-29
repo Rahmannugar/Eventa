@@ -2,7 +2,6 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiExtraModels,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -31,18 +30,9 @@ function errorResponse(
   });
 }
 
-function attendeeOrigin(): MethodDecorator {
-  return ApiHeader({
-    description: 'Must exactly match the configured attendee client origin.',
-    name: 'Origin',
-    required: true,
-  });
-}
-
 export function ApiForgotAttendeePassword(): MethodDecorator {
   return applyDecorators(
     ApiExtraModels(ApiErrorResponseDto),
-    attendeeOrigin(),
     ApiOperation({ summary: 'Request an attendee password reset email' }),
     ApiAcceptedResponse({ type: ForgotAttendeePasswordResponseDto }),
     errorResponse(
@@ -61,8 +51,9 @@ export function ApiForgotAttendeePassword(): MethodDecorator {
 export function ApiResetAttendeePassword(): MethodDecorator {
   return applyDecorators(
     ApiExtraModels(ApiErrorResponseDto),
-    attendeeOrigin(),
-    ApiOperation({ summary: 'Reset an attendee password with an emailed code' }),
+    ApiOperation({
+      summary: 'Reset an attendee password with an emailed code',
+    }),
     ApiOkResponse({ type: ResetAttendeePasswordResponseDto }),
     errorResponse(
       400,

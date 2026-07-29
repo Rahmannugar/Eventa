@@ -1,6 +1,6 @@
 # Admin Authentication Architecture
 
-Gateway owns the public browser boundary. It validates request shapes, requires the exact admin-client origin, applies route-specific IP and protected-email abuse controls, and gives every Identity gRPC call a bounded deadline.
+Gateway owns the public browser boundary. It validates request shapes, rejects a present browser origin unless it exactly matches the configured admin client, applies route-specific IP and protected-email abuse controls, and gives every Identity gRPC call a bounded deadline.
 
 Gateway contains no admin eligibility or activation business rules. Identity decides whether a provisioned account may receive an OTP, verifies the OTP, hashes the submitted password, and performs the activation transition. Activation creates no browser credential; login is the only route that receives an admin session token.
 

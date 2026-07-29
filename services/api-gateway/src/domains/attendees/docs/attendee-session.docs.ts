@@ -2,7 +2,6 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiExtraModels,
-  ApiHeader,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -53,11 +52,6 @@ export function ApiLogoutAttendee(): MethodDecorator {
   return applyDecorators(
     ApiCookieAuth('attendeeSession'),
     ApiExtraModels(ApiErrorResponseDto),
-    ApiHeader({
-      description: 'Must exactly match the configured attendee client origin.',
-      name: 'Origin',
-      required: true,
-    }),
     ApiOperation({ summary: 'Sign out the current attendee session' }),
     ApiNoContentResponse({
       description:
@@ -81,11 +75,6 @@ export function ApiDeleteAttendeeAccount(): MethodDecorator {
   return applyDecorators(
     ApiCookieAuth('attendeeSession'),
     ApiExtraModels(ApiErrorResponseDto),
-    ApiHeader({
-      description: 'Must exactly match the configured attendee client origin.',
-      name: 'Origin',
-      required: true,
-    }),
     ApiOperation({ summary: 'Delete the signed-in attendee account' }),
     ApiNoContentResponse({
       description: 'The attendee account was deleted and all sessions revoked.',

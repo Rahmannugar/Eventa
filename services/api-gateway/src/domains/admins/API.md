@@ -1,7 +1,5 @@
 # Admin Authentication API
 
-All routes require the exact configured admin-client `Origin`.
-
 ## Request activation
 
 `POST /auth/admins/register` accepts an email and returns `202` with `{ "accepted": true }`. Unknown, activated, and eligible emails receive the same response. Only an inactive account inserted through Identity's reviewed provisioning SQL receives an email.
@@ -34,4 +32,4 @@ Current-account and logout requests have separate IP and protected-session abuse
 
 `POST /auth/admins/reset-password` accepts email, six-digit code, and a replacement password. Success returns `{ "passwordReset": true }` after Identity replaces the password and revokes every admin session. Invalid, expired, or mismatched completion returns `400 ADMIN_PASSWORD_RESET_INVALID`.
 
-Both routes require the exact admin-client origin and have separate IP plus protected-email abuse controls. Validation returns `422`, abuse controls return `429`, and dependency failure returns `503`.
+Both routes reject a present browser origin unless it exactly matches the configured admin client. They have separate IP plus protected-email abuse controls. Validation returns `422`, abuse controls return `429`, and dependency failure returns `503`.

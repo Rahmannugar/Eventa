@@ -62,9 +62,9 @@ The Gateway reads `eventa_attendee_session`, resolves it through Identity-owned 
 
 `POST /auth/attendees/logout`
 
-Logout requires the exact configured attendee-client `Origin`. It revokes only the presented session and then clears the matching host-only cookie. Success is `204`, including a request without a usable cookie. If Identity cannot confirm revocation, Gateway returns `503` and retains the cookie for retry.
+Logout rejects a present browser `Origin` unless it exactly matches the configured attendee client. It revokes only the presented session and then clears the matching host-only cookie. Success is `204`, including a request without a usable cookie. If Identity cannot confirm revocation, Gateway returns `503` and retains the cookie for retry.
 
-Credentialed CORS permits only `ATTENDEE_CLIENT_ORIGIN`. Login and logout reject a missing or different `Origin` with `403 UNTRUSTED_ORIGIN`.
+Credentialed CORS permits only `ATTENDEE_CLIENT_ORIGIN`. Protected routes reject a different browser `Origin` with `403 UNTRUSTED_ORIGIN`; non-browser clients may omit the header.
 
 ## Delete Account
 
@@ -98,4 +98,4 @@ The request contains `email`. Accepted requests return `202 { "accepted": true }
 
 The request contains `email`, a six-digit `code`, and `newPassword`. Success returns `200 { "passwordReset": true }`. A successful reset revokes every attendee session before replacing the password. An exact replay of the same code and new password returns the same success without repeating those mutations. A different password cannot reuse a claimed or completed code.
 
-Both endpoints require the exact configured attendee-client `Origin` and apply separate client-IP and protected-email abuse controls. Invalid fields return `422`; invalid, expired, replaced, or exhausted codes return `400 PASSWORD_RESET_INVALID`; route or per-email request cooldown denial returns `429`; unavailable rate-limit, Identity, reset-state, session-state, or delivery infrastructure returns `503`.
+Both endpoints reject a present browser `Origin` unless it exactly matches the configured attendee client and apply separate client-IP and protected-email abuse controls. Invalid fields return `422`; invalid, expired, replaced, or exhausted codes return `400 PASSWORD_RESET_INVALID`; route or per-email request cooldown denial returns `429`; unavailable rate-limit, Identity, reset-state, session-state, or delivery infrastructure returns `503`.

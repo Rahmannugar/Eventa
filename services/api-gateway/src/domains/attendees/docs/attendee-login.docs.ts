@@ -1,7 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiExtraModels,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -75,11 +74,6 @@ function forbiddenResponse(): MethodDecorator {
 export function ApiLoginAttendee(): MethodDecorator {
   return applyDecorators(
     ApiExtraModels(ApiErrorResponseDto),
-    ApiHeader({
-      description: 'Must exactly match the configured attendee client origin.',
-      name: 'Origin',
-      required: true,
-    }),
     ApiOperation({ summary: 'Sign in an attendee' }),
     ApiOkResponse({
       description:

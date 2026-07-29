@@ -22,8 +22,9 @@ export class AttendeeClientOriginGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<OriginRequest>();
+    const origin = request.headers.origin;
 
-    if (request.headers.origin === this.attendeeClientOrigin) {
+    if (origin === undefined || origin === this.attendeeClientOrigin) {
       return true;
     }
 
