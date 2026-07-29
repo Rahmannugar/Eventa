@@ -8,22 +8,13 @@
 
 export const protobufPackage = "eventa.identity.v1";
 
-export interface ConfirmAdminActivationRequest {
+export interface ActivateAdminRequest {
   email: string;
   otp: string;
-}
-
-export interface ConfirmAdminActivationResponse {
-  activationToken: string;
-  expiresAt: string;
-}
-
-export interface CompleteAdminActivationRequest {
-  activationToken: string;
   password: string;
 }
 
-export interface CompleteAdminActivationResponse {
+export interface ActivateAdminResponse {
   activated: boolean;
 }
 

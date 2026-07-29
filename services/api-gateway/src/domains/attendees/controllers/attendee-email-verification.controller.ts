@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -26,6 +25,7 @@ import {
   AttendeeEmailVerificationResendRateLimitGuard,
 } from '../rate-limit/guards/attendee-email-verification-rate-limit.guards';
 import { AttendeeEmailVerificationService } from '../services/attendee-email-verification.service';
+import { RequestId } from '../../../http/request-id.decorator';
 
 @ApiTags('Attendee authentication')
 @Controller('auth/attendees/email-verification')
@@ -40,7 +40,7 @@ export class AttendeeEmailVerificationController {
   @ApiConfirmAttendeeEmailVerification()
   confirm(
     @Body() request: ConfirmAttendeeEmailVerificationDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ConfirmAttendeeEmailVerificationResponse> {
     return this.emailVerification.confirm({
       email: request.email,
@@ -55,7 +55,7 @@ export class AttendeeEmailVerificationController {
   @ApiResendAttendeeEmailVerification()
   resend(
     @Body() request: ResendAttendeeEmailVerificationDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ResendAttendeeEmailVerificationResponse> {
     return this.emailVerification.resend({
       email: request.email,

@@ -10,8 +10,7 @@ import "eventa/identity/v1/admin_session.proto";
 
 service AdminIdentityService {
   rpc RegisterAdmin(RegisterAdminRequest) returns (RegisterAdminResponse);
-  rpc ConfirmAdminActivation(ConfirmAdminActivationRequest) returns (ConfirmAdminActivationResponse);
-  rpc CompleteAdminActivation(CompleteAdminActivationRequest) returns (CompleteAdminActivationResponse);
+  rpc ActivateAdmin(ActivateAdminRequest) returns (ActivateAdminResponse);
   rpc LoginAdmin(LoginAdminRequest) returns (LoginAdminResponse);
   rpc ForgotAdminPassword(ForgotAdminPasswordRequest) returns (ForgotAdminPasswordResponse);
   rpc ResetAdminPassword(ResetAdminPasswordRequest) returns (ResetAdminPasswordResponse);

@@ -24,11 +24,9 @@ import {
   AdminRegistrationRateLimitService,
 } from './rate-limit/admin-registration-rate-limit';
 import {
-  AdminActivationCompleteRateLimitGuard,
-  AdminActivationConfirmRateLimitGuard,
+  AdminActivationRateLimitGuard,
   AdminActivationRateLimitService,
 } from './rate-limit/admin-activation-rate-limit';
-import { AdminActivationCookie } from './services/admin-activation-cookie.service';
 import { AdminActivationService } from './services/admin-activation.service';
 import {
   AdminLoginRateLimitGuard,
@@ -111,10 +109,6 @@ export class AdminsModule {
           inject: [RATE_LIMIT_STATE],
         },
         {
-          provide: AdminActivationCookie,
-          useFactory: () => new AdminActivationCookie(options.secureCookies),
-        },
-        {
           provide: AdminSessionCookie,
           useFactory: () => new AdminSessionCookie(options.secureCookies),
         },
@@ -148,8 +142,7 @@ export class AdminsModule {
         AdminResetPasswordRateLimitGuard,
         AdminAccountRateLimitGuard,
         AdminLogoutRateLimitGuard,
-        AdminActivationConfirmRateLimitGuard,
-        AdminActivationCompleteRateLimitGuard,
+        AdminActivationRateLimitGuard,
         AdminLoginRateLimitGuard,
         AdminRegistrationRateLimitGuard,
       ],

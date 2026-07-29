@@ -2,7 +2,6 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiExtraModels,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
@@ -82,16 +81,7 @@ function errorResponse(
 }
 
 function commonDecorators(summary: string): MethodDecorator[] {
-  return [
-    ApiExtraModels(ApiErrorResponseDto),
-    ApiHeader({
-      description:
-        'Optional client request identifier. Eventa preserves valid values.',
-      name: 'x-request-id',
-      required: false,
-    }),
-    ApiOperation({ summary }),
-  ];
+  return [ApiExtraModels(ApiErrorResponseDto), ApiOperation({ summary })];
 }
 
 export function ApiConfirmAttendeeEmailVerification(): MethodDecorator {

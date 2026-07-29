@@ -28,7 +28,7 @@ Business endpoints use one public shape:
 }
 ```
 
-`errors` is present only when the client can correct specific fields. Internal dependency names and error details are never exposed. Every response includes an `x-request-id`; a valid incoming value is preserved, otherwise the Gateway creates one and forwards it on internal calls.
+`errors` is present only when the client can correct specific fields. Internal dependency names and error details are never exposed. The Gateway creates an `x-request-id` when the client does not provide one, returns it as a response header, and forwards it on internal calls. Public operations do not require clients to supply it.
 
 ## Operational and Documentation Routes
 

@@ -2,7 +2,6 @@ import type { RegisterAttendeeResponse } from '@eventa/grpc-contracts';
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -11,6 +10,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 
 import { AttendeeRegistrationService } from '../services/attendee-registration.service';
+import { RequestId } from '../../../http/request-id.decorator';
 import { ApiRegisterAttendee } from '../docs/attendee-registration.docs';
 import { RegisterAttendeeDto } from '../dto/register-attendee.dto';
 import { AttendeeRegistrationRateLimitGuard } from '../rate-limit/guards/attendee-registration-rate-limit.guard';
@@ -28,7 +28,7 @@ export class AttendeeRegistrationController {
   @ApiRegisterAttendee()
   register(
     @Body() request: RegisterAttendeeDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<RegisterAttendeeResponse> {
     return this.attendeeRegistration.register({
       email: request.email,

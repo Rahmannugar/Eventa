@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -21,6 +20,7 @@ import {
   AdminResetPasswordRateLimitGuard,
 } from '../rate-limit/admin-password-reset-rate-limit';
 import { AdminPasswordResetService } from '../services/admin-password-reset.service';
+import { RequestId } from '../../../http/request-id.decorator';
 
 @ApiTags('Admin authentication')
 @Controller('auth/admins')
@@ -37,7 +37,7 @@ export class AdminPasswordResetController {
   })
   forgotPassword(
     @Body() request: ForgotAdminPasswordDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ForgotAdminPasswordResponseDto> {
     return this.passwordReset.forgotPassword(request.email, requestId);
   }
@@ -52,7 +52,7 @@ export class AdminPasswordResetController {
   })
   resetPassword(
     @Body() request: ResetAdminPasswordDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ResetAdminPasswordResponseDto> {
     return this.passwordReset.resetPassword(
       request.email,

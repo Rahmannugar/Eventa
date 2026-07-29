@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -15,6 +14,7 @@ import {
   LoginAttendeeDto,
 } from '../dto/login-attendee.dto';
 import { AttendeeLoginService } from '../services/attendee-login.service';
+import { RequestId } from '../../../http/request-id.decorator';
 import { AttendeeLoginRateLimitGuard } from '../rate-limit/guards/attendee-login-rate-limit.guard';
 import { ApiLoginAttendee } from '../docs/attendee-login.docs';
 import {
@@ -37,7 +37,7 @@ export class AttendeeLoginController {
   @ApiLoginAttendee()
   async login(
     @Body() request: LoginAttendeeDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
     @Res({ passthrough: true }) response: AttendeeCookieResponse,
   ): Promise<LoggedInAttendeeDto> {
     const result = await this.attendeeLogin.login({

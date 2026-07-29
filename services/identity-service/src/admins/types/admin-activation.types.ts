@@ -6,8 +6,10 @@ export interface AdminActivationRepository {
   findAdminForActivation(
     email: string,
   ): Promise<AdminActivationAccount | undefined>;
-  confirmEmail(adminId: string): Promise<boolean>;
-  activate(adminId: string, passwordHash: string): Promise<boolean>;
+  activate(
+    adminId: string,
+    passwordHash: string,
+  ): Promise<'activated' | 'already-activated' | 'invalid'>;
 }
 
 export interface AdminActivationOtp {
@@ -40,16 +42,11 @@ export interface AdminActivationOtpState {
     subject: string,
     otpDigest: string,
   ): Promise<
-    { status: 'invalid' } | { adminId: string; status: 'active' | 'confirmed' }
+    | { status: 'invalid' }
+    | {
+        adminId: string;
+        status: 'active' | 'completed' | 'confirmed';
+      }
   >;
-  saveGrant(record: {
-    adminId: string;
-    grantDigest: string;
-    subject: string;
-    ttlMs: number;
-  }): Promise<void>;
-  readGrant(
-    grantDigest: string,
-  ): Promise<{ adminId: string; subject: string } | undefined>;
-  completeGrant(grantDigest: string, subject: string): Promise<void>;
+  complete(subject: string): Promise<void>;
 }

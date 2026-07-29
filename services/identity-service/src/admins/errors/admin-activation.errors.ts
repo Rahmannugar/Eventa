@@ -18,10 +18,3 @@ export class AdminActivationOtpInvalidError extends Error {
     this.name = AdminActivationOtpInvalidError.name;
   }
 }
-
-export class AdminActivationGrantInvalidError extends Error {
-  constructor() {
-    super('ADMIN_ACTIVATION_GRANT_INVALID');
-    this.name = AdminActivationGrantInvalidError.name;
-  }
-}

@@ -8,12 +8,7 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
-import {
-  CompleteAdminActivationRequest,
-  CompleteAdminActivationResponse,
-  ConfirmAdminActivationRequest,
-  ConfirmAdminActivationResponse,
-} from "./admin_activation.generated";
+import { ActivateAdminRequest, ActivateAdminResponse } from "./admin_activation.generated";
 import { LoginAdminRequest, LoginAdminResponse } from "./admin_login.generated";
 import {
   ForgotAdminPasswordRequest,
@@ -38,15 +33,7 @@ export const EVENTA_IDENTITY_V1_PACKAGE_NAME = "eventa.identity.v1";
 export interface AdminIdentityServiceClient {
   registerAdmin(request: RegisterAdminRequest, metadata?: Metadata): Observable<RegisterAdminResponse>;
 
-  confirmAdminActivation(
-    request: ConfirmAdminActivationRequest,
-    metadata?: Metadata,
-  ): Observable<ConfirmAdminActivationResponse>;
-
-  completeAdminActivation(
-    request: CompleteAdminActivationRequest,
-    metadata?: Metadata,
-  ): Observable<CompleteAdminActivationResponse>;
+  activateAdmin(request: ActivateAdminRequest, metadata?: Metadata): Observable<ActivateAdminResponse>;
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 
@@ -73,15 +60,7 @@ export interface AdminIdentityServiceClient {
 export interface AdminIdentityServiceController {
   registerAdmin(request: RegisterAdminRequest, metadata?: Metadata): Observable<RegisterAdminResponse>;
 
-  confirmAdminActivation(
-    request: ConfirmAdminActivationRequest,
-    metadata?: Metadata,
-  ): Observable<ConfirmAdminActivationResponse>;
-
-  completeAdminActivation(
-    request: CompleteAdminActivationRequest,
-    metadata?: Metadata,
-  ): Observable<CompleteAdminActivationResponse>;
+  activateAdmin(request: ActivateAdminRequest, metadata?: Metadata): Observable<ActivateAdminResponse>;
 
   loginAdmin(request: LoginAdminRequest, metadata?: Metadata): Observable<LoginAdminResponse>;
 
@@ -109,8 +88,7 @@ export function AdminIdentityServiceControllerMethods() {
   return function (constructor: Function) {
     const grpcMethods: string[] = [
       "registerAdmin",
-      "confirmAdminActivation",
-      "completeAdminActivation",
+      "activateAdmin",
       "loginAdmin",
       "forgotAdminPassword",
       "resetAdminPassword",

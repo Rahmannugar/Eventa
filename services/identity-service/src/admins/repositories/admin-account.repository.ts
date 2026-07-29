@@ -58,31 +58,10 @@ export class AdminAccountRepository
     );
   }
 
-  async confirmEmail(adminId: string): Promise<boolean> {
-    return runWithOperationSpan(
-      'admin_account.confirm_email',
-      async () => {
-        const [account] = await this.database
-          .update(adminAccounts)
-          .set({
-            emailVerifiedAt: sql`COALESCE(${adminAccounts.emailVerifiedAt}, NOW())`,
-          })
-          .where(
-            and(
-              eq(adminAccounts.id, adminId),
-              isNull(adminAccounts.passwordHash),
-              isNull(adminAccounts.activatedAt),
-            ),
-          )
-          .returning({ adminId: adminAccounts.id });
-
-        return account !== undefined;
-      },
-      this.spanOptions('UPDATE'),
-    );
-  }
-
-  async activate(adminId: string, passwordHash: string): Promise<boolean> {
+  async activate(
+    adminId: string,
+    passwordHash: string,
+  ): Promise<'activated' | 'already-activated' | 'invalid'> {
     return runWithOperationSpan(
       'admin_account.activate',
       async () => {
@@ -90,19 +69,36 @@ export class AdminAccountRepository
           .update(adminAccounts)
           .set({
             activatedAt: sql`NOW()`,
+            emailVerifiedAt: sql`NOW()`,
             passwordHash,
           })
           .where(
             and(
               eq(adminAccounts.id, adminId),
-              isNotNull(adminAccounts.emailVerifiedAt),
               isNull(adminAccounts.passwordHash),
               isNull(adminAccounts.activatedAt),
             ),
           )
           .returning({ adminId: adminAccounts.id });
 
-        return account !== undefined;
+        if (account !== undefined) {
+          return 'activated';
+        }
+
+        const [existing] = await this.database
+          .select({ adminId: adminAccounts.id })
+          .from(adminAccounts)
+          .where(
+            and(
+              eq(adminAccounts.id, adminId),
+              isNotNull(adminAccounts.emailVerifiedAt),
+              isNotNull(adminAccounts.passwordHash),
+              isNotNull(adminAccounts.activatedAt),
+            ),
+          )
+          .limit(1);
+
+        return existing === undefined ? 'invalid' : 'already-activated';
       },
       this.spanOptions('UPDATE'),
     );

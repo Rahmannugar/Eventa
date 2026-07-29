@@ -1,7 +1,6 @@
 import {
   AdminIdentityServiceControllerMethods,
-  type CompleteAdminActivationResponse,
-  type ConfirmAdminActivationResponse,
+  type ActivateAdminResponse,
   type AuthenticateAdminSessionResponse,
   type GetCurrentAdminAccountResponse,
   type ForgotAdminPasswordResponse,
@@ -18,12 +17,8 @@ import { from, type Observable } from 'rxjs';
 
 import { RegisterAdminDto } from '../dto/register-admin.dto';
 import { LoginAdminDto } from '../dto/login-admin.dto';
+import { ActivateAdminDto } from '../dto/admin-activation.dto';
 import {
-  CompleteAdminActivationDto,
-  ConfirmAdminActivationDto,
-} from '../dto/admin-activation.dto';
-import {
-  AdminActivationGrantInvalidError,
   AdminActivationOtpInvalidError,
   AdminActivationRateLimitedError,
   AdminActivationStateUnavailableError,
@@ -66,16 +61,8 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     return from(this.handleRegistration(request.email));
   }
 
-  confirmAdminActivation(
-    request: ConfirmAdminActivationDto,
-  ): Observable<ConfirmAdminActivationResponse> {
-    return from(this.handleConfirmation(request));
-  }
-
-  completeAdminActivation(
-    request: CompleteAdminActivationDto,
-  ): Observable<CompleteAdminActivationResponse> {
-    return from(this.handleCompletion(request));
+  activateAdmin(request: ActivateAdminDto): Observable<ActivateAdminResponse> {
+    return from(this.handleActivation(request));
   }
 
   loginAdmin(request: LoginAdminDto): Observable<LoginAdminResponse> {
@@ -143,22 +130,13 @@ export class AdminIdentityController implements AdminIdentityServiceController {
     }
   }
 
-  private async handleConfirmation(
-    request: ConfirmAdminActivationDto,
-  ): Promise<ConfirmAdminActivationResponse> {
+  private async handleActivation(
+    request: ActivateAdminDto,
+  ): Promise<ActivateAdminResponse> {
     try {
-      return await this.adminActivation.confirm(request.email, request.otp);
-    } catch (error: unknown) {
-      this.translateActivationError(error);
-    }
-  }
-
-  private async handleCompletion(
-    request: CompleteAdminActivationDto,
-  ): Promise<CompleteAdminActivationResponse> {
-    try {
-      return await this.adminActivation.complete(
-        request.activationToken,
+      return await this.adminActivation.activate(
+        request.email,
+        request.otp,
         request.password,
       );
     } catch (error: unknown) {
@@ -167,10 +145,7 @@ export class AdminIdentityController implements AdminIdentityServiceController {
   }
 
   private translateActivationError(error: unknown): never {
-    if (
-      error instanceof AdminActivationOtpInvalidError ||
-      error instanceof AdminActivationGrantInvalidError
-    ) {
+    if (error instanceof AdminActivationOtpInvalidError) {
       throw new RpcException({
         code: status.FAILED_PRECONDITION,
         message: error.message,

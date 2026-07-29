@@ -1,7 +1,4 @@
-import type {
-  CompleteAdminActivationRequest,
-  ConfirmAdminActivationRequest,
-} from '@eventa/grpc-contracts';
+import type { ActivateAdminRequest } from '@eventa/grpc-contracts';
 import {
   IsEmail,
   IsString,
@@ -10,19 +7,13 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class ConfirmAdminActivationDto implements ConfirmAdminActivationRequest {
+export class ActivateAdminDto implements ActivateAdminRequest {
   @IsEmail()
   @MaxLength(320)
   email!: string;
 
   @Matches(/^\d{6}$/)
   otp!: string;
-}
-
-export class CompleteAdminActivationDto implements CompleteAdminActivationRequest {
-  @Matches(/^[A-Za-z0-9_-]{43}$/)
-  activationToken!: string;
-
   @IsString()
   @MinLength(8)
   @MaxLength(128)

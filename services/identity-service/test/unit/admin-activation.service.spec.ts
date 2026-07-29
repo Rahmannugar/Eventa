@@ -16,32 +16,30 @@ const HMAC_SECRET = 'unit-test-admin-activation-secret-32-characters';
 class RecordingRepository implements AdminActivationRepository {
   account: { adminId: string } | undefined;
   activated: Array<{ adminId: string; passwordHash: string }> = [];
-  confirmed: string[] = [];
 
   findAdminForActivation(): Promise<{ adminId: string } | undefined> {
     return Promise.resolve(this.account);
   }
 
-  confirmEmail(adminId: string): Promise<boolean> {
-    this.confirmed.push(adminId);
-    return Promise.resolve(true);
-  }
-
-  activate(adminId: string, passwordHash: string): Promise<boolean> {
+  activate(
+    adminId: string,
+    passwordHash: string,
+  ): Promise<'activated' | 'already-activated' | 'invalid'> {
     this.activated.push({ adminId, passwordHash });
-    return Promise.resolve(true);
+    return Promise.resolve('activated');
   }
 }
 
 class RecordingState implements AdminActivationOtpState {
   canceled = 0;
   completed = 0;
-  grant: { adminId: string; subject: string } | undefined;
-  savedGrants = 0;
   savedOtps: AdminActivationOtpRecord[] = [];
   verification:
     | { status: 'invalid' }
-    | { adminId: string; status: 'active' | 'confirmed' } = {
+    | {
+        adminId: string;
+        status: 'active' | 'completed' | 'confirmed';
+      } = {
     status: 'invalid',
   };
 
@@ -63,16 +61,7 @@ class RecordingState implements AdminActivationOtpState {
     return Promise.resolve(this.verification);
   }
 
-  saveGrant(): Promise<void> {
-    this.savedGrants += 1;
-    return Promise.resolve();
-  }
-
-  readGrant() {
-    return Promise.resolve(this.grant);
-  }
-
-  completeGrant(): Promise<void> {
+  complete(): Promise<void> {
     this.completed += 1;
     return Promise.resolve();
   }
@@ -146,14 +135,8 @@ describe('admin activation', () => {
     const { repository, service, state } = createService();
     state.verification = { adminId: ADMIN_ID, status: 'active' };
 
-    const confirmation = await service.confirm('admin@example.com', '123456');
-    expect(confirmation.activationToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(repository.confirmed).toEqual([ADMIN_ID]);
-    expect(state.savedGrants).toBe(1);
-
-    state.grant = { adminId: ADMIN_ID, subject: 'protected-email' };
     await expect(
-      service.complete(confirmation.activationToken, 'strong-password'),
+      service.activate('admin@example.com', '123456', 'strong-password'),
     ).resolves.toEqual({ activated: true });
     expect(repository.activated).toEqual([
       { adminId: ADMIN_ID, passwordHash: 'hashed:strong-password' },

@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -14,6 +13,7 @@ import { LoggedInAdminDto, LoginAdminDto } from '../dto/login-admin.dto';
 import { AdminClientOriginGuard } from '../guards/admin-client-origin.guard';
 import { AdminLoginRateLimitGuard } from '../rate-limit/admin-login-rate-limit';
 import { AdminLoginService } from '../services/admin-login.service';
+import { RequestId } from '../../../http/request-id.decorator';
 import {
   AdminSessionCookie,
   type AdminSessionCookieResponse,
@@ -34,7 +34,7 @@ export class AdminLoginController {
   @ApiResponse({ status: HttpStatus.OK, type: LoggedInAdminDto })
   async login(
     @Body() request: LoginAdminDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
     @Res({ passthrough: true }) response: AdminSessionCookieResponse,
   ): Promise<LoggedInAdminDto> {
     const result = await this.adminLogin.login(

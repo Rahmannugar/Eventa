@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class ConfirmAdminActivationDto {
+export class ActivateAdminDto {
   @ApiProperty({ example: 'admin@example.com', maxLength: 320 })
   @IsEmail()
   @MaxLength(320)
@@ -16,9 +16,6 @@ export class ConfirmAdminActivationDto {
   @ApiProperty({ example: '123456', pattern: '^\\d{6}$' })
   @Matches(/^\d{6}$/)
   otp!: string;
-}
-
-export class CompleteAdminActivationDto {
   @ApiProperty({ example: 'a-secure-password', minLength: 8, maxLength: 128 })
   @IsString()
   @MinLength(8)
@@ -26,12 +23,7 @@ export class CompleteAdminActivationDto {
   password!: string;
 }
 
-export class ConfirmedAdminActivationDto {
-  @ApiProperty({ example: true })
-  activationReady!: boolean;
-}
-
-export class CompletedAdminActivationDto {
+export class ActivatedAdminDto {
   @ApiProperty({ example: true })
   activated!: boolean;
 }

@@ -62,19 +62,9 @@ end
 return { values[4], values[1] }
 `;
 
-const SAVE_GRANT_SCRIPT = `
-redis.call(
-  'HSET',
-  KEYS[1],
-  'admin_id', ARGV[1],
-  'subject', ARGV[2]
-)
-redis.call('PEXPIRE', KEYS[1], ARGV[3])
-return 1
-`;
-
-const COMPLETE_GRANT_SCRIPT = `
-redis.call('DEL', KEYS[1], KEYS[2], KEYS[3])
+const COMPLETE_ACTIVATION_SCRIPT = `
+redis.call('HSET', KEYS[1], 'status', 'completed')
+redis.call('DEL', KEYS[2])
 return 1
 `;
 
@@ -84,10 +74,6 @@ function otpKey(subject: string): string {
 
 function cooldownKey(subject: string): string {
   return `identity:admin-activation:{${subject}}:request-cooldown`;
-}
-
-function grantKey(grantDigest: string): string {
-  return `identity:admin-activation:grant:${grantDigest}`;
 }
 
 function parseDecision(result: unknown): AdminActivationRequestDecision {
@@ -159,7 +145,11 @@ export class RedisAdminActivationOtpState implements AdminActivationOtpState {
     subject: string,
     otpDigest: string,
   ): Promise<
-    { status: 'invalid' } | { adminId: string; status: 'active' | 'confirmed' }
+    | { status: 'invalid' }
+    | {
+        adminId: string;
+        status: 'active' | 'completed' | 'confirmed';
+      }
   > {
     const result = await this.evaluate(
       'admin_activation_otp.verify',
@@ -176,7 +166,9 @@ export class RedisAdminActivationOtpState implements AdminActivationOtpState {
     const adminId = String(result[1] ?? '');
 
     if (
-      (status !== 'active' && status !== 'confirmed') ||
+      (status !== 'active' &&
+        status !== 'confirmed' &&
+        status !== 'completed') ||
       adminId.length === 0
     ) {
       throw new AdminActivationStateUnavailableError();
@@ -185,49 +177,11 @@ export class RedisAdminActivationOtpState implements AdminActivationOtpState {
     return { adminId, status };
   }
 
-  async saveGrant(record: {
-    adminId: string;
-    grantDigest: string;
-    subject: string;
-    ttlMs: number;
-  }): Promise<void> {
+  async complete(subject: string): Promise<void> {
     await this.evaluate(
-      'admin_activation_grant.save',
-      SAVE_GRANT_SCRIPT,
-      [grantKey(record.grantDigest)],
-      [record.adminId, record.subject, String(record.ttlMs)],
-    );
-  }
-
-  async readGrant(
-    grantDigest: string,
-  ): Promise<{ adminId: string; subject: string } | undefined> {
-    const result = await this.evaluate(
-      'admin_activation_grant.read',
-      `return redis.call('HMGET', KEYS[1], 'admin_id', 'subject')`,
-      [grantKey(grantDigest)],
-      [],
-    );
-
-    if (!Array.isArray(result) || result[0] === null || result[1] === null) {
-      return undefined;
-    }
-
-    const adminId = String(result[0]);
-    const subject = String(result[1]);
-
-    if (adminId.length === 0 || subject.length === 0) {
-      throw new AdminActivationStateUnavailableError();
-    }
-
-    return { adminId, subject };
-  }
-
-  async completeGrant(grantDigest: string, subject: string): Promise<void> {
-    await this.evaluate(
-      'admin_activation_grant.complete',
-      COMPLETE_GRANT_SCRIPT,
-      [grantKey(grantDigest), otpKey(subject), cooldownKey(subject)],
+      'admin_activation_otp.complete',
+      COMPLETE_ACTIVATION_SCRIPT,
+      [otpKey(subject), cooldownKey(subject)],
       [],
     );
   }

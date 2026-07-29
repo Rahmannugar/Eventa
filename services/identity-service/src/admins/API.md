@@ -3,8 +3,7 @@
 Identity implements `eventa.identity.v1.AdminIdentityService`.
 
 - `RegisterAdmin` accepts an email and always returns `accepted = true` after the universal cooldown check. It publishes activation email work only for a provisioned account without a password or activation timestamp.
-- `ConfirmAdminActivation` accepts an email and six-digit OTP. Success records email verification idempotently and returns a ten-minute opaque activation credential for Gateway's HttpOnly cookie.
-- `CompleteAdminActivation` accepts the activation credential and first password. Success hashes the password and atomically activates the account.
+- `ActivateAdmin` accepts an email, six-digit OTP, and first password. Success hashes the password and atomically records email verification, the password, and activation.
 - `LoginAdmin` accepts email and password. Only an activated account with matching credentials receives its admin ID, canonical email, opaque session token, and fixed expiry.
 - `AuthenticateAdminSession` resolves a live opaque session into bounded admin and session identity.
 - `GetCurrentAdminAccount` returns the activated admin ID and email.

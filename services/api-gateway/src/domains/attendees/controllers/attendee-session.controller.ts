@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -19,6 +18,7 @@ import {
   type AttendeeCookieResponse,
 } from '../services/attendee-session-cookie.service';
 import { AttendeeSessionService } from '../services/attendee-session.service';
+import { RequestId } from '../../../http/request-id.decorator';
 import type { AttendeeAuthenticatedRequest } from '../types/authenticated-attendee.types';
 import { CurrentAttendeeAccountDto } from '../dto/current-attendee-account.dto';
 import {
@@ -50,7 +50,7 @@ export class AttendeeSessionController {
   @ApiGetCurrentAttendeeAccount()
   me(
     @Req() request: AttendeeAuthenticatedRequest,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<CurrentAttendeeAccountDto> {
     return this.sessions.getCurrentAccount(
       request.attendeeSession.attendeeId,
@@ -64,7 +64,7 @@ export class AttendeeSessionController {
   @ApiLogoutAttendee()
   async logout(
     @Req() request: SessionRequest,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
     @Res({ passthrough: true }) response: AttendeeCookieResponse,
   ): Promise<void> {
     const token = this.sessionCookie.read(request.headers.cookie);
@@ -87,7 +87,7 @@ export class AttendeeSessionController {
   async deleteAccount(
     @Body() body: DeleteAttendeeAccountDto,
     @Req() request: AttendeeAuthenticatedRequest,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
     @Res({ passthrough: true }) response: AttendeeCookieResponse,
   ): Promise<void> {
     await this.sessions.deleteAccount(

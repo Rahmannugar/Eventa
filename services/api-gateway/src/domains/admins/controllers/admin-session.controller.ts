@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -23,6 +22,7 @@ import {
   type AdminSessionCookieResponse,
 } from '../services/admin-session-cookie.service';
 import { AdminSessionService } from '../services/admin-session.service';
+import { RequestId } from '../../../http/request-id.decorator';
 import type { AdminAuthenticatedRequest } from '../types/authenticated-admin.types';
 
 interface SessionRequest {
@@ -47,7 +47,7 @@ export class AdminSessionController {
   @ApiResponse({ status: HttpStatus.OK, type: CurrentAdminAccountDto })
   account(
     @Req() request: AdminAuthenticatedRequest,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<CurrentAdminAccountDto> {
     return this.adminSessions.getCurrentAccount(
       request.adminSession.adminId,
@@ -62,7 +62,7 @@ export class AdminSessionController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT })
   async logout(
     @Req() request: SessionRequest,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
     @Res({ passthrough: true }) response: AdminSessionCookieResponse,
   ): Promise<void> {
     const token = this.sessionCookie.read(request.headers.cookie);

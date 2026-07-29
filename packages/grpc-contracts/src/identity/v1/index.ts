@@ -9,10 +9,8 @@ export type {
   RegisterAdminResponse,
 } from '../../generated/eventa/identity/v1/admin_registration.generated';
 export type {
-  CompleteAdminActivationRequest,
-  CompleteAdminActivationResponse,
-  ConfirmAdminActivationRequest,
-  ConfirmAdminActivationResponse,
+  ActivateAdminRequest,
+  ActivateAdminResponse,
 } from '../../generated/eventa/identity/v1/admin_activation.generated';
 export type {
   LoginAdminRequest,

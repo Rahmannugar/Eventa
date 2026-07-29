@@ -1,9 +1,7 @@
 import type {
   AdminIdentityServiceClient,
-  CompleteAdminActivationRequest,
-  CompleteAdminActivationResponse,
-  ConfirmAdminActivationRequest,
-  ConfirmAdminActivationResponse,
+  ActivateAdminRequest,
+  ActivateAdminResponse,
   AuthenticateAdminSessionRequest,
   AuthenticateAdminSessionResponse,
   GetCurrentAdminAccountRequest,
@@ -28,16 +26,11 @@ export interface DeadlineAwareAdminIdentityServiceClient extends AdminIdentitySe
     metadata?: Metadata,
     options?: CallOptions,
   ): Observable<RegisterAdminResponse>;
-  confirmAdminActivation(
-    request: ConfirmAdminActivationRequest,
+  activateAdmin(
+    request: ActivateAdminRequest,
     metadata?: Metadata,
     options?: CallOptions,
-  ): Observable<ConfirmAdminActivationResponse>;
-  completeAdminActivation(
-    request: CompleteAdminActivationRequest,
-    metadata?: Metadata,
-    options?: CallOptions,
-  ): Observable<CompleteAdminActivationResponse>;
+  ): Observable<ActivateAdminResponse>;
   loginAdmin(
     request: LoginAdminRequest,
     metadata?: Metadata,

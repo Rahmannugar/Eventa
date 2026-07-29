@@ -1,7 +1,6 @@
 import {
   ADMIN_IDENTITY_SERVICE_NAME,
-  type CompleteAdminActivationResponse,
-  type ConfirmAdminActivationResponse,
+  type ActivateAdminResponse,
   type RegisterAdminResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -86,17 +85,18 @@ export class AdminActivationService implements OnModuleInit {
     }
   }
 
-  async confirm(
+  async activate(
     email: string,
     otp: string,
+    password: string,
     requestId: string,
-  ): Promise<ConfirmAdminActivationResponse> {
+  ): Promise<ActivateAdminResponse> {
     const identity = this.requireIdentity();
 
     try {
       return await firstValueFrom(
-        identity.confirmAdminActivation(
-          { email, otp },
+        identity.activateAdmin(
+          { email, otp, password },
           this.metadata(requestId),
           this.deadline(),
         ),
@@ -113,52 +113,7 @@ export class AdminActivationService implements OnModuleInit {
           throw new ApiHttpException(
             HttpStatus.UNPROCESSABLE_ENTITY,
             'VALIDATION_FAILED',
-            'Check the email and activation code and try again.',
-          );
-        case status.DEADLINE_EXCEEDED:
-          throw this.unavailable('IDENTITY_RPC_DEADLINE_EXCEEDED');
-        default:
-          throw this.unavailable('IDENTITY_RPC_UNAVAILABLE');
-      }
-    }
-  }
-
-  async complete(
-    activationToken: string | undefined,
-    password: string,
-    requestId: string,
-  ): Promise<CompleteAdminActivationResponse> {
-    if (activationToken === undefined) {
-      throw new ApiHttpException(
-        HttpStatus.BAD_REQUEST,
-        'ADMIN_ACTIVATION_REQUIRED',
-        'Confirm the activation code before setting a password.',
-      );
-    }
-
-    const identity = this.requireIdentity();
-
-    try {
-      return await firstValueFrom(
-        identity.completeAdminActivation(
-          { activationToken, password },
-          this.metadata(requestId),
-          this.deadline(),
-        ),
-      );
-    } catch (error: unknown) {
-      switch (readErrorField(error, 'code')) {
-        case status.FAILED_PRECONDITION:
-          throw new ApiHttpException(
-            HttpStatus.BAD_REQUEST,
-            'ADMIN_ACTIVATION_REQUIRED',
-            'Confirm the activation code before setting a password.',
-          );
-        case status.INVALID_ARGUMENT:
-          throw new ApiHttpException(
-            HttpStatus.UNPROCESSABLE_ENTITY,
-            'VALIDATION_FAILED',
-            'Check the password and try again.',
+            'Check the email, activation code, and password and try again.',
           );
         case status.DEADLINE_EXCEEDED:
           throw this.unavailable('IDENTITY_RPC_DEADLINE_EXCEEDED');

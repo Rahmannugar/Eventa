@@ -1,15 +1,13 @@
-import { createHmac, randomBytes, randomInt } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
 
 import { Logger } from '@nestjs/common';
 
 import {
   ADMIN_ACTIVATION_OTP_MAX_GUESSES,
   ADMIN_ACTIVATION_OTP_TTL_MS,
-  ADMIN_ACTIVATION_GRANT_TTL_MS,
   ADMIN_ACTIVATION_REQUEST_COOLDOWN_MS,
 } from '../constants/admin-activation.constants';
 import {
-  AdminActivationGrantInvalidError,
   AdminActivationOtpInvalidError,
   AdminActivationRateLimitedError,
 } from '../errors/admin-activation.errors';
@@ -78,10 +76,11 @@ export class AdminActivationService {
     return { accepted: true };
   }
 
-  async confirm(
+  async activate(
     email: string,
     otp: string,
-  ): Promise<{ activationToken: string; expiresAt: string }> {
+    password: string,
+  ): Promise<{ activated: true }> {
     if (!/^\d{6}$/.test(otp)) {
       throw new AdminActivationOtpInvalidError();
     }
@@ -95,61 +94,25 @@ export class AdminActivationService {
       throw new AdminActivationOtpInvalidError();
     }
 
-    if (!(await this.admins.confirmEmail(match.adminId))) {
+    const passwordHash = await this.passwordHasher.hash(password);
+    const activation = await this.admins.activate(match.adminId, passwordHash);
+
+    if (activation === 'invalid') {
       throw new AdminActivationOtpInvalidError();
     }
 
-    const activationToken = randomBytes(32).toString('base64url');
-    const grantDigest = this.protect('grant', activationToken);
-    const expiresAt = new Date(
-      Date.now() + ADMIN_ACTIVATION_GRANT_TTL_MS,
-    ).toISOString();
-
-    await this.otpState.saveGrant({
-      adminId: match.adminId,
-      grantDigest,
-      subject,
-      ttlMs: ADMIN_ACTIVATION_GRANT_TTL_MS,
-    });
-
-    return { activationToken, expiresAt };
-  }
-
-  async complete(
-    activationToken: string,
-    password: string,
-  ): Promise<{ activated: true }> {
-    if (!/^[A-Za-z0-9_-]{43}$/.test(activationToken)) {
-      throw new AdminActivationGrantInvalidError();
-    }
-
-    const grantDigest = this.protect('grant', activationToken);
-    const grant = await this.otpState.readGrant(grantDigest);
-
-    if (grant === undefined) {
-      throw new AdminActivationGrantInvalidError();
-    }
-
-    const passwordHash = await this.passwordHasher.hash(password);
-
-    if (!(await this.admins.activate(grant.adminId, passwordHash))) {
-      throw new AdminActivationGrantInvalidError();
-    }
-
-    await this.otpState
-      .completeGrant(grantDigest, grant.subject)
-      .catch((error: unknown) => {
-        this.logger.error({
-          admin_id: grant.adminId,
-          error_type: error instanceof Error ? error.name : 'UnknownError',
-          event: 'admin_activation_state_cleanup_failed',
-        });
+    await this.otpState.complete(subject).catch((error: unknown) => {
+      this.logger.error({
+        admin_id: match.adminId,
+        error_type: error instanceof Error ? error.name : 'UnknownError',
+        event: 'admin_activation_state_cleanup_failed',
       });
+    });
 
     return { activated: true };
   }
 
-  private protect(purpose: 'grant' | 'otp' | 'subject', value: string): string {
+  private protect(purpose: 'otp' | 'subject', value: string): string {
     return createHmac('sha256', this.hmacSecret)
       .update(`admin-activation-${purpose}\0${value}`)
       .digest('hex');

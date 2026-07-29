@@ -76,12 +76,6 @@ export function ApiLoginAttendee(): MethodDecorator {
   return applyDecorators(
     ApiExtraModels(ApiErrorResponseDto),
     ApiHeader({
-      description:
-        'Optional client request identifier. Eventa preserves valid values.',
-      name: 'x-request-id',
-      required: false,
-    }),
-    ApiHeader({
       description: 'Must exactly match the configured attendee client origin.',
       name: 'Origin',
       required: true,

@@ -145,7 +145,7 @@ describe('RedisEmailVerificationOtpState integration', () => {
     expect(decisions.filter((decision) => !decision.allowed)).toHaveLength(9);
   });
 
-  it('moves admin activation from OTP confirmation to one-time grant cleanup', async () => {
+  it('preserves exact admin activation replay after completion', async () => {
     await adminActivationState.save({
       adminId: 'admin-1',
       attempts: 5,
@@ -161,26 +161,10 @@ describe('RedisEmailVerificationOtpState integration', () => {
       adminActivationState.verify('admin-subject', 'correct-digest'),
     ).resolves.toEqual({ adminId: 'admin-1', status: 'confirmed' });
 
-    await adminActivationState.saveGrant({
-      adminId: 'admin-1',
-      grantDigest: 'grant-digest',
-      subject: 'admin-subject',
-      ttlMs: 60_000,
-    });
-    await expect(
-      adminActivationState.readGrant('grant-digest'),
-    ).resolves.toEqual({
-      adminId: 'admin-1',
-      subject: 'admin-subject',
-    });
-
-    await adminActivationState.completeGrant('grant-digest', 'admin-subject');
-    await expect(
-      adminActivationState.readGrant('grant-digest'),
-    ).resolves.toBeUndefined();
+    await adminActivationState.complete('admin-subject');
     await expect(
       adminActivationState.verify('admin-subject', 'correct-digest'),
-    ).resolves.toEqual({ status: 'invalid' });
+    ).resolves.toEqual({ adminId: 'admin-1', status: 'completed' });
   });
 
   it('keeps three admin sessions for seven days and removes the oldest fourth-login victim', async () => {

@@ -8,8 +8,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `POST` | `/auth/attendees/register`                   | Creates an unverified attendee account after registration rate limiting and Identity validation. |
 | `POST` | `/auth/admins/register`                      | Generically accepts an activation request for a SQL-provisioned admin.                           |
-| `POST` | `/auth/admins/activation/confirm`            | Confirms an admin activation OTP and sets a short-lived activation cookie.                       |
-| `POST` | `/auth/admins/activation/complete`           | Sets the first password and activates the admin without creating a login session.                |
+| `POST` | `/auth/admins/activate`                      | Verifies the activation OTP, sets the first password, and activates the admin.                   |
 | `POST` | `/auth/admins/login`                         | Signs in an activated admin and sets a server-backed seven-day session cookie.                   |
 | `GET`  | `/auth/admins/me`                            | Returns the activated account for a live admin session.                                          |
 | `POST` | `/auth/admins/logout`                        | Revokes the current admin session before clearing its cookie.                                    |

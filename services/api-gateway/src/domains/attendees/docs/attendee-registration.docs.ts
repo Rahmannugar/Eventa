@@ -2,7 +2,6 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiExtraModels,
-  ApiHeader,
   ApiOperation,
   ApiResponse,
   getSchemaPath,
@@ -70,12 +69,6 @@ function errorResponse(
 export function ApiRegisterAttendee(): MethodDecorator {
   return applyDecorators(
     ApiExtraModels(ApiErrorResponseDto),
-    ApiHeader({
-      description:
-        'Optional client request identifier. Eventa preserves valid values.',
-      name: 'x-request-id',
-      required: false,
-    }),
     ApiOperation({
       summary: 'Register an attendee account',
       description:

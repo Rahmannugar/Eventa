@@ -15,44 +15,22 @@ import type {
   RateLimitDecision,
 } from '../../../rate-limit/types/rate-limit.types';
 
-type AdminActivationOperation = 'complete' | 'confirm';
-
-const RULES: Record<AdminActivationOperation, HybridRateLimitRules> = {
-  confirm: {
-    routeKey: 'admin-activation-confirm',
-    tokenBucket: {
-      capacity: 10,
-      name: 'ip-burst',
-      refillIntervalMs: 6_000,
-    },
-    primarySlidingWindow: {
-      limit: 60,
-      name: 'ip-hour',
-      windowMs: 60 * 60 * 1_000,
-    },
-    secondarySlidingWindow: {
-      limit: 10,
-      name: 'email-fifteen-minutes',
-      windowMs: 15 * 60 * 1_000,
-    },
+const RULES: HybridRateLimitRules = {
+  routeKey: 'admin-activation',
+  tokenBucket: {
+    capacity: 10,
+    name: 'ip-burst',
+    refillIntervalMs: 6_000,
   },
-  complete: {
-    routeKey: 'admin-activation-complete',
-    tokenBucket: {
-      capacity: 5,
-      name: 'ip-burst',
-      refillIntervalMs: 12_000,
-    },
-    primarySlidingWindow: {
-      limit: 30,
-      name: 'ip-hour',
-      windowMs: 60 * 60 * 1_000,
-    },
-    secondarySlidingWindow: {
-      limit: 10,
-      name: 'ip-fifteen-minutes',
-      windowMs: 15 * 60 * 1_000,
-    },
+  primarySlidingWindow: {
+    limit: 60,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 10,
+    name: 'email-fifteen-minutes',
+    windowMs: 15 * 60 * 1_000,
   },
 };
 
@@ -73,24 +51,22 @@ export class AdminActivationRateLimitService {
   ) {}
 
   check(
-    operation: AdminActivationOperation,
     clientIp: string,
-    email?: string,
+    email: string | undefined,
   ): Promise<RateLimitDecision> {
-    const rules = RULES[operation];
-    const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
+    const keyPrefix = `eventa:rate-limit:{${RULES.routeKey}}`;
     const baseAttempt = {
       member: randomUUID(),
       primarySlidingWindowKey: `${keyPrefix}:window:ip:${this.hash(`ip:${clientIp}`)}`,
-      rules,
+      rules: RULES,
       tokenBucketKey: `${keyPrefix}:bucket:ip:${this.hash(`ip:${clientIp}`)}`,
     };
     const canonicalEmail = email?.trim().toLowerCase();
 
     const secondarySubject =
-      operation === 'confirm' && canonicalEmail !== undefined
-        ? `email:${canonicalEmail}`
-        : `ip-short:${clientIp}`;
+      canonicalEmail === undefined
+        ? `ip-short:${clientIp}`
+        : `email:${canonicalEmail}`;
 
     return this.state.consume({
       ...baseAttempt,
@@ -104,33 +80,18 @@ export class AdminActivationRateLimitService {
 }
 
 @Injectable()
-export class AdminActivationConfirmRateLimitGuard implements CanActivate {
+export class AdminActivationRateLimitGuard implements CanActivate {
   constructor(private readonly rateLimits: AdminActivationRateLimitService) {}
 
   canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RateLimitedRequest>();
-    return enforce(
-      context,
-      this.rateLimits,
-      'confirm',
-      readEmail(request.body),
-    );
-  }
-}
-
-@Injectable()
-export class AdminActivationCompleteRateLimitGuard implements CanActivate {
-  constructor(private readonly rateLimits: AdminActivationRateLimitService) {}
-
-  canActivate(context: ExecutionContext): Promise<boolean> {
-    return enforce(context, this.rateLimits, 'complete');
+    return enforce(context, this.rateLimits, readEmail(request.body));
   }
 }
 
 async function enforce(
   context: ExecutionContext,
   rateLimits: AdminActivationRateLimitService,
-  operation: AdminActivationOperation,
   email?: string,
 ): Promise<boolean> {
   const http = context.switchToHttp();
@@ -139,7 +100,7 @@ async function enforce(
   const clientIp = request.ip || request.socket.remoteAddress || 'unknown';
 
   try {
-    const decision = await rateLimits.check(operation, clientIp, email);
+    const decision = await rateLimits.check(clientIp, email);
     setHeaders(response, decision);
 
     if (decision.allowed) {

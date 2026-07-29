@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -25,6 +24,7 @@ import {
   AttendeeResetPasswordRateLimitGuard,
 } from '../rate-limit/guards/attendee-password-reset-rate-limit.guards';
 import { AttendeePasswordResetService } from '../services/attendee-password-reset.service';
+import { RequestId } from '../../../http/request-id.decorator';
 
 @ApiTags('Attendee authentication')
 @Controller('auth/attendees')
@@ -37,7 +37,7 @@ export class AttendeePasswordResetController {
   @ApiForgotAttendeePassword()
   forgotPassword(
     @Body() request: ForgotAttendeePasswordDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ForgotAttendeePasswordResponseDto> {
     return this.passwordReset.forgotPassword({
       email: request.email,
@@ -51,7 +51,7 @@ export class AttendeePasswordResetController {
   @ApiResetAttendeePassword()
   resetPassword(
     @Body() request: ResetAttendeePasswordDto,
-    @Headers('x-request-id') requestId: string,
+    @RequestId() requestId: string,
   ): Promise<ResetAttendeePasswordResponseDto> {
     return this.passwordReset.resetPassword({
       code: request.code,
