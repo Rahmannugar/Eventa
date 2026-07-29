@@ -8,7 +8,12 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { CurrentAdminAccountDto } from '../dto/current-admin-account.dto';
 import { AdminAuthenticationGuard } from '../guards/admin-authentication.guard';
@@ -43,6 +48,7 @@ export class AdminSessionController {
     AdminAccountRateLimitGuard,
     AdminAuthenticationGuard,
   )
+  @ApiCookieAuth('adminSession')
   @ApiOperation({ summary: 'Get the signed-in admin account' })
   @ApiResponse({ status: HttpStatus.OK, type: CurrentAdminAccountDto })
   account(

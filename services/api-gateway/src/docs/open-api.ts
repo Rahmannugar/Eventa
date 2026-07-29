@@ -16,6 +16,11 @@ export function setupApiDocumentation(
       { in: 'cookie', type: 'apiKey' },
       'attendeeSession',
     )
+    .addCookieAuth(
+      'eventa_admin_session',
+      { in: 'cookie', type: 'apiKey' },
+      'adminSession',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, documentConfig, {
     operationIdFactory: (_controllerKey, methodKey) => methodKey,
