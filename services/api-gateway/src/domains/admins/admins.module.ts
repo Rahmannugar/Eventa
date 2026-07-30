@@ -9,10 +9,10 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RATE_LIMIT_STATE } from '../../rate-limit/constants/rate-limit.constants';
 import type { RateLimitState } from '../../rate-limit/ports/rate-limit.state';
 import {
-  ADMIN_CLIENT_ORIGIN,
   ADMIN_IDENTITY_GRPC_CLIENT,
   ADMIN_IDENTITY_GRPC_DEADLINE_MS,
 } from './constants/admin-registration.constants';
+import { CLIENT_ORIGIN } from '../../http/client-origin.constants';
 import { AdminActivationController } from './controllers/admin-activation.controller';
 import { AdminLoginController } from './controllers/admin-login.controller';
 import { AdminSessionController } from './controllers/admin-session.controller';
@@ -48,7 +48,7 @@ import {
 } from './rate-limit/admin-password-reset-rate-limit';
 
 interface AdminsModuleOptions {
-  adminClientOrigin: string;
+  clientOrigin: string;
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
@@ -82,8 +82,8 @@ export class AdminsModule {
       ],
       providers: [
         {
-          provide: ADMIN_CLIENT_ORIGIN,
-          useValue: options.adminClientOrigin,
+          provide: CLIENT_ORIGIN,
+          useValue: options.clientOrigin,
         },
         {
           provide: ADMIN_IDENTITY_GRPC_DEADLINE_MS,

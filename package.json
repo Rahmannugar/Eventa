@@ -36,7 +36,8 @@
     "test:unit:identity": "pnpm --filter @eventa/identity-service test:unit",
     "test:unit:notification": "pnpm --filter @eventa/notification-service test:unit",
     "typecheck": "turbo run typecheck",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test:all && pnpm build && pnpm format:check"
+    "verify": "pnpm lint && pnpm typecheck && pnpm test:all && pnpm build && pnpm format:check",
+    "web:start": "pnpm --filter eventa-app dev"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

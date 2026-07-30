@@ -34,7 +34,7 @@ The shared HTTP filter keeps the public envelope stable and records a safe diagn
 
 Gateway configuration is validated before the HTTP listener starts. Trusted-proxy hops are explicit. Node's HTTP header and request-body reception limits protect the public listener from incomplete requests; the keep-alive timeout bounds idle connection reuse. These transport limits do not masquerade as handler-execution deadlines.
 
-Credentialed CORS allows only the configured attendee and admin client origins. Each browser flow independently requires its matching exact `Origin`.
+Credentialed CORS allows only the configured web client origin. Attendee and admin browser flows require that same exact `Origin`.
 
 Each Identity gRPC command carries an explicit absolute deadline. Deadline expiry cancels the client call through grpc-js and maps to the route's stable public `503` response with an internal deadline-specific diagnostic. The Redis client connects lazily for protected routes, disables the offline queue and automatic reconnect loop, bounds connection establishment and each command, and closes during application shutdown.
 

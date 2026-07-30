@@ -4,6 +4,16 @@ Run commands from the repository root.
 
 Create each service-owned `.env` and the Grafana `.env` before running these commands; commands never generate configuration or secrets.
 
+## Web app
+
+Create `apps/eventa-app/.env` from its `.env.example`, then start the attendee and Admin Dashboard web experience directly on the host.
+
+```bash
+pnpm web:start
+```
+
+The web app runs at `http://localhost:5273`. It is not started through Docker Compose. Configure the API Gateway's `CLIENT_ORIGIN` as that same origin.
+
 ## Services
 
 Build and start Eventa, wait for migrations and event-bus initialization, then remove their completed containers.

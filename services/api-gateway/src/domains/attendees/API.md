@@ -64,7 +64,7 @@ The Gateway reads `eventa_attendee_session`, resolves it through Identity-owned 
 
 Logout rejects a present browser `Origin` unless it exactly matches the configured attendee client. It revokes only the presented session and then clears the matching host-only cookie. Success is `204`, including a request without a usable cookie. If Identity cannot confirm revocation, Gateway returns `503` and retains the cookie for retry.
 
-Credentialed CORS permits only `ATTENDEE_CLIENT_ORIGIN`. Protected routes reject a different browser `Origin` with `403 UNTRUSTED_ORIGIN`; non-browser clients may omit the header.
+Credentialed CORS permits only `CLIENT_ORIGIN`. Protected routes reject a different browser `Origin` with `403 UNTRUSTED_ORIGIN`; non-browser clients may omit the header.
 
 ## Delete Account
 

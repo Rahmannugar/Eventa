@@ -28,14 +28,14 @@ export class AppModule implements NestModule {
           redisUrl: config.redisUrl,
         }),
         AdminsModule.register({
-          adminClientOrigin: config.adminClientOrigin,
+          clientOrigin: config.clientOrigin,
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
           secureCookies: config.publicApiUrl.startsWith('https://'),
         }),
         AttendeesModule.register({
-          attendeeClientOrigin: config.attendeeClientOrigin,
+          clientOrigin: config.clientOrigin,
           identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
           identityGrpcUrl: config.identityGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,

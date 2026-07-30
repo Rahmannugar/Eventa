@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 
 import { ApiHttpException } from '../../../http/errors/api-http.exception';
-import { ADMIN_CLIENT_ORIGIN } from '../constants/admin-registration.constants';
+import { CLIENT_ORIGIN } from '../../../http/client-origin.constants';
 
 interface OriginRequest {
   headers: { origin?: string };
@@ -16,15 +16,15 @@ interface OriginRequest {
 @Injectable()
 export class AdminClientOriginGuard implements CanActivate {
   constructor(
-    @Inject(ADMIN_CLIENT_ORIGIN)
-    private readonly adminClientOrigin: string,
+    @Inject(CLIENT_ORIGIN)
+    private readonly clientOrigin: string,
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<OriginRequest>();
     const origin = request.headers.origin;
 
-    if (origin === undefined || origin === this.adminClientOrigin) {
+    if (origin === undefined || origin === this.clientOrigin) {
       return true;
     }
 

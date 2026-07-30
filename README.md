@@ -25,7 +25,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for service ownership, communication boun
 - Analytics Service
 - Notification Service
 
-Services use explicit application services for business use cases, thin transport controllers, persistence-only repositories, and capability adapters for infrastructure. Separate read models are introduced only when a real access pattern justifies them. Every deployable owns `README.md`, `API.md`, and `ARCHITECTURE.md`; each substantial domain owns concise `API.md` and `ARCHITECTURE.md` files without duplicating machine-readable contracts.
+Services use explicit application services for business use cases, thin transport controllers, persistence-only repositories, and capability adapters for infrastructure. Separate read models are introduced only when a real access pattern justifies them. Every backend service owns `README.md`, `API.md`, and `ARCHITECTURE.md`; each substantial backend domain owns concise `API.md` and `ARCHITECTURE.md` files without duplicating machine-readable contracts. Frontend applications own a focused `README.md` and design guidance instead of service API or architecture catalogs.
 
 ## Technology
 
@@ -81,10 +81,13 @@ Create each service `.env` file from its service-owned `.env.example` before sta
 
 Create the ignored RabbitMQ `.env` from `infrastructure/messaging/job-queue/rabbitmq/.env.example` and the Grafana `.env` from `infrastructure/observability/dashboards/grafana/.env.example` as well. Secrets are not stored in Compose or committed configuration.
 
+Create `apps/eventa-app/.env` from its `.env.example` before starting the web app. Run it directly on the host with `pnpm web:start`; it is not part of Docker Compose. The attendee and admin browser flows share `http://localhost:5273`, so the Gateway's `CLIENT_ORIGIN` uses that origin.
+
 The migration must complete successfully before Identity starts, and the Gateway waits for healthy Identity and Redis containers.
 
 Local endpoints:
 
+- Eventa web app: `http://localhost:5273`
 - API Gateway: `http://localhost:3004`
 - Scalar API reference: `http://localhost:3004/docs`
 - OpenAPI JSON: `http://localhost:3004/openapi.json`

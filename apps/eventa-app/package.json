@@ -1,0 +1,30 @@
+{
+  "name": "eventa-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit --project tsconfig.json && vite build",
+    "dev": "vite --host 127.0.0.1 --port 5273",
+    "lint": "eslint src vite.config.ts --max-warnings 0",
+    "preview": "vite preview --host 127.0.0.1 --port 5273",
+    "typecheck": "tsc --noEmit --project tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-query": "^5.90.2",
+    "authrail": "^1.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "vite": "^8.1.4"
+  }
+}

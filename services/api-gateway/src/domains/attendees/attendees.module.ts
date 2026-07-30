@@ -27,7 +27,7 @@ import { AttendeeLoginController } from './controllers/attendee-login.controller
 import { AttendeeLoginService } from './services/attendee-login.service';
 import { AttendeeLoginRateLimitGuard } from './rate-limit/guards/attendee-login-rate-limit.guard';
 import { AttendeeLoginRateLimitService } from './rate-limit/services/attendee-login-rate-limit.service';
-import { ATTENDEE_CLIENT_ORIGIN } from './constants/attendee-login.constants';
+import { CLIENT_ORIGIN } from '../../http/client-origin.constants';
 import { AttendeeSessionCookie } from './services/attendee-session-cookie.service';
 import { AttendeeClientOriginGuard } from './guards/attendee-client-origin.guard';
 import { AttendeeSessionController } from './controllers/attendee-session.controller';
@@ -48,7 +48,7 @@ import {
 } from './rate-limit/guards/attendee-password-reset-rate-limit.guards';
 
 interface AttendeesModuleOptions {
-  attendeeClientOrigin: string;
+  clientOrigin: string;
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
@@ -94,8 +94,8 @@ export class AttendeesModule {
         AttendeeRegistrationService,
         AttendeeSessionService,
         {
-          provide: ATTENDEE_CLIENT_ORIGIN,
-          useValue: options.attendeeClientOrigin,
+          provide: CLIENT_ORIGIN,
+          useValue: options.clientOrigin,
         },
         {
           provide: AttendeeSessionCookie,
