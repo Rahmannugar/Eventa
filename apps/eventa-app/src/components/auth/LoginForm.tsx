@@ -1,6 +1,5 @@
-import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { userFacingApiError } from '../../lib/api/api-error';
 import type { Actor } from '../../lib/auth/auth.types';
@@ -71,14 +70,11 @@ export function LoginForm({ actor }: { actor: Actor }) {
   return (
     <>
       <div className="auth-heading">
-        <p className="eyebrow">
-          {actor === 'admin' ? 'Admin Dashboard' : 'Attendee account'}
-        </p>
-        <h2>Welcome back.</h2>
+        <h2>Sign in</h2>
         <p>
           {actor === 'admin'
-            ? 'Sign in with your activated organizer account.'
-            : 'Sign in to keep your tickets and plans together.'}
+            ? 'Use your approved organizer account.'
+            : 'Sign in to your Eventa account.'}
         </p>
       </div>
 
@@ -116,11 +112,6 @@ export function LoginForm({ actor }: { actor: Actor }) {
           }}
         />
 
-        <div className="login-form__meta">
-          <span>Secure, server-backed session</span>
-          <span>7 days</span>
-        </div>
-
         {login.error === null ? null : (
           <div className="form-alert" role="alert" aria-live="assertive">
             {userFacingApiError(login.error)}
@@ -132,31 +123,9 @@ export function LoginForm({ actor }: { actor: Actor }) {
           busy={login.isPending}
           className="login-form__submit"
         >
-          <span>{login.isPending ? 'Signing in…' : 'Sign in'}</span>
-          {login.isPending ? null : <ArrowRightIcon aria-hidden="true" />}
+          {login.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
-
-      <p className="auth-secondary-action">
-        {actor === 'admin' ? (
-          <>
-            Need to activate an approved account?{' '}
-            <span>Activation arrives in slice four.</span>
-          </>
-        ) : (
-          <>
-            Need an account?{' '}
-            <span>Registration arrives in the next slice.</span>
-          </>
-        )}
-      </p>
-
-      <Link
-        className="auth-back-link"
-        to={actor === 'admin' ? '/attendee/login' : '/admin/login'}
-      >
-        Switch to {actor === 'admin' ? 'attendee' : 'organizer'} access
-      </Link>
     </>
   );
 }

@@ -154,17 +154,6 @@ a {
     linear-gradient(145deg, #17231d, #294037);
 }
 
-.auth-story::after {
-  position: absolute;
-  top: -2rem;
-  right: 18%;
-  width: 1px;
-  height: 120%;
-  background: rgb(255 255 255 / 12%);
-  content: '';
-  transform: rotate(18deg);
-}
-
 .auth-story__content {
   position: relative;
   z-index: 1;
@@ -193,58 +182,6 @@ a {
   color: rgb(255 253 248 / 72%);
   font-size: 1.02rem;
   line-height: 1.75;
-}
-
-.event-stub {
-  position: absolute;
-  right: 2.5rem;
-  bottom: 2.5rem;
-  left: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 5.1rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 1rem;
-  background: rgb(255 255 255 / 8%);
-  color: rgb(255 253 248 / 68%);
-  font-size: 0.69rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
-.event-stub::before,
-.event-stub::after {
-  position: absolute;
-  top: 50%;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  background: #0b4d3c;
-  content: '';
-  transform: translateY(-50%);
-}
-
-.auth-canvas--admin .event-stub::before,
-.auth-canvas--admin .event-stub::after {
-  background: #23352e;
-}
-
-.event-stub::before {
-  left: -0.72rem;
-}
-
-.event-stub::after {
-  right: -0.72rem;
-}
-
-.event-stub__code {
-  color: #fffdf8;
-  font-family: var(--serif);
-  font-size: 1.35rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
 }
 
 .auth-panel {
@@ -413,14 +350,6 @@ a {
   height: 1.1rem;
 }
 
-.login-form__meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: -0.25rem;
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
 .form-alert {
   border: 1px solid rgb(170 52 44 / 22%);
   border-radius: 0.75rem;
@@ -487,37 +416,6 @@ a {
 .login-form__submit {
   width: 100%;
   margin-top: 0.2rem;
-}
-
-.auth-secondary-action,
-.auth-panel__note {
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.55;
-}
-
-.auth-secondary-action {
-  margin: 1.5rem 0 0;
-}
-
-.auth-secondary-action span {
-  color: var(--ink);
-  font-weight: 650;
-}
-
-.auth-back-link {
-  display: inline-block;
-  margin-top: 0.8rem;
-  color: var(--evergreen);
-  font-size: 0.76rem;
-  font-weight: 750;
-  text-underline-offset: 0.2rem;
-}
-
-.auth-panel__note {
-  margin: 2.2rem 0 0;
-  padding-top: 1.2rem;
-  border-top: 1px solid var(--line);
 }
 
 .session-state {

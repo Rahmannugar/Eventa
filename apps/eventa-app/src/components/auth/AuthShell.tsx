@@ -1,23 +1,17 @@
 import type { ReactNode } from 'react';
 
-import type { Actor } from '../../lib/auth/auth.types';
 import { Brand } from '../ui/Brand';
+import type { Actor } from '../../lib/auth/auth.types';
 import { ActorSwitch } from './ActorSwitch';
 
 const actorContent = {
   admin: {
-    eyebrow: 'Organizer access',
-    headline: 'Manage your events in one place.',
-    supporting:
-      'Create and publish events, manage attendees, and track event performance from the Admin Dashboard.',
-    note: 'Admin access is available only to approved organizers.',
+    headline: 'Manage Eventa.',
+    supporting: 'Sign in to the Admin Dashboard.',
   },
   attendee: {
-    eyebrow: 'Attendee access',
-    headline: 'Find and manage your events.',
-    supporting:
-      'Discover events, buy tickets, and keep your event details and tickets in one account.',
-    note: 'New here? Account creation arrives in the next authentication slice.',
+    headline: 'Welcome back.',
+    supporting: 'Sign in to your Eventa account.',
   },
 } as const;
 
@@ -35,13 +29,8 @@ export function AuthShell({
       <section className="auth-story" aria-labelledby="eventa-story-title">
         <Brand inverse />
         <div className="auth-story__content">
-          <p className="eyebrow">{content.eyebrow}</p>
           <h1 id="eventa-story-title">{content.headline}</h1>
           <p>{content.supporting}</p>
-        </div>
-        <div className="event-stub" aria-hidden="true">
-          <span>EVENTA / ADMIT ONE</span>
-          <span className="event-stub__code">EV—27</span>
         </div>
       </section>
 
@@ -52,7 +41,6 @@ export function AuthShell({
         <div className="auth-panel__content">
           <ActorSwitch actor={actor} />
           {children}
-          <p className="auth-panel__note">{content.note}</p>
         </div>
       </section>
     </main>

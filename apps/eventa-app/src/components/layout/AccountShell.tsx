@@ -16,9 +16,7 @@ export function AccountShell({ actor }: { actor: Actor }) {
   if (account === undefined) return null;
 
   const displayName =
-    account.actor === 'attendee'
-      ? `@${account.username}`
-      : 'Approved organizer';
+    account.actor === 'attendee' ? `@${account.username}` : 'Organizer';
 
   async function signOut() {
     try {
@@ -40,24 +38,15 @@ export function AccountShell({ actor }: { actor: Actor }) {
 
       <section className="account-shell__content">
         <div>
-          <p className="eyebrow">
-            {actor === 'admin'
-              ? 'Organizer session active'
-              : 'Your attendee pass is active'}
-          </p>
           <h1>
             {actor === 'admin' ? 'Admin Dashboard' : 'Your Eventa account'}
           </h1>
-          <p className="account-shell__intro">
-            {actor === 'admin'
-              ? 'Your organizer session is active and separate from attendee access.'
-              : 'Your attendee session is active and ready for future event and ticket features.'}
-          </p>
+          <p className="account-shell__intro">Signed in as {account.email}.</p>
         </div>
 
         <article className="account-card">
           <div className="account-card__ticket" aria-hidden="true">
-            <span>SESSION</span>
+            <span>ACCOUNT</span>
             <strong>{actor === 'admin' ? 'ADMIN' : 'ATTENDEE'}</strong>
           </div>
           <div className="account-card__details">

@@ -14,10 +14,7 @@ function SessionLoader({ actor }: { actor: Actor }) {
     <main className="session-state" aria-busy="true">
       <Brand />
       <div className="session-state__card">
-        <span className="session-state__pulse" aria-hidden="true" />
-        <p>
-          Restoring your {actor === 'admin' ? 'organizer' : 'attendee'} session…
-        </p>
+        <p>Loading {actor === 'admin' ? 'Admin Dashboard' : 'your account'}…</p>
       </div>
     </main>
   );
@@ -28,9 +25,8 @@ function SessionFailure({ retry }: { retry: () => Promise<unknown> }) {
     <main className="session-state">
       <Brand />
       <div className="session-state__card" role="alert">
-        <p className="eyebrow">Connection interrupted</p>
-        <h1>We could not restore your session.</h1>
-        <p>Your account has not been signed out. Try the connection again.</p>
+        <h1>Unable to load your account</h1>
+        <p>Check your connection and try again.</p>
         <Button
           onClick={() => {
             void retry();
@@ -52,12 +48,7 @@ export function PublicSessionBoundary({
 }) {
   const session = useSession(actor);
 
-  if (session.isPending) return <SessionLoader actor={actor} />;
   if (session.data !== undefined) return <Navigate replace to={`/${actor}`} />;
-
-  if (session.error !== null && !isSessionInvalid(session.error)) {
-    return <SessionFailure retry={session.refetch} />;
-  }
 
   return children;
 }

@@ -2,7 +2,7 @@
 
 ## Direction
 
-Eventa uses a warm, clear visual system built around event discovery and management. Authentication is direct and legible. Product copy explains what attendees and organizers can do without abstract marketing language.
+Eventa uses a warm, clear visual system built around event discovery and management. Authentication is direct and legible. Interface copy names the immediate user action. It does not expose delivery plans, implementation slices, session internals, or decorative ticket codes.
 
 Authrail informs the split authentication canvas, restrained controls, explicit states, and route-level session boundaries. Eventa does not reuse Authrail branding, copy, or source.
 
@@ -34,7 +34,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Controls do not jump or lift on hover. Border, background, and text transitions communicate interaction.
 - Submissions disable while pending and retain descriptive button text.
 - Field validation is inline. Request failures stay in the form that owns recovery.
-- Session restoration uses a stable skeleton. Dependency failures offer an explicit retry. Invalid sessions return to the correct actor login.
+- Public login pages remain usable while session restoration is pending or unavailable. A valid restored session redirects to the protected route. Protected-route restoration uses a stable loading state, offers retry on dependency failure, and returns invalid sessions to the correct actor login.
 
 ## Accessibility
 
