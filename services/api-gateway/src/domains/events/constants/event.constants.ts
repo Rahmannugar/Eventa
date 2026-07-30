@@ -1,0 +1,2 @@
+export const EVENT_GRPC_CLIENT = Symbol('EVENT_GRPC_CLIENT');
+export const EVENT_GRPC_DEADLINE_MS = Symbol('EVENT_GRPC_DEADLINE_MS');

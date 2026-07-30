@@ -6,9 +6,11 @@ The API Gateway is Eventa's public HTTP boundary. It owns transport validation, 
 
 - HTTP port: configured by `PORT`; local Compose publishes `3004`.
 - Identity dependency: configured by `IDENTITY_GRPC_URL`.
+- Event dependency: configured by `EVENT_GRPC_URL`.
 - Redis rate-limit dependency: configured by `REDIS_URL`.
 - HTTP header, request-body, and keep-alive limits: configured by the corresponding `HTTP_*_TIMEOUT_MS` variables.
 - Identity RPC deadline: configured by `IDENTITY_GRPC_DEADLINE_MS`.
+- Event RPC deadline: configured by `EVENT_GRPC_DEADLINE_MS`.
 - Redis connection and command budgets: configured by `REDIS_CONNECT_TIMEOUT_MS` and `REDIS_OPERATION_TIMEOUT_MS`.
 - Interactive API reference: `/docs` when `API_DOCS_ENABLED=true`.
 - Liveness: `/health/live`.
@@ -29,3 +31,4 @@ The local stack sends Gateway metrics and traces through Alloy and collects its 
 - [ARCHITECTURE.md](ARCHITECTURE.md): domain modules, shared infrastructure, dependency behavior, and protocol translation.
 - [commands.md](commands.md): service-owned validation and local runtime commands.
 - [Attendees API](src/domains/attendees/API.md) and [architecture](src/domains/attendees/ARCHITECTURE.md): the domain-owned registration contract and command flow.
+- [Events API](src/domains/events/API.md) and [architecture](src/domains/events/ARCHITECTURE.md): authenticated admin event routing and dependency behavior.

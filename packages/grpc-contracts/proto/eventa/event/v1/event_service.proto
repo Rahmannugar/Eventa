@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package eventa.event.v1;
+
+import "eventa/event/v1/event.proto";
+
+service EventService {
+  rpc CreateDraftEvent(CreateDraftEventRequest) returns (CreateDraftEventResponse);
+  rpc GetAdminEvent(GetAdminEventRequest) returns (GetAdminEventResponse);
+}

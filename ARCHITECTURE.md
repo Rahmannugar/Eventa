@@ -4,34 +4,39 @@
 
 Eventa is organized as independently deployable services with explicit business ownership. Clients use HTTP through the API Gateway. Services use gRPC for synchronous commands and queries, an event bus for durable business facts, and a job queue for retryable worker assignments.
 
-The local stack contains:
+The system shape is:
 
 ```text
-Attendee client
-  -> API Gateway
-       -> Identity Service
-            -> RabbitMQ
-                 -> Notification Service
-                      -> Email provider
+Eventa web app
+  - Attendee
+  - Admin
+          |
+          | HTTP
+          v
+     API Gateway
+          |
+          | routes authorized operations
+          v
+  - Identity Service
+  - Event Service
+  - Commerce Service
+  - Ticket Service
+  - Discovery Service
+  - Analytics Service
+  - Notification Service
 
-Gateway, Identity, and Notification
-  -> service-owned state
+Infrastructure
+  - Kafka
+  - Redis
+  - RabbitMQ
 
-Gateway, Identity, and Notification
-  -> OpenTelemetry OTLP
-       -> Grafana Alloy
-            -> Prometheus metrics
-            -> Tempo traces
-
-Container stdout/stderr
+Application and worker telemetry
   -> Grafana Alloy
-       -> Loki logs
-
-Grafana
-  -> Prometheus, Tempo, and Loki
+       -> Prometheus, Tempo, and Loki
+            -> Grafana
 ```
 
-Eventa includes Event, Commerce, Ticket, Discovery, Notification, Analytics, attendee-web, and admin-web capabilities. Each service is an independently deployable modular monolith.
+Eventa uses one web application with attendee and admin surfaces. Each backend service is independently deployable.
 
 ## Ownership
 
@@ -65,11 +70,13 @@ We keep authoritative gRPC schemas in `packages/grpc-contracts/proto`. Pinned Bu
 
 RabbitMQ DLQs are used only for actionable failed work with a defined recovery path, not as a default for every queue. Replaceable, best-effort, and time-bounded jobs use owned failed or expired states, resend, reconciliation, or rebuild behavior instead. Production DLQs are bounded, observable through RabbitMQ and OpenTelemetry signals, alerted through Grafana, and reviewed through audited manual recovery;.
 
-We document concrete behavior in the owning service: [API Gateway architecture](services/api-gateway/ARCHITECTURE.md), [Identity architecture](services/identity-service/ARCHITECTURE.md), and [Notification architecture](services/notification-service/ARCHITECTURE.md).
+We document concrete behavior in the owning service: [API Gateway architecture](services/api-gateway/ARCHITECTURE.md), [Identity architecture](services/identity-service/ARCHITECTURE.md), [Event architecture](services/event-service/ARCHITECTURE.md), and [Notification architecture](services/notification-service/ARCHITECTURE.md).
 
 ## Persistence and Correctness
 
 Each service owns its PostgreSQL schema, migrations, constraints, and database principal. We use Drizzle in TypeScript services. Go services use GORM for persistence and reviewed SQL migrations as the deployment authority.
+
+Event Service records each admin event mutation in its own append-only audit history in the same transaction as the state change. A later projection may aggregate service-owned audit facts without becoming their source of truth.
 
 ## Operations
 

@@ -146,6 +146,13 @@ export class AdminsModule {
         AdminLoginRateLimitGuard,
         AdminRegistrationRateLimitGuard,
       ],
+      exports: [
+        AdminAuthenticationGuard,
+        AdminClientOriginGuard,
+        AdminSessionService,
+        AdminSessionCookie,
+        CLIENT_ORIGIN,
+      ],
     };
   }
 }

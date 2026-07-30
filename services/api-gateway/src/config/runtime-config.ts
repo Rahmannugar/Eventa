@@ -4,6 +4,8 @@ export interface RuntimeConfig {
   httpHeadersTimeoutMs: number;
   httpKeepAliveTimeoutMs: number;
   httpRequestTimeoutMs: number;
+  eventGrpcDeadlineMs: number;
+  eventGrpcUrl: string;
   identityGrpcDeadlineMs: number;
   identityGrpcUrl: string;
   port: number;
@@ -89,6 +91,12 @@ export function readRuntimeConfig(
     throw new Error('IDENTITY_GRPC_URL must use the host:port format');
   }
 
+  const eventGrpcUrl = readRequiredString(environment, 'EVENT_GRPC_URL');
+
+  if (!/^[^\s:/]+:\d+$/.test(eventGrpcUrl)) {
+    throw new Error('EVENT_GRPC_URL must use the host:port format');
+  }
+
   const publicApiUrl = readRequiredString(environment, 'PUBLIC_API_URL');
   let parsedPublicApiUrl: URL;
 
@@ -140,6 +148,10 @@ export function readRuntimeConfig(
     environment,
     'HTTP_REQUEST_TIMEOUT_MS',
   );
+  const eventGrpcDeadlineMs = readPositiveInteger(
+    environment,
+    'EVENT_GRPC_DEADLINE_MS',
+  );
 
   if (httpHeadersTimeoutMs > httpRequestTimeoutMs) {
     throw new Error(
@@ -147,9 +159,17 @@ export function readRuntimeConfig(
     );
   }
 
+  if (eventGrpcDeadlineMs >= httpRequestTimeoutMs) {
+    throw new Error(
+      'EVENT_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
+
   return {
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
     clientOrigin: readOrigin(environment, 'CLIENT_ORIGIN'),
+    eventGrpcDeadlineMs,
+    eventGrpcUrl,
     httpHeadersTimeoutMs,
     httpKeepAliveTimeoutMs: readPositiveInteger(
       environment,

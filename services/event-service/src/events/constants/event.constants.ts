@@ -1,0 +1,1 @@
+export const EVENT_MANAGEMENT = Symbol('EVENT_MANAGEMENT');

@@ -23,6 +23,22 @@ services:
       - identity-database-data:/var/lib/postgresql/data
     logging: *local-logging
 
+  event-database:
+    image: postgres:17-alpine
+    env_file:
+      - ./services/event-service/.env
+    ports:
+      - '57432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - event-database-data:/var/lib/postgresql/data
+    logging: *local-logging
+
   notification-database:
     image: postgres:17-alpine
     env_file:
@@ -168,6 +184,38 @@ services:
     restart: unless-stopped
     logging: *local-logging
 
+  event-migration:
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
+    image: eventa-event-service:local
+    command: ['node', 'dist/database/migrate.js']
+    env_file:
+      - ./services/event-service/.env
+    depends_on:
+      event-database:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+    logging: *local-logging
+
+  event-service:
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
+    image: eventa-event-service:local
+    env_file:
+      - ./services/event-service/.env
+    ports:
+      - '3007:3007'
+      - '50052:50052'
+    depends_on:
+      event-migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging: *local-logging
+
   notification-migration:
     build:
       context: .
@@ -211,6 +259,8 @@ services:
     ports:
       - '3004:3004'
     depends_on:
+      event-service:
+        condition: service_healthy
       identity-service:
         condition: service_healthy
       api-gateway-redis:
@@ -305,6 +355,7 @@ services:
 
 volumes:
   event-bus-data:
+  event-database-data:
   identity-database-data:
   notification-database-data:
   job-queue-data:

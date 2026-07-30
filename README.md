@@ -69,7 +69,7 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-Docker Compose starts the API Gateway, Identity Service, Notification Service, their owned PostgreSQL databases, Redis-backed registration rate-limit and OTP state, RabbitMQ, and the local observability pipeline. Identity and Notification migrations run in one-shot containers before their services start.
+Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, and the local observability pipeline. Identity, Event, and Notification migrations run in one-shot containers before their services start.
 
 Start the stack with:
 
@@ -95,6 +95,7 @@ Local endpoints:
 - Gateway liveness: `http://localhost:3004/health/live`
 - Identity readiness: `http://localhost:3005/health/ready`
 - Notification readiness: `http://localhost:3006/health/ready`
+- Event readiness: `http://localhost:3007/health/ready`
 - RabbitMQ management: `http://localhost:15673`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`

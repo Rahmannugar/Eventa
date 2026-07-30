@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package eventa.event.v1;
+
+enum EventStatus {
+  EVENT_STATUS_UNSPECIFIED = 0;
+  EVENT_STATUS_DRAFT = 1;
+}
+
+message Event {
+  string event_id = 1;
+  string title = 2;
+  EventStatus status = 3;
+  string created_by_admin_id = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message CreateDraftEventRequest {
+  string admin_id = 1;
+  string title = 2;
+}
+
+message CreateDraftEventResponse {
+  Event event = 1;
+}
+
+message GetAdminEventRequest {
+  string event_id = 1;
+}
+
+message GetAdminEventResponse {
+  Event event = 1;
+}

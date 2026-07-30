@@ -14,10 +14,19 @@ import { AttendeesModule } from './domains/attendees/attendees.module';
 import { HealthModule } from './health/health.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { AdminsModule } from './domains/admins/admins.module';
+import { EventsModule } from './domains/events/events.module';
 
 @Module({})
 export class AppModule implements NestModule {
   static register(config: RuntimeConfig): DynamicModule {
+    const adminsModule = AdminsModule.register({
+      clientOrigin: config.clientOrigin,
+      identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
+      identityGrpcUrl: config.identityGrpcUrl,
+      rateLimitKeySecret: config.rateLimitKeySecret,
+      secureCookies: config.publicApiUrl.startsWith('https://'),
+    });
+
     return {
       module: AppModule,
       imports: [
@@ -27,12 +36,12 @@ export class AppModule implements NestModule {
           operationTimeoutMs: config.redisOperationTimeoutMs,
           redisUrl: config.redisUrl,
         }),
-        AdminsModule.register({
-          clientOrigin: config.clientOrigin,
-          identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
-          identityGrpcUrl: config.identityGrpcUrl,
+        adminsModule,
+        EventsModule.register({
+          adminsModule,
+          eventGrpcDeadlineMs: config.eventGrpcDeadlineMs,
+          eventGrpcUrl: config.eventGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
-          secureCookies: config.publicApiUrl.startsWith('https://'),
         }),
         AttendeesModule.register({
           clientOrigin: config.clientOrigin,
