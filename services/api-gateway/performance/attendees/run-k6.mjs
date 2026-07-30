@@ -71,9 +71,7 @@ if (scenario.observesDelivery === true) {
       throw new Error('DELIVERY_OBSERVER_NOT_READY');
     }
   } catch {
-    console.error(
-      'Notification delivery observer is unavailable. Start it with: pnpm --filter @eventa/notification-service performance:notifications:observe-deliveries',
-    );
+    console.error('Notification delivery observer is unavailable.');
     process.exit(1);
   }
 }

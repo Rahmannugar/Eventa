@@ -8,9 +8,6 @@
   "scripts": {
     "build": "nest build",
     "lint": "eslint src test performance --max-warnings 0",
-    "performance:attendees:confirmation": "node performance/attendees/run-k6.mjs confirmation",
-    "performance:attendees:registration": "node performance/attendees/run-k6.mjs registration",
-    "performance:attendees:resend": "node performance/attendees/run-k6.mjs resend",
     "start": "node dist/main.js",
     "test": "pnpm test:unit",
     "test:integration": "dotenv -e .env -- vitest run test/integration",

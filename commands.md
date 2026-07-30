@@ -147,6 +147,20 @@ Open the provisioned Eventa dashboard and explore metrics, traces, and logs in G
 open http://localhost:3300
 ```
 
+Before enabling Grafana alert email, set `GF_SMTP_PASSWORD`, a verified `GF_SMTP_FROM_ADDRESS`, and `GF_SMTP_ENABLED=true` in the ignored Grafana `.env`. The SMTP password is a separate Resend API key. Restart only Grafana after changing those values.
+
+```bash
+docker compose up -d --force-recreate observability-dashboard
+```
+
+Sign in as the configured Grafana administrator, then:
+
+1. Open **Alerts & IRM → Contact points**.
+2. Create an email contact point named **eventa-grafana-alerts**.
+3. Enter the operator's recipient email in **Addresses**. This address belongs in Grafana, not the environment file.
+4. Use **Test** to send one contact-point test without generating application failures.
+5. Save the contact point after the email arrives.
+
 Open Alloy's component graph and collector diagnostics.
 
 ```bash

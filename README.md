@@ -114,10 +114,3 @@ Each deployable service also owns its operational, API, and architecture documen
 ## Performance Validation
 
 Eventa uses k6 for local performance validation. k6 scenarios validate both request-response and event-driven work:
-
-- Request-response scenarios measure throughput, latency, errors, and resource pressure across HTTP, Redis, and PostgreSQL.
-- Event-driven scenarios measure publication, broker and queue delay, consumer processing, retries, duplicate handling, and eventual workflow completion.
-
-Event-driven latency is measured from the initiating request to the durable terminal business outcome, rather than stopping at broker acknowledgement. Results are evaluated with the corresponding OpenTelemetry traces, Prometheus metrics, Grafana dashboards, Loki logs, and Tempo traces.
-
-Local k6 runs are low-volume performance validations. Each domain owns its scenarios. The attendee scenarios run one workflow at a time; see [`services/api-gateway/performance/attendees/README.md`](services/api-gateway/performance/attendees/README.md).
