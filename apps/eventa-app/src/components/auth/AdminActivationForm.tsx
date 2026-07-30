@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { userFacingApiError } from '../../lib/api/api-error';
 import {
@@ -52,6 +53,9 @@ export function AdminActivationForm() {
     try {
       await activationRequest.mutateAsync(result.data);
       setShowActivation(true);
+      toast.success('Activation code requested', {
+        description: 'Check your email if the account is eligible.',
+      });
     } catch {
       // The normalized request error remains visible in the form.
     }
@@ -219,12 +223,6 @@ export function AdminActivationForm() {
             {userFacingApiError(activationRequest.error)}
           </div>
         )}
-
-        {activationRequest.isSuccess ? (
-          <div className="form-status" role="status">
-            If this account is eligible, an activation code has been requested.
-          </div>
-        ) : null}
 
         <Button
           type="submit"

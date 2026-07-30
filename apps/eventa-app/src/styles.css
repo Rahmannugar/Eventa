@@ -486,6 +486,17 @@ a {
   color: var(--muted);
 }
 
+.button--danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.button--danger:hover:not(:disabled) {
+  border-color: #812a24;
+  background: #812a24;
+}
+
 .button:disabled {
   opacity: 0.58;
 }
@@ -506,6 +517,66 @@ a {
   color: var(--evergreen);
   font-weight: 750;
   text-underline-offset: 0.2rem;
+}
+
+.auth-form-link--split {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+
+.forgot-password-link {
+  width: fit-content;
+  margin-top: -0.55rem;
+  color: var(--evergreen);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-underline-offset: 0.2rem;
+}
+
+.eventa-toast {
+  border: 1px solid var(--line) !important;
+  border-radius: 0.8rem !important;
+  background: var(--paper) !important;
+  box-shadow: 0 14px 38px rgb(23 35 29 / 14%) !important;
+  color: var(--ink) !important;
+  font-family: inherit !important;
+}
+
+.eventa-toast--success {
+  border-color: rgb(11 89 69 / 34%) !important;
+}
+
+.eventa-toast--success [data-icon] {
+  color: var(--evergreen);
+}
+
+.eventa-toast--error {
+  border-color: rgb(170 52 44 / 34%) !important;
+  background: var(--danger-soft) !important;
+}
+
+.eventa-toast--error [data-icon] {
+  color: var(--danger);
+}
+
+.eventa-toast--warning [data-icon] {
+  color: #9a5f16;
+}
+
+.eventa-toast__title {
+  font-weight: 800 !important;
+}
+
+.eventa-toast__description {
+  color: var(--muted) !important;
+}
+
+.eventa-toast__close {
+  border-color: var(--line) !important;
+  background: var(--paper) !important;
+  color: var(--muted) !important;
 }
 
 .session-state {
@@ -693,6 +764,110 @@ a {
   width: fit-content;
 }
 
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid rgb(170 52 44 / 24%);
+  border-radius: 1rem;
+  background: rgb(255 253 248 / 64%);
+  padding: 1.25rem;
+}
+
+.danger-zone h2 {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.danger-zone p {
+  max-width: 31rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.danger-zone > .button {
+  flex: 0 0 auto;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background: rgb(7 31 25 / 58%);
+  backdrop-filter: blur(2px);
+}
+
+.confirmation-dialog {
+  position: relative;
+  width: min(100%, 29rem);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 24px 70px rgb(7 31 25 / 25%);
+  padding: 1.6rem;
+}
+
+.confirmation-dialog > h2 {
+  margin: 0;
+  padding-right: 2.5rem;
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.confirmation-dialog > p {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.confirmation-dialog__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--muted);
+}
+
+.confirmation-dialog__close:hover:not(:disabled) {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.confirmation-dialog__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.confirmation-dialog__form {
+  display: grid;
+  gap: 1.2rem;
+  margin-top: 1.35rem;
+}
+
+.confirmation-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 @keyframes pulse {
   70% {
     box-shadow: 0 0 0 0.7rem rgb(239 113 79 / 0%);
@@ -768,6 +943,17 @@ a {
   .account-card__details {
     align-content: center;
     padding: 2rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .danger-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .danger-zone > .button {
+    width: 100%;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { userFacingApiError } from '../../lib/api/api-error';
 import {
@@ -98,6 +99,9 @@ export function EmailVerificationForm() {
 
     try {
       await resend.mutateAsync({ email: result.data });
+      toast.success('Verification code requested', {
+        description: 'Check your email for the new code.',
+      });
     } catch {
       // The normalized request error remains visible beside the action.
     }
@@ -151,12 +155,6 @@ export function EmailVerificationForm() {
             {userFacingApiError(resend.error)}
           </div>
         )}
-
-        {resend.isSuccess ? (
-          <div className="form-status" role="status">
-            A new verification code was requested. Check your email.
-          </div>
-        ) : null}
 
         <Button
           type="submit"

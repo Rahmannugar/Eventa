@@ -50,3 +50,16 @@ export interface ActivateAdminInput extends RequestAdminActivationInput {
   otp: string;
   password: string;
 }
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput extends ForgotPasswordInput {
+  code: string;
+  newPassword: string;
+}
+
+export interface DeleteAttendeeAccountInput {
+  password: string;
+}

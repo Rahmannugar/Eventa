@@ -6,6 +6,7 @@ import type { Actor } from '../../lib/auth/auth.types';
 import { useLogout, useSession } from '../../lib/auth/useAuth';
 import { Brand } from '../ui/Brand';
 import { Button } from '../ui/Button';
+import { DeleteAttendeeAccount } from '../account/DeleteAttendeeAccount';
 
 export function AccountShell({ actor }: { actor: Actor }) {
   const navigate = useNavigate();
@@ -72,6 +73,8 @@ export function AccountShell({ actor }: { actor: Actor }) {
           <SignOutIcon aria-hidden="true" />
           {logout.isPending ? 'Signing out…' : 'Sign out'}
         </Button>
+
+        {actor === 'attendee' ? <DeleteAttendeeAccount /> : null}
       </section>
     </main>
   );

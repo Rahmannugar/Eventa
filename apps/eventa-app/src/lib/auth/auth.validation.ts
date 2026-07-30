@@ -45,3 +45,19 @@ export const activateAdminSchema = z.object({
     .regex(/^\d{6}$/, 'Activation code must contain exactly 6 digits.'),
   password: passwordSchema,
 });
+
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+export const resetPasswordSchema = z.object({
+  code: z
+    .string()
+    .regex(/^\d{6}$/, 'Reset code must contain exactly 6 digits.'),
+  email: emailSchema,
+  newPassword: passwordSchema,
+});
+
+export const deleteAttendeeAccountSchema = z.object({
+  password: passwordSchema,
+});

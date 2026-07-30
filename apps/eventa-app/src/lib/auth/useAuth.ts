@@ -3,21 +3,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   activateAdmin,
   confirmAttendeeEmail,
+  deleteAttendeeAccount,
+  forgotPassword,
   getCurrentAccount,
   login,
   logout,
   registerAttendee,
   requestAdminActivation,
   resendAttendeeEmail,
+  resetPassword,
 } from './auth.service';
 import type {
   ActivateAdminInput,
   Actor,
   ConfirmAttendeeEmailInput,
+  DeleteAttendeeAccountInput,
+  ForgotPasswordInput,
   LoginInput,
   RegisterAttendeeInput,
   RequestAdminActivationInput,
   ResendAttendeeEmailInput,
+  ResetPasswordInput,
   SessionAccount,
 } from './auth.types';
 
@@ -85,5 +91,34 @@ export function useRequestAdminActivation() {
 export function useActivateAdmin() {
   return useMutation({
     mutationFn: (input: ActivateAdminInput) => activateAdmin(input),
+  });
+}
+
+export function useForgotPassword(actor: Actor) {
+  return useMutation({
+    mutationFn: (input: ForgotPasswordInput) => forgotPassword(actor, input),
+  });
+}
+
+export function useResetPassword(actor: Actor) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ResetPasswordInput) => resetPassword(actor, input),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: sessionQueryKey(actor) });
+    },
+  });
+}
+
+export function useDeleteAttendeeAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: DeleteAttendeeAccountInput) =>
+      deleteAttendeeAccount(input),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: sessionQueryKey('attendee') });
+    },
   });
 }

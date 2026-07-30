@@ -141,6 +141,10 @@ export function LoginForm({ actor }: { actor: Actor }) {
           }}
         />
 
+        <Link className="forgot-password-link" to={`/${actor}/forgot-password`}>
+          Forgot password?
+        </Link>
+
         {login.error === null ? null : (
           <div className="form-alert" role="alert" aria-live="assertive">
             {userFacingApiError(login.error)}

@@ -34,6 +34,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Controls do not jump or lift on hover. Border, background, and text transitions communicate interaction.
 - Submissions disable while pending and retain descriptive button text.
 - Field validation is inline. Request failures stay in the form that owns recovery.
+- Short-lived action outcomes use one Eventa-styled toaster at the top right. Success and error notices never replace field validation or the owning form's recoverable failure state.
 - Six-digit verification and activation codes use the shared shadcn-style OTP control with paste, one-time-code autofill, visible slot focus, and no decorative separator.
 - Public login pages remain usable while session restoration is pending or unavailable. A valid restored session redirects to the protected route. Protected-route restoration uses a stable loading state, offers retry on dependency failure, and returns invalid sessions to the correct actor login.
 

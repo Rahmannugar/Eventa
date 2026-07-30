@@ -5,11 +5,14 @@ import type {
   Actor,
   ActivateAdminInput,
   ConfirmAttendeeEmailInput,
+  DeleteAttendeeAccountInput,
+  ForgotPasswordInput,
   LoginInput,
   RegisterAttendeeInput,
   RegisteredAttendee,
   RequestAdminActivationInput,
   ResendAttendeeEmailInput,
+  ResetPasswordInput,
   SessionAccount,
 } from './auth.types';
 
@@ -51,6 +54,14 @@ const adminActivationRequestedSchema = z.object({
 
 const adminActivatedSchema = z.object({
   activated: z.literal(true),
+});
+
+const passwordResetRequestedSchema = z.object({
+  accepted: z.literal(true),
+});
+
+const passwordResetSchema = z.object({
+  passwordReset: z.literal(true),
 });
 
 const endpoints = {
@@ -134,5 +145,36 @@ export async function activateAdmin(input: ActivateAdminInput): Promise<void> {
     body: input,
     method: 'POST',
     responseSchema: adminActivatedSchema,
+  });
+}
+
+export async function forgotPassword(
+  actor: Actor,
+  input: ForgotPasswordInput,
+): Promise<void> {
+  await apiRequest(`${endpoints[actor]}/forgot-password`, {
+    body: input,
+    method: 'POST',
+    responseSchema: passwordResetRequestedSchema,
+  });
+}
+
+export async function resetPassword(
+  actor: Actor,
+  input: ResetPasswordInput,
+): Promise<void> {
+  await apiRequest(`${endpoints[actor]}/reset-password`, {
+    body: input,
+    method: 'POST',
+    responseSchema: passwordResetSchema,
+  });
+}
+
+export function deleteAttendeeAccount(
+  input: DeleteAttendeeAccountInput,
+): Promise<void> {
+  return apiCommand(`${endpoints.attendee}/delete-account`, {
+    body: input,
+    method: 'POST',
   });
 }

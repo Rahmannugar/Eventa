@@ -1,26 +1,32 @@
-import type { ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   busy?: boolean;
-  variant?: 'primary' | 'secondary' | 'quiet';
+  variant?: 'danger' | 'primary' | 'secondary' | 'quiet';
 }
 
-export function Button({
-  busy = false,
-  children,
-  className = '',
-  disabled,
-  variant = 'primary',
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      className={`button button--${variant} ${className}`.trim()}
-      disabled={disabled === true || busy}
-      aria-busy={busy}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      busy = false,
+      children,
+      className = '',
+      disabled,
+      variant = 'primary',
+      ...props
+    },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        className={`button button--${variant} ${className}`.trim()}
+        disabled={disabled === true || busy}
+        aria-busy={busy}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  },
+);

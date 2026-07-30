@@ -22,6 +22,12 @@ Open `http://localhost:5273`.
 
 The app runs on the host, not in Docker Compose. Its backend boundary is the API Gateway at `http://localhost:3004`. Configure the Gateway's `CLIENT_ORIGIN` as `http://localhost:5273`.
 
+## Authentication
+
+Attendee routes cover account creation, email verification, sign-in, password recovery, session restoration, sign-out, and password-confirmed account deletion.
+
+Organizer routes cover approved-account activation, sign-in, password recovery, session restoration, and sign-out. Activation never creates a session; organizers sign in explicitly after activation.
+
 ## Authentication boundary
 
 - Attendee routes use the attendee session cookie.
