@@ -361,6 +361,83 @@ a {
   line-height: 1.5;
 }
 
+.form-status {
+  border: 1px solid rgb(11 89 69 / 22%);
+  border-radius: 0.75rem;
+  background: rgb(11 89 69 / 8%);
+  color: var(--evergreen-deep);
+  padding: 0.8rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.otp-field {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.otp-field:has(input:disabled) {
+  opacity: 0.58;
+}
+
+.otp-field__group {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.otp-field__slot {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 3.15rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-right: 0;
+  background: #fff;
+  color: var(--ink);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.otp-field__slot:first-child {
+  border-radius: 0.75rem 0 0 0.75rem;
+}
+
+.otp-field__slot:last-child {
+  border-right: 1px solid var(--line);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.otp-field:has(input[aria-invalid='true']) .otp-field__slot {
+  border-color: var(--danger);
+}
+
+.otp-field__slot[data-active='true'] {
+  z-index: 1;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgb(36 118 95 / 11%);
+}
+
+.otp-field__character {
+  min-height: 1.25em;
+}
+
+.otp-field__caret {
+  position: absolute;
+  width: 1px;
+  height: 1.35rem;
+  background: var(--ink);
+  animation: caret-blink 1.2s ease-out infinite;
+}
+
 .button {
   display: inline-flex;
   min-height: 2.9rem;
@@ -416,6 +493,19 @@ a {
 .login-form__submit {
   width: 100%;
   margin-top: 0.2rem;
+}
+
+.auth-form-link {
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.auth-form-link a {
+  color: var(--evergreen);
+  font-weight: 750;
+  text-underline-offset: 0.2rem;
 }
 
 .session-state {
@@ -609,6 +699,18 @@ a {
   }
   100% {
     box-shadow: 0 0 0 0 rgb(239 113 79 / 0%);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  50% {
+    opacity: 0;
   }
 }
 

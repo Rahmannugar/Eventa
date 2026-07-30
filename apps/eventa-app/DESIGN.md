@@ -26,7 +26,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Desktop authentication uses a two-column canvas: an event-led editorial panel and a focused form surface.
 - Mobile collapses to one column, keeping brand, actor context, and the form above the fold without hiding essential navigation.
 - Forms stay between 360px and 440px wide. Labels, help, validation, and actions align to one predictable vertical rhythm.
-- Protected shells use a compact masthead and one clear account card until later product stories add domain navigation.
+- Authentication uses a compact signed-in account landing. Later attendee and admin product stories replace it with dedicated professional application shells and sidebar navigation.
 
 ## Interaction
 
@@ -34,6 +34,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Controls do not jump or lift on hover. Border, background, and text transitions communicate interaction.
 - Submissions disable while pending and retain descriptive button text.
 - Field validation is inline. Request failures stay in the form that owns recovery.
+- Six-digit verification and activation codes use the shared shadcn-style OTP control with paste, one-time-code autofill, visible slot focus, and no decorative separator.
 - Public login pages remain usable while session restoration is pending or unavailable. A valid restored session redirects to the protected route. Protected-route restoration uses a stable loading state, offers retry on dependency failure, and returns invalid sessions to the correct actor login.
 
 ## Accessibility

@@ -18,9 +18,13 @@ const actorContent = {
 export function AuthShell({
   actor,
   children,
+  headline,
+  supporting,
 }: {
   actor: Actor;
   children: ReactNode;
+  headline?: string;
+  supporting?: string;
 }) {
   const content = actorContent[actor];
 
@@ -29,8 +33,8 @@ export function AuthShell({
       <section className="auth-story" aria-labelledby="eventa-story-title">
         <Brand inverse />
         <div className="auth-story__content">
-          <h1 id="eventa-story-title">{content.headline}</h1>
-          <p>{content.supporting}</p>
+          <h1 id="eventa-story-title">{headline ?? content.headline}</h1>
+          <p>{supporting ?? content.supporting}</p>
         </div>
       </section>
 

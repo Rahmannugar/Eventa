@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { userFacingApiError } from '../../lib/api/api-error';
 import type { Actor } from '../../lib/auth/auth.types';
@@ -12,6 +12,27 @@ import { TextField } from '../ui/TextField';
 interface FormErrors {
   email?: string;
   password?: string;
+}
+
+function emailFromState(state: unknown): string {
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'email' in state &&
+    typeof state.email === 'string'
+  ) {
+    return state.email;
+  }
+
+  return '';
+}
+
+function completedAuthenticationStep(actor: Actor, state: unknown): boolean {
+  if (typeof state !== 'object' || state === null) return false;
+
+  return actor === 'attendee'
+    ? 'emailVerified' in state && state.emailVerified === true
+    : 'adminActivated' in state && state.adminActivated === true;
 }
 
 function safeDestination(actor: Actor, state: unknown): string {
@@ -32,7 +53,7 @@ export function LoginForm({ actor }: { actor: Actor }) {
   const location = useLocation();
   const navigate = useNavigate();
   const login = useLogin(actor);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => emailFromState(location.state));
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -85,6 +106,14 @@ export function LoginForm({ actor }: { actor: Actor }) {
           void submit(event);
         }}
       >
+        {completedAuthenticationStep(actor, location.state) ? (
+          <div className="form-status" role="status">
+            {actor === 'attendee'
+              ? 'Email verified. Sign in to continue.'
+              : 'Account activated. Sign in to continue.'}
+          </div>
+        ) : null}
+
         <TextField
           id={`${actor}-email`}
           label="Email address"
@@ -126,6 +155,16 @@ export function LoginForm({ actor }: { actor: Actor }) {
           {login.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
+
+      <p className="auth-form-link">
+        {actor === 'attendee' ? (
+          <>
+            New to Eventa? <Link to="/attendee/register">Create account</Link>
+          </>
+        ) : (
+          <Link to="/admin/activate">Activate an approved account</Link>
+        )}
+      </p>
     </>
   );
 }
