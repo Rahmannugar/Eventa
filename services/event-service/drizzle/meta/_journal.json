@@ -8,6 +8,13 @@
       "when": 1785407507996,
       "tag": "0000_create_event_drafts_and_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785634276519,
+      "tag": "0001_add_editable_event_details",
+      "breakpoints": true
     }
   ]
 }

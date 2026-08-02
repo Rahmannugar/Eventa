@@ -33,7 +33,7 @@ RUN pnpm --filter @eventa/grpc-contracts build \
   && pnpm --filter @eventa/observability build \
   && pnpm --filter @eventa/event-service lint \
   && pnpm --filter @eventa/event-service typecheck \
-  && pnpm --filter @eventa/event-service test:unit \
+  && pnpm --filter @eventa/event-service test:contract \
   && pnpm --filter @eventa/event-service build
 
 FROM quality AS package

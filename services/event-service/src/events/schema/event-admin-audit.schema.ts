@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -18,7 +19,8 @@ export const eventAdminAuditLog = pgTable(
       .notNull()
       .references(() => events.id, { onDelete: 'restrict' }),
     actorAdminId: uuid('actor_admin_id').notNull(),
-    action: text('action').$type<'event.created'>().notNull(),
+    action: text('action').$type<'event.created' | 'event.updated'>().notNull(),
+    eventVersion: integer('event_version').notNull(),
     requestId: text('request_id').notNull(),
     occurredAt: timestamp('occurred_at', {
       mode: 'date',
@@ -34,7 +36,11 @@ export const eventAdminAuditLog = pgTable(
     ),
     check(
       'event_admin_audit_action_allowed',
-      sql`${table.action} IN ('event.created')`,
+      sql`${table.action} IN ('event.created', 'event.updated')`,
+    ),
+    check(
+      'event_admin_audit_version_positive',
+      sql`${table.eventVersion} >= 1`,
     ),
     check(
       'event_admin_audit_request_id_length',

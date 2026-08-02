@@ -18,6 +18,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 | `POST` | `/admin/events`                              | Creates a draft event.                                                                           |
 | `GET`  | `/admin/events/:eventId`                     | Returns an event to any authenticated admin.                                                     |
+| `PUT`  | `/admin/events/:eventId`                     | Replaces editable draft details when the supplied version is current.                            |
 
 The Gateway also exposes:
 
@@ -36,7 +37,7 @@ The protobuf schemas are authoritative. Buf validates and generates the TypeScri
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Event Service exposes draft creation and admin event retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
+Event Service exposes draft creation, optimistic draft updates, and admin event retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
 
 Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 

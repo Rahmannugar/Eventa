@@ -21,6 +21,23 @@ export interface Event {
   createdByAdminId: string;
   createdAt: string;
   updatedAt: string;
+  version: number;
+  description?: string | undefined;
+  category?: string | undefined;
+  startsAt?: string | undefined;
+  endsAt?: string | undefined;
+  timeZone?: string | undefined;
+  venue: Venue | undefined;
+}
+
+export interface Venue {
+  name: string;
+  addressLine1: string;
+  addressLine2?: string | undefined;
+  city: string;
+  region?: string | undefined;
+  postalCode?: string | undefined;
+  countryCode: string;
 }
 
 export interface CreateDraftEventRequest {
@@ -37,6 +54,23 @@ export interface GetAdminEventRequest {
 }
 
 export interface GetAdminEventResponse {
+  event: Event | undefined;
+}
+
+export interface UpdateDraftEventRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  title: string;
+  description: string;
+  category: string;
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  venue: Venue | undefined;
+}
+
+export interface UpdateDraftEventResponse {
   event: Event | undefined;
 }
 

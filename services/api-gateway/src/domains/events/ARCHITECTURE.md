@@ -4,4 +4,6 @@ Gateway authenticates the opaque admin session through Identity before calling E
 
 The Gateway validates public input, applies operation-specific abuse controls, propagates the request ID, and calls Event Service with a deadline shorter than the outer HTTP request budget. Event Service owns event rules, persistence, creator provenance, and durable mutation audit history.
 
-Creator identity is not an authorization boundary. Any authenticated admin may retrieve and later mutate any event.
+Creator identity is not an authorization boundary. Any authenticated admin may retrieve or mutate any event.
+
+Draft updates are full replacements of editable details. Gateway forwards the authenticated admin ID and expected version; Event Service owns schedule validation and the atomic version check. A stale version becomes the stable public conflict response so the client can reload before retrying.

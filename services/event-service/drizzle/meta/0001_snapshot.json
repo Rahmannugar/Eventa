@@ -1,0 +1,402 @@
+{
+  "id": "0c16a485-fe16-4056-a020-721efeb1c43e",
+  "prevId": "07ceb0b9-cde1-42b6-ad7b-b1545e79932a",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.event_admin_audit_log": {
+      "name": "event_admin_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_admin_id": {
+          "name": "actor_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_admin_audit_event_time_index": {
+          "name": "event_admin_audit_event_time_index",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_admin_audit_log_event_id_events_id_fk": {
+          "name": "event_admin_audit_log_event_id_events_id_fk",
+          "tableFrom": "event_admin_audit_log",
+          "tableTo": "events",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_admin_audit_action_allowed": {
+          "name": "event_admin_audit_action_allowed",
+          "value": "\"event_admin_audit_log\".\"action\" IN ('event.created', 'event.updated')"
+        },
+        "event_admin_audit_version_positive": {
+          "name": "event_admin_audit_version_positive",
+          "value": "\"event_admin_audit_log\".\"event_version\" >= 1"
+        },
+        "event_admin_audit_request_id_length": {
+          "name": "event_admin_audit_request_id_length",
+          "value": "char_length(\"event_admin_audit_log\".\"request_id\") BETWEEN 1 AND 128"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_venues": {
+      "name": "event_venues",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address_line_1": {
+          "name": "address_line_1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address_line_2": {
+          "name": "address_line_2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "event_venues_event_id_events_id_fk": {
+          "name": "event_venues_event_id_events_id_fk",
+          "tableFrom": "event_venues",
+          "tableTo": "events",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_venues_name_normalized": {
+          "name": "event_venues_name_normalized",
+          "value": "\"event_venues\".\"name\" = btrim(\"event_venues\".\"name\")"
+        },
+        "event_venues_name_length": {
+          "name": "event_venues_name_length",
+          "value": "char_length(\"event_venues\".\"name\") BETWEEN 1 AND 160"
+        },
+        "event_venues_address_line_1_normalized": {
+          "name": "event_venues_address_line_1_normalized",
+          "value": "\"event_venues\".\"address_line_1\" = btrim(\"event_venues\".\"address_line_1\")"
+        },
+        "event_venues_address_line_1_length": {
+          "name": "event_venues_address_line_1_length",
+          "value": "char_length(\"event_venues\".\"address_line_1\") BETWEEN 1 AND 200"
+        },
+        "event_venues_address_line_2_length": {
+          "name": "event_venues_address_line_2_length",
+          "value": "\"event_venues\".\"address_line_2\" IS NULL OR char_length(\"event_venues\".\"address_line_2\") BETWEEN 1 AND 200"
+        },
+        "event_venues_address_line_2_normalized": {
+          "name": "event_venues_address_line_2_normalized",
+          "value": "\"event_venues\".\"address_line_2\" IS NULL OR \"event_venues\".\"address_line_2\" = btrim(\"event_venues\".\"address_line_2\")"
+        },
+        "event_venues_city_normalized": {
+          "name": "event_venues_city_normalized",
+          "value": "\"event_venues\".\"city\" = btrim(\"event_venues\".\"city\")"
+        },
+        "event_venues_city_length": {
+          "name": "event_venues_city_length",
+          "value": "char_length(\"event_venues\".\"city\") BETWEEN 1 AND 120"
+        },
+        "event_venues_region_length": {
+          "name": "event_venues_region_length",
+          "value": "\"event_venues\".\"region\" IS NULL OR char_length(\"event_venues\".\"region\") BETWEEN 1 AND 120"
+        },
+        "event_venues_region_normalized": {
+          "name": "event_venues_region_normalized",
+          "value": "\"event_venues\".\"region\" IS NULL OR \"event_venues\".\"region\" = btrim(\"event_venues\".\"region\")"
+        },
+        "event_venues_postal_code_length": {
+          "name": "event_venues_postal_code_length",
+          "value": "\"event_venues\".\"postal_code\" IS NULL OR char_length(\"event_venues\".\"postal_code\") BETWEEN 1 AND 32"
+        },
+        "event_venues_postal_code_normalized": {
+          "name": "event_venues_postal_code_normalized",
+          "value": "\"event_venues\".\"postal_code\" IS NULL OR \"event_venues\".\"postal_code\" = btrim(\"event_venues\".\"postal_code\")"
+        },
+        "event_venues_country_code": {
+          "name": "event_venues_country_code",
+          "value": "\"event_venues\".\"country_code\" ~ '^[A-Z]{2}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.events": {
+      "name": "events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_by_admin_id": {
+          "name": "created_by_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "events_status_created_at_index": {
+          "name": "events_status_created_at_index",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "events_title_normalized": {
+          "name": "events_title_normalized",
+          "value": "\"events\".\"title\" = btrim(\"events\".\"title\")"
+        },
+        "events_title_length": {
+          "name": "events_title_length",
+          "value": "char_length(\"events\".\"title\") BETWEEN 1 AND 160"
+        },
+        "events_description_length": {
+          "name": "events_description_length",
+          "value": "\"events\".\"description\" IS NULL OR char_length(\"events\".\"description\") BETWEEN 1 AND 10000"
+        },
+        "events_description_normalized": {
+          "name": "events_description_normalized",
+          "value": "\"events\".\"description\" IS NULL OR \"events\".\"description\" = btrim(\"events\".\"description\")"
+        },
+        "events_category_normalized": {
+          "name": "events_category_normalized",
+          "value": "\"events\".\"category\" IS NULL OR \"events\".\"category\" = btrim(\"events\".\"category\")"
+        },
+        "events_category_length": {
+          "name": "events_category_length",
+          "value": "\"events\".\"category\" IS NULL OR char_length(\"events\".\"category\") BETWEEN 1 AND 80"
+        },
+        "events_schedule_valid": {
+          "name": "events_schedule_valid",
+          "value": "(\"events\".\"starts_at\" IS NULL AND \"events\".\"ends_at\" IS NULL AND \"events\".\"time_zone\" IS NULL) OR (\"events\".\"starts_at\" IS NOT NULL AND \"events\".\"ends_at\" IS NOT NULL AND \"events\".\"time_zone\" IS NOT NULL AND \"events\".\"ends_at\" > \"events\".\"starts_at\")"
+        },
+        "events_details_complete": {
+          "name": "events_details_complete",
+          "value": "(\"events\".\"description\" IS NULL AND \"events\".\"category\" IS NULL AND \"events\".\"starts_at\" IS NULL AND \"events\".\"ends_at\" IS NULL AND \"events\".\"time_zone\" IS NULL) OR (\"events\".\"description\" IS NOT NULL AND \"events\".\"category\" IS NOT NULL AND \"events\".\"starts_at\" IS NOT NULL AND \"events\".\"ends_at\" IS NOT NULL AND \"events\".\"time_zone\" IS NOT NULL)"
+        },
+        "events_time_zone_length": {
+          "name": "events_time_zone_length",
+          "value": "\"events\".\"time_zone\" IS NULL OR char_length(\"events\".\"time_zone\") BETWEEN 1 AND 64"
+        },
+        "events_version_positive": {
+          "name": "events_version_positive",
+          "value": "\"events\".\"version\" >= 1"
+        },
+        "events_status_allowed": {
+          "name": "events_status_allowed",
+          "value": "\"events\".\"status\" IN ('draft')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

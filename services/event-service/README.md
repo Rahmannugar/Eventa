@@ -1,6 +1,6 @@
 # Event Service
 
-Event Service owns Eventa's event records, lifecycle rules, and admin event-action audit history. It exposes gRPC business operations to the API Gateway and HTTP health endpoints for local operations.
+Event Service owns Eventa's event records, event-owned venue details, lifecycle rules, optimistic draft editing, and admin event-action audit history. It exposes gRPC business operations to the API Gateway and HTTP health endpoints for local operations.
 
 ## Runtime
 

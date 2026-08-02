@@ -14,6 +14,23 @@ message Event {
   string created_by_admin_id = 4;
   string created_at = 5;
   string updated_at = 6;
+  int32 version = 7;
+  optional string description = 8;
+  optional string category = 9;
+  optional string starts_at = 10;
+  optional string ends_at = 11;
+  optional string time_zone = 12;
+  Venue venue = 13;
+}
+
+message Venue {
+  string name = 1;
+  string address_line_1 = 2;
+  optional string address_line_2 = 3;
+  string city = 4;
+  optional string region = 5;
+  optional string postal_code = 6;
+  string country_code = 7;
 }
 
 message CreateDraftEventRequest {
@@ -30,5 +47,22 @@ message GetAdminEventRequest {
 }
 
 message GetAdminEventResponse {
+  Event event = 1;
+}
+
+message UpdateDraftEventRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string title = 4;
+  string description = 5;
+  string category = 6;
+  string starts_at = 7;
+  string ends_at = 8;
+  string time_zone = 9;
+  Venue venue = 10;
+}
+
+message UpdateDraftEventResponse {
   Event event = 1;
 }

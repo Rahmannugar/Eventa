@@ -17,6 +17,7 @@ import {
   AdminEventCreateRateLimitGuard,
   AdminEventRateLimitService,
   AdminEventReadRateLimitGuard,
+  AdminEventUpdateRateLimitGuard,
 } from './rate-limit/admin-event-rate-limit';
 import { AdminEventService } from './services/admin-event.service';
 
@@ -62,6 +63,7 @@ export class EventsModule {
         AdminEventService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
+        AdminEventUpdateRateLimitGuard,
       ],
     };
   }

@@ -10,11 +10,10 @@
     "build": "nest build",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "node dist/database/migrate.js",
-    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
+    "lint": "eslint src drizzle.config.ts --max-warnings 0",
     "start": "node dist/main.js",
-    "test": "pnpm test:unit",
-    "test:integration": "dotenv -e .env -- vitest run test/integration",
-    "test:unit": "vitest run test/unit",
+    "test": "pnpm test:contract",
+    "test:contract": "pnpm --filter @eventa/grpc-contracts test",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
@@ -34,7 +33,6 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.8"
   }
 }

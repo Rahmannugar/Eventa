@@ -1,16 +1,45 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
   CreateDraftEvent,
+  EventVenue,
   EventRecord,
   EventRepository as EventRepositoryPort,
+  UpdateDraftEvent,
+  UpdateDraftEventResult,
 } from '../types/event.types';
+
+const EVENT_COLUMNS = {
+  eventId: events.id,
+  title: events.title,
+  description: events.description,
+  category: events.category,
+  startsAt: events.startsAt,
+  endsAt: events.endsAt,
+  timeZone: events.timeZone,
+  status: events.status,
+  version: events.version,
+  createdByAdminId: events.createdByAdminId,
+  createdAt: events.createdAt,
+  updatedAt: events.updatedAt,
+};
+
+const VENUE_COLUMNS = {
+  name: eventVenues.name,
+  addressLine1: eventVenues.addressLine1,
+  addressLine2: eventVenues.addressLine2,
+  city: eventVenues.city,
+  region: eventVenues.region,
+  postalCode: eventVenues.postalCode,
+  countryCode: eventVenues.countryCode,
+};
 
 export class EventRepository implements EventRepositoryPort {
   constructor(
@@ -29,14 +58,7 @@ export class EventRepository implements EventRepositoryPort {
               createdByAdminId: input.actorAdminId,
               title: input.title,
             })
-            .returning({
-              eventId: events.id,
-              title: events.title,
-              status: events.status,
-              createdByAdminId: events.createdByAdminId,
-              createdAt: events.createdAt,
-              updatedAt: events.updatedAt,
-            });
+            .returning(EVENT_COLUMNS);
 
           if (event === undefined) {
             throw new Error('Event insert returned no row');
@@ -46,10 +68,11 @@ export class EventRepository implements EventRepositoryPort {
             action: 'event.created',
             actorAdminId: input.actorAdminId,
             eventId: event.eventId,
+            eventVersion: event.version,
             requestId: input.requestId,
           });
 
-          return event;
+          return this.toEventRecord(event, null);
         }),
       this.spanOptions('INSERT'),
     );
@@ -59,23 +82,94 @@ export class EventRepository implements EventRepositoryPort {
     return runWithOperationSpan(
       'event.find_by_id',
       async () => {
-        const [event] = await this.database
-          .select({
-            eventId: events.id,
-            title: events.title,
-            status: events.status,
-            createdByAdminId: events.createdByAdminId,
-            createdAt: events.createdAt,
-            updatedAt: events.updatedAt,
-          })
+        const [result] = await this.database
+          .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
           .from(events)
+          .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
           .where(eq(events.id, eventId))
           .limit(1);
 
-        return event;
+        return result === undefined
+          ? undefined
+          : this.toEventRecord(result.event, result.venue);
       },
       this.spanOptions('SELECT'),
     );
+  }
+
+  updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult> {
+    return runWithOperationSpan(
+      'event.update_draft',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const [event] = await transaction
+            .update(events)
+            .set({
+              title: input.title,
+              description: input.description,
+              category: input.category,
+              startsAt: input.startsAt,
+              endsAt: input.endsAt,
+              timeZone: input.timeZone,
+              updatedAt: sql`now()`,
+              version: sql`${events.version} + 1`,
+            })
+            .where(
+              and(
+                eq(events.id, input.eventId),
+                eq(events.status, 'draft'),
+                eq(events.version, input.expectedVersion),
+              ),
+            )
+            .returning(EVENT_COLUMNS);
+
+          if (event === undefined) {
+            const [existing] = await transaction
+              .select({ eventId: events.id })
+              .from(events)
+              .where(eq(events.id, input.eventId))
+              .limit(1);
+
+            return existing === undefined
+              ? { outcome: 'not_found' as const }
+              : { outcome: 'version_conflict' as const };
+          }
+
+          const [venue] = await transaction
+            .insert(eventVenues)
+            .values({ eventId: input.eventId, ...input.venue })
+            .onConflictDoUpdate({
+              target: eventVenues.eventId,
+              set: input.venue,
+            })
+            .returning(VENUE_COLUMNS);
+
+          if (venue === undefined) {
+            throw new Error('Event venue upsert returned no row');
+          }
+
+          await transaction.insert(eventAdminAuditLog).values({
+            action: 'event.updated',
+            actorAdminId: input.actorAdminId,
+            eventId: event.eventId,
+            eventVersion: event.version,
+            requestId: input.requestId,
+          });
+
+          return {
+            outcome: 'updated' as const,
+            event: this.toEventRecord(event, venue),
+          };
+        }),
+      this.spanOptions('UPDATE'),
+    );
+  }
+
+  private toEventRecord(
+    event: Omit<EventRecord, 'venue'>,
+    venue: EventVenue | null,
+  ): EventRecord {
+    return { ...event, venue };
   }
 
   private spanOptions(operation: string): {

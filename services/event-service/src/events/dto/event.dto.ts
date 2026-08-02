@@ -1,9 +1,26 @@
 import type {
   CreateDraftEventRequest,
   GetAdminEventRequest,
+  UpdateDraftEventRequest,
+  Venue,
 } from '@eventa/grpc-contracts';
-import { Transform } from 'class-transformer';
-import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsDefined,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsTimeZone,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 
 export class CreateDraftEventDto implements CreateDraftEventRequest {
   @IsUUID()
@@ -21,4 +38,117 @@ export class CreateDraftEventDto implements CreateDraftEventRequest {
 export class GetAdminEventDto implements GetAdminEventRequest {
   @IsUUID()
   eventId!: string;
+}
+
+export class EventVenueDto implements Venue {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  name!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  addressLine1!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  addressLine2?: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  city!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  region?: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  postalCode?: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsString()
+  @Length(2, 2)
+  @Matches(/^[A-Z]{2}$/)
+  countryCode!: string;
+}
+
+export class UpdateDraftEventDto implements UpdateDraftEventRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  title!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  description!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  category!: string;
+
+  @IsISO8601({ strict: true, strictSeparator: true })
+  startsAt!: string;
+
+  @IsISO8601({ strict: true, strictSeparator: true })
+  endsAt!: string;
+
+  @IsTimeZone()
+  @MaxLength(64)
+  timeZone!: string;
+
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => EventVenueDto)
+  venue!: EventVenueDto;
 }

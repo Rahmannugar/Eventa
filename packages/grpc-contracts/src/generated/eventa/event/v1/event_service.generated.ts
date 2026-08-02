@@ -13,6 +13,8 @@ import {
   CreateDraftEventResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
+  UpdateDraftEventRequest,
+  UpdateDraftEventResponse,
 } from "./event.generated";
 
 export const protobufPackage = "eventa.event.v1";
@@ -23,17 +25,21 @@ export interface EventServiceClient {
   createDraftEvent(request: CreateDraftEventRequest, metadata?: Metadata): Observable<CreateDraftEventResponse>;
 
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
+
+  updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 }
 
 export interface EventServiceController {
   createDraftEvent(request: CreateDraftEventRequest, metadata?: Metadata): Observable<CreateDraftEventResponse>;
 
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
+
+  updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 }
 
 export function EventServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["createDraftEvent", "getAdminEvent"];
+    const grpcMethods: string[] = ["createDraftEvent", "getAdminEvent", "updateDraftEvent"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("EventService", method)(constructor.prototype[method], method, descriptor);

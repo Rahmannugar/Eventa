@@ -12,5 +12,8 @@ export {
   type Event,
   type GetAdminEventRequest,
   type GetAdminEventResponse,
+  type UpdateDraftEventRequest,
+  type UpdateDraftEventResponse,
+  type Venue,
 } from '../../generated/eventa/event/v1/event.generated';
 export * from './proto-paths';

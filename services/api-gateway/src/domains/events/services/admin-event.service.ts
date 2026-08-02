@@ -18,7 +18,7 @@ import {
   EVENT_GRPC_CLIENT,
   EVENT_GRPC_DEADLINE_MS,
 } from '../constants/event.constants';
-import type { AdminEventDto } from '../dto/event.dto';
+import type { AdminEventDto, UpdateDraftEventDto } from '../dto/event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
 
 function readErrorCode(error: unknown): unknown {
@@ -83,6 +83,28 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async updateDraft(
+    adminId: string,
+    eventId: string,
+    input: UpdateDraftEventDto,
+    requestId: string,
+  ): Promise<AdminEventDto> {
+    const events = this.requireClient();
+
+    try {
+      const response = await firstValueFrom(
+        events.updateDraftEvent(
+          { adminId, eventId, ...input },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      return this.toAdminEvent(response.event);
+    } catch (error: unknown) {
+      this.translate(error, 'update');
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }
@@ -104,7 +126,9 @@ export class AdminEventService implements OnModuleInit {
   private toAdminEvent(event: Event | undefined): AdminEventDto {
     if (
       event === undefined ||
-      event.status !== EventStatus.EVENT_STATUS_DRAFT
+      event.status !== EventStatus.EVENT_STATUS_DRAFT ||
+      !Number.isInteger(event.version) ||
+      event.version < 1
     ) {
       throw this.unavailable('EVENT_RESPONSE_INVALID');
     }
@@ -112,14 +136,41 @@ export class AdminEventService implements OnModuleInit {
     return {
       eventId: event.eventId,
       title: event.title,
+      description: event.description,
+      category: event.category,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      timeZone: event.timeZone,
+      venue:
+        event.venue === undefined
+          ? undefined
+          : {
+              name: event.venue.name,
+              addressLine1: event.venue.addressLine1,
+              ...(event.venue.addressLine2 === undefined
+                ? {}
+                : { addressLine2: event.venue.addressLine2 }),
+              city: event.venue.city,
+              ...(event.venue.region === undefined
+                ? {}
+                : { region: event.venue.region }),
+              ...(event.venue.postalCode === undefined
+                ? {}
+                : { postalCode: event.venue.postalCode }),
+              countryCode: event.venue.countryCode,
+            },
       status: 'draft',
+      version: event.version,
       createdByAdminId: event.createdByAdminId,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
     };
   }
 
-  private translate(error: unknown, operation: 'create' | 'read'): never {
+  private translate(
+    error: unknown,
+    operation: 'create' | 'read' | 'update',
+  ): never {
     switch (readErrorCode(error)) {
       case status.NOT_FOUND:
         throw new ApiHttpException(
@@ -134,13 +185,21 @@ export class AdminEventService implements OnModuleInit {
           'Check the event fields and try again.',
           { diagnosticCode: 'EVENT_VALIDATION_FAILED' },
         );
+      case status.ABORTED:
+        throw new ApiHttpException(
+          HttpStatus.CONFLICT,
+          'EVENT_VERSION_CONFLICT',
+          'The event changed. Reload it and apply your changes again.',
+        );
       case status.DEADLINE_EXCEEDED:
         throw this.unavailable('EVENT_RPC_DEADLINE_EXCEEDED');
       default:
         throw this.unavailable(
           operation === 'create'
             ? 'EVENT_CREATE_RPC_UNAVAILABLE'
-            : 'EVENT_READ_RPC_UNAVAILABLE',
+            : operation === 'update'
+              ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
+              : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

@@ -54,7 +54,26 @@ const READ_RULES = {
   },
 } as const satisfies HybridRateLimitRules;
 
-type AdminEventOperation = 'create' | 'read';
+const UPDATE_RULES = {
+  routeKey: 'admin-event-update',
+  tokenBucket: {
+    capacity: 30,
+    name: 'ip-burst',
+    refillIntervalMs: 2_000,
+  },
+  primarySlidingWindow: {
+    limit: 600,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 300,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;
+
+type AdminEventOperation = 'create' | 'read' | 'update';
 
 interface EventRequest {
   headers: { cookie?: string };
@@ -77,7 +96,12 @@ export class AdminEventRateLimitService {
     clientIp: string,
     sessionToken?: string,
   ): Promise<RateLimitDecision> {
-    const rules = operation === 'create' ? CREATE_RULES : READ_RULES;
+    const rules =
+      operation === 'create'
+        ? CREATE_RULES
+        : operation === 'update'
+          ? UPDATE_RULES
+          : READ_RULES;
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
     const ipSubject = this.hash(`ip:${clientIp}`);
     const attempt = {
@@ -133,7 +157,9 @@ abstract class AdminEventRateLimitGuard implements CanActivate {
         HttpStatus.TOO_MANY_REQUESTS,
         this.operation === 'create'
           ? 'EVENT_CREATE_RATE_LIMITED'
-          : 'EVENT_READ_RATE_LIMITED',
+          : this.operation === 'update'
+            ? 'EVENT_UPDATE_RATE_LIMITED'
+            : 'EVENT_READ_RATE_LIMITED',
         'Wait before trying this event action again.',
       );
     } catch (error: unknown) {
@@ -190,6 +216,18 @@ export class AdminEventCreateRateLimitGuard extends AdminEventRateLimitGuard {
 @Injectable()
 export class AdminEventReadRateLimitGuard extends AdminEventRateLimitGuard {
   protected readonly operation = 'read' as const;
+
+  constructor(
+    rateLimits: AdminEventRateLimitService,
+    sessionCookie: AdminSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AdminEventUpdateRateLimitGuard extends AdminEventRateLimitGuard {
+  protected readonly operation = 'update' as const;
 
   constructor(
     rateLimits: AdminEventRateLimitService,

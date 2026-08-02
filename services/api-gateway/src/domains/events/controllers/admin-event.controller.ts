@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -24,10 +25,12 @@ import {
   AdminEventDto,
   AdminEventPathDto,
   CreateDraftEventDto,
+  UpdateDraftEventDto,
 } from '../dto/event.dto';
 import {
   AdminEventCreateRateLimitGuard,
   AdminEventReadRateLimitGuard,
+  AdminEventUpdateRateLimitGuard,
 } from '../rate-limit/admin-event-rate-limit';
 import { AdminEventService } from '../services/admin-event.service';
 
@@ -71,5 +74,27 @@ export class AdminEventController {
     @RequestId() requestId: string,
   ): Promise<AdminEventDto> {
     return this.events.getById(path.eventId, requestId);
+  }
+
+  @Put(':eventId')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventUpdateRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Replace editable draft event details' })
+  @ApiResponse({ status: HttpStatus.OK, type: AdminEventDto })
+  update(
+    @Param() path: AdminEventPathDto,
+    @Body() input: UpdateDraftEventDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<AdminEventDto> {
+    return this.events.updateDraft(
+      request.adminSession.adminId,
+      path.eventId,
+      input,
+      requestId,
+    );
   }
 }

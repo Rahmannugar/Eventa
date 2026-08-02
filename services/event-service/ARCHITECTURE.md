@@ -17,7 +17,11 @@ Controllers translate gRPC. Application services own use-case behavior. Reposito
 
 ## Persistence and Audit
 
-The `events` table is authoritative event state. The append-only `event_admin_audit_log` records state-changing admin actions. Draft creation inserts the event and `event.created` audit row in one transaction. A failed audit insert rolls back the event.
+The `events` table is authoritative event state. `event_venues` stores one event-owned venue address. Title-only drafts have no venue until a full draft update supplies the content, category, schedule, timezone, and venue together.
+
+Every event carries a monotonically increasing version. A draft update changes the event only when its expected version matches, increments the version, upserts the venue, and appends `event.updated` in one transaction. This prevents silent overwrites when admins edit concurrently.
+
+The append-only `event_admin_audit_log` records state-changing admin actions and the resulting event version. Draft creation inserts the event and `event.created` audit row in one transaction. Mutation or audit failure rolls back the complete state change.
 
 Reads do not create durable audit rows. They remain visible through bounded request metrics, traces, and structured operational logs.
 
