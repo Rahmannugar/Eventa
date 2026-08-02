@@ -4,6 +4,7 @@ import {
   type CreateDraftEventRequest,
   type GetEventMediaUploadRequest,
   type GetAdminEventRequest,
+  type RemoveEventMediaRequest,
   type UpdateDraftEventRequest,
   type Venue,
 } from '@eventa/grpc-contracts';
@@ -191,4 +192,21 @@ export class GetEventMediaUploadDto implements GetEventMediaUploadRequest {
 
   @IsUUID()
   uploadId!: string;
+}
+
+export class RemoveEventMediaDto implements RemoveEventMediaRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @IsInt()
+  @IsIn([1, 2, 3, 4, 5])
+  slot!: EventMediaSlot;
 }

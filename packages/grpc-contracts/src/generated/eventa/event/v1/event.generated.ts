@@ -142,4 +142,15 @@ export interface GetEventMediaUploadResponse {
   verificationDeadlineAt: string;
 }
 
+export interface RemoveEventMediaRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  slot: EventMediaSlot;
+}
+
+export interface RemoveEventMediaResponse {
+  eventVersion: number;
+}
+
 export const EVENTA_EVENT_V1_PACKAGE_NAME = "eventa.event.v1";

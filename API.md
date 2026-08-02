@@ -4,21 +4,24 @@
 
 Clients communicate with Eventa through the API Gateway over HTTP.
 
-| Method | Path                                         | Outcome                                                                                          |
-| ------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `POST` | `/auth/attendees/register`                   | Creates an unverified attendee account after registration rate limiting and Identity validation. |
-| `POST` | `/auth/admins/register`                      | Generically accepts an activation request for a SQL-provisioned admin.                           |
-| `POST` | `/auth/admins/activate`                      | Verifies the activation OTP, sets the first password, and activates the admin.                   |
-| `POST` | `/auth/admins/login`                         | Signs in an activated admin and sets a server-backed seven-day session cookie.                   |
-| `GET`  | `/auth/admins/me`                            | Returns the activated account for a live admin session.                                          |
-| `POST` | `/auth/admins/logout`                        | Revokes the current admin session before clearing its cookie.                                    |
-| `POST` | `/auth/admins/forgot-password`               | Generically accepts an admin password-reset email request.                                       |
-| `POST` | `/auth/admins/reset-password`                | Replaces an activated admin password and revokes every admin session.                            |
-| `POST` | `/auth/attendees/email-verification/confirm` | Confirms email ownership with a valid six-digit OTP.                                             |
-| `POST` | `/auth/attendees/email-verification/resend`  | Accepts an enumeration-resistant request for a replacement OTP email.                            |
-| `POST` | `/admin/events`                              | Creates a draft event.                                                                           |
-| `GET`  | `/admin/events/:eventId`                     | Returns an event to any authenticated admin.                                                     |
-| `PUT`  | `/admin/events/:eventId`                     | Replaces editable draft details when the supplied version is current.                            |
+| Method   | Path                                             | Outcome                                                                                          |
+| -------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `POST`   | `/auth/attendees/register`                       | Creates an unverified attendee account after registration rate limiting and Identity validation. |
+| `POST`   | `/auth/admins/register`                          | Generically accepts an activation request for a SQL-provisioned admin.                           |
+| `POST`   | `/auth/admins/activate`                          | Verifies the activation OTP, sets the first password, and activates the admin.                   |
+| `POST`   | `/auth/admins/login`                             | Signs in an activated admin and sets a server-backed seven-day session cookie.                   |
+| `GET`    | `/auth/admins/me`                                | Returns the activated account for a live admin session.                                          |
+| `POST`   | `/auth/admins/logout`                            | Revokes the current admin session before clearing its cookie.                                    |
+| `POST`   | `/auth/admins/forgot-password`                   | Generically accepts an admin password-reset email request.                                       |
+| `POST`   | `/auth/admins/reset-password`                    | Replaces an activated admin password and revokes every admin session.                            |
+| `POST`   | `/auth/attendees/email-verification/confirm`     | Confirms email ownership with a valid six-digit OTP.                                             |
+| `POST`   | `/auth/attendees/email-verification/resend`      | Accepts an enumeration-resistant request for a replacement OTP email.                            |
+| `POST`   | `/admin/events`                                  | Creates a draft event.                                                                           |
+| `GET`    | `/admin/events/:eventId`                         | Returns an event to any authenticated admin.                                                     |
+| `PUT`    | `/admin/events/:eventId`                         | Replaces editable draft details when the supplied version is current.                            |
+| `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image attachment or replacement.                                                 |
+| `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether the image is still processing, attached, rejected, conflicted, or expired.       |
+| `DELETE` | `/admin/events/:eventId/media/:slot`             | Removes the selected verified image at the supplied event version.                               |
 
 The Gateway also exposes:
 
@@ -37,7 +40,7 @@ The protobuf schemas are authoritative. Buf validates and generates the TypeScri
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Event Service exposes draft creation, optimistic draft updates, and admin event retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
+Event Service exposes draft creation and editing, verified media attachment, replacement and removal, upload status, and admin event retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
 
 Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 

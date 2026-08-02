@@ -19,10 +19,10 @@ export class EventScheduleInvalidError extends Error {
   }
 }
 
-export class EventMediaSlotOccupiedError extends Error {
+export class EventMediaNotFoundError extends Error {
   constructor() {
-    super('EVENT_MEDIA_SLOT_OCCUPIED');
-    this.name = 'EventMediaSlotOccupiedError';
+    super('EVENT_MEDIA_NOT_FOUND');
+    this.name = 'EventMediaNotFoundError';
   }
 }
 

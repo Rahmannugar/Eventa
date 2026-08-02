@@ -39,6 +39,15 @@ export class AdminEventMediaUploadPathDto extends AdminEventPathDto {
   uploadId!: string;
 }
 
+export class AdminEventMediaPathDto extends AdminEventPathDto {
+  @ApiProperty({
+    enum: ['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'],
+  })
+  @IsString()
+  @IsIn(['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'])
+  slot!: 'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
+}
+
 export class EventVenueDto {
   @ApiProperty({ example: 'Landmark Centre', maxLength: 160 })
   @Transform(({ value }: { value: unknown }) =>
@@ -273,6 +282,20 @@ export class EventMediaUploadStatusDto {
 
   @ApiPropertyOptional()
   failureCode?: string;
+}
+
+export class RemoveEventMediaQueryDto {
+  @ApiProperty({ example: 2, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class RemoveEventMediaResponseDto {
+  @ApiProperty({ example: 3, minimum: 2 })
+  eventVersion!: number;
 }
 
 export class AdminEventMediaDto {

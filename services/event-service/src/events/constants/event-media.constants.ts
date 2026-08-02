@@ -12,6 +12,12 @@ export const EVENT_MEDIA_VERIFICATION_QUEUE =
   'eventa.event.media-verification.v1';
 export const EVENT_MEDIA_VERIFICATION_JOB_TYPE = 'event.media-verification.v1';
 export const EVENT_MEDIA_VERIFICATION_OPERATION = 'event.media.verification';
+export const EVENT_MEDIA_OBJECT_DELETION_QUEUE =
+  'eventa.event.media-object-deletion.v1';
+export const EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE =
+  'event.media-object-deletion.v1';
+export const EVENT_MEDIA_OBJECT_DELETION_OPERATION =
+  'event.media.object_deletion';
 export const EVENT_MEDIA_RETRY_DELAYS_MS = [
   1_000, 1_000, 2_000, 3_000, 5_000, 10_000, 15_000, 30_000, 60_000,
 ] as const;

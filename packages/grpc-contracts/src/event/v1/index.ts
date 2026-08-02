@@ -19,6 +19,8 @@ export {
   type GetAdminEventResponse,
   type GetEventMediaUploadRequest,
   type GetEventMediaUploadResponse,
+  type RemoveEventMediaRequest,
+  type RemoveEventMediaResponse,
   type UpdateDraftEventRequest,
   type UpdateDraftEventResponse,
   type Venue,

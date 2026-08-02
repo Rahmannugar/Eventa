@@ -155,7 +155,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"} offset $__range))",
+          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"} offset $__range))",
           "instant": true,
           "legendFormat": "{{operation}} · {{outcome}}",
           "range": false,
@@ -167,7 +167,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "Durable media-verification assignments completed by the Event worker, including retries and terminal object-deletion failures.",
+      "description": "Durable media verification and formerly accepted object-deletion assignments completed by Event workers.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -194,14 +194,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (outcome) (increase(eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"} offset $__range))",
+          "expr": "sum by (operation, outcome) (increase(eventa_job_count_total{service_name=\"eventa-event-service\", operation=~\"event.media.(verification|object_deletion)\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-event-service\", operation=~\"event.media.(verification|object_deletion)\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-event-service\", operation=~\"event.media.(verification|object_deletion)\"} offset $__range))",
           "instant": true,
-          "legendFormat": "{{outcome}}",
+          "legendFormat": "{{operation}} · {{outcome}}",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Media verification outcomes",
+      "title": "Media worker outcomes",
       "type": "stat"
     },
     {

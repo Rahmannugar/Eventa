@@ -2,14 +2,33 @@
 
 All routes require the opaque `eventa_admin_session` cookie. A present browser `Origin` must match the configured Eventa web origin. Any authenticated admin may manage any event.
 
-| Method | Path                                             | Outcome                                                                  |
-| ------ | ------------------------------------------------ | ------------------------------------------------------------------------ |
-| `POST` | `/admin/events`                                  | Creates a title-only draft and returns the authoritative Event record.   |
-| `GET`  | `/admin/events/:eventId`                         | Returns an Event record, verified media, and version.                    |
-| `PUT`  | `/admin/events/:eventId`                         | Replaces editable draft details when the expected version is still live. |
-| `POST` | `/admin/events/:eventId/media-uploads`           | Reserves an empty slot and returns a presigned R2 upload.                |
-| `GET`  | `/admin/events/:eventId/media-uploads/:uploadId` | Returns durable worker verification status without changing it.          |
+| Method   | Path                                             | Outcome                                                                             |
+| -------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `POST`   | `/admin/events`                                  | Starts a draft event at version 1.                                                  |
+| `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
+| `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
+| `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image upload for an empty slot or replacement.                      |
+| `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
+| `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
 
-Create accepts a trimmed title between one and 160 characters. Update accepts the expected version, title, description, category, schedule, IANA timezone, and venue address. Media upload intent accepts the expected version, `cover` or one of four fixed gallery slots, JPEG, PNG, or WebP content type, and a byte size up to 8 MiB per file. Its response includes the upload ID, ten-minute upload expiry, thirty-minute verification deadline, presigned URL, and required headers. The browser sends those bytes directly to R2 and polls upload status; it never confirms the upload.
+Create accepts a trimmed title between one and 160 characters. Update accepts the expected version, title, description, category, schedule, IANA timezone, and venue address.
 
-Missing events return `404 EVENT_NOT_FOUND`; a missing upload returns `404 EVENT_MEDIA_UPLOAD_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. Occupied and pending slots return stable `409` errors. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update, media-intent, and read operations have separate budgets by protected session and client IP.
+## Media uploads
+
+An upload request selects `cover` or one of four gallery slots and declares a JPEG, PNG, or WebP file up to 8 MiB. The response gives the browser a create-only R2 upload URL, the exact required headers, a ten-minute upload deadline, and a thirty-minute verification deadline. The browser uploads directly to R2 and polls the returned upload ID; it never sends a confirmation command.
+
+If the slot already has an image, the request starts a replacement. The accepted image remains visible until the new file passes verification and replaces it atomically. A failed replacement leaves the accepted image unchanged.
+
+Upload status tells the client what to do:
+
+| Status     | Client meaning                                                                |
+| ---------- | ----------------------------------------------------------------------------- |
+| `pending`  | Upload or verification is still in progress. Keep the local preview and poll. |
+| `attached` | The image is accepted. Reload the event at `attachedEventVersion`.            |
+| `rejected` | The uploaded bytes failed verification or verification could not finish.      |
+| `conflict` | The event changed after the upload began. Reload before trying again.         |
+| `expired`  | No object arrived before the ten-minute upload deadline.                      |
+
+Removal takes `expectedVersion` as a query parameter. It immediately removes the verified reference and returns the new event version; physical object deletion continues as recoverable background work.
+
+Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/removal, media-intent, and read operations have separate budgets by protected session and client IP.

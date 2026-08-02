@@ -25,6 +25,8 @@ export const eventAdminAuditLog = pgTable(
         | 'event.updated'
         | 'event.media_upload_requested'
         | 'event.media_attached'
+        | 'event.media_replaced'
+        | 'event.media_removed'
       >()
       .notNull(),
     eventVersion: integer('event_version').notNull(),
@@ -43,7 +45,7 @@ export const eventAdminAuditLog = pgTable(
     ),
     check(
       'event_admin_audit_action_allowed',
-      sql`${table.action} IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached')`,
+      sql`${table.action} IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached', 'event.media_replaced', 'event.media_removed')`,
     ),
     check(
       'event_admin_audit_version_positive',

@@ -7,6 +7,8 @@ import type {
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
+  RemoveEventMediaRequest,
+  RemoveEventMediaResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
@@ -39,4 +41,9 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<GetEventMediaUploadResponse>;
+  removeEventMedia(
+    request: RemoveEventMediaRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<RemoveEventMediaResponse>;
 }

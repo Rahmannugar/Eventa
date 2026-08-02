@@ -25,6 +25,7 @@ import type {
   CreateEventMediaUploadDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
+  RemoveEventMediaResponseDto,
   UpdateDraftEventDto,
 } from '../dto/event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
@@ -191,6 +192,39 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async removeMedia(
+    adminId: string,
+    eventId: string,
+    slot: CreateEventMediaUploadDto['slot'],
+    expectedVersion: number,
+    requestId: string,
+  ): Promise<RemoveEventMediaResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.removeEventMedia(
+          {
+            adminId,
+            eventId,
+            expectedVersion,
+            slot: this.toContractMediaSlot(slot),
+          },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        !Number.isInteger(response.eventVersion) ||
+        response.eventVersion < 2
+      ) {
+        throw this.unavailable('EVENT_MEDIA_REMOVE_RESPONSE_INVALID');
+      }
+      return response;
+    } catch (error: unknown) {
+      this.translate(error, 'media_remove');
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }
@@ -264,7 +298,13 @@ export class AdminEventService implements OnModuleInit {
 
   private translate(
     error: unknown,
-    operation: 'create' | 'media_status' | 'media_upload' | 'read' | 'update',
+    operation:
+      | 'create'
+      | 'media_remove'
+      | 'media_status'
+      | 'media_upload'
+      | 'read'
+      | 'update',
   ): never {
     switch (readErrorCode(error)) {
       case status.NOT_FOUND:
@@ -291,11 +331,14 @@ export class AdminEventService implements OnModuleInit {
           'The event changed. Reload it and apply your changes again.',
         );
       case status.FAILED_PRECONDITION:
-        throw new ApiHttpException(
-          HttpStatus.CONFLICT,
-          'EVENT_MEDIA_SLOT_OCCUPIED',
-          'That event media slot is already occupied.',
-        );
+        if (operation === 'media_remove') {
+          throw new ApiHttpException(
+            HttpStatus.NOT_FOUND,
+            'EVENT_MEDIA_NOT_FOUND',
+            'That event media slot is empty.',
+          );
+        }
+        throw this.unavailable('EVENT_MEDIA_PRECONDITION_INVALID');
       case status.ALREADY_EXISTS:
         throw new ApiHttpException(
           HttpStatus.CONFLICT,
@@ -310,11 +353,13 @@ export class AdminEventService implements OnModuleInit {
             ? 'EVENT_CREATE_RPC_UNAVAILABLE'
             : operation === 'media_upload'
               ? 'EVENT_MEDIA_UPLOAD_RPC_UNAVAILABLE'
-              : operation === 'media_status'
-                ? 'EVENT_MEDIA_STATUS_RPC_UNAVAILABLE'
-                : operation === 'update'
-                  ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
-                  : 'EVENT_READ_RPC_UNAVAILABLE',
+              : operation === 'media_remove'
+                ? 'EVENT_MEDIA_REMOVE_RPC_UNAVAILABLE'
+                : operation === 'media_status'
+                  ? 'EVENT_MEDIA_STATUS_RPC_UNAVAILABLE'
+                  : operation === 'update'
+                    ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
+                    : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

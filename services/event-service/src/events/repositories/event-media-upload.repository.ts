@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventMediaObjectDeletions } from '../schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../schema/event-media-upload.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { events } from '../schema/event.schema';
@@ -82,21 +83,6 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
           event.version !== input.expectedVersion
         ) {
           return { outcome: 'version_conflict' as const };
-        }
-
-        const [occupied] = await transaction
-          .select({ id: eventMedia.id })
-          .from(eventMedia)
-          .where(
-            and(
-              eq(eventMedia.eventId, input.eventId),
-              eq(eventMedia.slot, input.slot),
-            ),
-          )
-          .limit(1);
-
-        if (occupied !== undefined) {
-          return { outcome: 'slot_occupied' as const };
         }
 
         const [upload] = await transaction
@@ -364,6 +350,16 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         return { outcome: 'conflict' as const, upload: conflict };
       }
 
+      const [replacedMedia] = await transaction
+        .delete(eventMedia)
+        .where(
+          and(
+            eq(eventMedia.eventId, current.eventId),
+            eq(eventMedia.slot, current.slot),
+          ),
+        )
+        .returning({ objectKey: eventMedia.objectKey });
+
       await transaction.insert(eventMedia).values({
         id: current.uploadId,
         eventId: current.eventId,
@@ -384,14 +380,32 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         .where(eq(eventMediaUploads.id, current.uploadId));
 
       await transaction.insert(eventAdminAuditLog).values({
-        action: 'event.media_attached',
+        action:
+          replacedMedia === undefined
+            ? 'event.media_attached'
+            : 'event.media_replaced',
         actorAdminId: current.actorAdminId,
         eventId: current.eventId,
         eventVersion: event.version,
         requestId: current.requestId,
       });
 
-      return { outcome: 'attached' as const, eventVersion: event.version };
+      if (replacedMedia !== undefined) {
+        await transaction.insert(eventMediaObjectDeletions).values({
+          eventId: current.eventId,
+          objectKey: replacedMedia.objectKey,
+          reason: 'replaced',
+        });
+      }
+
+      return {
+        outcome: 'attached' as const,
+        mutation:
+          replacedMedia === undefined
+            ? ('attached' as const)
+            : ('replaced' as const),
+        eventVersion: event.version,
+      };
     });
   }
 

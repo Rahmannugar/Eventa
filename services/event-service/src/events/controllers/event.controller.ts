@@ -11,6 +11,7 @@ import {
   type EventServiceController,
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
+  type RemoveEventMediaResponse,
   type UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -29,10 +30,11 @@ import {
   CreateEventMediaUploadDto,
   GetAdminEventDto,
   GetEventMediaUploadDto,
+  RemoveEventMediaDto,
   UpdateDraftEventDto,
 } from '../dto/event.dto';
 import {
-  EventMediaSlotOccupiedError,
+  EventMediaNotFoundError,
   EventMediaUploadInProgressError,
   EventMediaUploadNotFoundError,
   EventNotFoundError,
@@ -98,6 +100,13 @@ export class EventController implements EventServiceController {
     request: GetEventMediaUploadDto,
   ): Observable<GetEventMediaUploadResponse> {
     return from(this.getMediaUpload(request));
+  }
+
+  removeEventMedia(
+    request: RemoveEventMediaDto,
+    metadata?: Metadata,
+  ): Observable<RemoveEventMediaResponse> {
+    return from(this.removeMedia(request, this.readRequestId(metadata)));
   }
 
   private async getEvent(eventId: string): Promise<GetAdminEventResponse> {
@@ -188,12 +197,6 @@ export class EventController implements EventServiceController {
           message: error.message,
         });
       }
-      if (error instanceof EventMediaSlotOccupiedError) {
-        throw new RpcException({
-          code: status.FAILED_PRECONDITION,
-          message: error.message,
-        });
-      }
       if (error instanceof EventMediaUploadInProgressError) {
         throw new RpcException({
           code: status.ALREADY_EXISTS,
@@ -225,6 +228,43 @@ export class EventController implements EventServiceController {
       if (error instanceof EventMediaUploadNotFoundError) {
         throw new RpcException({
           code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async removeMedia(
+    request: RemoveEventMediaDto,
+    requestId: string,
+  ): Promise<RemoveEventMediaResponse> {
+    try {
+      return {
+        eventVersion: await this.mediaService.remove({
+          actorAdminId: request.adminId,
+          eventId: request.eventId,
+          expectedVersion: request.expectedVersion,
+          requestId,
+          slot: this.toDomainSlot(request.slot),
+        }),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventMediaNotFoundError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
           message: error.message,
         });
       }

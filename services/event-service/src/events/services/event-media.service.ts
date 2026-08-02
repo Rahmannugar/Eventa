@@ -5,7 +5,7 @@ import {
   EVENT_MEDIA_VERIFICATION_TTL_MS,
 } from '../constants/event-media.constants';
 import {
-  EventMediaSlotOccupiedError,
+  EventMediaNotFoundError,
   EventMediaUploadInProgressError,
   EventMediaUploadNotFoundError,
   EventNotFoundError,
@@ -14,10 +14,12 @@ import {
 import type {
   CreateEventMediaUploadCommand,
   EventMediaManagement,
+  EventMediaMutationRepository,
   EventMediaObjectStorage,
   EventMediaUploadIntent,
   EventMediaUploadRepository,
   EventMediaUploadStatusRecord,
+  RemoveEventMediaCommand,
 } from '../types/event.types';
 
 const EXTENSION_BY_CONTENT_TYPE = {
@@ -29,6 +31,7 @@ const EXTENSION_BY_CONTENT_TYPE = {
 export class EventMediaApplicationService implements EventMediaManagement {
   constructor(
     private readonly uploads: EventMediaUploadRepository,
+    private readonly media: EventMediaMutationRepository,
     private readonly objects: EventMediaObjectStorage,
   ) {}
 
@@ -59,9 +62,6 @@ export class EventMediaApplicationService implements EventMediaManagement {
     if (result.outcome === 'version_conflict') {
       throw new EventVersionConflictError();
     }
-    if (result.outcome === 'slot_occupied') {
-      throw new EventMediaSlotOccupiedError();
-    }
     if (result.outcome === 'upload_in_progress') {
       throw new EventMediaUploadInProgressError();
     }
@@ -82,5 +82,17 @@ export class EventMediaApplicationService implements EventMediaManagement {
     const upload = await this.uploads.findStatus(eventId, uploadId);
     if (upload === undefined) throw new EventMediaUploadNotFoundError();
     return upload;
+  }
+
+  async remove(input: RemoveEventMediaCommand): Promise<number> {
+    const result = await this.media.remove(input);
+    if (result.outcome === 'not_found') throw new EventNotFoundError();
+    if (result.outcome === 'version_conflict') {
+      throw new EventVersionConflictError();
+    }
+    if (result.outcome === 'media_not_found') {
+      throw new EventMediaNotFoundError();
+    }
+    return result.eventVersion;
   }
 }

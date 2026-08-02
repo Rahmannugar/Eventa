@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -24,11 +26,14 @@ import type { AdminAuthenticatedRequest } from '../../admins/types/authenticated
 import {
   AdminEventDto,
   AdminEventMediaUploadPathDto,
+  AdminEventMediaPathDto,
   AdminEventPathDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
+  RemoveEventMediaQueryDto,
+  RemoveEventMediaResponseDto,
   UpdateDraftEventDto,
 } from '../dto/event.dto';
 import {
@@ -139,5 +144,28 @@ export class AdminEventController {
     @RequestId() requestId: string,
   ): Promise<EventMediaUploadStatusDto> {
     return this.events.getMediaUpload(path.eventId, path.uploadId, requestId);
+  }
+
+  @Delete(':eventId/media/:slot')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventUpdateRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Remove verified event media' })
+  @ApiResponse({ status: HttpStatus.OK, type: RemoveEventMediaResponseDto })
+  removeMedia(
+    @Param() path: AdminEventMediaPathDto,
+    @Query() query: RemoveEventMediaQueryDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<RemoveEventMediaResponseDto> {
+    return this.events.removeMedia(
+      request.adminSession.adminId,
+      path.eventId,
+      path.slot,
+      query.expectedVersion,
+      requestId,
+    );
   }
 }

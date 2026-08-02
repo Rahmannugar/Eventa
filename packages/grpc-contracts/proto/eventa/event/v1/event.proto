@@ -127,3 +127,14 @@ message GetEventMediaUploadResponse {
   optional string failure_code = 6;
   string verification_deadline_at = 7;
 }
+
+message RemoveEventMediaRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  EventMediaSlot slot = 4;
+}
+
+message RemoveEventMediaResponse {
+  int32 event_version = 1;
+}

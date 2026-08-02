@@ -83,7 +83,7 @@ export class EventMediaVerificationService {
       upload,
       inspection.object,
     );
-    if (attached.outcome === 'attached') return { kind: 'attached' };
+    if (attached.outcome === 'attached') return { kind: attached.mutation };
     if (attached.upload.status === 'attached') return { kind: 'completed' };
     return this.deleteRejectedObject(attached.upload);
   }

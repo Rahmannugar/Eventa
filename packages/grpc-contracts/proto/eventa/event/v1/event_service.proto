@@ -10,4 +10,5 @@ service EventService {
   rpc UpdateDraftEvent(UpdateDraftEventRequest) returns (UpdateDraftEventResponse);
   rpc CreateEventMediaUpload(CreateEventMediaUploadRequest) returns (CreateEventMediaUploadResponse);
   rpc GetEventMediaUpload(GetEventMediaUploadRequest) returns (GetEventMediaUploadResponse);
+  rpc RemoveEventMedia(RemoveEventMediaRequest) returns (RemoveEventMediaResponse);
 }

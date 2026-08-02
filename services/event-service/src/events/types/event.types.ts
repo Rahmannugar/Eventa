@@ -97,7 +97,6 @@ export type CreateEventMediaUploadResult =
   | { outcome: 'created'; upload: EventMediaUploadRecord }
   | { outcome: 'not_found' }
   | { outcome: 'version_conflict' }
-  | { outcome: 'slot_occupied' }
   | { outcome: 'upload_in_progress' };
 
 export interface VerifiedEventMediaObject {
@@ -114,12 +113,17 @@ export type EventMediaObjectInspection =
   | { outcome: 'verified'; object: VerifiedEventMediaObject };
 
 export type AttachVerifiedEventMediaResult =
-  | { outcome: 'attached'; eventVersion: number }
+  | {
+      outcome: 'attached';
+      mutation: 'attached' | 'replaced';
+      eventVersion: number;
+    }
   | { outcome: 'already_terminal'; upload: EventMediaUploadRecord }
   | { outcome: 'conflict'; upload: EventMediaUploadRecord };
 
 export type EventMediaVerificationOutcome =
   | { kind: 'attached' }
+  | { kind: 'replaced' }
   | { kind: 'completed' }
   | { kind: 'retry'; retryAt: Date }
   | { kind: 'rejected' }
@@ -188,6 +192,55 @@ export interface EventMediaManagement {
     eventId: string,
     uploadId: string,
   ): Promise<EventMediaUploadStatusRecord>;
+  remove(input: RemoveEventMediaCommand): Promise<number>;
+}
+
+export interface RemoveEventMediaCommand {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  slot: EventMediaSlot;
+}
+
+export type RemoveEventMediaResult =
+  | { outcome: 'removed'; eventVersion: number }
+  | { outcome: 'not_found' }
+  | { outcome: 'media_not_found' }
+  | { outcome: 'version_conflict' };
+
+export interface EventMediaMutationRepository {
+  remove(input: RemoveEventMediaCommand): Promise<RemoveEventMediaResult>;
+}
+
+export interface EventMediaObjectDeletionRecord {
+  deletionId: string;
+  eventId: string;
+  objectKey: string;
+  reason: 'replaced' | 'removed';
+  status: 'pending' | 'deleted' | 'failed';
+  attemptCount: number;
+  claimToken: string | null;
+}
+
+export interface EventMediaObjectDeletionRepository {
+  claimDispatchable(limit: number, leaseExpiresBefore: Date): Promise<string[]>;
+  markDispatchFailed(deletionId: string): Promise<void>;
+  claim(
+    deletionId: string,
+    claimToken: string,
+    claimExpiresAt: Date,
+  ): Promise<EventMediaObjectDeletionRecord | undefined>;
+  recordFailure(
+    deletionId: string,
+    claimToken: string,
+    nextAttemptAt: Date,
+  ): Promise<'retry' | 'failed'>;
+  markDeleted(deletionId: string, claimToken: string): Promise<void>;
+}
+
+export interface EventMediaObjectDeletionJobPublisher {
+  publish(deletionId: string): Promise<void>;
 }
 
 export interface CreateDraftEvent {
