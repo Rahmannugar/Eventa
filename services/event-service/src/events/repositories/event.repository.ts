@@ -5,11 +5,13 @@ import { and, eq, sql } from 'drizzle-orm';
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventMedia } from '../schema/event-media.schema';
 import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
   CreateDraftEvent,
   EventVenue,
+  EventMediaRecord,
   EventRecord,
   EventRepository as EventRepositoryPort,
   UpdateDraftEvent,
@@ -39,6 +41,16 @@ const VENUE_COLUMNS = {
   region: eventVenues.region,
   postalCode: eventVenues.postalCode,
   countryCode: eventVenues.countryCode,
+};
+
+const MEDIA_COLUMNS = {
+  mediaId: eventMedia.id,
+  slot: eventMedia.slot,
+  objectKey: eventMedia.objectKey,
+  contentType: eventMedia.contentType,
+  sizeBytes: eventMedia.sizeBytes,
+  width: eventMedia.width,
+  height: eventMedia.height,
 };
 
 export class EventRepository implements EventRepositoryPort {
@@ -72,7 +84,7 @@ export class EventRepository implements EventRepositoryPort {
             requestId: input.requestId,
           });
 
-          return this.toEventRecord(event, null);
+          return this.toEventRecord(event, null, []);
         }),
       this.spanOptions('INSERT'),
     );
@@ -89,9 +101,17 @@ export class EventRepository implements EventRepositoryPort {
           .where(eq(events.id, eventId))
           .limit(1);
 
-        return result === undefined
-          ? undefined
-          : this.toEventRecord(result.event, result.venue);
+        if (result === undefined) {
+          return undefined;
+        }
+
+        const media = await this.database
+          .select(MEDIA_COLUMNS)
+          .from(eventMedia)
+          .where(eq(eventMedia.eventId, eventId))
+          .orderBy(eventMedia.slot);
+
+        return this.toEventRecord(result.event, result.venue, media);
       },
       this.spanOptions('SELECT'),
     );
@@ -156,9 +176,15 @@ export class EventRepository implements EventRepositoryPort {
             requestId: input.requestId,
           });
 
+          const media = await transaction
+            .select(MEDIA_COLUMNS)
+            .from(eventMedia)
+            .where(eq(eventMedia.eventId, input.eventId))
+            .orderBy(eventMedia.slot);
+
           return {
             outcome: 'updated' as const,
-            event: this.toEventRecord(event, venue),
+            event: this.toEventRecord(event, venue, media),
           };
         }),
       this.spanOptions('UPDATE'),
@@ -166,10 +192,11 @@ export class EventRepository implements EventRepositoryPort {
   }
 
   private toEventRecord(
-    event: Omit<EventRecord, 'venue'>,
+    event: Omit<EventRecord, 'venue' | 'media'>,
     venue: EventVenue | null,
+    media: EventMediaRecord[],
   ): EventRecord {
-    return { ...event, venue };
+    return { ...event, venue, media };
   }
 
   private spanOptions(operation: string): {

@@ -1,12 +1,16 @@
-import type {
-  CreateDraftEventRequest,
-  GetAdminEventRequest,
-  UpdateDraftEventRequest,
-  Venue,
+import {
+  EventMediaSlot,
+  type CreateEventMediaUploadRequest,
+  type CreateDraftEventRequest,
+  type GetEventMediaUploadRequest,
+  type GetAdminEventRequest,
+  type UpdateDraftEventRequest,
+  type Venue,
 } from '@eventa/grpc-contracts';
 import { Transform, Type } from 'class-transformer';
 import {
   IsDefined,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -21,6 +25,8 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+
+import { EVENT_MEDIA_CONTENT_TYPES } from '../constants/event-media.constants';
 
 export class CreateDraftEventDto implements CreateDraftEventRequest {
   @IsUUID()
@@ -151,4 +157,38 @@ export class UpdateDraftEventDto implements UpdateDraftEventRequest {
   @ValidateNested()
   @Type(() => EventVenueDto)
   venue!: EventVenueDto;
+}
+
+export class CreateEventMediaUploadDto implements CreateEventMediaUploadRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @IsInt()
+  @IsIn([1, 2, 3, 4, 5])
+  slot!: EventMediaSlot;
+
+  @IsString()
+  @IsIn(EVENT_MEDIA_CONTENT_TYPES)
+  contentType!: 'image/jpeg' | 'image/png' | 'image/webp';
+
+  @IsInt()
+  @Min(1)
+  @Max(8_388_608)
+  sizeBytes!: number;
+}
+
+export class GetEventMediaUploadDto implements GetEventMediaUploadRequest {
+  @IsUUID()
+  eventId!: string;
+
+  @IsUUID()
+  uploadId!: string;
 }

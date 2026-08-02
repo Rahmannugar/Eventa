@@ -19,7 +19,14 @@ export const eventAdminAuditLog = pgTable(
       .notNull()
       .references(() => events.id, { onDelete: 'restrict' }),
     actorAdminId: uuid('actor_admin_id').notNull(),
-    action: text('action').$type<'event.created' | 'event.updated'>().notNull(),
+    action: text('action')
+      .$type<
+        | 'event.created'
+        | 'event.updated'
+        | 'event.media_upload_requested'
+        | 'event.media_attached'
+      >()
+      .notNull(),
     eventVersion: integer('event_version').notNull(),
     requestId: text('request_id').notNull(),
     occurredAt: timestamp('occurred_at', {
@@ -36,7 +43,7 @@ export const eventAdminAuditLog = pgTable(
     ),
     check(
       'event_admin_audit_action_allowed',
-      sql`${table.action} IN ('event.created', 'event.updated')`,
+      sql`${table.action} IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached')`,
     ),
     check(
       'event_admin_audit_version_positive',

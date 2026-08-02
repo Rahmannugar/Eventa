@@ -7,3 +7,5 @@ The Gateway validates public input, applies operation-specific abuse controls, p
 Creator identity is not an authorization boundary. Any authenticated admin may retrieve or mutate any event.
 
 Draft updates are full replacements of editable details. Gateway forwards the authenticated admin ID and expected version; Event Service owns schedule validation and the atomic version check. A stale version becomes the stable public conflict response so the client can reload before retrying.
+
+For media, Gateway validates the fixed slot, declared type, per-file size, and expected event version, then forwards the authenticated admin ID. Event Service returns the signed direct-upload contract with distinct upload and verification deadlines. Gateway does not proxy image bytes and exposes no confirmation command. The client can show a local preview, then poll the authenticated status read after its direct `PUT` completes. Polling does not create an audit record. Only Event Service verifies R2 content and attaches media.

@@ -8,4 +8,6 @@ service EventService {
   rpc CreateDraftEvent(CreateDraftEventRequest) returns (CreateDraftEventResponse);
   rpc GetAdminEvent(GetAdminEventRequest) returns (GetAdminEventResponse);
   rpc UpdateDraftEvent(UpdateDraftEventRequest) returns (UpdateDraftEventResponse);
+  rpc CreateEventMediaUpload(CreateEventMediaUploadRequest) returns (CreateEventMediaUploadResponse);
+  rpc GetEventMediaUpload(GetEventMediaUploadRequest) returns (GetEventMediaUploadResponse);
 }

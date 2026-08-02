@@ -11,8 +11,12 @@ import { Observable } from "rxjs";
 import {
   CreateDraftEventRequest,
   CreateDraftEventResponse,
+  CreateEventMediaUploadRequest,
+  CreateEventMediaUploadResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
+  GetEventMediaUploadRequest,
+  GetEventMediaUploadResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
 } from "./event.generated";
@@ -27,6 +31,16 @@ export interface EventServiceClient {
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
+
+  createEventMediaUpload(
+    request: CreateEventMediaUploadRequest,
+    metadata?: Metadata,
+  ): Observable<CreateEventMediaUploadResponse>;
+
+  getEventMediaUpload(
+    request: GetEventMediaUploadRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventMediaUploadResponse>;
 }
 
 export interface EventServiceController {
@@ -35,11 +49,27 @@ export interface EventServiceController {
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
+
+  createEventMediaUpload(
+    request: CreateEventMediaUploadRequest,
+    metadata?: Metadata,
+  ): Observable<CreateEventMediaUploadResponse>;
+
+  getEventMediaUpload(
+    request: GetEventMediaUploadRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventMediaUploadResponse>;
 }
 
 export function EventServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["createDraftEvent", "getAdminEvent", "updateDraftEvent"];
+    const grpcMethods: string[] = [
+      "createDraftEvent",
+      "getAdminEvent",
+      "updateDraftEvent",
+      "createEventMediaUpload",
+      "getEventMediaUpload",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("EventService", method)(constructor.prototype[method], method, descriptor);

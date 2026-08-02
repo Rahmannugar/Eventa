@@ -1,5 +1,7 @@
 import {
   EVENT_SERVICE_NAME,
+  EventMediaSlot,
+  EventMediaUploadStatus,
   EventStatus,
   type Event,
 } from '@eventa/grpc-contracts';
@@ -18,7 +20,13 @@ import {
   EVENT_GRPC_CLIENT,
   EVENT_GRPC_DEADLINE_MS,
 } from '../constants/event.constants';
-import type { AdminEventDto, UpdateDraftEventDto } from '../dto/event.dto';
+import type {
+  AdminEventDto,
+  CreateEventMediaUploadDto,
+  EventMediaUploadIntentDto,
+  EventMediaUploadStatusDto,
+  UpdateDraftEventDto,
+} from '../dto/event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
 
 function readErrorCode(error: unknown): unknown {
@@ -105,6 +113,84 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async createMediaUpload(
+    adminId: string,
+    eventId: string,
+    input: CreateEventMediaUploadDto,
+    requestId: string,
+  ): Promise<EventMediaUploadIntentDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.createEventMediaUpload(
+          {
+            adminId,
+            eventId,
+            expectedVersion: input.expectedVersion,
+            slot: this.toContractMediaSlot(input.slot),
+            contentType: input.contentType,
+            sizeBytes: input.sizeBytes,
+          },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        response.uploadId === '' ||
+        response.uploadUrl === '' ||
+        response.expiresAt === '' ||
+        response.verificationDeadlineAt === '' ||
+        Object.keys(response.requiredHeaders).length === 0
+      ) {
+        throw this.unavailable('EVENT_MEDIA_UPLOAD_RESPONSE_INVALID');
+      }
+      return response;
+    } catch (error: unknown) {
+      this.translate(error, 'media_upload');
+    }
+  }
+
+  async getMediaUpload(
+    eventId: string,
+    uploadId: string,
+    requestId: string,
+  ): Promise<EventMediaUploadStatusDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.getEventMediaUpload(
+          { eventId, uploadId },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      const statusValue = this.toPublicUploadStatus(response.status);
+      const slot = this.toPublicMediaSlot(response.slot);
+      if (
+        response.uploadId === '' ||
+        response.expiresAt === '' ||
+        response.verificationDeadlineAt === ''
+      ) {
+        throw this.unavailable('EVENT_MEDIA_STATUS_RESPONSE_INVALID');
+      }
+      return {
+        uploadId: response.uploadId,
+        status: statusValue,
+        slot,
+        expiresAt: response.expiresAt,
+        verificationDeadlineAt: response.verificationDeadlineAt,
+        ...(response.attachedEventVersion === undefined
+          ? {}
+          : { attachedEventVersion: response.attachedEventVersion }),
+        ...(response.failureCode === undefined
+          ? {}
+          : { failureCode: response.failureCode }),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'media_status');
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }
@@ -159,6 +245,15 @@ export class AdminEventService implements OnModuleInit {
                 : { postalCode: event.venue.postalCode }),
               countryCode: event.venue.countryCode,
             },
+      media: event.media.map((media) => ({
+        mediaId: media.mediaId,
+        slot: this.toPublicMediaSlot(media.slot),
+        url: media.url,
+        contentType: this.toPublicContentType(media.contentType),
+        sizeBytes: media.sizeBytes,
+        width: media.width,
+        height: media.height,
+      })),
       status: 'draft',
       version: event.version,
       createdByAdminId: event.createdByAdminId,
@@ -169,14 +264,18 @@ export class AdminEventService implements OnModuleInit {
 
   private translate(
     error: unknown,
-    operation: 'create' | 'read' | 'update',
+    operation: 'create' | 'media_status' | 'media_upload' | 'read' | 'update',
   ): never {
     switch (readErrorCode(error)) {
       case status.NOT_FOUND:
         throw new ApiHttpException(
           HttpStatus.NOT_FOUND,
-          'EVENT_NOT_FOUND',
-          'Event was not found.',
+          operation === 'media_status'
+            ? 'EVENT_MEDIA_UPLOAD_NOT_FOUND'
+            : 'EVENT_NOT_FOUND',
+          operation === 'media_status'
+            ? 'Media upload was not found.'
+            : 'Event was not found.',
         );
       case status.INVALID_ARGUMENT:
         throw new ApiHttpException(
@@ -191,17 +290,96 @@ export class AdminEventService implements OnModuleInit {
           'EVENT_VERSION_CONFLICT',
           'The event changed. Reload it and apply your changes again.',
         );
+      case status.FAILED_PRECONDITION:
+        throw new ApiHttpException(
+          HttpStatus.CONFLICT,
+          'EVENT_MEDIA_SLOT_OCCUPIED',
+          'That event media slot is already occupied.',
+        );
+      case status.ALREADY_EXISTS:
+        throw new ApiHttpException(
+          HttpStatus.CONFLICT,
+          'EVENT_MEDIA_UPLOAD_IN_PROGRESS',
+          'An upload is already in progress for that media slot.',
+        );
       case status.DEADLINE_EXCEEDED:
         throw this.unavailable('EVENT_RPC_DEADLINE_EXCEEDED');
       default:
         throw this.unavailable(
           operation === 'create'
             ? 'EVENT_CREATE_RPC_UNAVAILABLE'
-            : operation === 'update'
-              ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
-              : 'EVENT_READ_RPC_UNAVAILABLE',
+            : operation === 'media_upload'
+              ? 'EVENT_MEDIA_UPLOAD_RPC_UNAVAILABLE'
+              : operation === 'media_status'
+                ? 'EVENT_MEDIA_STATUS_RPC_UNAVAILABLE'
+                : operation === 'update'
+                  ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
+                  : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
+  }
+
+  private toContractMediaSlot(
+    slot: CreateEventMediaUploadDto['slot'],
+  ): EventMediaSlot {
+    return {
+      cover: EventMediaSlot.EVENT_MEDIA_SLOT_COVER,
+      gallery_1: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_1,
+      gallery_2: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_2,
+      gallery_3: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_3,
+      gallery_4: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_4,
+    }[slot];
+  }
+
+  private toPublicMediaSlot(
+    slot: EventMediaSlot,
+  ): CreateEventMediaUploadDto['slot'] {
+    switch (slot) {
+      case EventMediaSlot.EVENT_MEDIA_SLOT_COVER:
+        return 'cover';
+      case EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_1:
+        return 'gallery_1';
+      case EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_2:
+        return 'gallery_2';
+      case EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_3:
+        return 'gallery_3';
+      case EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_4:
+        return 'gallery_4';
+      default:
+        throw this.unavailable('EVENT_MEDIA_SLOT_INVALID');
+    }
+  }
+
+  private toPublicUploadStatus(
+    uploadStatus: EventMediaUploadStatus,
+  ): EventMediaUploadStatusDto['status'] {
+    switch (uploadStatus) {
+      case EventMediaUploadStatus.EVENT_MEDIA_UPLOAD_STATUS_PENDING:
+        return 'pending';
+      case EventMediaUploadStatus.EVENT_MEDIA_UPLOAD_STATUS_ATTACHED:
+        return 'attached';
+      case EventMediaUploadStatus.EVENT_MEDIA_UPLOAD_STATUS_REJECTED:
+        return 'rejected';
+      case EventMediaUploadStatus.EVENT_MEDIA_UPLOAD_STATUS_CONFLICT:
+        return 'conflict';
+      case EventMediaUploadStatus.EVENT_MEDIA_UPLOAD_STATUS_EXPIRED:
+        return 'expired';
+      default:
+        throw this.unavailable('EVENT_MEDIA_UPLOAD_STATUS_INVALID');
+    }
+  }
+
+  private toPublicContentType(
+    value: string,
+  ): 'image/jpeg' | 'image/png' | 'image/webp' {
+    if (
+      value === 'image/jpeg' ||
+      value === 'image/png' ||
+      value === 'image/webp'
+    ) {
+      return value;
+    }
+    throw this.unavailable('EVENT_MEDIA_CONTENT_TYPE_INVALID');
   }
 
   private unavailable(diagnosticCode: string): ApiHttpException {

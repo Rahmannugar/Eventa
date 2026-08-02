@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDefined,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -31,6 +32,11 @@ export class CreateDraftEventDto {
 export class AdminEventPathDto {
   @IsUUID()
   eventId!: string;
+}
+
+export class AdminEventMediaUploadPathDto extends AdminEventPathDto {
+  @IsUUID()
+  uploadId!: string;
 }
 
 export class EventVenueDto {
@@ -180,6 +186,9 @@ export class AdminEventDto {
   @ApiPropertyOptional({ type: EventVenueDto })
   venue!: EventVenueDto | undefined;
 
+  @ApiProperty({ type: () => [AdminEventMediaDto] })
+  media!: AdminEventMediaDto[];
+
   @ApiProperty({ enum: ['draft'], example: 'draft' })
   status!: 'draft';
 
@@ -194,4 +203,99 @@ export class AdminEventDto {
 
   @ApiProperty({ example: '2026-07-30T10:00:00.000Z' })
   updatedAt!: string;
+}
+
+export class CreateEventMediaUploadDto {
+  @ApiProperty({ example: 2, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @ApiProperty({
+    enum: ['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'],
+  })
+  @IsString()
+  @IsIn(['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'])
+  slot!: 'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
+
+  @ApiProperty({ enum: ['image/jpeg', 'image/png', 'image/webp'] })
+  @IsString()
+  @IsIn(['image/jpeg', 'image/png', 'image/webp'])
+  contentType!: 'image/jpeg' | 'image/png' | 'image/webp';
+
+  @ApiProperty({ minimum: 1, maximum: 8388608 })
+  @IsInt()
+  @Min(1)
+  @Max(8_388_608)
+  sizeBytes!: number;
+}
+
+export class EventMediaUploadIntentDto {
+  @ApiProperty()
+  uploadId!: string;
+
+  @ApiProperty()
+  uploadUrl!: string;
+
+  @ApiProperty({ additionalProperties: { type: 'string' }, type: 'object' })
+  requiredHeaders!: Record<string, string>;
+
+  @ApiProperty()
+  expiresAt!: string;
+
+  @ApiProperty()
+  verificationDeadlineAt!: string;
+}
+
+export class EventMediaUploadStatusDto {
+  @ApiProperty()
+  uploadId!: string;
+
+  @ApiProperty({
+    enum: ['pending', 'attached', 'rejected', 'conflict', 'expired'],
+  })
+  status!: 'pending' | 'attached' | 'rejected' | 'conflict' | 'expired';
+
+  @ApiProperty({
+    enum: ['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'],
+  })
+  slot!: 'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
+
+  @ApiProperty()
+  expiresAt!: string;
+
+  @ApiProperty()
+  verificationDeadlineAt!: string;
+
+  @ApiPropertyOptional()
+  attachedEventVersion?: number;
+
+  @ApiPropertyOptional()
+  failureCode?: string;
+}
+
+export class AdminEventMediaDto {
+  @ApiProperty()
+  mediaId!: string;
+
+  @ApiProperty({
+    enum: ['cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'],
+  })
+  slot!: 'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
+
+  @ApiProperty()
+  url!: string;
+
+  @ApiProperty({ enum: ['image/jpeg', 'image/png', 'image/webp'] })
+  contentType!: 'image/jpeg' | 'image/png' | 'image/webp';
+
+  @ApiProperty()
+  sizeBytes!: number;
+
+  @ApiProperty()
+  width!: number;
+
+  @ApiProperty()
+  height!: number;
 }

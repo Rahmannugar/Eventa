@@ -15,6 +15,7 @@ import {
 import { AdminEventController } from './controllers/admin-event.controller';
 import {
   AdminEventCreateRateLimitGuard,
+  AdminEventMediaUploadRateLimitGuard,
   AdminEventRateLimitService,
   AdminEventReadRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
@@ -63,6 +64,7 @@ export class EventsModule {
         AdminEventService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
+        AdminEventMediaUploadRateLimitGuard,
         AdminEventUpdateRateLimitGuard,
       ],
     };

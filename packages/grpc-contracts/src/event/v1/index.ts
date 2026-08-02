@@ -7,11 +7,18 @@ export {
 } from '../../generated/eventa/event/v1/event_service.generated';
 export {
   EventStatus,
+  EventMediaSlot,
+  EventMediaUploadStatus,
+  type CreateEventMediaUploadRequest,
+  type CreateEventMediaUploadResponse,
   type CreateDraftEventRequest,
   type CreateDraftEventResponse,
   type Event,
+  type EventMedia,
   type GetAdminEventRequest,
   type GetAdminEventResponse,
+  type GetEventMediaUploadRequest,
+  type GetEventMediaUploadResponse,
   type UpdateDraftEventRequest,
   type UpdateDraftEventResponse,
   type Venue,

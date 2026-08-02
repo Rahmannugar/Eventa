@@ -14,6 +14,26 @@ export enum EventStatus {
   UNRECOGNIZED = -1,
 }
 
+export enum EventMediaSlot {
+  EVENT_MEDIA_SLOT_UNSPECIFIED = 0,
+  EVENT_MEDIA_SLOT_COVER = 1,
+  EVENT_MEDIA_SLOT_GALLERY_1 = 2,
+  EVENT_MEDIA_SLOT_GALLERY_2 = 3,
+  EVENT_MEDIA_SLOT_GALLERY_3 = 4,
+  EVENT_MEDIA_SLOT_GALLERY_4 = 5,
+  UNRECOGNIZED = -1,
+}
+
+export enum EventMediaUploadStatus {
+  EVENT_MEDIA_UPLOAD_STATUS_UNSPECIFIED = 0,
+  EVENT_MEDIA_UPLOAD_STATUS_PENDING = 1,
+  EVENT_MEDIA_UPLOAD_STATUS_ATTACHED = 2,
+  EVENT_MEDIA_UPLOAD_STATUS_REJECTED = 3,
+  EVENT_MEDIA_UPLOAD_STATUS_CONFLICT = 4,
+  EVENT_MEDIA_UPLOAD_STATUS_EXPIRED = 5,
+  UNRECOGNIZED = -1,
+}
+
 export interface Event {
   eventId: string;
   title: string;
@@ -28,6 +48,17 @@ export interface Event {
   endsAt?: string | undefined;
   timeZone?: string | undefined;
   venue: Venue | undefined;
+  media: EventMedia[];
+}
+
+export interface EventMedia {
+  mediaId: string;
+  slot: EventMediaSlot;
+  url: string;
+  contentType: string;
+  sizeBytes: number;
+  width: number;
+  height: number;
 }
 
 export interface Venue {
@@ -72,6 +103,43 @@ export interface UpdateDraftEventRequest {
 
 export interface UpdateDraftEventResponse {
   event: Event | undefined;
+}
+
+export interface CreateEventMediaUploadRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  slot: EventMediaSlot;
+  contentType: string;
+  sizeBytes: number;
+}
+
+export interface CreateEventMediaUploadResponse {
+  uploadId: string;
+  uploadUrl: string;
+  requiredHeaders: { [key: string]: string };
+  expiresAt: string;
+  verificationDeadlineAt: string;
+}
+
+export interface CreateEventMediaUploadResponse_RequiredHeadersEntry {
+  key: string;
+  value: string;
+}
+
+export interface GetEventMediaUploadRequest {
+  eventId: string;
+  uploadId: string;
+}
+
+export interface GetEventMediaUploadResponse {
+  uploadId: string;
+  status: EventMediaUploadStatus;
+  slot: EventMediaSlot;
+  expiresAt: string;
+  attachedEventVersion?: number | undefined;
+  failureCode?: string | undefined;
+  verificationDeadlineAt: string;
 }
 
 export const EVENTA_EVENT_V1_PACKAGE_NAME = "eventa.event.v1";

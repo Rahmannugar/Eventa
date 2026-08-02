@@ -15,6 +15,13 @@
       "when": 1785634276519,
       "tag": "0001_add_editable_event_details",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785670682332,
+      "tag": "0002_add_verified_event_media",
+      "breakpoints": true
     }
   ]
 }

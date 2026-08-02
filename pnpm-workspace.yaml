@@ -10,5 +10,6 @@ allowBuilds:
   argon2: true
   esbuild: true
   protobufjs: true
+  sharp: true
 
 injectWorkspacePackages: true

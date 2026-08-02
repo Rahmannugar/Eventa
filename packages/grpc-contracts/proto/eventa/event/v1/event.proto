@@ -7,6 +7,24 @@ enum EventStatus {
   EVENT_STATUS_DRAFT = 1;
 }
 
+enum EventMediaSlot {
+  EVENT_MEDIA_SLOT_UNSPECIFIED = 0;
+  EVENT_MEDIA_SLOT_COVER = 1;
+  EVENT_MEDIA_SLOT_GALLERY_1 = 2;
+  EVENT_MEDIA_SLOT_GALLERY_2 = 3;
+  EVENT_MEDIA_SLOT_GALLERY_3 = 4;
+  EVENT_MEDIA_SLOT_GALLERY_4 = 5;
+}
+
+enum EventMediaUploadStatus {
+  EVENT_MEDIA_UPLOAD_STATUS_UNSPECIFIED = 0;
+  EVENT_MEDIA_UPLOAD_STATUS_PENDING = 1;
+  EVENT_MEDIA_UPLOAD_STATUS_ATTACHED = 2;
+  EVENT_MEDIA_UPLOAD_STATUS_REJECTED = 3;
+  EVENT_MEDIA_UPLOAD_STATUS_CONFLICT = 4;
+  EVENT_MEDIA_UPLOAD_STATUS_EXPIRED = 5;
+}
+
 message Event {
   string event_id = 1;
   string title = 2;
@@ -21,6 +39,17 @@ message Event {
   optional string ends_at = 11;
   optional string time_zone = 12;
   Venue venue = 13;
+  repeated EventMedia media = 14;
+}
+
+message EventMedia {
+  string media_id = 1;
+  EventMediaSlot slot = 2;
+  string url = 3;
+  string content_type = 4;
+  int32 size_bytes = 5;
+  int32 width = 6;
+  int32 height = 7;
 }
 
 message Venue {
@@ -65,4 +94,36 @@ message UpdateDraftEventRequest {
 
 message UpdateDraftEventResponse {
   Event event = 1;
+}
+
+message CreateEventMediaUploadRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  EventMediaSlot slot = 4;
+  string content_type = 5;
+  int32 size_bytes = 6;
+}
+
+message CreateEventMediaUploadResponse {
+  string upload_id = 1;
+  string upload_url = 2;
+  map<string, string> required_headers = 3;
+  string expires_at = 4;
+  string verification_deadline_at = 5;
+}
+
+message GetEventMediaUploadRequest {
+  string event_id = 1;
+  string upload_id = 2;
+}
+
+message GetEventMediaUploadResponse {
+  string upload_id = 1;
+  EventMediaUploadStatus status = 2;
+  EventMediaSlot slot = 3;
+  string expires_at = 4;
+  optional int32 attached_event_version = 5;
+  optional string failure_code = 6;
+  string verification_deadline_at = 7;
 }

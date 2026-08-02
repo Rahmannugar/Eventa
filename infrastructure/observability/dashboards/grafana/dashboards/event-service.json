@@ -155,14 +155,53 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)\"} offset $__range))",
+          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_upload_intent\"} offset $__range))",
           "instant": true,
           "legendFormat": "{{operation}} · {{outcome}}",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Draft mutation outcomes",
+      "title": "Event mutation outcomes",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Durable media-verification assignments completed by the Event worker, including retries and terminal object-deletion failures.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 6 },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by (outcome) (increase(eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"}[$__range]) + (last_over_time(eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"}[$__range]) unless eventa_job_count_total{service_name=\"eventa-event-service\", operation=\"event.media.verification\"} offset $__range))",
+          "instant": true,
+          "legendFormat": "{{outcome}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Media verification outcomes",
       "type": "stat"
     },
     {
@@ -182,7 +221,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
       "id": 5,
       "options": {
         "legend": {
@@ -207,7 +246,7 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 14 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 20 },
       "id": 6,
       "options": {
         "dedupStrategy": "none",
@@ -233,7 +272,7 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 29 },
       "id": 7,
       "options": {
         "dedupStrategy": "none",

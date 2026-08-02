@@ -8,8 +8,9 @@ Any authenticated admin may manage any event. `created_by_admin_id` records prov
 
 ## Modules
 
-- `events` owns event commands, queries, persistence, audit records, and domain documentation.
+- `events` owns event commands, queries, media verification jobs, persistence, audit records, and domain documentation.
 - `database` owns the PostgreSQL client, Drizzle database, migrations, and shutdown.
+- `infrastructure` owns the shared RabbitMQ connection and Cloudflare R2 adapter.
 - `health` exposes liveness and database-backed readiness.
 - `config` validates permanent runtime configuration before listeners start.
 
@@ -17,14 +18,16 @@ Controllers translate gRPC. Application services own use-case behavior. Reposito
 
 ## Persistence and Audit
 
-The `events` table is authoritative event state. `event_venues` stores one event-owned venue address. Title-only drafts have no venue until a full draft update supplies the content, category, schedule, timezone, and venue together.
+The `events` table is authoritative event state. `event_venues` stores one event-owned venue address. `event_media` stores only verified R2 objects in one cover slot and four fixed gallery slots. `event_media_uploads` is the durable authority for pending verification, claims, retry timing, terminal outcomes, and rejected-object deletion. RabbitMQ messages contain only an upload ID and never replace that record.
 
 Every event carries a monotonically increasing version. A draft update changes the event only when its expected version matches, increments the version, upserts the venue, and appends `event.updated` in one transaction. This prevents silent overwrites when admins edit concurrently.
 
-The append-only `event_admin_audit_log` records state-changing admin actions and the resulting event version. Draft creation inserts the event and `event.created` audit row in one transaction. Mutation or audit failure rolls back the complete state change.
+The append-only `event_admin_audit_log` records state-changing admin actions and the resulting event version. Draft creation inserts the event and `event.created` audit row in one transaction. Media intent appends `event.media_upload_requested`. Successful verification attaches media, increments the event version, and appends `event.media_attached` in one transaction. Mutation or audit failure rolls back the complete state change.
 
 Reads do not create durable audit rows. They remain visible through bounded request metrics, traces, and structured operational logs.
 
 ## Runtime
 
-Event Service exposes gRPC for business traffic and HTTP for health. PostgreSQL is a real readiness dependency. OpenTelemetry exports service identity, request metrics, business outcomes, traces, and structured logs without making the collector a readiness dependency.
+Event Service exposes gRPC for business traffic and HTTP for health. PostgreSQL is a real readiness dependency. One startup-owned RabbitMQ connection supplies purpose-specific publisher and consumer channels. The media dispatcher publishes database records when their durable next-attempt time is due and recovers abandoned publication or execution leases. The idempotent worker verifies exact object size, declared and detected image type, dimensions, and ETag before attachment. Missing objects retry until the ten-minute upload deadline. Transient R2 failures retry until the thirty-minute verification deadline. Rejected, conflicted, and expired objects enter durable deletion state without a DLQ; deletion is capped at ten attempts.
+
+OpenTelemetry exports service identity, request and job metrics, business outcomes, traces, and structured logs without making the collector a readiness dependency.

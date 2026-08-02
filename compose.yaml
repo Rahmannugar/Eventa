@@ -213,6 +213,8 @@ services:
     depends_on:
       event-migration:
         condition: service_completed_successfully
+      job-queue:
+        condition: service_healthy
     restart: unless-stopped
     logging: *local-logging
 

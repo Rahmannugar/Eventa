@@ -1,8 +1,12 @@
 import type {
+  CreateEventMediaUploadRequest,
+  CreateEventMediaUploadResponse,
   CreateDraftEventRequest,
   CreateDraftEventResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
+  GetEventMediaUploadRequest,
+  GetEventMediaUploadResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
@@ -25,4 +29,14 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<UpdateDraftEventResponse>;
+  createEventMediaUpload(
+    request: CreateEventMediaUploadRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<CreateEventMediaUploadResponse>;
+  getEventMediaUpload(
+    request: GetEventMediaUploadRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<GetEventMediaUploadResponse>;
 }
