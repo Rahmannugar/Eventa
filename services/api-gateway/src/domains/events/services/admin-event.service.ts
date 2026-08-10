@@ -28,7 +28,7 @@ import type {
   RemoveEventMediaResponseDto,
   PublishEventDto,
   UpdateDraftEventDto,
-} from '../dto/event.dto';
+} from '../dto/admin-event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
 
 function readErrorCode(error: unknown): unknown {

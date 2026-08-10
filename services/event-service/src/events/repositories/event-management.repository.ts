@@ -57,7 +57,7 @@ const MEDIA_COLUMNS = {
   height: eventMedia.height,
 };
 
-export class EventRepository implements EventRepositoryPort {
+export class EventManagementRepository implements EventRepositoryPort {
   constructor(
     @Inject(EVENT_DATABASE)
     private readonly database: EventDatabase,
@@ -103,6 +103,33 @@ export class EventRepository implements EventRepositoryPort {
           .from(events)
           .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
           .where(eq(events.id, eventId))
+          .limit(1);
+
+        if (result === undefined) {
+          return undefined;
+        }
+
+        const media = await this.database
+          .select(MEDIA_COLUMNS)
+          .from(eventMedia)
+          .where(eq(eventMedia.eventId, eventId))
+          .orderBy(eventMedia.slot);
+
+        return this.toEventRecord(result.event, result.venue, media);
+      },
+      this.spanOptions('SELECT'),
+    );
+  }
+
+  findPublishedById(eventId: string): Promise<EventRecord | undefined> {
+    return runWithOperationSpan(
+      'event.find_published_by_id',
+      async () => {
+        const [result] = await this.database
+          .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
+          .from(events)
+          .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+          .where(and(eq(events.id, eventId), eq(events.status, 'published')))
           .limit(1);
 
         if (result === undefined) {

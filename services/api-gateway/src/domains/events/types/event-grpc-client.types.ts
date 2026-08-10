@@ -7,6 +7,8 @@ import type {
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
+  GetPublishedEventRequest,
+  GetPublishedEventResponse,
   RemoveEventMediaRequest,
   RemoveEventMediaResponse,
   PublishEventRequest,
@@ -28,6 +30,11 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<GetAdminEventResponse>;
+  getPublishedEvent(
+    request: GetPublishedEventRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<GetPublishedEventResponse>;
   updateDraftEvent(
     request: UpdateDraftEventRequest,
     metadata: Metadata,

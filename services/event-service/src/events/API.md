@@ -4,6 +4,8 @@
 
 `GetAdminEvent` accepts an event ID. Gateway authentication admits the management request, and any authenticated admin may retrieve any event. A missing event returns gRPC `NOT_FOUND`.
 
+`GetPublishedEvent` accepts an event ID and returns content, schedule, venue, verified media, publication time, and version only when the authoritative event state is `published`. It omits creator provenance and draft lifecycle state. Draft and missing IDs both return gRPC `NOT_FOUND`.
+
 `UpdateDraftEvent` accepts the acting admin, event ID, expected version, title, description, category, ISO-8601 start and end instants, IANA timezone, and venue address. It replaces the editable details and returns the incremented version. The end must be after the start. A stale version returns gRPC `ABORTED`; a missing event returns `NOT_FOUND`.
 
 `CreateEventMediaUpload` accepts the acting admin, event ID, expected version, one fixed media slot, declared image type, and declared byte size. JPEG, PNG, and WebP images up to 8 MiB per file are accepted. An empty slot creates new media; an occupied slot reserves a replacement while its verified image remains authoritative. Only one upload may be pending for a slot. The response contains a ten-minute create-only R2 `PUT` URL, a separate thirty-minute verification deadline, and the exact signed headers the client must send. A stale version returns `ABORTED`; an upload already pending for the slot returns `ALREADY_EXISTS`.

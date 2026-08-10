@@ -337,6 +337,7 @@ export interface UpdateDraftEventCommand {
 export interface EventRepository {
   createDraft(input: CreateDraftEvent): Promise<EventRecord>;
   findById(eventId: string): Promise<EventRecord | undefined>;
+  findPublishedById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
   publish(input: PublishEvent): Promise<PublishEventResult>;
 }
@@ -348,6 +349,7 @@ export interface EventManagement {
     requestId: string,
   ): Promise<EventRecord>;
   getById(eventId: string): Promise<EventRecord>;
+  getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
   publish(input: PublishEventCommand): Promise<EventRecord>;
 }

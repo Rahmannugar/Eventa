@@ -44,6 +44,20 @@ message Event {
   optional string published_at = 15;
 }
 
+message PublishedEvent {
+  string event_id = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;
+  string starts_at = 5;
+  string ends_at = 6;
+  string time_zone = 7;
+  Venue venue = 8;
+  repeated EventMedia media = 9;
+  string published_at = 10;
+  int32 version = 11;
+}
+
 message EventMedia {
   string media_id = 1;
   EventMediaSlot slot = 2;
@@ -79,6 +93,14 @@ message GetAdminEventRequest {
 
 message GetAdminEventResponse {
   Event event = 1;
+}
+
+message GetPublishedEventRequest {
+  string event_id = 1;
+}
+
+message GetPublishedEventResponse {
+  PublishedEvent event = 1;
 }
 
 message UpdateDraftEventRequest {

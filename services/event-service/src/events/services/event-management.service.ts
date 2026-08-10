@@ -12,7 +12,7 @@ import type {
   UpdateDraftEventCommand,
 } from '../types/event.types';
 
-export class EventApplicationService implements EventManagement {
+export class EventManagementService implements EventManagement {
   constructor(private readonly events: EventRepository) {}
 
   async createDraft(
@@ -29,6 +29,16 @@ export class EventApplicationService implements EventManagement {
 
   async getById(eventId: string): Promise<EventRecord> {
     const event = await this.events.findById(eventId);
+
+    if (event === undefined) {
+      throw new EventNotFoundError();
+    }
+
+    return event;
+  }
+
+  async getPublishedById(eventId: string): Promise<EventRecord> {
+    const event = await this.events.findPublishedById(eventId);
 
     if (event === undefined) {
       throw new EventNotFoundError();

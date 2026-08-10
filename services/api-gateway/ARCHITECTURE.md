@@ -13,7 +13,7 @@ src/domains/
   attendees/
     attendee-owned transport, application, policy, and documentation
   events/
-    authenticated admin event transport, abuse controls, and Event routing
+    public published reads, authenticated admin transport, abuse controls, and Event routing
 
 src/rate-limit/
   atomic hybrid policy state and shared contracts

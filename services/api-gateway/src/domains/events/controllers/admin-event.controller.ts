@@ -36,7 +36,7 @@ import {
   RemoveEventMediaResponseDto,
   PublishEventDto,
   UpdateDraftEventDto,
-} from '../dto/event.dto';
+} from '../dto/admin-event.dto';
 import {
   AdminEventCreateRateLimitGuard,
   AdminEventMediaUploadRateLimitGuard,

@@ -16,6 +16,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST`   | `/auth/admins/reset-password`                    | Replaces an activated admin password and revokes every admin session.                            |
 | `POST`   | `/auth/attendees/email-verification/confirm`     | Confirms email ownership with a valid six-digit OTP.                                             |
 | `POST`   | `/auth/attendees/email-verification/resend`      | Accepts an enumeration-resistant request for a replacement OTP email.                            |
+| `GET`    | `/events/:eventId`                               | Returns authoritative public details only for a published event.                                 |
 | `POST`   | `/admin/events`                                  | Creates a draft event.                                                                           |
 | `GET`    | `/admin/events/:eventId`                         | Returns an event to any authenticated admin.                                                     |
 | `PUT`    | `/admin/events/:eventId`                         | Replaces editable draft details when the supplied version is current.                            |
@@ -41,7 +42,7 @@ The protobuf schemas are authoritative. Buf validates and generates the TypeScri
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
-Event Service exposes draft creation and editing, verified media attachment, replacement and removal, publication, upload status, and admin event retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
+Event Service exposes draft creation and editing, verified media attachment, replacement and removal, publication, upload status, admin event retrieval, and published-only retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
 
 Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 

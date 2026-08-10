@@ -13,6 +13,7 @@ import {
   EVENT_GRPC_DEADLINE_MS,
 } from './constants/event.constants';
 import { AdminEventController } from './controllers/admin-event.controller';
+import { PublishedEventController } from './controllers/published-event.controller';
 import {
   AdminEventCreateRateLimitGuard,
   AdminEventMediaUploadRateLimitGuard,
@@ -21,7 +22,12 @@ import {
   AdminEventReadRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
 } from './rate-limit/admin-event-rate-limit';
+import {
+  PublishedEventRateLimitService,
+  PublishedEventReadRateLimitGuard,
+} from './rate-limit/published-event-rate-limit';
 import { AdminEventService } from './services/admin-event.service';
+import { PublishedEventService } from './services/published-event.service';
 
 interface EventsModuleOptions {
   adminsModule: DynamicModule;
@@ -50,7 +56,7 @@ export class EventsModule {
           },
         ]),
       ],
-      controllers: [AdminEventController],
+      controllers: [AdminEventController, PublishedEventController],
       providers: [
         {
           provide: EVENT_GRPC_DEADLINE_MS,
@@ -63,11 +69,22 @@ export class EventsModule {
           inject: [RATE_LIMIT_STATE],
         },
         AdminEventService,
+        PublishedEventService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
         AdminEventMediaUploadRateLimitGuard,
         AdminEventPublishRateLimitGuard,
         AdminEventUpdateRateLimitGuard,
+        {
+          provide: PublishedEventRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new PublishedEventRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
+        },
+        PublishedEventReadRateLimitGuard,
       ],
     };
   }

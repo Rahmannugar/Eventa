@@ -1,4 +1,12 @@
-# Admin Events API
+# Events API
+
+## Published events
+
+`GET /events/:eventId` is public and returns the authoritative published representation: event content, schedule, venue, verified media, publication time, and version. It does not expose creator provenance or lifecycle state. Draft and missing IDs both return `404 EVENT_NOT_FOUND`, so the public boundary does not disclose draft existence.
+
+The route uses an IP-only read budget. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`.
+
+## Admin management
 
 All routes require the opaque `eventa_admin_session` cookie. A present browser `Origin` must match the configured Eventa web origin. Any authenticated admin may manage any event.
 

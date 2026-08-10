@@ -31,12 +31,12 @@ import { ObservedEventManagement } from './observability/observed-event-manageme
 import { EventMediaUploadRepository } from './repositories/event-media-upload.repository';
 import { EventMediaMutationRepository } from './repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from './repositories/event-media-object-deletion.repository';
-import { EventRepository } from './repositories/event.repository';
+import { EventManagementRepository } from './repositories/event-management.repository';
 import { EventPublicationOutboxRepository } from './repositories/event-publication-outbox.repository';
 import { EventMediaApplicationService } from './services/event-media.service';
 import { EventMediaObjectDeletionService } from './services/event-media-object-deletion.service';
 import { EventMediaVerificationService } from './services/event-media-verification.service';
-import { EventApplicationService } from './services/event.service';
+import { EventManagementService } from './services/event-management.service';
 import { EventPublicationOutboxRelay } from './services/event-publication-outbox-relay';
 import type {
   EventPublisher,
@@ -54,7 +54,7 @@ import type {
   imports: [DatabaseModule],
   controllers: [EventController],
   providers: [
-    EventRepository,
+    EventManagementRepository,
     EventMediaUploadRepository,
     EventMediaMutationRepository,
     EventMediaObjectDeletionRepository,
@@ -123,8 +123,8 @@ import type {
     {
       provide: EVENT_MANAGEMENT,
       useFactory: (events: EventRepositoryPort) =>
-        new ObservedEventManagement(new EventApplicationService(events)),
-      inject: [EventRepository],
+        new ObservedEventManagement(new EventManagementService(events)),
+      inject: [EventManagementRepository],
     },
     {
       provide: EVENT_MEDIA_MANAGEMENT,

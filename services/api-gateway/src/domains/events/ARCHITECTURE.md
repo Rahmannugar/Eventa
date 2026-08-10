@@ -1,4 +1,8 @@
-# Admin Events Architecture
+# Events Architecture
+
+Public retrieval uses `GET /events/:eventId` without an admin session. Gateway validates the event ID, applies an IP-only read budget, propagates the request ID, and calls the dedicated published-event gRPC query under the Event deadline. Event Service owns the published-state predicate. Gateway therefore cannot accidentally broaden the public query to include drafts. Missing and draft IDs share one public not-found response.
+
+The public representation excludes creator provenance and draft lifecycle state. Verified media remains Event-owned data returned by the authoritative query; Gateway only translates the internal contract to HTTP.
 
 Gateway authenticates the opaque admin session through Identity before calling Event Service. The resolved admin ID comes only from the server-backed session; the client cannot submit an acting admin ID.
 

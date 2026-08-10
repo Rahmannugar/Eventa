@@ -6,7 +6,7 @@
 | --------- | ---------------------------------- | --------------------------------------------- |
 | Admins    | `/auth/admins/*` HTTP endpoints    | [Admins API](src/domains/admins/API.md)       |
 | Attendees | `/auth/attendees/*` HTTP endpoints | [Attendees API](src/domains/attendees/API.md) |
-| Events    | `/admin/events*` HTTP endpoints    | [Events API](src/domains/events/API.md)       |
+| Events    | `/events/*` and `/admin/events*`   | [Events API](src/domains/events/API.md)       |
 
 The generated OpenAPI document is authoritative for exact public HTTP schemas. Domain API files explain behavior, errors, and transport policy without duplicating that contract.
 

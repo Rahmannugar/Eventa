@@ -64,6 +64,8 @@ API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/T
 - Event bus: durable completed business facts and independent consumers. Kafka is the adapter choice.
 - Job queue: retryable background work assigned to workers. RabbitMQ is the adapter choice.
 
+Identity publishes `attendee.deleted.v1`, and Event Service publishes `event.published.v1`, through their service-owned outboxes. No deployable subscribes to either Kafka lifecycle topic. Both facts still need purpose-built consumers; each consumer must be introduced by the product story that owns its reaction, durable inbox/idempotency boundary, recovery policy, and operating owner. RabbitMQ consumers are separate workers for assigned jobs and are not Kafka business-fact consumers.
+
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
 
 We keep authoritative gRPC schemas in `packages/grpc-contracts/proto`. Pinned Buf tooling checks compatibility and generates the committed TypeScript contracts; loader and deadline behavior stays in narrow handwritten transport code.

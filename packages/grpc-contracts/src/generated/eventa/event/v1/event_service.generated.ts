@@ -17,6 +17,8 @@ import {
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
+  GetPublishedEventRequest,
+  GetPublishedEventResponse,
   PublishEventRequest,
   PublishEventResponse,
   RemoveEventMediaRequest,
@@ -33,6 +35,8 @@ export interface EventServiceClient {
   createDraftEvent(request: CreateDraftEventRequest, metadata?: Metadata): Observable<CreateDraftEventResponse>;
 
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
+
+  getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
@@ -56,6 +60,8 @@ export interface EventServiceController {
 
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
 
+  getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
+
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
   createEventMediaUpload(
@@ -78,6 +84,7 @@ export function EventServiceControllerMethods() {
     const grpcMethods: string[] = [
       "createDraftEvent",
       "getAdminEvent",
+      "getPublishedEvent",
       "updateDraftEvent",
       "createEventMediaUpload",
       "getEventMediaUpload",

@@ -11,7 +11,7 @@ import { EventMediaUploadRepository } from '../../src/events/repositories/event-
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventPublicationOutboxRepository } from '../../src/events/repositories/event-publication-outbox.repository';
-import { EventRepository } from '../../src/events/repositories/event.repository';
+import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
@@ -71,7 +71,7 @@ const client = postgres(requiredTestDatabaseUrl, {
   onnotice: () => undefined,
 });
 const database = drizzle(client);
-const eventsRepository = new EventRepository(database);
+const eventsRepository = new EventManagementRepository(database);
 const uploadsRepository = new EventMediaUploadRepository(database);
 const mediaRepository = new EventMediaMutationRepository(database);
 const deletionsRepository = new EventMediaObjectDeletionRepository(database);
@@ -567,6 +567,38 @@ describe('Event mutation integration', () => {
     await expect(
       publicationOutboxRepository.claimBatch(1, 30_000),
     ).resolves.toEqual([]);
+  });
+
+  it('returns published events without disclosing drafts', async () => {
+    const draft = await eventsRepository.createDraft({
+      actorAdminId: randomUUID(),
+      requestId: randomUUID(),
+      title: 'Private draft',
+    });
+    await expect(
+      eventsRepository.findPublishedById(draft.eventId),
+    ).resolves.toBeUndefined();
+
+    const publishable = await createPublishableEvent('Public event');
+    const publication = await eventsRepository.publish({
+      actorAdminId: publishable.adminId,
+      eventId: publishable.eventId,
+      expectedVersion: publishable.version,
+      requestId: randomUUID(),
+    });
+    if (publication.outcome !== 'published') {
+      throw new Error('Publication setup failed');
+    }
+
+    await expect(
+      eventsRepository.findPublishedById(publishable.eventId),
+    ).resolves.toMatchObject({
+      eventId: publishable.eventId,
+      media: [{ slot: 'cover' }],
+      status: 'published',
+      venue: { city: 'Lagos', countryCode: 'NG' },
+      version: publishable.version + 1,
+    });
   });
 });
 

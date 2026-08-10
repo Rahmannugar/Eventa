@@ -8,6 +8,7 @@ Event Service implements `eventa.event.v1.EventService`.
 | ------------------------ | --------------------------------------------------------------------------------- |
 | `CreateDraftEvent`       | Starts a title-only draft at version 1.                                           |
 | `GetAdminEvent`          | Returns the latest admin event state, verified images, and version.               |
+| `GetPublishedEvent`      | Returns the public representation only when the event is published.               |
 | `UpdateDraftEvent`       | Saves complete draft details and returns the new version.                         |
 | `CreateEventMediaUpload` | Starts a direct image upload for an empty slot or replacement.                    |
 | `GetEventMediaUpload`    | Reports whether an upload is waiting, attached, rejected, conflicted, or expired. |

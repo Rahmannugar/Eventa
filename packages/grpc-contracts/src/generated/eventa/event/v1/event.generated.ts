@@ -53,6 +53,20 @@ export interface Event {
   publishedAt?: string | undefined;
 }
 
+export interface PublishedEvent {
+  eventId: string;
+  title: string;
+  description: string;
+  category: string;
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  venue: Venue | undefined;
+  media: EventMedia[];
+  publishedAt: string;
+  version: number;
+}
+
 export interface EventMedia {
   mediaId: string;
   slot: EventMediaSlot;
@@ -88,6 +102,14 @@ export interface GetAdminEventRequest {
 
 export interface GetAdminEventResponse {
   event: Event | undefined;
+}
+
+export interface GetPublishedEventRequest {
+  eventId: string;
+}
+
+export interface GetPublishedEventResponse {
+  event: PublishedEvent | undefined;
 }
 
 export interface UpdateDraftEventRequest {

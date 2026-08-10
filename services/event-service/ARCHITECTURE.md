@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Event Service owns event state, event lifecycle rules, and durable audit history for admin event mutations. It owns its PostgreSQL database and never reads Identity data. The authenticated admin ID arrives through the Gateway's internal gRPC command.
+Event Service owns event state, event lifecycle rules, authoritative published-event filtering, and durable audit history for admin event mutations. It owns its PostgreSQL database and never reads Identity data. The authenticated admin ID arrives through the Gateway's internal gRPC command.
 
 Any authenticated admin may manage any event. `created_by_admin_id` records provenance and does not grant exclusive ownership.
 
@@ -25,6 +25,8 @@ Every event carries a monotonically increasing version. A draft update changes t
 The append-only `event_admin_audit_log` records state-changing admin actions and the resulting event version. Draft creation inserts the event and `event.created` audit row in one transaction. Media intent appends `event.media_upload_requested`. Successful verification attaches or atomically replaces media, increments the event version, and appends `event.media_attached` or `event.media_replaced`. Explicit removal increments the version and appends `event.media_removed`. Publication atomically changes the status, records the publication time, increments the version, appends `event.published`, and inserts the versioned Kafka fact into the outbox. Each formerly accepted object receives durable deletion work in the same replacement or removal transaction. Mutation, audit, or outbox failure rolls back the complete state change.
 
 Reads do not create durable audit rows. They remain visible through bounded request metrics, traces, and structured operational logs.
+
+The public read repository selects by event ID and `published` status in the same query, then loads the event-owned venue and verified media. Draft and missing IDs are indistinguishable at the gRPC boundary. Its dedicated response omits creator provenance and draft lifecycle state.
 
 ## Runtime
 

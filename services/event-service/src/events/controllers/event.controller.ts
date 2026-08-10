@@ -11,6 +11,8 @@ import {
   type EventServiceController,
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
+  type GetPublishedEventResponse,
+  type PublishedEvent,
   type RemoveEventMediaResponse,
   type PublishEventResponse,
   type UpdateDraftEventResponse,
@@ -27,14 +29,17 @@ import {
   EVENT_MEDIA_MANAGEMENT,
 } from '../constants/event.constants';
 import {
-  CreateDraftEventDto,
-  CreateEventMediaUploadDto,
   GetAdminEventDto,
-  GetEventMediaUploadDto,
-  RemoveEventMediaDto,
+  CreateDraftEventDto,
   PublishEventDto,
   UpdateDraftEventDto,
-} from '../dto/event.dto';
+} from '../dto/event-management.dto';
+import {
+  CreateEventMediaUploadDto,
+  GetEventMediaUploadDto,
+  RemoveEventMediaDto,
+} from '../dto/event-media.dto';
+import { GetPublishedEventDto } from '../dto/published-event.dto';
 import {
   EventMediaNotFoundError,
   EventMediaUploadInProgressError,
@@ -85,6 +90,12 @@ export class EventController implements EventServiceController {
     return from(this.getEvent(request.eventId));
   }
 
+  getPublishedEvent(
+    request: GetPublishedEventDto,
+  ): Observable<GetPublishedEventResponse> {
+    return from(this.getPublished(request.eventId));
+  }
+
   updateDraftEvent(
     request: UpdateDraftEventDto,
     metadata?: Metadata,
@@ -123,6 +134,26 @@ export class EventController implements EventServiceController {
     try {
       return {
         event: this.toContract(await this.eventService.getById(eventId)),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async getPublished(
+    eventId: string,
+  ): Promise<GetPublishedEventResponse> {
+    try {
+      return {
+        event: this.toPublishedContract(
+          await this.eventService.getPublishedById(eventId),
+        ),
       };
     } catch (error: unknown) {
       if (error instanceof EventNotFoundError) {
@@ -366,6 +397,51 @@ export class EventController implements EventServiceController {
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
       publishedAt: event.publishedAt?.toISOString(),
+    };
+  }
+
+  private toPublishedContract(event: EventRecord): PublishedEvent {
+    if (
+      event.status !== 'published' ||
+      event.description === null ||
+      event.category === null ||
+      event.startsAt === null ||
+      event.endsAt === null ||
+      event.timeZone === null ||
+      event.venue === null ||
+      event.publishedAt === null
+    ) {
+      throw new Error('Published event state is incomplete');
+    }
+
+    return {
+      eventId: event.eventId,
+      title: event.title,
+      description: event.description,
+      category: event.category,
+      startsAt: event.startsAt.toISOString(),
+      endsAt: event.endsAt.toISOString(),
+      timeZone: event.timeZone,
+      venue: {
+        name: event.venue.name,
+        addressLine1: event.venue.addressLine1,
+        addressLine2: event.venue.addressLine2 ?? undefined,
+        city: event.venue.city,
+        region: event.venue.region ?? undefined,
+        postalCode: event.venue.postalCode ?? undefined,
+        countryCode: event.venue.countryCode,
+      },
+      media: event.media.map((media) => ({
+        mediaId: media.mediaId,
+        slot: this.toContractSlot(media.slot),
+        url: `${this.config.cloudflareR2PublicBaseUrl}/${media.objectKey}`,
+        contentType: media.contentType,
+        sizeBytes: media.sizeBytes,
+        width: media.width,
+        height: media.height,
+      })),
+      publishedAt: event.publishedAt.toISOString(),
+      version: event.version,
     };
   }
 

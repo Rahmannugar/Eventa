@@ -39,6 +39,10 @@ export class ObservedEventManagement implements EventManagement {
     return this.eventManagement.getById(eventId);
   }
 
+  getPublishedById(eventId: string): Promise<EventRecord> {
+    return this.eventManagement.getPublishedById(eventId);
+  }
+
   async updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord> {
     try {
       const event = await this.eventManagement.updateDraft(input);
