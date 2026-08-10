@@ -5,6 +5,7 @@ import {
   type GetEventMediaUploadRequest,
   type GetAdminEventRequest,
   type RemoveEventMediaRequest,
+  type PublishEventRequest,
   type UpdateDraftEventRequest,
   type Venue,
 } from '@eventa/grpc-contracts';
@@ -209,4 +210,17 @@ export class RemoveEventMediaDto implements RemoveEventMediaRequest {
   @IsInt()
   @IsIn([1, 2, 3, 4, 5])
   slot!: EventMediaSlot;
+}
+
+export class PublishEventDto implements PublishEventRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
 }

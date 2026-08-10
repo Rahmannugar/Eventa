@@ -26,6 +26,7 @@ import type {
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
   RemoveEventMediaResponseDto,
+  PublishEventDto,
   UpdateDraftEventDto,
 } from '../dto/event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
@@ -225,6 +226,27 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async publish(
+    adminId: string,
+    eventId: string,
+    input: PublishEventDto,
+    requestId: string,
+  ): Promise<AdminEventDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.publishEvent(
+          { adminId, eventId, expectedVersion: input.expectedVersion },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      return this.toAdminEvent(response.event);
+    } catch (error: unknown) {
+      this.translate(error, 'publish');
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }
@@ -246,9 +268,14 @@ export class AdminEventService implements OnModuleInit {
   private toAdminEvent(event: Event | undefined): AdminEventDto {
     if (
       event === undefined ||
-      event.status !== EventStatus.EVENT_STATUS_DRAFT ||
+      ![
+        EventStatus.EVENT_STATUS_DRAFT,
+        EventStatus.EVENT_STATUS_PUBLISHED,
+      ].includes(event.status) ||
       !Number.isInteger(event.version) ||
-      event.version < 1
+      event.version < 1 ||
+      (event.status === EventStatus.EVENT_STATUS_PUBLISHED) !==
+        (event.publishedAt !== undefined && event.publishedAt !== '')
     ) {
       throw this.unavailable('EVENT_RESPONSE_INVALID');
     }
@@ -288,11 +315,15 @@ export class AdminEventService implements OnModuleInit {
         width: media.width,
         height: media.height,
       })),
-      status: 'draft',
+      status:
+        event.status === EventStatus.EVENT_STATUS_PUBLISHED
+          ? 'published'
+          : 'draft',
       version: event.version,
       createdByAdminId: event.createdByAdminId,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
+      publishedAt: event.publishedAt,
     };
   }
 
@@ -304,6 +335,7 @@ export class AdminEventService implements OnModuleInit {
       | 'media_status'
       | 'media_upload'
       | 'read'
+      | 'publish'
       | 'update',
   ): never {
     switch (readErrorCode(error)) {
@@ -331,6 +363,13 @@ export class AdminEventService implements OnModuleInit {
           'The event changed. Reload it and apply your changes again.',
         );
       case status.FAILED_PRECONDITION:
+        if (operation === 'publish') {
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'EVENT_PUBLICATION_INCOMPLETE',
+            'Complete the event details, venue, and cover image before publishing.',
+          );
+        }
         if (operation === 'media_remove') {
           throw new ApiHttpException(
             HttpStatus.NOT_FOUND,
@@ -359,7 +398,9 @@ export class AdminEventService implements OnModuleInit {
                   ? 'EVENT_MEDIA_STATUS_RPC_UNAVAILABLE'
                   : operation === 'update'
                     ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
-                    : 'EVENT_READ_RPC_UNAVAILABLE',
+                    : operation === 'publish'
+                      ? 'EVENT_PUBLISH_RPC_UNAVAILABLE'
+                      : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

@@ -19,9 +19,16 @@ export const events = pgTable(
     startsAt: timestamp('starts_at', { mode: 'date', withTimezone: true }),
     endsAt: timestamp('ends_at', { mode: 'date', withTimezone: true }),
     timeZone: text('time_zone'),
-    status: text('status').$type<'draft'>().default('draft').notNull(),
+    status: text('status')
+      .$type<'draft' | 'published'>()
+      .default('draft')
+      .notNull(),
     version: integer('version').default(1).notNull(),
     createdByAdminId: uuid('created_by_admin_id').notNull(),
+    publishedAt: timestamp('published_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', {
       mode: 'date',
       withTimezone: true,
@@ -74,6 +81,13 @@ export const events = pgTable(
       sql`${table.timeZone} IS NULL OR char_length(${table.timeZone}) BETWEEN 1 AND 64`,
     ),
     check('events_version_positive', sql`${table.version} >= 1`),
-    check('events_status_allowed', sql`${table.status} IN ('draft')`),
+    check(
+      'events_status_allowed',
+      sql`${table.status} IN ('draft', 'published')`,
+    ),
+    check(
+      'events_published_at_shape',
+      sql`(${table.status} = 'published') = (${table.publishedAt} IS NOT NULL)`,
+    ),
   ],
 );

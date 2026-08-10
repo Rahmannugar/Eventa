@@ -7,6 +7,7 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 | `POST`   | `/admin/events`                                  | Starts a draft event at version 1.                                                  |
 | `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
 | `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
+| `POST`   | `/admin/events/:eventId/publish`                 | Publishes a complete draft at the supplied version.                                 |
 | `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image upload for an empty slot or replacement.                      |
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
 | `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
@@ -31,4 +32,6 @@ Upload status tells the client what to do:
 
 Removal takes `expectedVersion` as a query parameter. It immediately removes the verified reference and returns the new event version; physical object deletion continues as recoverable background work.
 
-Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/removal, media-intent, and read operations have separate budgets by protected session and client IP.
+Publication requires complete details, one venue, and a verified cover image. It takes `expectedVersion`, returns the published event with its incremented version and publication time, and freezes draft mutations. An incomplete event returns `422 EVENT_PUBLICATION_INCOMPLETE`; a stale version or an already-published event returns `409 EVENT_VERSION_CONFLICT`.
+
+Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/removal, publication, media-intent, and read operations have separate budgets by protected session and client IP.

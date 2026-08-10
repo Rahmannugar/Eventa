@@ -10,11 +10,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EventMediaUploadRepository } from '../../src/events/repositories/event-media-upload.repository';
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
+import { EventPublicationOutboxRepository } from '../../src/events/repositories/event-publication-outbox.repository';
 import { EventRepository } from '../../src/events/repositories/event.repository';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
 import { eventMedia } from '../../src/events/schema/event-media.schema';
+import { eventPublicationOutbox } from '../../src/events/schema/event-publication-outbox.schema';
 import { eventVenues } from '../../src/events/schema/event-venue.schema';
 import { events } from '../../src/events/schema/event.schema';
 import { EventMediaVerificationService } from '../../src/events/services/event-media-verification.service';
@@ -73,6 +75,9 @@ const eventsRepository = new EventRepository(database);
 const uploadsRepository = new EventMediaUploadRepository(database);
 const mediaRepository = new EventMediaMutationRepository(database);
 const deletionsRepository = new EventMediaObjectDeletionRepository(database);
+const publicationOutboxRepository = new EventPublicationOutboxRepository(
+  client,
+);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -95,7 +100,7 @@ const verifier = new EventMediaVerificationService(
   verifiedObjectStorage,
 );
 
-describe('EventMediaVerificationService integration', () => {
+describe('Event mutation integration', () => {
   beforeAll(async () => {
     await ensureTestDatabase();
     await migrate(database, {
@@ -104,6 +109,7 @@ describe('EventMediaVerificationService integration', () => {
   });
 
   beforeEach(async () => {
+    await database.delete(eventPublicationOutbox);
     await database.delete(eventAdminAuditLog);
     await database.delete(eventMediaObjectDeletions);
     await database.delete(eventMedia);
@@ -411,6 +417,157 @@ describe('EventMediaVerificationService integration', () => {
     expect(providerCalls).toBe(10);
     expect(persisted).toEqual({ attemptCount: 10, status: 'failed' });
   });
+
+  it('rejects incomplete publication without changing durable state', async () => {
+    const event = await eventsRepository.createDraft({
+      actorAdminId: randomUUID(),
+      requestId: randomUUID(),
+      title: 'Incomplete publication',
+    });
+
+    await expect(
+      eventsRepository.publish({
+        actorAdminId: randomUUID(),
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'incomplete' });
+
+    const [persistedEvent] = await database
+      .select({
+        publishedAt: events.publishedAt,
+        status: events.status,
+        version: events.version,
+      })
+      .from(events)
+      .where(eq(events.id, event.eventId));
+    const [publicationAuditCount] = await database
+      .select({ value: count() })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.action, 'event.published'));
+    const [outboxCount] = await database
+      .select({ value: count() })
+      .from(eventPublicationOutbox);
+
+    expect(persistedEvent).toEqual({
+      publishedAt: null,
+      status: 'draft',
+      version: 1,
+    });
+    expect(publicationAuditCount?.value).toBe(0);
+    expect(outboxCount?.value).toBe(0);
+  });
+
+  it('publishes once with its audit and outbox fact', async () => {
+    const event = await createPublishableEvent('Published event');
+    const requestId = randomUUID();
+
+    const outcomes = await Promise.all([
+      eventsRepository.publish({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId,
+      }),
+      eventsRepository.publish({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: randomUUID(),
+      }),
+    ]);
+
+    expect(outcomes.map((outcome) => outcome.outcome).sort()).toEqual([
+      'published',
+      'version_conflict',
+    ]);
+
+    const [persistedEvent] = await database
+      .select({
+        publishedAt: events.publishedAt,
+        status: events.status,
+        version: events.version,
+      })
+      .from(events)
+      .where(eq(events.id, event.eventId));
+    const audits = await database
+      .select({
+        actorAdminId: eventAdminAuditLog.actorAdminId,
+        eventVersion: eventAdminAuditLog.eventVersion,
+        requestId: eventAdminAuditLog.requestId,
+      })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.action, 'event.published'));
+    const [publication] = await database
+      .select({ payload: eventPublicationOutbox.payload })
+      .from(eventPublicationOutbox);
+
+    expect(persistedEvent?.status).toBe('published');
+    expect(persistedEvent?.version).toBe(event.version + 1);
+    expect(persistedEvent?.publishedAt).toBeInstanceOf(Date);
+    expect(audits).toEqual([
+      {
+        actorAdminId: event.adminId,
+        eventVersion: event.version + 1,
+        requestId,
+      },
+    ]);
+    expect(publication?.payload).toEqual({
+      eventId: event.eventId,
+      publishedAt: persistedEvent?.publishedAt?.toISOString(),
+      type: 'event.published.v1',
+      version: event.version + 1,
+    });
+  });
+
+  it('reclaims publication after a failed relay attempt', async () => {
+    const event = await createPublishableEvent('Recovered publication');
+    await eventsRepository.publish({
+      actorAdminId: event.adminId,
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+
+    const [firstClaim] = await publicationOutboxRepository.claimBatch(
+      1,
+      30_000,
+    );
+    if (firstClaim === undefined) throw new Error('Publication claim missing');
+    await expect(
+      publicationOutboxRepository.scheduleRetry(
+        firstClaim.fact.eventId,
+        firstClaim.claimToken,
+        'EVENT_BUS_PUBLISH_FAILED',
+        new Date(0),
+      ),
+    ).resolves.toBe(true);
+
+    const [recoveredClaim] = await publicationOutboxRepository.claimBatch(
+      1,
+      30_000,
+    );
+    if (recoveredClaim === undefined) {
+      throw new Error('Recovered publication claim missing');
+    }
+    expect(recoveredClaim.attempt).toBe(2);
+    expect(recoveredClaim.fact).toEqual(firstClaim.fact);
+    await expect(
+      publicationOutboxRepository.markPublished(
+        recoveredClaim.fact.eventId,
+        recoveredClaim.claimToken,
+      ),
+    ).resolves.toBe(true);
+
+    const [persisted] = await database
+      .select({ publishedAt: eventPublicationOutbox.publishedAt })
+      .from(eventPublicationOutbox);
+    expect(persisted?.publishedAt).toBeInstanceOf(Date);
+    await expect(
+      publicationOutboxRepository.claimBatch(1, 30_000),
+    ).resolves.toEqual([]);
+  });
 });
 
 async function createAttachedCover(title: string): Promise<{
@@ -444,4 +601,42 @@ async function createAttachedCover(title: string): Promise<{
   const outcome = await verifier.verify(uploadId);
   if (outcome.kind !== 'attached') throw new Error('Media attachment failed');
   return { adminId, eventId: event.eventId, objectKey, uploadId };
+}
+
+async function createPublishableEvent(title: string): Promise<{
+  adminId: string;
+  eventId: string;
+  version: number;
+}> {
+  const event = await createAttachedCover(title);
+  const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
+  const result = await eventsRepository.updateDraft({
+    actorAdminId: event.adminId,
+    category: 'Community',
+    description: 'A complete event ready for publication.',
+    endsAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1_000),
+    eventId: event.eventId,
+    expectedVersion: 2,
+    requestId: randomUUID(),
+    startsAt,
+    timeZone: 'Africa/Lagos',
+    title,
+    venue: {
+      addressLine1: '1 Marina Road',
+      addressLine2: null,
+      city: 'Lagos',
+      countryCode: 'NG',
+      name: 'Eventa Hall',
+      postalCode: null,
+      region: 'Lagos',
+    },
+  });
+  if (result.outcome !== 'updated') {
+    throw new Error('Publishable event setup failed');
+  }
+  return {
+    adminId: event.adminId,
+    eventId: event.eventId,
+    version: result.event.version,
+  };
 }

@@ -129,19 +129,11 @@ services:
   event-bus-init:
     image: apache/kafka:4.1.0
     command:
-      [
-        '/opt/kafka/bin/kafka-topics.sh',
-        '--bootstrap-server',
-        'event-bus:9092',
-        '--create',
-        '--if-not-exists',
-        '--topic',
-        'eventa.identity.attendee-lifecycle.v1',
-        '--partitions',
-        '3',
-        '--replication-factor',
-        '1',
-      ]
+      - /bin/bash
+      - -ec
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.identity.attendee-lifecycle.v1 --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.event.lifecycle.v1 --partitions 3 --replication-factor 1
     depends_on:
       event-bus:
         condition: service_healthy
@@ -211,6 +203,8 @@ services:
       - '3007:3007'
       - '50052:50052'
     depends_on:
+      event-bus-init:
+        condition: service_completed_successfully
       event-migration:
         condition: service_completed_successfully
       job-queue:

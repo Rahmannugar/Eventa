@@ -1,5 +1,6 @@
 import {
   EventNotFoundError,
+  EventPublicationIncompleteError,
   EventScheduleInvalidError,
   EventVersionConflictError,
 } from '../errors/event.errors';
@@ -7,6 +8,7 @@ import type {
   EventManagement,
   EventRecord,
   EventRepository,
+  PublishEventCommand,
   UpdateDraftEventCommand,
 } from '../types/event.types';
 
@@ -72,6 +74,22 @@ export class EventApplicationService implements EventManagement {
 
     if (result.outcome === 'version_conflict') {
       throw new EventVersionConflictError();
+    }
+
+    return result.event;
+  }
+
+  async publish(input: PublishEventCommand): Promise<EventRecord> {
+    const result = await this.events.publish(input);
+
+    if (result.outcome === 'not_found') {
+      throw new EventNotFoundError();
+    }
+    if (result.outcome === 'version_conflict') {
+      throw new EventVersionConflictError();
+    }
+    if (result.outcome === 'incomplete') {
+      throw new EventPublicationIncompleteError();
     }
 
     return result.event;

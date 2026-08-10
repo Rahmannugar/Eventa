@@ -7,11 +7,12 @@ Event Service implements `eventa.event.v1.EventService`.
 | Operation                | Purpose                                                                           |
 | ------------------------ | --------------------------------------------------------------------------------- |
 | `CreateDraftEvent`       | Starts a title-only draft at version 1.                                           |
-| `GetAdminEvent`          | Returns the latest draft details, verified images, and version.                   |
+| `GetAdminEvent`          | Returns the latest admin event state, verified images, and version.               |
 | `UpdateDraftEvent`       | Saves complete draft details and returns the new version.                         |
 | `CreateEventMediaUpload` | Starts a direct image upload for an empty slot or replacement.                    |
 | `GetEventMediaUpload`    | Reports whether an upload is waiting, attached, rejected, conflicted, or expired. |
 | `RemoveEventMedia`       | Clears a verified image and returns the new event version.                        |
+| `PublishEvent`           | Publishes a complete draft at the expected version.                               |
 
 The protobuf schemas in `packages/grpc-contracts/proto/eventa/event/v1` are authoritative for exact messages and service declarations.
 

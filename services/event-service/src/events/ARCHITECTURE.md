@@ -2,7 +2,7 @@
 
 ## State
 
-An event begins in `draft` at version 1. Creation requires only a normalized title. A full draft update supplies the description, category, schedule, IANA timezone, and one event-owned venue address. Publication rules remain outside this slice.
+An event begins in `draft` at version 1. Creation requires only a normalized title. A full draft update supplies the description, category, schedule, IANA timezone, and one event-owned venue address. Publication requires those details, the venue, and one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations.
 
 ## Draft Creation
 
@@ -40,6 +40,16 @@ PostgreSQL is authoritative for scheduling and execution state. RabbitMQ assignm
 
 Explicit removal locks the event, verifies draft state and expected version, removes the verified slot, increments the version, appends `event.media_removed`, and creates exact-key object-deletion work in one transaction. An empty slot changes nothing. The object-deletion worker uses PostgreSQL attempts and leases, RabbitMQ assignments containing only the deletion ID, idempotent R2 deletion, and a durable failed state after ten failures.
 
+## Publication
+
+1. The client supplies the version from its latest admin event representation.
+2. The repository locks the event and verifies draft state, expected version, complete details, venue presence, and a verified cover reference.
+3. One transaction changes the status to `published`, records the publication time, increments the version, appends `event.published`, and inserts one `event.published.v1` outbox fact.
+4. The outbox relay claims due facts with expiring leases and `SKIP LOCKED`, then publishes them to `eventa.event.lifecycle.v1` keyed by event ID.
+5. Broker failure releases the claim onto bounded exponential retry. A process failure leaves the lease to expire. A send followed by a process failure may produce a duplicate, so consumers deduplicate the event ID and version under at-least-once delivery.
+
+Publication never waits for Kafka. PostgreSQL establishes both the published state and the durable fact before the admin response succeeds.
+
 ## Audit
 
-The audit table is append-only through the Event application boundary. It records only mutations, including the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.
+The audit table is append-only through the Event application boundary. It records only mutations, including `event.published` and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.

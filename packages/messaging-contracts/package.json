@@ -15,6 +15,10 @@
     "./identity/admin-auth.jobs": {
       "types": "./dist/identity/admin-auth.jobs.d.ts",
       "default": "./dist/identity/admin-auth.jobs.js"
+    },
+    "./event/event-lifecycle.events": {
+      "types": "./dist/event/event-lifecycle.events.d.ts",
+      "default": "./dist/event/event-lifecycle.events.js"
     }
   },
   "typesVersions": {
@@ -27,6 +31,9 @@
       ],
       "identity/admin-auth.jobs": [
         "dist/identity/admin-auth.jobs.d.ts"
+      ],
+      "event/event-lifecycle.events": [
+        "dist/event/event-lifecycle.events.d.ts"
       ]
     }
   },

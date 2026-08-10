@@ -78,6 +78,8 @@ Each service owns its PostgreSQL schema, migrations, constraints, and database p
 
 Event Service records each admin event mutation in its own append-only audit history in the same transaction as the state change. A later projection may aggregate service-owned audit facts without becoming their source of truth.
 
+Event publication changes the authoritative Event row, appends its admin audit entry, and inserts one versioned `event.published.v1` fact into the Event-owned outbox in the same PostgreSQL transaction. Event Service relays that fact to Kafka with leased claims and bounded retry. The outbox remains authoritative when broker publication fails, and consumers treat delivery as at least once.
+
 ## Operations
 
 Liveness describes whether a process is alive. Readiness is exposed only when a real local dependency determines whether an instance should receive traffic. Services close owned connections during graceful shutdown.

@@ -5,10 +5,13 @@ import type { RuntimeConfig } from '../config/runtime-config';
 import { RUNTIME_CONFIG } from '../config/runtime.constants';
 import { RabbitMQClient } from '../infrastructure/clients/rabbitmq.client';
 import { R2Client } from '../infrastructure/clients/r2.client';
+import { KafkaClient } from '../infrastructure/clients/kafka.client';
+import { KafkaEventPublisher } from './adapters/event-bus/event.publisher';
 import { RabbitMQEventMediaVerificationJobPublisher } from './adapters/job-queue/rabbitmq-event-media-verification-job.publisher';
 import { RabbitMQEventMediaObjectDeletionJobPublisher } from './adapters/job-queue/rabbitmq-event-media-object-deletion-job.publisher';
 import {
   EVENT_MANAGEMENT,
+  EVENT_PUBLISHER,
   EVENT_MEDIA_MANAGEMENT,
   EVENT_MEDIA_MUTATION_REPOSITORY,
   EVENT_MEDIA_OBJECT_DELETION_JOB_PUBLISHER,
@@ -16,6 +19,7 @@ import {
   EVENT_MEDIA_OBJECT_STORAGE,
   EVENT_MEDIA_UPLOAD_REPOSITORY,
   EVENT_MEDIA_VERIFICATION_JOB_PUBLISHER,
+  EVENT_PUBLICATION_OUTBOX,
 } from './constants/event.constants';
 import { EventController } from './controllers/event.controller';
 import { EventMediaVerificationConsumer } from './jobs/event-media-verification.consumer';
@@ -28,11 +32,14 @@ import { EventMediaUploadRepository } from './repositories/event-media-upload.re
 import { EventMediaMutationRepository } from './repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from './repositories/event-media-object-deletion.repository';
 import { EventRepository } from './repositories/event.repository';
+import { EventPublicationOutboxRepository } from './repositories/event-publication-outbox.repository';
 import { EventMediaApplicationService } from './services/event-media.service';
 import { EventMediaObjectDeletionService } from './services/event-media-object-deletion.service';
 import { EventMediaVerificationService } from './services/event-media-verification.service';
 import { EventApplicationService } from './services/event.service';
+import { EventPublicationOutboxRelay } from './services/event-publication-outbox-relay';
 import type {
+  EventPublisher,
   EventMediaObjectStorage,
   EventMediaMutationRepository as EventMediaMutationRepositoryPort,
   EventMediaObjectDeletionJobPublisher,
@@ -40,6 +47,7 @@ import type {
   EventMediaUploadRepository as EventMediaUploadRepositoryPort,
   EventMediaVerificationJobPublisher,
   EventRepository as EventRepositoryPort,
+  EventPublicationOutbox,
 } from './types/event.types';
 
 @Module({
@@ -50,6 +58,33 @@ import type {
     EventMediaUploadRepository,
     EventMediaMutationRepository,
     EventMediaObjectDeletionRepository,
+    EventPublicationOutboxRepository,
+    {
+      provide: KafkaClient,
+      inject: [RUNTIME_CONFIG],
+      useFactory: (config: RuntimeConfig) =>
+        new KafkaClient(
+          config.kafkaBrokers,
+          'eventa-event-service',
+          config.kafkaConnectionTimeoutMs,
+          config.kafkaRequestTimeoutMs,
+        ),
+    },
+    {
+      provide: EVENT_PUBLICATION_OUTBOX,
+      useExisting: EventPublicationOutboxRepository,
+    },
+    {
+      provide: EVENT_PUBLISHER,
+      inject: [KafkaClient],
+      useFactory: (kafka: KafkaClient) => new KafkaEventPublisher(kafka),
+    },
+    {
+      provide: EventPublicationOutboxRelay,
+      inject: [EVENT_PUBLICATION_OUTBOX, EVENT_PUBLISHER],
+      useFactory: (outbox: EventPublicationOutbox, publisher: EventPublisher) =>
+        new EventPublicationOutboxRelay(outbox, publisher),
+    },
     {
       provide: EVENT_MEDIA_MUTATION_REPOSITORY,
       useExisting: EventMediaMutationRepository,

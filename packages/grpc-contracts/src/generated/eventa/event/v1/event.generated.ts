@@ -11,6 +11,7 @@ export const protobufPackage = "eventa.event.v1";
 export enum EventStatus {
   EVENT_STATUS_UNSPECIFIED = 0,
   EVENT_STATUS_DRAFT = 1,
+  EVENT_STATUS_PUBLISHED = 2,
   UNRECOGNIZED = -1,
 }
 
@@ -49,6 +50,7 @@ export interface Event {
   timeZone?: string | undefined;
   venue: Venue | undefined;
   media: EventMedia[];
+  publishedAt?: string | undefined;
 }
 
 export interface EventMedia {
@@ -151,6 +153,16 @@ export interface RemoveEventMediaRequest {
 
 export interface RemoveEventMediaResponse {
   eventVersion: number;
+}
+
+export interface PublishEventRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+}
+
+export interface PublishEventResponse {
+  event: Event | undefined;
 }
 
 export const EVENTA_EVENT_V1_PACKAGE_NAME = "eventa.event.v1";

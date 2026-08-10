@@ -29,6 +29,13 @@
       "when": 1785678515623,
       "tag": "0003_add_media_replacement_and_removal",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785939703484,
+      "tag": "0004_publish_events_with_outbox",
+      "breakpoints": true
     }
   ]
 }

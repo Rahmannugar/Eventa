@@ -155,7 +155,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)\"} offset $__range))",
+          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)|event.publication\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)|event.publication\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-event-service\", operation=~\"event.draft_(creation|update)|event.media_(upload_intent|remove)|event.publication\"} offset $__range))",
           "instant": true,
           "legendFormat": "{{operation}} · {{outcome}}",
           "range": false,

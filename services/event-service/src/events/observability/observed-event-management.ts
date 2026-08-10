@@ -3,12 +3,14 @@ import { recordBusinessOutcome } from '@eventa/observability';
 import {
   EventNotFoundError,
   EventScheduleInvalidError,
+  EventPublicationIncompleteError,
   EventVersionConflictError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
   EventRecord,
   UpdateDraftEventCommand,
+  PublishEventCommand,
 } from '../types/event.types';
 
 export class ObservedEventManagement implements EventManagement {
@@ -56,6 +58,25 @@ export class ObservedEventManagement implements EventManagement {
     }
   }
 
+  async publish(input: PublishEventCommand): Promise<EventRecord> {
+    try {
+      const event = await this.eventManagement.publish(input);
+      this.recordPublication('published');
+      return event;
+    } catch (error: unknown) {
+      if (error instanceof EventVersionConflictError) {
+        this.recordPublication('conflict');
+      } else if (error instanceof EventNotFoundError) {
+        this.recordPublication('not_found');
+      } else if (error instanceof EventPublicationIncompleteError) {
+        this.recordPublication('incomplete');
+      } else {
+        this.recordPublication('failed');
+      }
+      throw error;
+    }
+  }
+
   private record(outcome: 'created' | 'failed'): void {
     recordBusinessOutcome({
       operation: 'event.draft_creation',
@@ -71,5 +92,11 @@ export class ObservedEventManagement implements EventManagement {
       operation: 'event.draft_update',
       outcome,
     });
+  }
+
+  private recordPublication(
+    outcome: 'published' | 'conflict' | 'not_found' | 'incomplete' | 'failed',
+  ): void {
+    recordBusinessOutcome({ operation: 'event.publication', outcome });
   }
 }

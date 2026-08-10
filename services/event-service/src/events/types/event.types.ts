@@ -18,11 +18,12 @@ export interface EventRecord {
   timeZone: string | null;
   venue: EventVenue | null;
   media: EventMediaRecord[];
-  status: 'draft';
+  status: 'draft' | 'published';
   version: number;
   createdByAdminId: string;
   createdAt: Date;
   updatedAt: Date;
+  publishedAt: Date | null;
 }
 
 export type EventMediaSlot =
@@ -268,6 +269,49 @@ export type UpdateDraftEventResult =
   | { outcome: 'not_found' }
   | { outcome: 'version_conflict' };
 
+export interface PublishEvent {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+}
+
+export type PublishEventResult =
+  | { outcome: 'published'; event: EventRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'version_conflict' }
+  | { outcome: 'incomplete' };
+
+export type PublishEventCommand = PublishEvent;
+
+export type { EventPublishedEvent as EventPublishedFact } from '@eventa/messaging-contracts/event/event-lifecycle.events';
+
+import type { EventPublishedEvent } from '@eventa/messaging-contracts/event/event-lifecycle.events';
+
+export interface ClaimedEventPublication {
+  attempt: number;
+  claimToken: string;
+  fact: EventPublishedEvent;
+}
+
+export interface EventPublicationOutbox {
+  claimBatch(
+    limit: number,
+    claimTtlMs: number,
+  ): Promise<ClaimedEventPublication[]>;
+  markPublished(eventId: string, claimToken: string): Promise<boolean>;
+  scheduleRetry(
+    eventId: string,
+    claimToken: string,
+    errorCode: string,
+    retryAt: Date,
+  ): Promise<boolean>;
+}
+
+export interface EventPublisher {
+  publish(fact: EventPublishedEvent): Promise<void>;
+}
+
 export interface UpdateDraftEventCommand {
   actorAdminId: string;
   eventId: string;
@@ -294,6 +338,7 @@ export interface EventRepository {
   createDraft(input: CreateDraftEvent): Promise<EventRecord>;
   findById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
+  publish(input: PublishEvent): Promise<PublishEventResult>;
 }
 
 export interface EventManagement {
@@ -304,4 +349,5 @@ export interface EventManagement {
   ): Promise<EventRecord>;
   getById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
+  publish(input: PublishEventCommand): Promise<EventRecord>;
 }

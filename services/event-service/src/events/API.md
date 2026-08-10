@@ -14,4 +14,6 @@ Accepted media appears in Event responses with its fixed slot, public URL, verif
 
 `RemoveEventMedia` accepts the acting admin, event ID, expected version, and fixed slot. The verified reference disappears immediately and the response returns the incremented event version. Physical object deletion continues through durable background work. A stale version returns `ABORTED`, a missing event returns `NOT_FOUND`, and an empty slot returns `FAILED_PRECONDITION`.
 
+`PublishEvent` accepts the acting admin, event ID, and expected version. Publication requires complete details, one venue, and a verified cover image. It returns the event as `published` with an incremented version and publication time. A missing event returns `NOT_FOUND`, an incomplete draft returns `FAILED_PRECONDITION`, and a stale version or already-published event returns `ABORTED`.
+
 Exact message fields remain authoritative in the `eventa.event.v1` protobuf schemas.

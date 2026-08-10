@@ -5,6 +5,7 @@ package eventa.event.v1;
 enum EventStatus {
   EVENT_STATUS_UNSPECIFIED = 0;
   EVENT_STATUS_DRAFT = 1;
+  EVENT_STATUS_PUBLISHED = 2;
 }
 
 enum EventMediaSlot {
@@ -40,6 +41,7 @@ message Event {
   optional string time_zone = 12;
   Venue venue = 13;
   repeated EventMedia media = 14;
+  optional string published_at = 15;
 }
 
 message EventMedia {
@@ -137,4 +139,14 @@ message RemoveEventMediaRequest {
 
 message RemoveEventMediaResponse {
   int32 event_version = 1;
+}
+
+message PublishEventRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+}
+
+message PublishEventResponse {
+  Event event = 1;
 }

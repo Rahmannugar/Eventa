@@ -19,6 +19,13 @@ export class EventScheduleInvalidError extends Error {
   }
 }
 
+export class EventPublicationIncompleteError extends Error {
+  constructor() {
+    super('EVENT_PUBLICATION_INCOMPLETE');
+    this.name = EventPublicationIncompleteError.name;
+  }
+}
+
 export class EventMediaNotFoundError extends Error {
   constructor() {
     super('EVENT_MEDIA_NOT_FOUND');

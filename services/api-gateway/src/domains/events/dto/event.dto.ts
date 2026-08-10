@@ -198,8 +198,8 @@ export class AdminEventDto {
   @ApiProperty({ type: () => [AdminEventMediaDto] })
   media!: AdminEventMediaDto[];
 
-  @ApiProperty({ enum: ['draft'], example: 'draft' })
-  status!: 'draft';
+  @ApiProperty({ enum: ['draft', 'published'], example: 'draft' })
+  status!: 'draft' | 'published';
 
   @ApiProperty({ example: 1, minimum: 1 })
   version!: number;
@@ -212,6 +212,17 @@ export class AdminEventDto {
 
   @ApiProperty({ example: '2026-07-30T10:00:00.000Z' })
   updatedAt!: string;
+
+  @ApiPropertyOptional({ example: '2026-07-30T10:05:00.000Z' })
+  publishedAt!: string | undefined;
+}
+
+export class PublishEventDto {
+  @ApiProperty({ example: 3, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
 }
 
 export class CreateEventMediaUploadDto {

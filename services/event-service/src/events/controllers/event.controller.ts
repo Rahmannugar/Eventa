@@ -12,6 +12,7 @@ import {
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
   type RemoveEventMediaResponse,
+  type PublishEventResponse,
   type UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -31,6 +32,7 @@ import {
   GetAdminEventDto,
   GetEventMediaUploadDto,
   RemoveEventMediaDto,
+  PublishEventDto,
   UpdateDraftEventDto,
 } from '../dto/event.dto';
 import {
@@ -38,6 +40,7 @@ import {
   EventMediaUploadInProgressError,
   EventMediaUploadNotFoundError,
   EventNotFoundError,
+  EventPublicationIncompleteError,
   EventScheduleInvalidError,
   EventVersionConflictError,
 } from '../errors/event.errors';
@@ -107,6 +110,13 @@ export class EventController implements EventServiceController {
     metadata?: Metadata,
   ): Observable<RemoveEventMediaResponse> {
     return from(this.removeMedia(request, this.readRequestId(metadata)));
+  }
+
+  publishEvent(
+    request: PublishEventDto,
+    metadata?: Metadata,
+  ): Observable<PublishEventResponse> {
+    return from(this.publish(request, this.readRequestId(metadata)));
   }
 
   private async getEvent(eventId: string): Promise<GetAdminEventResponse> {
@@ -272,6 +282,44 @@ export class EventController implements EventServiceController {
     }
   }
 
+  private async publish(
+    request: PublishEventDto,
+    requestId: string,
+  ): Promise<PublishEventResponse> {
+    try {
+      return {
+        event: this.toContract(
+          await this.eventService.publish({
+            actorAdminId: request.adminId,
+            eventId: request.eventId,
+            expectedVersion: request.expectedVersion,
+            requestId,
+          }),
+        ),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventPublicationIncompleteError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   private readRequestId(metadata?: Metadata): string {
     const value = metadata?.get('x-request-id')[0];
     return typeof value === 'string' && REQUEST_ID_PATTERN.test(value)
@@ -309,11 +357,15 @@ export class EventController implements EventServiceController {
         width: media.width,
         height: media.height,
       })),
-      status: EventStatus.EVENT_STATUS_DRAFT,
+      status:
+        event.status === 'published'
+          ? EventStatus.EVENT_STATUS_PUBLISHED
+          : EventStatus.EVENT_STATUS_DRAFT,
       version: event.version,
       createdByAdminId: event.createdByAdminId,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
+      publishedAt: event.publishedAt?.toISOString(),
     };
   }
 

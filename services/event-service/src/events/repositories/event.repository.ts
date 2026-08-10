@@ -6,6 +6,7 @@ import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
 import { eventMedia } from '../schema/event-media.schema';
+import { eventPublicationOutbox } from '../schema/event-publication-outbox.schema';
 import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
@@ -14,6 +15,8 @@ import type {
   EventMediaRecord,
   EventRecord,
   EventRepository as EventRepositoryPort,
+  PublishEvent,
+  PublishEventResult,
   UpdateDraftEvent,
   UpdateDraftEventResult,
 } from '../types/event.types';
@@ -31,6 +34,7 @@ const EVENT_COLUMNS = {
   createdByAdminId: events.createdByAdminId,
   createdAt: events.createdAt,
   updatedAt: events.updatedAt,
+  publishedAt: events.publishedAt,
 };
 
 const VENUE_COLUMNS = {
@@ -188,6 +192,121 @@ export class EventRepository implements EventRepositoryPort {
           };
         }),
       this.spanOptions('UPDATE'),
+    );
+  }
+
+  publish(input: PublishEvent): Promise<PublishEventResult> {
+    return runWithOperationSpan(
+      'event.publish',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const [result] = await transaction
+            .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
+            .from(events)
+            .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+            .where(eq(events.id, input.eventId))
+            .limit(1)
+            .for('update', { of: events });
+
+          if (result === undefined) {
+            return { outcome: 'not_found' as const };
+          }
+
+          if (
+            result.event.status !== 'draft' ||
+            result.event.version !== input.expectedVersion
+          ) {
+            return { outcome: 'version_conflict' as const };
+          }
+
+          const [cover] = await transaction
+            .select({ mediaId: eventMedia.id })
+            .from(eventMedia)
+            .where(
+              and(
+                eq(eventMedia.eventId, input.eventId),
+                eq(eventMedia.slot, 'cover'),
+              ),
+            )
+            .limit(1);
+
+          if (!this.isPublicationComplete(result.event, result.venue, cover)) {
+            return { outcome: 'incomplete' as const };
+          }
+
+          const publishedAt = new Date();
+          const [event] = await transaction
+            .update(events)
+            .set({
+              publishedAt,
+              status: 'published',
+              updatedAt: publishedAt,
+              version: sql`${events.version} + 1`,
+            })
+            .where(
+              and(
+                eq(events.id, input.eventId),
+                eq(events.status, 'draft'),
+                eq(events.version, input.expectedVersion),
+              ),
+            )
+            .returning(EVENT_COLUMNS);
+
+          if (event === undefined) {
+            return { outcome: 'version_conflict' as const };
+          }
+
+          await transaction.insert(eventAdminAuditLog).values({
+            action: 'event.published',
+            actorAdminId: input.actorAdminId,
+            eventId: event.eventId,
+            eventVersion: event.version,
+            requestId: input.requestId,
+          });
+
+          await transaction.insert(eventPublicationOutbox).values({
+            eventId: event.eventId,
+            eventType: 'event.published.v1',
+            occurredAt: publishedAt,
+            payload: {
+              eventId: event.eventId,
+              publishedAt: publishedAt.toISOString(),
+              type: 'event.published.v1',
+              version: event.version,
+            },
+          });
+
+          const media = await transaction
+            .select(MEDIA_COLUMNS)
+            .from(eventMedia)
+            .where(eq(eventMedia.eventId, input.eventId))
+            .orderBy(eventMedia.slot);
+
+          return {
+            outcome: 'published' as const,
+            event: this.toEventRecord(event, result.venue, media),
+          };
+        }),
+      this.spanOptions('UPDATE'),
+    );
+  }
+
+  private isPublicationComplete(
+    event: Pick<
+      EventRecord,
+      'category' | 'description' | 'endsAt' | 'startsAt' | 'timeZone'
+    >,
+    venue: EventVenue | null,
+    cover: { mediaId: string } | undefined,
+  ): boolean {
+    return (
+      event.description !== null &&
+      event.category !== null &&
+      event.startsAt !== null &&
+      event.endsAt !== null &&
+      event.timeZone !== null &&
+      venue !== null &&
+      cover !== undefined
     );
   }
 
