@@ -26,7 +26,8 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Desktop authentication uses a two-column canvas: an event-led editorial panel and a focused form surface.
 - Mobile collapses to one column, keeping brand, actor context, and the form above the fold without hiding essential navigation.
 - Forms stay between 360px and 440px wide. Labels, help, validation, and actions align to one predictable vertical rhythm.
-- Authentication uses a compact signed-in account landing. Later attendee and admin product stories replace it with dedicated professional application shells and sidebar navigation.
+- Authentication uses a compact signed-in attendee account landing. The Admin Dashboard uses a dedicated organizer shell with a persistent desktop sidebar and a compact mobile header. Only implemented organizer destinations appear in its navigation.
+- Event management uses a constrained working canvas rather than a generic metric dashboard. Creation has one clear entry action. Editing separates the primary form from a compact step guide and keeps the authoritative event status and version visible.
 
 ## Interaction
 
@@ -37,6 +38,8 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Short-lived action outcomes use one Eventa-styled toaster at the top right. Success and error notices never replace field validation or the owning form's recoverable failure state.
 - Six-digit verification and activation codes use the shared shadcn-style OTP control with paste, one-time-code autofill, visible slot focus, and no decorative separator.
 - Public login pages remain usable while session restoration is pending or unavailable. A valid restored session redirects to the protected route. Protected-route restoration uses a stable loading state, offers retry on dependency failure, and returns invalid sessions to the correct actor login.
+- Event drafts use explicit Save. A stale version preserves entered values, explains the conflict in the form, and requires an explicit authoritative reload before another attempt. Success is announced without moving focus; dependency and not-found failures remain in the page that owns recovery.
+- Data-backed admin routes keep the organizer shell visible while page-shaped loading, empty, error, and recovery states change inside the workspace.
 
 ## Accessibility
 

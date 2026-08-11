@@ -18,7 +18,7 @@ const apiErrorSchema = z.object({
 
 interface ApiRequestOptions<T> {
   body?: unknown;
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   responseSchema: z.ZodType<T>;
 }
 

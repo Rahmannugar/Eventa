@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedSessionBoundary } from '../components/auth/SessionBoundary';
+import { AdminDashboardShell } from '../components/events/AdminDashboardShell';
 import { AccountPage } from '../pages/AccountPage';
 import { AdminActivationPage } from '../pages/AdminActivationPage';
+import { AdminEventEditorPage } from '../pages/AdminEventEditorPage';
+import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AttendeeEmailVerificationPage } from '../pages/AttendeeEmailVerificationPage';
 import { AttendeeRegistrationPage } from '../pages/AttendeeRegistrationPage';
 import { LoginPage } from '../pages/LoginPage';
@@ -43,7 +46,13 @@ export function AppRoutes() {
       />
       <Route path="/admin/activate" element={<AdminActivationPage />} />
       <Route element={<ProtectedSessionBoundary actor="admin" />}>
-        <Route path="/admin" element={<AccountPage actor="admin" />} />
+        <Route element={<AdminDashboardShell />}>
+          <Route path="/admin" element={<AdminEventsPage />} />
+          <Route
+            path="/admin/events/:eventId"
+            element={<AdminEventEditorPage />}
+          />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate replace to="/attendee/login" />} />
