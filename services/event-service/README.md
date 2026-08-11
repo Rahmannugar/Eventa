@@ -7,7 +7,8 @@ Event Service owns Eventa's event records, event-owned venue details, lifecycle 
 - gRPC listener: configured by `GRPC_HOST` and `GRPC_PORT`; local Compose publishes `50052`.
 - Health listener: configured by `HEALTH_PORT`; local Compose publishes `3007`.
 - PostgreSQL dependency: configured by `DATABASE_URL`.
-- Kafka event bus: configured by `KAFKA_BROKERS` and bounded connection and request timeouts.
+- RabbitMQ retry and reconciliation publication: configured by `RABBITMQ_URL` and bounded connection and confirmation timeouts.
+- PostgreSQL outbox delivery: local Compose runs external Debezium lanes for Kafka lifecycle facts and initial RabbitMQ job assignments; Event Service does not own a Kafka client.
 - OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.
 - Deployment label: configured by `DEPLOYMENT_ENVIRONMENT`.
 

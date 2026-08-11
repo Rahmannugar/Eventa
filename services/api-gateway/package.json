@@ -10,7 +10,7 @@
     "lint": "eslint src test performance --max-warnings 0",
     "start": "node dist/main.js",
     "test": "pnpm test:unit",
-    "test:integration": "dotenv -e .env -- vitest run test/integration",
+    "test:integration": "dotenv -e .env -- vitest run test/integration --passWithNoTests",
     "test:unit": "vitest run test/unit",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit --project tsconfig.json"

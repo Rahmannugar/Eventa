@@ -3,7 +3,14 @@ import { and, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
+import {
+  EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+  EVENT_MEDIA_OBJECT_DELETION_QUEUE,
+  EVENT_MEDIA_VERIFICATION_JOB_TYPE,
+  EVENT_MEDIA_VERIFICATION_QUEUE,
+} from '../constants/event-media.constants';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventJobOutbox } from '../schema/event-job-outbox.schema';
 import { eventMediaObjectDeletions } from '../schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../schema/event-media-upload.schema';
 import { eventMedia } from '../schema/event-media.schema';
@@ -65,6 +72,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
   ): Promise<CreateEventMediaUploadResult> {
     try {
       return await this.database.transaction(async (transaction) => {
+        const createdAt = new Date();
         const [event] = await transaction
           .select({
             id: events.id,
@@ -98,6 +106,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
             declaredContentType: input.contentType,
             declaredSizeBytes: input.sizeBytes,
             expiresAt: input.expiresAt,
+            jobPublishedAt: createdAt,
             verificationDeadlineAt: input.verificationDeadlineAt,
           })
           .returning(UPLOAD_COLUMNS);
@@ -105,6 +114,17 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         if (upload === undefined) {
           throw new Error('Event media upload insert returned no row');
         }
+
+        await transaction.insert(eventJobOutbox).values({
+          aggregateType: 'eventa.event.jobs',
+          eventType: EVENT_MEDIA_VERIFICATION_JOB_TYPE,
+          occurredAt: createdAt,
+          payload: {
+            type: EVENT_MEDIA_VERIFICATION_JOB_TYPE,
+            uploadId: upload.uploadId,
+          },
+          routingKey: EVENT_MEDIA_VERIFICATION_QUEUE,
+        });
 
         await transaction.insert(eventAdminAuditLog).values({
           action: 'event.media_upload_requested',
@@ -391,10 +411,28 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
       });
 
       if (replacedMedia !== undefined) {
-        await transaction.insert(eventMediaObjectDeletions).values({
-          eventId: current.eventId,
-          objectKey: replacedMedia.objectKey,
-          reason: 'replaced',
+        const createdAt = new Date();
+        const [deletion] = await transaction
+          .insert(eventMediaObjectDeletions)
+          .values({
+            eventId: current.eventId,
+            jobPublishedAt: createdAt,
+            objectKey: replacedMedia.objectKey,
+            reason: 'replaced',
+          })
+          .returning({ deletionId: eventMediaObjectDeletions.id });
+        if (deletion === undefined) {
+          throw new Error('Event media object deletion insert returned no row');
+        }
+        await transaction.insert(eventJobOutbox).values({
+          aggregateType: 'eventa.event.jobs',
+          eventType: EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+          occurredAt: createdAt,
+          payload: {
+            deletionId: deletion.deletionId,
+            type: EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+          },
+          routingKey: EVENT_MEDIA_OBJECT_DELETION_QUEUE,
         });
       }
 

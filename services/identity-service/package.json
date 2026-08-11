@@ -33,7 +33,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "drizzle-orm": "^0.44.7",
-    "kafkajs": "2.2.4",
     "postgres": "^3.4.8",
     "redis": "^6.1.0",
     "reflect-metadata": "^0.2.2",

@@ -8,9 +8,6 @@ export interface RuntimeConfig {
   grpcHost: string;
   grpcPort: number;
   healthPort: number;
-  kafkaBrokers: string[];
-  kafkaConnectionTimeoutMs: number;
-  kafkaRequestTimeoutMs: number;
   r2RequestTimeoutMs: number;
   rabbitMqConnectTimeoutMs: number;
   rabbitMqPublishTimeoutMs: number;
@@ -74,19 +71,6 @@ function readRabbitMqUrl(environment: NodeJS.ProcessEnv): string {
   return value;
 }
 
-function readKafkaBrokers(environment: NodeJS.ProcessEnv): string[] {
-  const brokers = readRequiredString(environment, 'KAFKA_BROKERS')
-    .split(',')
-    .map((broker) => broker.trim())
-    .filter(Boolean);
-
-  if (brokers.some((broker) => !broker.includes(':'))) {
-    throw new Error('KAFKA_BROKERS must contain host:port entries');
-  }
-
-  return brokers;
-}
-
 export function readDatabaseUrl(environment: NodeJS.ProcessEnv): string {
   return readRequiredString(environment, 'DATABASE_URL');
 }
@@ -116,15 +100,6 @@ export function readRuntimeConfig(
     grpcHost: readRequiredString(environment, 'GRPC_HOST'),
     grpcPort: readPort(environment, 'GRPC_PORT'),
     healthPort: readPort(environment, 'HEALTH_PORT'),
-    kafkaBrokers: readKafkaBrokers(environment),
-    kafkaConnectionTimeoutMs: readPositiveInteger(
-      environment,
-      'KAFKA_CONNECTION_TIMEOUT_MS',
-    ),
-    kafkaRequestTimeoutMs: readPositiveInteger(
-      environment,
-      'KAFKA_REQUEST_TIMEOUT_MS',
-    ),
     r2RequestTimeoutMs: readPositiveInteger(
       environment,
       'R2_REQUEST_TIMEOUT_MS',

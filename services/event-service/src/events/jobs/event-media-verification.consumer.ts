@@ -16,6 +16,7 @@ import type { Channel, Message } from 'amqplib';
 import type { RabbitMQClient } from '../../infrastructure/clients/rabbitmq.client';
 import {
   EVENT_MEDIA_CONSUMER_PREFETCH,
+  EVENT_MEDIA_JOB_EXCHANGE,
   EVENT_MEDIA_VERIFICATION_JOB_TYPE,
   EVENT_MEDIA_VERIFICATION_OPERATION,
   EVENT_MEDIA_VERIFICATION_QUEUE,
@@ -52,10 +53,18 @@ export class EventMediaVerificationConsumer
     const channel = await this.rabbitMQ.consumerChannel(
       'event-media-verification-job-consumer',
     );
+    await channel.assertExchange(EVENT_MEDIA_JOB_EXCHANGE, 'direct', {
+      durable: true,
+    });
     await channel.assertQueue(EVENT_MEDIA_VERIFICATION_QUEUE, {
       durable: true,
       arguments: { 'x-delivery-limit': -1, 'x-queue-type': 'quorum' },
     });
+    await channel.bindQueue(
+      EVENT_MEDIA_VERIFICATION_QUEUE,
+      EVENT_MEDIA_JOB_EXCHANGE,
+      EVENT_MEDIA_VERIFICATION_QUEUE,
+    );
     await channel.prefetch(EVENT_MEDIA_CONSUMER_PREFETCH);
     this.channel = channel;
     const reply = await channel.consume(
@@ -150,11 +159,6 @@ export class EventMediaVerificationConsumer
 
   private validate(message: Message): string | undefined {
     try {
-      if (
-        message.properties.contentType !== 'application/json' ||
-        message.properties.type !== EVENT_MEDIA_VERIFICATION_JOB_TYPE
-      )
-        return undefined;
       const value: unknown = JSON.parse(
         Buffer.from(message.content).toString('utf8'),
       );

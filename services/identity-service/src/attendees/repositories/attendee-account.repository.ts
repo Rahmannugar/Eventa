@@ -285,6 +285,7 @@ export class AttendeeAccountRepository
       };
 
       await transaction.insert(attendeeLifecycleOutbox).values({
+        aggregateType: 'eventa.identity.attendee-lifecycle.v1',
         attendeeId: event.attendeeId,
         eventId: event.eventId,
         eventType: event.type,

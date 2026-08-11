@@ -286,32 +286,6 @@ export type PublishEventCommand = PublishEvent;
 
 export type { EventPublishedEvent as EventPublishedFact } from '@eventa/messaging-contracts/event/event-lifecycle.events';
 
-import type { EventPublishedEvent } from '@eventa/messaging-contracts/event/event-lifecycle.events';
-
-export interface ClaimedEventPublication {
-  attempt: number;
-  claimToken: string;
-  fact: EventPublishedEvent;
-}
-
-export interface EventPublicationOutbox {
-  claimBatch(
-    limit: number,
-    claimTtlMs: number,
-  ): Promise<ClaimedEventPublication[]>;
-  markPublished(eventId: string, claimToken: string): Promise<boolean>;
-  scheduleRetry(
-    eventId: string,
-    claimToken: string,
-    errorCode: string,
-    retryAt: Date,
-  ): Promise<boolean>;
-}
-
-export interface EventPublisher {
-  publish(fact: EventPublishedEvent): Promise<void>;
-}
-
 export interface UpdateDraftEventCommand {
   actorAdminId: string;
   eventId: string;

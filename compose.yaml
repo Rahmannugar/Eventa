@@ -9,6 +9,14 @@ x-local-logging: &local-logging
 services:
   identity-database:
     image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=8
+      - -c
+      - max_wal_senders=8
     env_file:
       - ./services/identity-service/.env
     ports:
@@ -25,6 +33,14 @@ services:
 
   event-database:
     image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=8
+      - -c
+      - max_wal_senders=8
     env_file:
       - ./services/event-service/.env
     ports:
@@ -140,6 +156,52 @@ services:
     restart: 'no'
     logging: *local-logging
 
+  identity-kafka-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/identity-service/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/identity-kafka/application.properties:/debezium/config/application.properties:ro
+      - identity-kafka-cdc-data:/debezium/data
+    depends_on:
+      event-bus-init:
+        condition: service_completed_successfully
+      identity-migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging: *local-logging
+
+  event-kafka-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/event-service/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/event-kafka/application.properties:/debezium/config/application.properties:ro
+      - event-kafka-cdc-data:/debezium/data
+    depends_on:
+      event-bus-init:
+        condition: service_completed_successfully
+      event-migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging: *local-logging
+
+  event-rabbitmq-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/event-service/.env
+      - ./infrastructure/messaging/job-queue/rabbitmq/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/event-rabbitmq/application.properties:/debezium/config/application.properties:ro
+      - event-rabbitmq-cdc-data:/debezium/data
+    depends_on:
+      event-service:
+        condition: service_healthy
+      job-queue:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -203,8 +265,6 @@ services:
       - '3007:3007'
       - '50052:50052'
     depends_on:
-      event-bus-init:
-        condition: service_completed_successfully
       event-migration:
         condition: service_completed_successfully
       job-queue:
@@ -351,7 +411,10 @@ services:
 
 volumes:
   event-bus-data:
+  event-kafka-cdc-data:
+  event-rabbitmq-cdc-data:
   event-database-data:
+  identity-kafka-cdc-data:
   identity-database-data:
   notification-database-data:
   job-queue-data:

@@ -292,6 +292,7 @@ export class EventManagementRepository implements EventRepositoryPort {
           });
 
           await transaction.insert(eventPublicationOutbox).values({
+            aggregateType: 'eventa.event.lifecycle.v1',
             eventId: event.eventId,
             eventType: 'event.published.v1',
             occurredAt: publishedAt,

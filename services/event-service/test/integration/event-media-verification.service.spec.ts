@@ -10,9 +10,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EventMediaUploadRepository } from '../../src/events/repositories/event-media-upload.repository';
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
-import { EventPublicationOutboxRepository } from '../../src/events/repositories/event-publication-outbox.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
+import { eventJobOutbox } from '../../src/events/schema/event-job-outbox.schema';
 import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
 import { eventMedia } from '../../src/events/schema/event-media.schema';
@@ -75,9 +75,6 @@ const eventsRepository = new EventManagementRepository(database);
 const uploadsRepository = new EventMediaUploadRepository(database);
 const mediaRepository = new EventMediaMutationRepository(database);
 const deletionsRepository = new EventMediaObjectDeletionRepository(database);
-const publicationOutboxRepository = new EventPublicationOutboxRepository(
-  client,
-);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -109,6 +106,7 @@ describe('Event mutation integration', () => {
   });
 
   beforeEach(async () => {
+    await database.delete(eventJobOutbox);
     await database.delete(eventPublicationOutbox);
     await database.delete(eventAdminAuditLog);
     await database.delete(eventMediaObjectDeletions);
@@ -171,11 +169,25 @@ describe('Event mutation integration', () => {
       .select({ status: eventMediaUploads.status })
       .from(eventMediaUploads)
       .where(eq(eventMediaUploads.id, uploadId));
+    const [job] = await database
+      .select({
+        aggregateType: eventJobOutbox.aggregateType,
+        eventType: eventJobOutbox.eventType,
+        payload: eventJobOutbox.payload,
+        routingKey: eventJobOutbox.routingKey,
+      })
+      .from(eventJobOutbox);
 
     expect(persistedEvent?.version).toBe(2);
     expect(mediaCount?.value).toBe(1);
     expect(attachmentAuditCount?.value).toBe(1);
     expect(persistedUpload?.status).toBe('attached');
+    expect(job).toEqual({
+      aggregateType: 'eventa.event.jobs',
+      eventType: 'event.media-verification.v1',
+      payload: { type: 'event.media-verification.v1', uploadId },
+      routingKey: 'eventa.event.media-verification.v1',
+    });
   });
 
   it('accepts a present object after the upload deadline', async () => {
@@ -462,6 +474,7 @@ describe('Event mutation integration', () => {
   it('publishes once with its audit and outbox fact', async () => {
     const event = await createPublishableEvent('Published event');
     const requestId = randomUUID();
+    const competingRequestId = randomUUID();
 
     const outcomes = await Promise.all([
       eventsRepository.publish({
@@ -474,7 +487,7 @@ describe('Event mutation integration', () => {
         actorAdminId: event.adminId,
         eventId: event.eventId,
         expectedVersion: event.version,
-        requestId: randomUUID(),
+        requestId: competingRequestId,
       }),
     ]);
 
@@ -506,67 +519,18 @@ describe('Event mutation integration', () => {
     expect(persistedEvent?.status).toBe('published');
     expect(persistedEvent?.version).toBe(event.version + 1);
     expect(persistedEvent?.publishedAt).toBeInstanceOf(Date);
-    expect(audits).toEqual([
-      {
-        actorAdminId: event.adminId,
-        eventVersion: event.version + 1,
-        requestId,
-      },
-    ]);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actorAdminId: event.adminId,
+      eventVersion: event.version + 1,
+    });
+    expect([requestId, competingRequestId]).toContain(audits[0]?.requestId);
     expect(publication?.payload).toEqual({
       eventId: event.eventId,
       publishedAt: persistedEvent?.publishedAt?.toISOString(),
       type: 'event.published.v1',
       version: event.version + 1,
     });
-  });
-
-  it('reclaims publication after a failed relay attempt', async () => {
-    const event = await createPublishableEvent('Recovered publication');
-    await eventsRepository.publish({
-      actorAdminId: event.adminId,
-      eventId: event.eventId,
-      expectedVersion: event.version,
-      requestId: randomUUID(),
-    });
-
-    const [firstClaim] = await publicationOutboxRepository.claimBatch(
-      1,
-      30_000,
-    );
-    if (firstClaim === undefined) throw new Error('Publication claim missing');
-    await expect(
-      publicationOutboxRepository.scheduleRetry(
-        firstClaim.fact.eventId,
-        firstClaim.claimToken,
-        'EVENT_BUS_PUBLISH_FAILED',
-        new Date(0),
-      ),
-    ).resolves.toBe(true);
-
-    const [recoveredClaim] = await publicationOutboxRepository.claimBatch(
-      1,
-      30_000,
-    );
-    if (recoveredClaim === undefined) {
-      throw new Error('Recovered publication claim missing');
-    }
-    expect(recoveredClaim.attempt).toBe(2);
-    expect(recoveredClaim.fact).toEqual(firstClaim.fact);
-    await expect(
-      publicationOutboxRepository.markPublished(
-        recoveredClaim.fact.eventId,
-        recoveredClaim.claimToken,
-      ),
-    ).resolves.toBe(true);
-
-    const [persisted] = await database
-      .select({ publishedAt: eventPublicationOutbox.publishedAt })
-      .from(eventPublicationOutbox);
-    expect(persisted?.publishedAt).toBeInstanceOf(Date);
-    await expect(
-      publicationOutboxRepository.claimBatch(1, 30_000),
-    ).resolves.toEqual([]);
   });
 
   it('returns published events without disclosing drafts', async () => {

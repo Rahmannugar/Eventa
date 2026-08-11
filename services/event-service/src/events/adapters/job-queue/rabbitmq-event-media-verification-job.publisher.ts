@@ -8,6 +8,7 @@ import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.cl
 import {
   EVENT_MEDIA_VERIFICATION_JOB_TYPE,
   EVENT_MEDIA_VERIFICATION_QUEUE,
+  EVENT_MEDIA_JOB_EXCHANGE,
 } from '../../constants/event-media.constants';
 import type { EventMediaVerificationJobPublisher } from '../../types/event.types';
 
@@ -36,7 +37,8 @@ export class RabbitMQEventMediaVerificationJobPublisher implements EventMediaVer
 
     await this.withTimeout(
       new Promise<void>((resolve, reject) => {
-        channel.sendToQueue(
+        channel.publish(
+          EVENT_MEDIA_JOB_EXCHANGE,
           EVENT_MEDIA_VERIFICATION_QUEUE,
           Buffer.from(JSON.stringify(body)),
           {
@@ -63,10 +65,18 @@ export class RabbitMQEventMediaVerificationJobPublisher implements EventMediaVer
   }
 
   private async ensureTopology(channel: ConfirmChannel): Promise<void> {
+    await channel.assertExchange(EVENT_MEDIA_JOB_EXCHANGE, 'direct', {
+      durable: true,
+    });
     await channel.assertQueue(EVENT_MEDIA_VERIFICATION_QUEUE, {
       durable: true,
       arguments: { 'x-delivery-limit': -1, 'x-queue-type': 'quorum' },
     });
+    await channel.bindQueue(
+      EVENT_MEDIA_VERIFICATION_QUEUE,
+      EVENT_MEDIA_JOB_EXCHANGE,
+      EVENT_MEDIA_VERIFICATION_QUEUE,
+    );
   }
 
   private async withTimeout(

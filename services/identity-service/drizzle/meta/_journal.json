@@ -43,6 +43,13 @@
       "when": 1785252224623,
       "tag": "0005_record_password_reset_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786379832513,
+      "tag": "0006_route_outbox_with_debezium",
+      "breakpoints": true
     }
   ]
 }

@@ -50,7 +50,7 @@ Session authentication returns only Redis-owned session context. Account retriev
 
 Deletion verifies the current password before mutation. One Redis command installs a short per-attendee deletion barrier and revokes every session; session creation checks the same barrier, closing the concurrent login race. A PostgreSQL transaction changes the account only when its stored password hash still equals the hash that was verified, then sets `deleted_at` and inserts one `attendee.deleted.v1` outbox event. A concurrent password reset therefore prevents stale-password deletion. Failure cancels the preparation barrier when possible; its five-minute TTL bounds crash recovery. After commit, the barrier is retained for seven days while PostgreSQL remains the permanent login authority.
 
-The outbox relay claims records with leases and `SKIP LOCKED`, publishes them to `eventa.identity.attendee-lifecycle.v1` keyed by attendee ID, and records completion. Broker failure schedules bounded exponential retry without changing the successful deletion response. Event IDs support consumer deduplication under at-least-once delivery.
+The outbox row is immutable. Debezium reads its insert from PostgreSQL logical WAL and publishes it to `eventa.identity.attendee-lifecycle.v1` keyed by attendee ID. It persists the WAL offset and resumes after broker or process failure without changing the successful deletion response. Delivery remains at least once, so future consumers deduplicate by event ID. No deployable consumes this lifecycle topic yet.
 
 ## Failure and Observability
 

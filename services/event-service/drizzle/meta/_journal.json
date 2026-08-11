@@ -36,6 +36,13 @@
       "when": 1785939703484,
       "tag": "0004_publish_events_with_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786379808063,
+      "tag": "0005_route_outbox_with_debezium",
+      "breakpoints": true
     }
   ]
 }

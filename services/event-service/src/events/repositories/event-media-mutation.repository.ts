@@ -3,7 +3,12 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
+import {
+  EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+  EVENT_MEDIA_OBJECT_DELETION_QUEUE,
+} from '../constants/event-media.constants';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventJobOutbox } from '../schema/event-job-outbox.schema';
 import { eventMediaObjectDeletions } from '../schema/event-media-object-deletion.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { events } from '../schema/event.schema';
@@ -61,10 +66,28 @@ export class EventMediaMutationRepository implements EventMediaMutationRepositor
         throw new Error('Locked event changed during media removal');
       }
 
-      await transaction.insert(eventMediaObjectDeletions).values({
-        eventId: input.eventId,
-        objectKey: removed.objectKey,
-        reason: 'removed',
+      const createdAt = new Date();
+      const [deletion] = await transaction
+        .insert(eventMediaObjectDeletions)
+        .values({
+          eventId: input.eventId,
+          jobPublishedAt: createdAt,
+          objectKey: removed.objectKey,
+          reason: 'removed',
+        })
+        .returning({ deletionId: eventMediaObjectDeletions.id });
+      if (deletion === undefined) {
+        throw new Error('Event media object deletion insert returned no row');
+      }
+      await transaction.insert(eventJobOutbox).values({
+        aggregateType: 'eventa.event.jobs',
+        eventType: EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+        occurredAt: createdAt,
+        payload: {
+          deletionId: deletion.deletionId,
+          type: EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
+        },
+        routingKey: EVENT_MEDIA_OBJECT_DELETION_QUEUE,
       });
       await transaction.insert(eventAdminAuditLog).values({
         action: 'event.media_removed',

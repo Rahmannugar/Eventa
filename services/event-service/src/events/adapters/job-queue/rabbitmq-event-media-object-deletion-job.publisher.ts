@@ -6,6 +6,7 @@ import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.cl
 import {
   EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
   EVENT_MEDIA_OBJECT_DELETION_QUEUE,
+  EVENT_MEDIA_JOB_EXCHANGE,
 } from '../../constants/event-media.constants';
 import type { EventMediaObjectDeletionJobPublisher } from '../../types/event.types';
 
@@ -24,10 +25,18 @@ export class RabbitMQEventMediaObjectDeletionJobPublisher implements EventMediaO
     const channel = await this.rabbitMQ.confirmChannel(
       'event-media-object-deletion-job-publisher',
     );
+    await channel.assertExchange(EVENT_MEDIA_JOB_EXCHANGE, 'direct', {
+      durable: true,
+    });
     await channel.assertQueue(EVENT_MEDIA_OBJECT_DELETION_QUEUE, {
       durable: true,
       arguments: { 'x-delivery-limit': -1, 'x-queue-type': 'quorum' },
     });
+    await channel.bindQueue(
+      EVENT_MEDIA_OBJECT_DELETION_QUEUE,
+      EVENT_MEDIA_JOB_EXCHANGE,
+      EVENT_MEDIA_OBJECT_DELETION_QUEUE,
+    );
     const traceHeaders: Record<string, string> = {};
     propagation.inject(context.active(), traceHeaders);
     const body: EventMediaObjectDeletionJob = {
@@ -37,7 +46,8 @@ export class RabbitMQEventMediaObjectDeletionJobPublisher implements EventMediaO
 
     await this.withTimeout(
       new Promise<void>((resolve, reject) => {
-        channel.sendToQueue(
+        channel.publish(
+          EVENT_MEDIA_JOB_EXCHANGE,
           EVENT_MEDIA_OBJECT_DELETION_QUEUE,
           Buffer.from(JSON.stringify(body)),
           {

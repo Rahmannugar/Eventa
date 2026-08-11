@@ -26,6 +26,8 @@ Eventa web app
   - Notification Service
 
 Infrastructure
+  - PostgreSQL logical WAL
+  - Debezium
   - Kafka
   - Redis
   - RabbitMQ
@@ -64,6 +66,8 @@ API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/T
 - Event bus: durable completed business facts and independent consumers. Kafka is the adapter choice.
 - Job queue: retryable background work assigned to workers. RabbitMQ is the adapter choice.
 
+Database-driven messages use a transactional outbox and Debezium over PostgreSQL logical WAL. Debezium routes committed outbox inserts to Kafka for business facts or RabbitMQ for initial job assignments, using destination-specific lanes to isolate backpressure. Polling is limited to job retry and reconciliation, and delivery remains at least once.
+
 Identity publishes `attendee.deleted.v1`, and Event Service publishes `event.published.v1`, through their service-owned outboxes. No deployable subscribes to either Kafka lifecycle topic. Both facts still need purpose-built consumers; each consumer must be introduced by the product story that owns its reaction, durable inbox/idempotency boundary, recovery policy, and operating owner. RabbitMQ consumers are separate workers for assigned jobs and are not Kafka business-fact consumers.
 
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
@@ -80,7 +84,7 @@ Each service owns its PostgreSQL schema, migrations, constraints, and database p
 
 Event Service records each admin event mutation in its own append-only audit history in the same transaction as the state change. A later projection may aggregate service-owned audit facts without becoming their source of truth.
 
-Event publication changes the authoritative Event row, appends its admin audit entry, and inserts one versioned `event.published.v1` fact into the Event-owned outbox in the same PostgreSQL transaction. Event Service relays that fact to Kafka with leased claims and bounded retry. The outbox remains authoritative when broker publication fails, and consumers treat delivery as at least once.
+Event publication changes the authoritative Event row, appends its admin audit entry, and inserts one versioned `event.published.v1` fact into the Event-owned outbox in the same PostgreSQL transaction. Debezium reads the committed insert from WAL, persists its source offset, and routes the fact to Kafka. The outbox remains authoritative when broker publication fails, and consumers treat delivery as at least once.
 
 ## Operations
 

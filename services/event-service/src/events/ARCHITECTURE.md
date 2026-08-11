@@ -33,12 +33,12 @@ The published-event repository query combines event ID and `published` status be
 1. The client requests an upload for a fixed slot using the event version it read. An occupied slot reserves a replacement while its verified media stays active.
 2. Event Service locks the event row, verifies draft state and version, inserts a durable pending upload, and appends `event.media_upload_requested` in one transaction.
 3. Event Service returns a create-only presigned R2 `PUT`. The browser uploads directly with the signed content type and `If-None-Match: *` headers. There is no confirmation endpoint.
-4. A dispatcher publishes the upload ID through RabbitMQ. The worker may run before the browser completes, so an absent object releases its database claim and retries with bounded backoff until the upload deadline.
+4. The transaction also appends an immutable job-outbox row. Debezium reads that insert from PostgreSQL WAL and publishes the upload ID through RabbitMQ. The worker may run before the browser completes, so an absent object releases its database claim and retries with bounded backoff until the upload deadline.
 5. The worker verifies the stored byte count, declared metadata, detected JPEG, PNG, or WebP content, dimensions, and ETag. A present object is inspected even when the worker wakes at the deadline.
 6. Attaching locks the upload and compares the event's stored expected version. An empty slot inserts media and appends `event.media_attached`. An occupied slot atomically swaps the verified reference, appends `event.media_replaced`, and creates durable deletion work for the old object. Both paths increment the event version in the same transaction. Duplicate deliveries cannot attach, replace, increment, or audit twice.
 7. Invalid, expired, or version-conflicted uploads remain durable terminal records. The same worker removes their objects with at most ten idempotent deletion attempts.
 
-PostgreSQL is authoritative for scheduling and execution state. RabbitMQ assignments contain only the owning upload or deletion ID. Publication failure leaves the record dispatchable; duplicate publication is safe.
+PostgreSQL is authoritative for scheduling and execution state. RabbitMQ assignments contain only the owning upload or deletion ID. Debezium owns initial publication; the dispatcher polls only for retry and reconciliation after the initial delivery window. Duplicate publication is safe.
 
 ## Media Removal
 
@@ -49,10 +49,12 @@ Explicit removal locks the event, verifies draft state and expected version, rem
 1. The client supplies the version from its latest admin event representation.
 2. The repository locks the event and verifies draft state, expected version, complete details, venue presence, and a verified cover reference.
 3. One transaction changes the status to `published`, records the publication time, increments the version, appends `event.published`, and inserts one `event.published.v1` outbox fact.
-4. The outbox relay claims due facts with expiring leases and `SKIP LOCKED`, then publishes them to `eventa.event.lifecycle.v1` keyed by event ID.
-5. Broker failure releases the claim onto bounded exponential retry. A process failure leaves the lease to expire. A send followed by a process failure may produce a duplicate, so consumers deduplicate the event ID and version under at-least-once delivery.
+4. Debezium reads the immutable outbox insert from PostgreSQL logical WAL and publishes it to `eventa.event.lifecycle.v1` keyed by event ID.
+5. Debezium persists its WAL offset and resumes after failure. Delivery remains at least once, so consumers deduplicate the event ID and version.
 
 Publication never waits for Kafka. PostgreSQL establishes both the published state and the durable fact before the admin response succeeds.
+
+Kafka lifecycle facts and RabbitMQ job assignments use separate Debezium lanes over PostgreSQL logical WAL.
 
 ## Audit
 
