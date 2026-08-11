@@ -69,12 +69,18 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, and the local observability pipeline. Identity, Event, and Notification migrations run in one-shot containers before their services start.
+Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. Compose limits concurrent startup work to protect local resources without omitting services.
 
-Start the stack with:
+Build and start Eventa with:
 
 ```bash
 pnpm services:start
+```
+
+After the images have been built once, start the same complete stack without rebuilding:
+
+```bash
+pnpm services:start:no-build
 ```
 
 Create each service `.env` file from its service-owned `.env.example` before starting Eventa. Missing files and invalid permanent configuration intentionally stop startup.

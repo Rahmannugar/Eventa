@@ -16,13 +16,13 @@ The web app runs at `http://localhost:5273`. It is not started through Docker Co
 
 ## Services
 
-Build and start Eventa, wait for migrations and event-bus initialization, then remove their completed containers.
+Build and start the complete Eventa stack, wait for migrations and event-bus initialization, then remove their completed containers. Compose concurrency is capped to protect local resources without omitting application, CDC, or observability services.
 
 ```bash
 pnpm services:start
 ```
 
-Start Eventa from existing images, wait for migrations and event-bus initialization, then remove their completed containers.
+Start the same complete stack from existing images, wait for migrations and event-bus initialization, then remove their completed containers. Startup concurrency remains capped.
 
 ```bash
 pnpm services:start:no-build

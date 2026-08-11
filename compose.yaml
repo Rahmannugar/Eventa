@@ -128,13 +128,9 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list',
-        ]
+      test: ['CMD', 'nc', '-z', '-w', '2', '127.0.0.1', '9092']
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 20
       start_period: 10s
     restart: unless-stopped
