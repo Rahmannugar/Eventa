@@ -16,13 +16,13 @@ The web app runs at `http://localhost:5273`. It is not started through Docker Co
 
 ## Services
 
-Build and start the complete Eventa stack, wait for migrations and event-bus initialization, then remove their completed containers. Compose concurrency is capped to protect local resources without omitting application, CDC, or observability services.
+Build and start the complete Eventa stack, wait for migrations and event-bus initialization, then remove their completed containers. Kafka and RabbitMQ warm independently before the remaining services start with bounded concurrency. No application, CDC, or observability service is omitted.
 
 ```bash
 pnpm services:start
 ```
 
-Start the same complete stack from existing images, wait for migrations and event-bus initialization, then remove their completed containers. Startup concurrency remains capped.
+Start the same complete stack from existing images with the same broker warm-up and bounded startup concurrency.
 
 ```bash
 pnpm services:start:no-build

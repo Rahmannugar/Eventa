@@ -69,7 +69,7 @@ Services use explicit application services for business use cases, thin transpor
 
 For the full command reference, see [commands.md](commands.md).
 
-Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. Compose limits concurrent startup work to protect local resources without omitting services.
+Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. The startup command warms Kafka and RabbitMQ before starting the remaining stack with bounded concurrency, protecting local resources without omitting services.
 
 Build and start Eventa with:
 
