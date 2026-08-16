@@ -235,7 +235,7 @@ export async function removeEventMedia({
   eventId,
   expectedVersion,
   slot,
-}: RemoveEventMediaCommand): Promise<AdminEvent> {
+}: RemoveEventMediaCommand): Promise<number> {
   const search = new URLSearchParams({
     expectedVersion: String(expectedVersion),
   });
@@ -243,11 +243,7 @@ export async function removeEventMedia({
     `/admin/events/${encodeURIComponent(eventId)}/media/${encodeURIComponent(slot)}?${search.toString()}`,
     { method: 'DELETE', responseSchema: removeEventMediaResponseSchema },
   );
-  const event = await getAdminEvent(eventId);
-  if (event.version < response.eventVersion) {
-    throw new Error('EVENT_MEDIA_EVENT_REFRESH_STALE');
-  }
-  return event;
+  return response.eventVersion;
 }
 
 export function uploadEventMedia(

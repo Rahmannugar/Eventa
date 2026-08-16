@@ -147,7 +147,7 @@ function EventDetailsContent({
             <div className="event-details-section__body event-details-media">
               {event.status === 'draft' ? (
                 <EventMediaManager
-                  disabled={publicationBusy}
+                  disabled={publicationBusy || retirementBusy}
                   event={event}
                   onOperationChange={setMediaBusy}
                 />

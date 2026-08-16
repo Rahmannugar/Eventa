@@ -3,20 +3,8 @@ import {
   ArrowsClockwiseIcon,
   WarningCircleIcon,
 } from '@phosphor-icons/react';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type Dispatch,
-  type FormEvent,
-  type SetStateAction,
-} from 'react';
-import {
-  Link,
-  Navigate,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
+import { useRef, useState, type FormEvent } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -33,6 +21,7 @@ import {
 } from '../../lib/events/event.validation';
 import type { AdminEvent } from '../../lib/events/event.types';
 import { useAdminEvent, useUpdateDraftEvent } from '../../lib/events/useEvents';
+import { useUnsavedChanges } from '../../lib/navigation/useUnsavedChanges';
 import { Button } from '../ui/Button';
 import { EventFormFields } from './EventFormFields';
 
@@ -40,7 +29,6 @@ const eventIdSchema = z.uuid();
 
 export function EventEditor({ eventId }: { eventId: string }) {
   const location = useLocation();
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const validEventId = eventIdSchema.safeParse(eventId).success;
   const eventQuery = useAdminEvent(eventId, validEventId);
 
@@ -75,14 +63,6 @@ export function EventEditor({ eventId }: { eventId: string }) {
         <Link
           className="back-link"
           to={`/admin/events/${eventQuery.data.eventId}`}
-          onClick={(clickEvent) => {
-            if (
-              hasUnsavedChanges &&
-              !window.confirm('Leave without saving your changes?')
-            ) {
-              clickEvent.preventDefault();
-            }
-          }}
         >
           <ArrowLeftIcon aria-hidden="true" />
           Event details
@@ -103,7 +83,6 @@ export function EventEditor({ eventId }: { eventId: string }) {
         <DraftEventForm
           key={`${eventQuery.data.eventId}:${String(eventQuery.data.version)}`}
           event={eventQuery.data}
-          onDirtyChange={setHasUnsavedChanges}
           reload={async () => {
             const result = await eventQuery.refetch();
             if (result.error !== null) throw result.error;
@@ -116,11 +95,9 @@ export function EventEditor({ eventId }: { eventId: string }) {
 
 function DraftEventForm({
   event,
-  onDirtyChange,
   reload,
 }: {
   event: AdminEvent;
-  onDirtyChange: Dispatch<SetStateAction<boolean>>;
   reload: () => Promise<unknown>;
 }) {
   const navigate = useNavigate();
@@ -136,19 +113,7 @@ function DraftEventForm({
     update.error instanceof ApiError &&
     update.error.code === 'EVENT_VERSION_CONFLICT';
 
-  useEffect(() => {
-    onDirtyChange(dirty);
-    return () => onDirtyChange(false);
-  }, [dirty, onDirtyChange]);
-
-  useEffect(() => {
-    if (!dirty) return;
-    const preventAccidentalExit = (browserEvent: BeforeUnloadEvent) =>
-      browserEvent.preventDefault();
-    window.addEventListener('beforeunload', preventAccidentalExit);
-    return () =>
-      window.removeEventListener('beforeunload', preventAccidentalExit);
-  }, [dirty]);
+  useUnsavedChanges(dirty, 'Leave without saving your changes?');
 
   function change<K extends keyof DraftEventFormValues>(
     field: K,
@@ -264,11 +229,6 @@ function DraftEventForm({
         <Link
           className="button button--secondary"
           to={`/admin/events/${event.eventId}`}
-          onClick={(clickEvent) => {
-            if (dirty && !window.confirm('Leave without saving your changes?')) {
-              clickEvent.preventDefault();
-            }
-          }}
         >
           Cancel
         </Link>

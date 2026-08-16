@@ -43,6 +43,7 @@ import {
 } from '../dto/admin-event.dto';
 import {
   AdminEventCreateRateLimitGuard,
+  AdminEventMediaStatusRateLimitGuard,
   AdminEventMediaUploadRateLimitGuard,
   AdminEventReadRateLimitGuard,
   AdminEventPublishRateLimitGuard,
@@ -200,7 +201,7 @@ export class AdminEventController {
   @Get(':eventId/media-uploads/:uploadId')
   @UseGuards(
     AdminClientOriginGuard,
-    AdminEventReadRateLimitGuard,
+    AdminEventMediaStatusRateLimitGuard,
     AdminAuthenticationGuard,
   )
   @ApiOperation({ summary: 'Get event media upload status' })

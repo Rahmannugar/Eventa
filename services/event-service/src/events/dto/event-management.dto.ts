@@ -28,7 +28,6 @@ import {
   Min,
   MinLength,
   ValidateNested,
-  ValidateIf,
 } from 'class-validator';
 
 export class GetAdminEventDto implements GetAdminEventRequest {
@@ -42,10 +41,7 @@ export class ListAdminEventsDto implements ListAdminEventsRequest {
   @Max(50)
   pageSize!: number;
 
-  @ValidateIf(
-    (venue: EventVenueDto) =>
-      venue.region !== undefined || venue.regionCode !== undefined,
-  )
+  @IsOptional()
   @IsString()
   @MaxLength(512)
   pageToken?: string;

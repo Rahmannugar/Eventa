@@ -92,6 +92,25 @@ const MEDIA_UPLOAD_RULES = {
   },
 } as const satisfies HybridRateLimitRules;
 
+const MEDIA_STATUS_RULES = {
+  routeKey: 'admin-event-media-status',
+  tokenBucket: {
+    capacity: 90,
+    name: 'ip-burst',
+    refillIntervalMs: 500,
+  },
+  primarySlidingWindow: {
+    limit: 7_200,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 3_600,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;
+
 const PUBLISH_RULES = {
   routeKey: 'admin-event-publish',
   tokenBucket: {
@@ -131,7 +150,13 @@ const RETIRE_RULES = {
 } as const satisfies HybridRateLimitRules;
 
 type AdminEventOperation =
-  'create' | 'media_upload' | 'publish' | 'read' | 'retire' | 'update';
+  | 'create'
+  | 'media_status'
+  | 'media_upload'
+  | 'publish'
+  | 'read'
+  | 'retire'
+  | 'update';
 
 interface EventRequest {
   headers: { cookie?: string };
@@ -157,15 +182,17 @@ export class AdminEventRateLimitService {
     const rules =
       operation === 'create'
         ? CREATE_RULES
-        : operation === 'media_upload'
-          ? MEDIA_UPLOAD_RULES
-          : operation === 'publish'
-            ? PUBLISH_RULES
-            : operation === 'retire'
-              ? RETIRE_RULES
-              : operation === 'update'
-                ? UPDATE_RULES
-                : READ_RULES;
+        : operation === 'media_status'
+          ? MEDIA_STATUS_RULES
+          : operation === 'media_upload'
+            ? MEDIA_UPLOAD_RULES
+            : operation === 'publish'
+              ? PUBLISH_RULES
+              : operation === 'retire'
+                ? RETIRE_RULES
+                : operation === 'update'
+                  ? UPDATE_RULES
+                  : READ_RULES;
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
     const ipSubject = this.hash(`ip:${clientIp}`);
     const attempt = {
@@ -223,13 +250,15 @@ abstract class AdminEventRateLimitGuard implements CanActivate {
           ? 'EVENT_CREATE_RATE_LIMITED'
           : this.operation === 'media_upload'
             ? 'EVENT_MEDIA_UPLOAD_RATE_LIMITED'
-            : this.operation === 'publish'
-              ? 'EVENT_PUBLISH_RATE_LIMITED'
-              : this.operation === 'retire'
-                ? 'EVENT_RETIRE_RATE_LIMITED'
-                : this.operation === 'update'
-                  ? 'EVENT_UPDATE_RATE_LIMITED'
-                  : 'EVENT_READ_RATE_LIMITED',
+            : this.operation === 'media_status'
+              ? 'EVENT_MEDIA_STATUS_RATE_LIMITED'
+              : this.operation === 'publish'
+                ? 'EVENT_PUBLISH_RATE_LIMITED'
+                : this.operation === 'retire'
+                  ? 'EVENT_RETIRE_RATE_LIMITED'
+                  : this.operation === 'update'
+                    ? 'EVENT_UPDATE_RATE_LIMITED'
+                    : 'EVENT_READ_RATE_LIMITED',
         'Wait before trying this event action again.',
       );
     } catch (error: unknown) {
@@ -310,6 +339,18 @@ export class AdminEventUpdateRateLimitGuard extends AdminEventRateLimitGuard {
 @Injectable()
 export class AdminEventMediaUploadRateLimitGuard extends AdminEventRateLimitGuard {
   protected readonly operation = 'media_upload' as const;
+
+  constructor(
+    rateLimits: AdminEventRateLimitService,
+    sessionCookie: AdminSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AdminEventMediaStatusRateLimitGuard extends AdminEventRateLimitGuard {
+  protected readonly operation = 'media_status' as const;
 
   constructor(
     rateLimits: AdminEventRateLimitService,

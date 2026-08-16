@@ -127,6 +127,7 @@ export type EventMediaOperation =
   | { phase: 'uploading'; progress: number; slot: EventMediaSlot }
   | { phase: 'verifying'; slot: EventMediaSlot }
   | { phase: 'removing'; slot: EventMediaSlot }
+  | { phase: 'refresh_required'; slot: EventMediaSlot }
   | { message: string; phase: 'error'; slot: EventMediaSlot };
 
 const acceptedMediaTypes: ReadonlySet<string> = new Set([
@@ -187,7 +188,21 @@ export function useEventMedia(event: AdminEvent) {
       if (result.attachedEventVersion === undefined) {
         throw new Error('EVENT_MEDIA_STATUS_MISMATCH');
       }
-      await refreshEvent(result.attachedEventVersion, signal);
+      const attachedEventVersion = result.attachedEventVersion;
+      queryClient.setQueryData<AdminEvent>(
+        adminEventQueryKey(event.eventId),
+        (current) =>
+          current === undefined
+            ? current
+            : { ...current, version: attachedEventVersion },
+      );
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+      try {
+        await refreshEvent(attachedEventVersion, signal);
+      } catch (error: unknown) {
+        if (isAbortError(error)) throw error;
+        throw new Error('EVENT_MEDIA_REFRESH_REQUIRED', { cause: error });
+      }
       return;
     }
     if (result.status === 'conflict') {
@@ -274,6 +289,13 @@ export function useEventMedia(event: AdminEvent) {
     } catch (error: unknown) {
       if (isAbortError(error)) return;
       if (
+        error instanceof Error &&
+        error.message === 'EVENT_MEDIA_REFRESH_REQUIRED'
+      ) {
+        setOperation({ phase: 'refresh_required', slot });
+        return;
+      }
+      if (
         error instanceof ApiError &&
         error.code === 'EVENT_VERSION_CONFLICT'
       ) {
@@ -299,15 +321,26 @@ export function useEventMedia(event: AdminEvent) {
     busyRef.current = true;
     setOperation({ phase: 'removing', slot });
     try {
-      const refreshedEvent = await removeEventMedia({
+      const eventVersion = await removeEventMedia({
         eventId: event.eventId,
         expectedVersion: event.version,
         slot,
       });
-      queryClient.setQueryData(
+      queryClient.setQueryData<AdminEvent>(
         adminEventQueryKey(event.eventId),
-        refreshedEvent,
+        (current) =>
+          current === undefined
+            ? current
+            : {
+                ...current,
+                media: current.media.filter((item) => item.slot !== slot),
+                version: eventVersion,
+              },
       );
+      void queryClient.invalidateQueries({
+        exact: true,
+        queryKey: adminEventQueryKey(event.eventId),
+      });
       void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
       setOperation({ phase: 'idle' });
     } catch (error: unknown) {

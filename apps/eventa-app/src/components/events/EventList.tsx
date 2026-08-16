@@ -51,6 +51,8 @@ export function EventList() {
   }
 
   const events = query.data?.pages.flatMap((page) => page.events) ?? [];
+  const criteriaLoadFailed =
+    query.error !== null && (query.isPlaceholderData || events.length === 0);
 
   return (
     <main className="admin-page admin-page--events">
@@ -119,7 +121,7 @@ export function EventList() {
 
       {query.isPending ? (
         <EventListLoading />
-      ) : query.error !== null && events.length === 0 ? (
+      ) : criteriaLoadFailed ? (
         <EventListError retry={() => void query.refetch()} />
       ) : events.length === 0 ? (
         <EventListEmpty

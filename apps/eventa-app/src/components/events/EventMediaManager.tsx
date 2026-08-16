@@ -6,6 +6,7 @@ import {
   WarningCircleIcon,
 } from '@phosphor-icons/react';
 import {
+  useEffect,
   useState,
   type ChangeEvent,
   type ChangeEventHandler,
@@ -42,8 +43,16 @@ export function EventMediaManager({
   const [confirmingRemoval, setConfirmingRemoval] =
     useState<EventMediaSlot | null>(null);
   const operationBusy =
-    media.operation.phase !== 'idle' && media.operation.phase !== 'error';
+    media.operation.phase === 'uploading' ||
+    media.operation.phase === 'verifying' ||
+    media.operation.phase === 'removing' ||
+    media.operation.phase === 'refresh_required';
   const busy = disabled || operationBusy;
+
+  useEffect(() => {
+    onOperationChange(operationBusy);
+    return () => onOperationChange(false);
+  }, [onOperationChange, operationBusy]);
 
   async function handleFile(
     slot: EventMediaSlot,
@@ -52,12 +61,7 @@ export function EventMediaManager({
     const file = change.target.files?.[0];
     change.target.value = '';
     if (file === undefined || disabled) return;
-    onOperationChange(true);
-    try {
-      await media.chooseFile(slot, file);
-    } finally {
-      onOperationChange(false);
-    }
+    await media.chooseFile(slot, file);
   }
 
   function requestRemoval(slot: EventMediaSlot) {
@@ -69,12 +73,7 @@ export function EventMediaManager({
   async function confirmRemoval(slot: EventMediaSlot) {
     if (disabled) return;
     setConfirmingRemoval(null);
-    onOperationChange(true);
-    try {
-      await media.remove(slot);
-    } finally {
-      onOperationChange(false);
-    }
+    await media.remove(slot);
   }
 
   return (
@@ -85,6 +84,20 @@ export function EventMediaManager({
           <span>{media.operation.message}</span>
           <Button type="button" variant="quiet" onClick={media.clearError}>
             Dismiss
+          </Button>
+        </div>
+      ) : null}
+
+      {media.operation.phase === 'refresh_required' ? (
+        <div className="event-media-manager__error" role="status">
+          <ArrowClockwiseIcon aria-hidden="true" />
+          <span>The image was added. Reload the event to see it.</span>
+          <Button
+            type="button"
+            variant="quiet"
+            onClick={() => window.location.reload()}
+          >
+            Reload event
           </Button>
         </div>
       ) : null}
@@ -106,7 +119,9 @@ export function EventMediaManager({
               label={label}
               media={item}
               operation={active ? media.operation : { phase: 'idle' }}
-              previewUrl={media.preview?.slot === slot ? media.preview.url : undefined}
+              previewUrl={
+                media.preview?.slot === slot ? media.preview.url : undefined
+              }
               slot={slot}
               onCancelRemoval={() => setConfirmingRemoval(null)}
               onConfirmRemoval={() => void confirmRemoval(slot)}
@@ -187,7 +202,11 @@ function MediaManagerSlot({
       <div className="event-media-slot__footer">
         <strong>{label}</strong>
         {confirmingRemoval ? (
-          <div className="event-media-slot__confirm" role="group" aria-label={`Remove ${label}`}>
+          <div
+            className="event-media-slot__confirm"
+            role="group"
+            aria-label={`Remove ${label}`}
+          >
             <Button type="button" variant="quiet" onClick={onCancelRemoval}>
               Keep
             </Button>
@@ -237,7 +256,8 @@ function MediaManagerSlot({
 function operationStatus(
   operation: ReturnType<typeof useEventMedia>['operation'],
 ): string | null {
-  if (operation.phase === 'uploading') return `Uploading ${String(operation.progress)}%`;
+  if (operation.phase === 'uploading')
+    return `Uploading ${String(operation.progress)}%`;
   if (operation.phase === 'verifying') return 'Checking image…';
   if (operation.phase === 'removing') return 'Removing…';
   return null;

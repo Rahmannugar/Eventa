@@ -16,6 +16,7 @@ import { AdminEventController } from './controllers/admin-event.controller';
 import { PublishedEventController } from './controllers/published-event.controller';
 import {
   AdminEventCreateRateLimitGuard,
+  AdminEventMediaStatusRateLimitGuard,
   AdminEventMediaUploadRateLimitGuard,
   AdminEventPublishRateLimitGuard,
   AdminEventRetireRateLimitGuard,
@@ -76,6 +77,7 @@ export class EventsModule {
         PublishedEventService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
+        AdminEventMediaStatusRateLimitGuard,
         AdminEventMediaUploadRateLimitGuard,
         AdminEventPublishRateLimitGuard,
         AdminEventRetireRateLimitGuard,

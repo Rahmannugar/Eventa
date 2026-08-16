@@ -19,7 +19,6 @@ import {
   Min,
   MinLength,
   ValidateNested,
-  ValidateIf,
 } from 'class-validator';
 
 export class AdminEventPathDto {
@@ -36,10 +35,7 @@ export class AdminEventListQueryDto {
   limit = 20;
 
   @ApiPropertyOptional({ description: 'Opaque pagination cursor' })
-  @ValidateIf(
-    (venue: EventVenueDto) =>
-      venue.region !== undefined || venue.regionCode !== undefined,
-  )
+  @IsOptional()
   @IsString()
   @MaxLength(512)
   cursor?: string;
