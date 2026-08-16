@@ -1,4 +1,5 @@
 import {
+  type CreateDraftEventResponse,
   EventStatus,
   type Event,
   type PublishEventRequest,
@@ -35,6 +36,18 @@ const publishedEvent: Event = {
   version: 4,
 };
 
+const draftEvent: Event = {
+  createdAt: '2026-08-16T06:19:02.000Z',
+  createdByAdminId: '1b878b2e-c0b8-44f6-b890-b15f237bb40e',
+  eventId: '6a6cbaf7-7720-4ab6-9419-f8189b9d173c',
+  media: [],
+  status: EventStatus.EVENT_STATUS_DRAFT,
+  title: 'Lagos Design Week',
+  updatedAt: '2026-08-16T06:19:02.000Z',
+  venue: undefined,
+  version: 1,
+};
+
 function createService(
   publishEvent: DeadlineAwareEventServiceClient['publishEvent'],
   deadlineMs = 3_000,
@@ -46,6 +59,60 @@ function createService(
   service.onModuleInit();
   return service;
 }
+
+function createDraftService(
+  createDraftEvent: DeadlineAwareEventServiceClient['createDraftEvent'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ createDraftEvent }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+describe('AdminEventService draft creation', () => {
+  it('accepts an omitted empty media list', async () => {
+    const wireEvent = {
+      ...draftEvent,
+      media: undefined,
+    } as unknown as Event;
+    const createDraftEvent = (): Observable<CreateDraftEventResponse> =>
+      of({ event: wireEvent });
+    const service = createDraftService(createDraftEvent);
+
+    await expect(
+      service.createDraft(
+        draftEvent.createdByAdminId,
+        draftEvent.title,
+        'draft-request',
+      ),
+    ).resolves.toMatchObject({
+      eventId: draftEvent.eventId,
+      media: [],
+      status: 'draft',
+      version: 1,
+    });
+  });
+
+  it('preserves invalid response diagnostics', async () => {
+    const invalidEvent = { ...draftEvent, version: 0 };
+    const createDraftEvent = (): Observable<CreateDraftEventResponse> =>
+      of({ event: invalidEvent });
+    const service = createDraftService(createDraftEvent);
+
+    await expect(
+      service.createDraft(
+        draftEvent.createdByAdminId,
+        draftEvent.title,
+        'draft-request',
+      ),
+    ).rejects.toMatchObject({
+      diagnosticCode: 'EVENT_RESPONSE_INVALID',
+    });
+  });
+});
 
 describe('AdminEventService publication', () => {
   afterEach(() => {

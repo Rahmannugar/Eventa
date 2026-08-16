@@ -306,7 +306,7 @@ export class AdminEventService implements OnModuleInit {
                 : { postalCode: event.venue.postalCode }),
               countryCode: event.venue.countryCode,
             },
-      media: event.media.map((media) => ({
+      media: (event.media ?? []).map((media) => ({
         mediaId: media.mediaId,
         slot: this.toPublicMediaSlot(media.slot),
         url: media.url,
@@ -338,6 +338,10 @@ export class AdminEventService implements OnModuleInit {
       | 'publish'
       | 'update',
   ): never {
+    if (error instanceof ApiHttpException) {
+      throw error;
+    }
+
     switch (readErrorCode(error)) {
       case status.NOT_FOUND:
         throw new ApiHttpException(

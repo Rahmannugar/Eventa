@@ -45,7 +45,7 @@ export function EventEditor({ eventId }: { eventId: string }) {
     return (
       <EventState
         title="This event link is not valid"
-        description="Return to Events and create a new draft, or use the complete link for an existing event."
+        description="Go back to Events and start a new event, or check the link and try again."
       />
     );
   }
@@ -72,7 +72,7 @@ export function EventEditor({ eventId }: { eventId: string }) {
         description={
           notFound
             ? 'It may have been removed, or this link may be incomplete.'
-            : 'Your draft is unchanged. Check your connection and try again.'
+            : 'Check your connection and try again.'
         }
         retry={notFound ? undefined : eventQuery.refetch}
       />
@@ -90,17 +90,11 @@ export function EventEditor({ eventId }: { eventId: string }) {
           <div className="event-editor-header__title">
             <div>
               <h1>{eventQuery.data.title}</h1>
-              <p>
-                {eventQuery.data.status === 'draft'
-                  ? 'Private draft'
-                  : 'Published event'}{' '}
-                · Version {eventQuery.data.version}
-              </p>
             </div>
             <span
               className={`status-badge status-badge--${eventQuery.data.status}`}
             >
-              {eventQuery.data.status}
+              {eventQuery.data.status === 'draft' ? 'Private' : 'Published'}
             </span>
           </div>
         </div>
@@ -119,10 +113,7 @@ export function EventEditor({ eventId }: { eventId: string }) {
               <WarningCircleIcon aria-hidden="true" weight="fill" />
               <div>
                 <h2>This event is published</h2>
-                <p>
-                  Published event details are locked. Draft editing is no longer
-                  available for this event.
-                </p>
+                <p>Published events are read-only.</p>
               </div>
             </div>
           ) : (
@@ -133,8 +124,8 @@ export function EventEditor({ eventId }: { eventId: string }) {
                 const result = await eventQuery.refetch();
                 if (result.error !== null) throw result.error;
               }}
-              onSaved={(version) => {
-                setSavedMessage(`Changes saved as version ${String(version)}.`);
+              onSaved={() => {
+                setSavedMessage('Changes saved.');
               }}
             />
           )}
@@ -144,25 +135,24 @@ export function EventEditor({ eventId }: { eventId: string }) {
           className="event-editor-guide"
           aria-labelledby="draft-guide-title"
         >
-          <p className="eyebrow">Draft guide</p>
-          <h2 id="draft-guide-title">What this draft needs</h2>
+          <h2 id="draft-guide-title">Details to add</h2>
           <ul>
             <li>
               <div>
-                <strong>Guest-facing details</strong>
-                <small>Use a clear title, description, and category.</small>
+                <strong>About the event</strong>
+                <small>Add a clear name, description, and category.</small>
               </div>
             </li>
             <li>
               <div>
-                <strong>Local schedule</strong>
-                <small>Choose the times in the event’s IANA timezone.</small>
+                <strong>Date and time</strong>
+                <small>Use the time zone where the event takes place.</small>
               </div>
             </li>
             <li>
               <div>
-                <strong>Recognizable venue</strong>
-                <small>Include a complete address and country code.</small>
+                <strong>Venue</strong>
+                <small>Add the address guests will use.</small>
               </div>
             </li>
           </ul>
@@ -179,7 +169,7 @@ function DraftEventForm({
 }: {
   event: AdminEvent;
   reload: () => Promise<unknown>;
-  onSaved: Dispatch<number>;
+  onSaved: Dispatch<void>;
 }) {
   const update = useUpdateDraftEvent();
   const formRef = useRef<HTMLFormElement>(null);
@@ -234,11 +224,11 @@ function DraftEventForm({
     setErrors({});
     update.reset();
     try {
-      const saved = await update.mutateAsync({
+      await update.mutateAsync({
         eventId: event.eventId,
         input: result.data,
       });
-      onSaved(saved.version);
+      onSaved();
       toast.success('Event details saved.');
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length > 0) {
@@ -270,15 +260,15 @@ function DraftEventForm({
         <div className="conflict-notice" role="alert">
           <WarningCircleIcon aria-hidden="true" weight="fill" />
           <div>
-            <strong>A newer version is available</strong>
+            <strong>This event changed since you opened it</strong>
             <p>
-              Your entered values are still here. Reload the saved event before
-              applying your changes again.
+              Your changes are still here. Load the latest event, then review
+              and save them again.
             </p>
             {reloadError ? (
               <p role="status">
-                The latest version could not be loaded. Your entered values are
-                still here; check your connection and try again.
+                We couldn’t load the latest event. Your changes are still here;
+                check your connection and try again.
               </p>
             ) : null}
             <Button
@@ -298,7 +288,7 @@ function DraftEventForm({
               }}
             >
               <ArrowsClockwiseIcon aria-hidden="true" />
-              {reloading ? 'Reloading event…' : 'Reload saved event'}
+              {reloading ? 'Loading latest event…' : 'Load latest event'}
             </Button>
           </div>
         </div>
@@ -368,7 +358,7 @@ function DraftEventForm({
           </div>
           <TextField
             id="draft-timezone"
-            label="Timezone"
+            label="Time zone"
             maxLength={64}
             placeholder="Africa/Lagos"
             value={values.timeZone}

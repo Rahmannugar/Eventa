@@ -12,8 +12,8 @@ import { TextField } from '../ui/TextField';
 const draftTitleSchema = z
   .string()
   .trim()
-  .min(1, 'Enter a working title for the event.')
-  .max(160, 'Event title must not exceed 160 characters.');
+  .min(1, 'Enter an event name.')
+  .max(160, 'Event name must not exceed 160 characters.');
 
 export function EventStart() {
   const navigate = useNavigate();
@@ -33,8 +33,8 @@ export function EventStart() {
     createDraft.reset();
     try {
       const created = await createDraft.mutateAsync({ title: result.data });
-      toast.success('Draft created.', {
-        description: 'Add the event schedule and venue next.',
+      toast.success('Event created.', {
+        description: 'Now add the date and venue.',
       });
       void navigate(`/admin/events/${created.eventId}`);
     } catch {
@@ -46,9 +46,7 @@ export function EventStart() {
     <main className="admin-page">
       <header className="admin-page__header">
         <div>
-          <p className="eyebrow">Event management</p>
           <h1>Events</h1>
-          <p>Create a draft, then shape the details guests will rely on.</p>
         </div>
       </header>
 
@@ -57,11 +55,8 @@ export function EventStart() {
           <CalendarPlusIcon weight="duotone" />
         </div>
         <div className="event-start__copy">
-          <h2 id="create-event-title">Create your next event</h2>
-          <p>
-            Begin with a working title. Your draft stays private while you add
-            its schedule and venue.
-          </p>
+          <h2 id="create-event-title">New event</h2>
+          <p>Start with the event name. You can add the date and venue next.</p>
         </div>
 
         <form
@@ -73,14 +68,14 @@ export function EventStart() {
         >
           {createDraft.error === null ? null : (
             <div className="form-alert" role="alert">
-              <strong>Draft not created.</strong>
+              <strong>Event not created.</strong>
               <span>{userFacingApiError(createDraft.error)}</span>
             </div>
           )}
 
           <TextField
             id="event-title"
-            label="Working title"
+            label="Event name"
             autoComplete="off"
             maxLength={160}
             placeholder="Lagos Design Week"
@@ -93,21 +88,13 @@ export function EventStart() {
           />
 
           <Button type="submit" busy={createDraft.isPending}>
-            {createDraft.isPending ? 'Creating draft…' : 'Create draft'}
+            {createDraft.isPending ? 'Creating event…' : 'Create event'}
             {createDraft.isPending ? null : (
               <ArrowRightIcon aria-hidden="true" />
             )}
           </Button>
         </form>
       </section>
-
-      <aside className="event-start__note">
-        <strong>Returning to a draft?</strong>
-        <span>
-          Open its saved Eventa URL to continue from the latest authoritative
-          version.
-        </span>
-      </aside>
     </main>
   );
 }

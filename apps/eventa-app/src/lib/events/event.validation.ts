@@ -32,9 +32,9 @@ const formSchema = z
     timeZone: z
       .string()
       .trim()
-      .min(1, 'Enter an IANA timezone.')
+      .min(1, 'Enter the event time zone.')
       .max(64)
-      .refine(isTimeZone, 'Enter a valid IANA timezone.'),
+      .refine(isTimeZone, 'Enter a valid time zone.'),
     venueName: z.string().trim().min(1, 'Enter a venue name.').max(160),
     addressLine1: z.string().trim().min(1, 'Enter the venue address.').max(200),
     addressLine2: z.string().trim().max(200),
@@ -61,7 +61,7 @@ const formSchema = z
     } catch {
       context.addIssue({
         code: 'custom',
-        message: 'Check the date, time, and timezone.',
+        message: 'Check the date, time, and time zone.',
         path: ['startsAt'],
       });
     }

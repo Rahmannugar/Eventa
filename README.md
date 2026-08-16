@@ -60,6 +60,8 @@ Services use explicit application services for business use cases, thin transpor
 - React
 - Vite
 
+Product interfaces use attendee and organizer language. They translate system state into what happened and what the user can do next; they do not expose services, contracts, internal fields or versions, implementation progress, or unavailable backend capabilities as interface copy.
+
 ### Infrastructure
 
 - Docker Compose

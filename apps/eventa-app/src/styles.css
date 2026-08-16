@@ -1144,21 +1144,6 @@ a {
   gap: 0.18rem;
 }
 
-.event-start__note {
-  display: flex;
-  max-width: 49rem;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  color: var(--muted);
-  font-size: 0.74rem;
-  line-height: 1.55;
-}
-
-.event-start__note strong {
-  flex: 0 0 auto;
-  color: var(--ink);
-}
-
 .admin-page--editor {
   width: min(100%, 90rem);
   padding-top: clamp(1.5rem, 4vw, 3rem);
@@ -1632,10 +1617,6 @@ a {
   .event-form__actions .button,
   .event-start__form .button {
     width: 100%;
-  }
-
-  .event-start__note {
-    display: grid;
   }
 
   .danger-zone {

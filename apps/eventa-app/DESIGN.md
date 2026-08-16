@@ -2,9 +2,16 @@
 
 ## Direction
 
-Eventa uses a warm, clear visual system built around event discovery and management. Authentication is direct and legible. Interface copy names the immediate user action. It does not expose delivery plans, implementation slices, session internals, or decorative ticket codes.
+Eventa uses a warm, clear visual system built around event discovery and management. Authentication is direct and legible. Interface copy names the immediate user action.
 
 Authrail informs the split authentication canvas, restrained controls, explicit states, and route-level session boundaries. Eventa does not reuse Authrail branding, copy, or source.
+
+## Product Language
+
+- Write for attendees and organizers, not for developers. Interface copy never exposes service names, API or database fields, transport mechanics, internal versions, source-of-truth terminology, implementation status, delivery slices, or missing backend capabilities.
+- Translate system state into what happened, what it means to the user, and the next available action. Use a backend term only when it is also the clearest established product concept for the actor.
+- Headings identify the task or content. Labels name the information requested. Buttons name the action. Do not add subtitles, helper text, badges, empty-state prose, or recovery instructions that merely repeat visible UI or narrate how Eventa is implemented.
+- Never turn a contract shape directly into screen structure or copy. The interface may collect or display the same data only after translating it into the organizer's or attendee's mental model.
 
 ## Visual Language
 
