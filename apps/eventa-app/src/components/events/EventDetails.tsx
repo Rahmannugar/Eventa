@@ -19,6 +19,7 @@ import type {
 } from '../../lib/events/event.types';
 import { useAdminEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
+import { EventMediaManager } from './EventMediaManager';
 
 const eventIdSchema = z.uuid();
 const gallerySlotOrder = ['gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'];
@@ -115,28 +116,34 @@ function EventDetailsContent({ event }: { event: AdminEvent }) {
               <h2 id="media-title">Images</h2>
             </div>
             <div className="event-details-section__body event-details-media">
-              <MediaSlot
-                className="event-details-cover"
-                media={cover}
-                emptyLabel="No cover image"
-                alt={cover === undefined ? '' : `${event.title} cover`}
-              />
-              <div className="event-details-gallery" aria-label="Gallery">
-                {gallery.length === 0 ? (
-                  <div className="event-details-media__empty">
-                    <ImageIcon aria-hidden="true" />
-                    <span>No gallery images</span>
+              {event.status === 'draft' ? (
+                <EventMediaManager event={event} />
+              ) : (
+                <>
+                  <MediaSlot
+                    className="event-details-cover"
+                    media={cover}
+                    emptyLabel="No cover image"
+                    alt={cover === undefined ? '' : `${event.title} cover`}
+                  />
+                  <div className="event-details-gallery" aria-label="Gallery">
+                    {gallery.length === 0 ? (
+                      <div className="event-details-media__empty">
+                        <ImageIcon aria-hidden="true" />
+                        <span>No gallery images</span>
+                      </div>
+                    ) : (
+                      gallery.map((media, index) => (
+                        <MediaSlot
+                          key={media.mediaId}
+                          media={media}
+                          alt={`${event.title} gallery image ${String(index + 1)}`}
+                        />
+                      ))
+                    )}
                   </div>
-                ) : (
-                  gallery.map((media, index) => (
-                    <MediaSlot
-                      key={media.mediaId}
-                      media={media}
-                      alt={`${event.title} gallery image ${String(index + 1)}`}
-                    />
-                  ))
-                )}
-              </div>
+                </>
+              )}
             </div>
           </section>
         </div>

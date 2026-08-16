@@ -4,7 +4,11 @@ import { apiRequest } from '../api/api-client';
 import type {
   AdminEvent,
   AdminEventListPage,
+  CreateEventMediaUploadCommand,
   CreateEventInput,
+  EventMediaUploadIntent,
+  EventMediaUploadStatus,
+  RemoveEventMediaCommand,
   UpdateDraftEventCommand,
 } from './event.types';
 
@@ -63,6 +67,46 @@ const adminEventListPageSchema: z.ZodType<AdminEventListPage> = z.object({
   nextCursor: z.string().min(1).optional(),
 });
 
+const eventMediaSlotSchema = z.enum([
+  'cover',
+  'gallery_1',
+  'gallery_2',
+  'gallery_3',
+  'gallery_4',
+]);
+
+const eventMediaUploadIntentSchema: z.ZodType<EventMediaUploadIntent> = z.object({
+  uploadId: z.uuid(),
+  uploadUrl: z.url(),
+  requiredHeaders: z.record(z.string(), z.string()),
+  expiresAt: z.iso.datetime({ offset: true }),
+  verificationDeadlineAt: z.iso.datetime({ offset: true }),
+});
+
+const eventMediaUploadStatusSchema: z.ZodType<EventMediaUploadStatus> = z
+  .object({
+    uploadId: z.uuid(),
+    status: z.enum(['pending', 'attached', 'rejected', 'conflict', 'expired']),
+    slot: eventMediaSlotSchema,
+    expiresAt: z.iso.datetime({ offset: true }),
+    verificationDeadlineAt: z.iso.datetime({ offset: true }),
+    attachedEventVersion: z.number().int().positive().optional(),
+    failureCode: z.string().min(1).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'attached' && value.attachedEventVersion === undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Attached media must include the resulting event version.',
+        path: ['attachedEventVersion'],
+      });
+    }
+  });
+
+const removeEventMediaResponseSchema = z.object({
+  eventVersion: z.number().int().positive(),
+});
+
 export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   return apiRequest('/admin/events', {
     body: input,
@@ -79,9 +123,13 @@ export function listAdminEvents(cursor?: string): Promise<AdminEventListPage> {
   });
 }
 
-export function getAdminEvent(eventId: string): Promise<AdminEvent> {
+export function getAdminEvent(
+  eventId: string,
+  signal?: AbortSignal,
+): Promise<AdminEvent> {
   return apiRequest(`/admin/events/${encodeURIComponent(eventId)}`, {
     responseSchema: adminEventSchema,
+    ...(signal === undefined ? {} : { signal }),
   });
 }
 
@@ -93,5 +141,89 @@ export function updateDraftEvent({
     body: input,
     method: 'PUT',
     responseSchema: adminEventSchema,
+  });
+}
+
+export function createEventMediaUpload(
+  { eventId, input }: CreateEventMediaUploadCommand,
+  signal?: AbortSignal,
+): Promise<EventMediaUploadIntent> {
+  return apiRequest(`/admin/events/${encodeURIComponent(eventId)}/media-uploads`, {
+    body: input,
+    method: 'POST',
+    responseSchema: eventMediaUploadIntentSchema,
+    ...(signal === undefined ? {} : { signal }),
+  });
+}
+
+export function getEventMediaUpload(
+  eventId: string,
+  uploadId: string,
+  signal?: AbortSignal,
+): Promise<EventMediaUploadStatus> {
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/media-uploads/${encodeURIComponent(uploadId)}`,
+    {
+      responseSchema: eventMediaUploadStatusSchema,
+      ...(signal === undefined ? {} : { signal }),
+    },
+  );
+}
+
+export async function removeEventMedia({
+  eventId,
+  expectedVersion,
+  slot,
+}: RemoveEventMediaCommand): Promise<AdminEvent> {
+  const search = new URLSearchParams({ expectedVersion: String(expectedVersion) });
+  const response = await apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/media/${encodeURIComponent(slot)}?${search.toString()}`,
+    { method: 'DELETE', responseSchema: removeEventMediaResponseSchema },
+  );
+  const event = await getAdminEvent(eventId);
+  if (event.version < response.eventVersion) {
+    throw new Error('EVENT_MEDIA_EVENT_REFRESH_STALE');
+  }
+  return event;
+}
+
+export function uploadEventMedia(
+  intent: EventMediaUploadIntent,
+  file: File,
+  onProgress: XMLHttpRequestUpload['onprogress'],
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Upload aborted', 'AbortError'));
+      return;
+    }
+    const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+
+    request.open('PUT', intent.uploadUrl);
+    for (const [name, value] of Object.entries(intent.requiredHeaders)) {
+      request.setRequestHeader(name, value);
+    }
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress?.call(request, event);
+      }
+    });
+    request.addEventListener('load', () => {
+      signal.removeEventListener('abort', abort);
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error('EVENT_MEDIA_STORAGE_UPLOAD_FAILED'));
+    });
+    request.addEventListener('error', () => {
+      signal.removeEventListener('abort', abort);
+      reject(new Error('EVENT_MEDIA_STORAGE_UPLOAD_FAILED'));
+    });
+    request.addEventListener('abort', () => {
+      signal.removeEventListener('abort', abort);
+      reject(new DOMException('Upload aborted', 'AbortError'));
+    });
+    signal.addEventListener('abort', abort, { once: true });
+    request.send(file);
   });
 }

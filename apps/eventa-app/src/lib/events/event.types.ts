@@ -8,11 +8,23 @@ export interface EventVenue {
   countryCode: string;
 }
 
+export type EventMediaSlot =
+  | 'cover'
+  | 'gallery_1'
+  | 'gallery_2'
+  | 'gallery_3'
+  | 'gallery_4';
+
+export type EventMediaContentType =
+  | 'image/jpeg'
+  | 'image/png'
+  | 'image/webp';
+
 export interface AdminEventMedia {
   mediaId: string;
-  slot: 'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
+  slot: EventMediaSlot;
   url: string;
-  contentType: 'image/jpeg' | 'image/png' | 'image/webp';
+  contentType: EventMediaContentType;
   sizeBytes: number;
   width: number;
   height: number;
@@ -72,4 +84,38 @@ export interface AdminEventSummary {
 export interface AdminEventListPage {
   events: AdminEventSummary[];
   nextCursor?: string | undefined;
+}
+
+export interface CreateEventMediaUploadCommand {
+  eventId: string;
+  input: {
+    expectedVersion: number;
+    slot: EventMediaSlot;
+    contentType: EventMediaContentType;
+    sizeBytes: number;
+  };
+}
+
+export interface EventMediaUploadIntent {
+  uploadId: string;
+  uploadUrl: string;
+  requiredHeaders: Record<string, string>;
+  expiresAt: string;
+  verificationDeadlineAt: string;
+}
+
+export interface EventMediaUploadStatus {
+  uploadId: string;
+  status: 'pending' | 'attached' | 'rejected' | 'conflict' | 'expired';
+  slot: EventMediaSlot;
+  expiresAt: string;
+  verificationDeadlineAt: string;
+  attachedEventVersion?: number | undefined;
+  failureCode?: string | undefined;
+}
+
+export interface RemoveEventMediaCommand {
+  eventId: string;
+  expectedVersion: number;
+  slot: EventMediaSlot;
 }

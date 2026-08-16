@@ -18,8 +18,9 @@ const apiErrorSchema = z.object({
 
 interface ApiRequestOptions<T> {
   body?: unknown;
-  method?: 'GET' | 'POST' | 'PUT';
+  method?: 'DELETE' | 'GET' | 'POST' | 'PUT';
   responseSchema: z.ZodType<T>;
+  signal?: AbortSignal;
 }
 
 function readPositiveInteger(value: string | null): number | undefined {
@@ -45,6 +46,7 @@ export async function apiRequest<T>(
     credentials: 'include',
     headers,
     method: options.method ?? 'GET',
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
 
   if (!response.ok) {
