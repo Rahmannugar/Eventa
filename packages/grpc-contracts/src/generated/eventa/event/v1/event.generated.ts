@@ -43,7 +43,10 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
   version: number;
-  description?: string | undefined;
+  description?:
+    | string
+    | undefined;
+  /** @deprecated */
   category?: string | undefined;
   startsAt?: string | undefined;
   endsAt?: string | undefined;
@@ -51,12 +54,14 @@ export interface Event {
   venue: Venue | undefined;
   media: EventMedia[];
   publishedAt?: string | undefined;
+  categories: string[];
 }
 
 export interface PublishedEvent {
   eventId: string;
   title: string;
   description: string;
+  /** @deprecated */
   category: string;
   startsAt: string;
   endsAt: string;
@@ -65,6 +70,7 @@ export interface PublishedEvent {
   media: EventMedia[];
   publishedAt: string;
   version: number;
+  categories: string[];
 }
 
 export interface EventMedia {
@@ -90,6 +96,12 @@ export interface Venue {
 export interface CreateDraftEventRequest {
   adminId: string;
   title: string;
+  description: string;
+  categories: string[];
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  venue: Venue | undefined;
 }
 
 export interface CreateDraftEventResponse {
@@ -102,6 +114,28 @@ export interface GetAdminEventRequest {
 
 export interface GetAdminEventResponse {
   event: Event | undefined;
+}
+
+export interface AdminEventSummary {
+  eventId: string;
+  title: string;
+  categories: string[];
+  status: EventStatus;
+  startsAt?: string | undefined;
+  endsAt?: string | undefined;
+  timeZone?: string | undefined;
+  venue: Venue | undefined;
+  updatedAt: string;
+}
+
+export interface ListAdminEventsRequest {
+  pageSize: number;
+  pageToken?: string | undefined;
+}
+
+export interface ListAdminEventsResponse {
+  events: AdminEventSummary[];
+  nextPageToken?: string | undefined;
 }
 
 export interface GetPublishedEventRequest {
@@ -118,11 +152,13 @@ export interface UpdateDraftEventRequest {
   expectedVersion: number;
   title: string;
   description: string;
+  /** @deprecated */
   category: string;
   startsAt: string;
   endsAt: string;
   timeZone: string;
   venue: Venue | undefined;
+  categories: string[];
 }
 
 export interface UpdateDraftEventResponse {

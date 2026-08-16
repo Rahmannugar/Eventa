@@ -6,11 +6,13 @@ The public representation excludes creator provenance and draft lifecycle state.
 
 Gateway authenticates the opaque admin session through Identity before calling Event Service. The resolved admin ID comes only from the server-backed session; the client cannot submit an acting admin ID.
 
+The admin catalogue forwards bounded cursor pagination to Event Service and maps the returned summaries to HTTP. Gateway does not join event data, interpret categories, or own ordering rules.
+
 The Gateway validates public input, applies operation-specific abuse controls, propagates the request ID, and calls Event Service with a deadline shorter than the outer HTTP request budget. Event Service owns event rules, persistence, creator provenance, and durable mutation audit history.
 
 Creator identity is not an authorization boundary. Any authenticated admin may retrieve or mutate any event.
 
-Draft updates are full replacements of editable details. Gateway forwards the authenticated admin ID and expected version; Event Service owns schedule validation and the atomic version check. A stale version becomes the stable public conflict response so the client can reload before retrying.
+Creation forwards the authenticated admin and complete event input as one command. Draft updates are full replacements of editable details. Gateway forwards the authenticated admin ID and expected version; Event Service owns category normalization, schedule validation, atomic persistence, and the version check. A stale version becomes the stable public conflict response so the client can reload before retrying.
 
 Publication has its own abuse budget. Gateway forwards the authenticated admin ID and expected version under the Event gRPC deadline. Event Service alone decides whether the draft is complete and performs the lifecycle transition. Gateway translates an incomplete draft to a correctable `422` response and version or lifecycle conflicts to `409`.
 

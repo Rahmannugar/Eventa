@@ -1,5 +1,5 @@
-import { EventStart } from '../components/events/EventStart';
+import { EventList } from '../components/events/EventList';
 
 export function AdminEventsPage() {
-  return <EventStart />;
+  return <EventList />;
 }

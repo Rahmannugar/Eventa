@@ -87,7 +87,7 @@ export class PublishedEventService implements OnModuleInit {
       event.eventId === '' ||
       event.title === '' ||
       event.description === '' ||
-      event.category === '' ||
+      event.categories.length === 0 ||
       event.startsAt === '' ||
       event.endsAt === '' ||
       event.timeZone === '' ||

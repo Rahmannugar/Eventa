@@ -19,6 +19,20 @@ export class EventScheduleInvalidError extends Error {
   }
 }
 
+export class EventCategoriesInvalidError extends Error {
+  constructor() {
+    super('EVENT_CATEGORIES_INVALID');
+    this.name = EventCategoriesInvalidError.name;
+  }
+}
+
+export class EventPageTokenInvalidError extends Error {
+  constructor() {
+    super('EVENT_PAGE_TOKEN_INVALID');
+    this.name = EventPageTokenInvalidError.name;
+  }
+}
+
 export class EventPublicationIncompleteError extends Error {
   constructor() {
     super('EVENT_PUBLICATION_INCOMPLETE');

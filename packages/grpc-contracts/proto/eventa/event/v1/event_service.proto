@@ -6,6 +6,7 @@ import "eventa/event/v1/event.proto";
 
 service EventService {
   rpc CreateDraftEvent(CreateDraftEventRequest) returns (CreateDraftEventResponse);
+  rpc ListAdminEvents(ListAdminEventsRequest) returns (ListAdminEventsResponse);
   rpc GetAdminEvent(GetAdminEventRequest) returns (GetAdminEventResponse);
   rpc GetPublishedEvent(GetPublishedEventRequest) returns (GetPublishedEventResponse);
   rpc UpdateDraftEvent(UpdateDraftEventRequest) returns (UpdateDraftEventResponse);

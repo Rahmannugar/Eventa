@@ -43,6 +43,13 @@
       "when": 1786379808063,
       "tag": "0005_route_outbox_with_debezium",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786872884131,
+      "tag": "0006_support_event_catalog",
+      "breakpoints": true
     }
   ]
 }

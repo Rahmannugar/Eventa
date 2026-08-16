@@ -15,7 +15,6 @@ export const events = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     title: text('title').notNull(),
     description: text('description'),
-    category: text('category'),
     startsAt: timestamp('starts_at', { mode: 'date', withTimezone: true }),
     endsAt: timestamp('ends_at', { mode: 'date', withTimezone: true }),
     timeZone: text('time_zone'),
@@ -61,20 +60,12 @@ export const events = pgTable(
       sql`${table.description} IS NULL OR ${table.description} = btrim(${table.description})`,
     ),
     check(
-      'events_category_normalized',
-      sql`${table.category} IS NULL OR ${table.category} = btrim(${table.category})`,
-    ),
-    check(
-      'events_category_length',
-      sql`${table.category} IS NULL OR char_length(${table.category}) BETWEEN 1 AND 80`,
-    ),
-    check(
       'events_schedule_valid',
       sql`(${table.startsAt} IS NULL AND ${table.endsAt} IS NULL AND ${table.timeZone} IS NULL) OR (${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL AND ${table.timeZone} IS NOT NULL AND ${table.endsAt} > ${table.startsAt})`,
     ),
     check(
       'events_details_complete',
-      sql`(${table.description} IS NULL AND ${table.category} IS NULL AND ${table.startsAt} IS NULL AND ${table.endsAt} IS NULL AND ${table.timeZone} IS NULL) OR (${table.description} IS NOT NULL AND ${table.category} IS NOT NULL AND ${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL AND ${table.timeZone} IS NOT NULL)`,
+      sql`(${table.description} IS NULL AND ${table.startsAt} IS NULL AND ${table.endsAt} IS NULL AND ${table.timeZone} IS NULL) OR (${table.description} IS NOT NULL AND ${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL AND ${table.timeZone} IS NOT NULL)`,
     ),
     check(
       'events_time_zone_length',

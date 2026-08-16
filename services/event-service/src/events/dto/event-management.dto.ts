@@ -1,12 +1,16 @@
 import type {
   CreateDraftEventRequest,
   GetAdminEventRequest,
+  ListAdminEventsRequest,
   PublishEventRequest,
   UpdateDraftEventRequest,
   Venue,
 } from '@eventa/grpc-contracts';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
   IsDefined,
   IsInt,
   IsISO8601,
@@ -23,22 +27,21 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class CreateDraftEventDto implements CreateDraftEventRequest {
-  @IsUUID()
-  adminId!: string;
-
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  title!: string;
-}
-
 export class GetAdminEventDto implements GetAdminEventRequest {
   @IsUUID()
   eventId!: string;
+}
+
+export class ListAdminEventsDto implements ListAdminEventsRequest {
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  pageSize!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(512)
+  pageToken?: string;
 }
 
 export class EventVenueDto implements Venue {
@@ -102,6 +105,50 @@ export class EventVenueDto implements Venue {
   countryCode!: string;
 }
 
+export class CreateDraftEventDto implements CreateDraftEventRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  title!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  description!: string;
+
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @ArrayUnique((category: string) => category.trim().toLocaleLowerCase('en'))
+  @IsString({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(80, { each: true })
+  categories!: string[];
+
+  @IsISO8601({ strict: true, strictSeparator: true })
+  startsAt!: string;
+
+  @IsISO8601({ strict: true, strictSeparator: true })
+  endsAt!: string;
+
+  @IsTimeZone()
+  @MaxLength(64)
+  timeZone!: string;
+
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => EventVenueDto)
+  venue!: EventVenueDto | undefined;
+}
+
 export class UpdateDraftEventDto implements UpdateDraftEventRequest {
   @IsUUID()
   adminId!: string;
@@ -130,13 +177,16 @@ export class UpdateDraftEventDto implements UpdateDraftEventRequest {
   @MaxLength(10000)
   description!: string;
 
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
   @IsString()
-  @MinLength(1)
   @MaxLength(80)
   category!: string;
+
+  @ArrayMaxSize(5)
+  @ArrayUnique((category: string) => category.trim().toLocaleLowerCase('en'))
+  @IsString({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(80, { each: true })
+  categories!: string[];
 
   @IsISO8601({ strict: true, strictSeparator: true })
   startsAt!: string;
@@ -151,7 +201,7 @@ export class UpdateDraftEventDto implements UpdateDraftEventRequest {
   @IsDefined()
   @ValidateNested()
   @Type(() => EventVenueDto)
-  venue!: EventVenueDto;
+  venue!: EventVenueDto | undefined;
 }
 
 export class PublishEventDto implements PublishEventRequest {

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { apiRequest } from '../api/api-client';
 import type {
   AdminEvent,
-  CreateDraftEventInput,
+  AdminEventListPage,
+  CreateEventInput,
   UpdateDraftEventCommand,
 } from './event.types';
 
@@ -27,11 +28,11 @@ const eventMediaSchema = z.object({
   height: z.number().int().positive(),
 });
 
-const adminEventSchema: z.ZodType<AdminEvent> = z.object({
+const adminEventSchema = z.object({
   eventId: z.uuid(),
   title: z.string().min(1),
   description: z.string().min(1).optional(),
-  category: z.string().min(1).optional(),
+  categories: z.array(z.string().min(1)).max(5),
   startsAt: z.iso.datetime({ offset: true }).optional(),
   endsAt: z.iso.datetime({ offset: true }).optional(),
   timeZone: z.string().min(1).optional(),
@@ -45,13 +46,36 @@ const adminEventSchema: z.ZodType<AdminEvent> = z.object({
   publishedAt: z.iso.datetime({ offset: true }).optional(),
 });
 
-export function createDraftEvent(
-  input: CreateDraftEventInput,
-): Promise<AdminEvent> {
+const adminEventSummarySchema = adminEventSchema.pick({
+  eventId: true,
+  title: true,
+  categories: true,
+  startsAt: true,
+  endsAt: true,
+  timeZone: true,
+  venue: true,
+  status: true,
+  updatedAt: true,
+});
+
+const adminEventListPageSchema: z.ZodType<AdminEventListPage> = z.object({
+  events: z.array(adminEventSummarySchema),
+  nextCursor: z.string().min(1).optional(),
+});
+
+export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   return apiRequest('/admin/events', {
     body: input,
     method: 'POST',
     responseSchema: adminEventSchema,
+  });
+}
+
+export function listAdminEvents(cursor?: string): Promise<AdminEventListPage> {
+  const search = new URLSearchParams({ limit: '20' });
+  if (cursor !== undefined) search.set('cursor', cursor);
+  return apiRequest<AdminEventListPage>(`/admin/events?${search.toString()}`, {
+    responseSchema: adminEventListPageSchema,
   });
 }
 

@@ -13,6 +13,14 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Headings identify the task or content. Labels name the information requested. Buttons name the action. Do not add subtitles, helper text, badges, empty-state prose, or recovery instructions that merely repeat visible UI or narrate how Eventa is implemented.
 - Never turn a contract shape directly into screen structure or copy. The interface may collect or display the same data only after translating it into the organizer's or attendee's mental model.
 
+## Event Management
+
+- The Events landing route is a management list. Its header pairs the `Events` heading with the primary `Create event` action. Creation has its own route and does not replace the catalog.
+- Wide layouts use a compact, scannable table. Narrow layouts use stacked event cards with the same information and one clear row-level navigation target.
+- Event creation collects the complete event and venue in one form. Creation and editing share category, date-time, time-zone, and country controls so the same information never behaves differently between routes.
+- Categories use a searchable multi-select with removable selections and a maximum of five. Date-time fields compose an accessible calendar popover with an explicit time input. Time zones and countries are searchable selects; country names are visible while ISO codes remain transport data.
+- Dirty state changes action availability and protects navigation. It is not displayed as explanatory product copy. Avoid side checklists and helper panels that repeat the form.
+
 ## Visual Language
 
 - Warm parchment is the primary canvas. Deep evergreen provides structure and authority.

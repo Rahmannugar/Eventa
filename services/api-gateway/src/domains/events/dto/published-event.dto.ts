@@ -65,7 +65,7 @@ export class PublishedEventDto {
   description!: string;
 
   @ApiProperty()
-  category!: string;
+  categories!: string[];
 
   @ApiProperty()
   startsAt!: string;

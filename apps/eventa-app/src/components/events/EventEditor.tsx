@@ -1,18 +1,9 @@
 import {
   ArrowLeftIcon,
   ArrowsClockwiseIcon,
-  CalendarBlankIcon,
-  MapPinIcon,
   WarningCircleIcon,
 } from '@phosphor-icons/react';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type Dispatch,
-  type FormEvent,
-  type TextareaHTMLAttributes,
-} from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -31,7 +22,7 @@ import {
 import type { AdminEvent } from '../../lib/events/event.types';
 import { useAdminEvent, useUpdateDraftEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
-import { TextField } from '../ui/TextField';
+import { EventFormFields } from './EventFormFields';
 
 const eventIdSchema = z.uuid();
 
@@ -39,19 +30,9 @@ export function EventEditor({ eventId }: { eventId: string }) {
   const location = useLocation();
   const validEventId = eventIdSchema.safeParse(eventId).success;
   const eventQuery = useAdminEvent(eventId, validEventId);
-  const [savedMessage, setSavedMessage] = useState<string>();
 
-  if (!validEventId) {
-    return (
-      <EventState
-        title="This event link is not valid"
-        description="Go back to Events and start a new event, or check the link and try again."
-      />
-    );
-  }
-
+  if (!validEventId) return <EventState title="This event link is not valid" />;
   if (eventQuery.isPending) return <EventEditorLoading />;
-
   if (eventQuery.error !== null && isSessionInvalid(eventQuery.error)) {
     return (
       <Navigate
@@ -61,20 +42,16 @@ export function EventEditor({ eventId }: { eventId: string }) {
       />
     );
   }
-
   if (eventQuery.error !== null && eventQuery.data === undefined) {
     const notFound =
       eventQuery.error instanceof ApiError &&
       eventQuery.error.statusCode === 404;
-    return (
+    return notFound ? (
+      <EventState title="Event not found" />
+    ) : (
       <EventState
-        title={notFound ? 'Event not found' : 'Event could not be loaded'}
-        description={
-          notFound
-            ? 'It may have been removed, or this link may be incomplete.'
-            : 'Check your connection and try again.'
-        }
-        retry={notFound ? undefined : eventQuery.refetch}
+        title="Event could not be loaded"
+        retry={() => void eventQuery.refetch()}
       />
     );
   }
@@ -82,82 +59,38 @@ export function EventEditor({ eventId }: { eventId: string }) {
   return (
     <main className="admin-page admin-page--editor">
       <header className="event-editor-header">
-        <div>
-          <Link className="back-link" to="/admin">
-            <ArrowLeftIcon aria-hidden="true" />
-            Events
-          </Link>
-          <div className="event-editor-header__title">
-            <div>
-              <h1>{eventQuery.data.title}</h1>
-            </div>
-            <span
-              className={`status-badge status-badge--${eventQuery.data.status}`}
-            >
-              {eventQuery.data.status === 'draft' ? 'Private' : 'Published'}
-            </span>
-          </div>
+        <Link className="back-link" to="/admin">
+          <ArrowLeftIcon aria-hidden="true" />
+          Events
+        </Link>
+        <div className="event-editor-header__title">
+          <h1>{eventQuery.data.title}</h1>
+          <span
+            className={`status-badge status-badge--${eventQuery.data.status}`}
+          >
+            {eventQuery.data.status === 'draft' ? 'Private' : 'Published'}
+          </span>
         </div>
       </header>
 
-      <div className="event-editor-layout">
-        <div>
-          {savedMessage === undefined ? null : (
-            <div className="form-status event-editor-status" role="status">
-              {savedMessage}
-            </div>
-          )}
-
-          {eventQuery.data.status === 'published' ? (
-            <div className="event-locked" role="status">
-              <WarningCircleIcon aria-hidden="true" weight="fill" />
-              <div>
-                <h2>This event is published</h2>
-                <p>Published events are read-only.</p>
-              </div>
-            </div>
-          ) : (
-            <DraftEventForm
-              key={`${eventQuery.data.eventId}:${String(eventQuery.data.version)}`}
-              event={eventQuery.data}
-              reload={async () => {
-                const result = await eventQuery.refetch();
-                if (result.error !== null) throw result.error;
-              }}
-              onSaved={() => {
-                setSavedMessage('Changes saved.');
-              }}
-            />
-          )}
+      {eventQuery.data.status === 'published' ? (
+        <div className="event-locked" role="status">
+          <WarningCircleIcon aria-hidden="true" weight="fill" />
+          <div>
+            <h2>This event is published</h2>
+            <p>Published events are read-only.</p>
+          </div>
         </div>
-
-        <aside
-          className="event-editor-guide"
-          aria-labelledby="draft-guide-title"
-        >
-          <h2 id="draft-guide-title">Details to add</h2>
-          <ul>
-            <li>
-              <div>
-                <strong>About the event</strong>
-                <small>Add a clear name, description, and category.</small>
-              </div>
-            </li>
-            <li>
-              <div>
-                <strong>Date and time</strong>
-                <small>Use the time zone where the event takes place.</small>
-              </div>
-            </li>
-            <li>
-              <div>
-                <strong>Venue</strong>
-                <small>Add the address guests will use.</small>
-              </div>
-            </li>
-          </ul>
-        </aside>
-      </div>
+      ) : (
+        <DraftEventForm
+          key={`${eventQuery.data.eventId}:${String(eventQuery.data.version)}`}
+          event={eventQuery.data}
+          reload={async () => {
+            const result = await eventQuery.refetch();
+            if (result.error !== null) throw result.error;
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -165,11 +98,9 @@ export function EventEditor({ eventId }: { eventId: string }) {
 function DraftEventForm({
   event,
   reload,
-  onSaved,
 }: {
   event: AdminEvent;
   reload: () => Promise<unknown>;
-  onSaved: Dispatch<void>;
 }) {
   const update = useUpdateDraftEvent();
   const formRef = useRef<HTMLFormElement>(null);
@@ -177,22 +108,29 @@ function DraftEventForm({
   const [errors, setErrors] = useState<DraftEventFormErrors>({});
   const [reloadError, setReloadError] = useState(false);
   const [reloading, setReloading] = useState(false);
-  const initialValues = draftEventFormValues(event);
-  const dirty = JSON.stringify(values) !== JSON.stringify(initialValues);
+  const dirty =
+    JSON.stringify(values) !== JSON.stringify(draftEventFormValues(event));
   const conflict =
     update.error instanceof ApiError &&
     update.error.code === 'EVENT_VERSION_CONFLICT';
 
   useEffect(() => {
     if (!dirty) return;
-    const preventAccidentalExit = (browserEvent: BeforeUnloadEvent) => {
+    const preventAccidentalExit = (browserEvent: BeforeUnloadEvent) =>
       browserEvent.preventDefault();
-    };
     window.addEventListener('beforeunload', preventAccidentalExit);
-    return () => {
+    return () =>
       window.removeEventListener('beforeunload', preventAccidentalExit);
-    };
   }, [dirty]);
+
+  function change<K extends keyof DraftEventFormValues>(
+    field: K,
+    value: DraftEventFormValues[K],
+  ) {
+    setValues((current) => ({ ...current, [field]: value }));
+    if (errors[field] !== undefined)
+      setErrors((current) => ({ ...current, [field]: undefined }));
+  }
 
   function focusFirstInvalidField() {
     window.setTimeout(() => {
@@ -200,16 +138,6 @@ function DraftEventForm({
         ?.querySelector<HTMLElement>('[aria-invalid="true"]')
         ?.focus();
     }, 0);
-  }
-
-  function change<K extends keyof DraftEventFormValues>(
-    field: K,
-    value: DraftEventFormValues[K],
-  ) {
-    setValues((current) => ({ ...current, [field]: value }));
-    if (errors[field] !== undefined) {
-      setErrors((current) => ({ ...current, [field]: undefined }));
-    }
   }
 
   async function submit(formEvent: FormEvent<HTMLFormElement>) {
@@ -224,12 +152,8 @@ function DraftEventForm({
     setErrors({});
     update.reset();
     try {
-      await update.mutateAsync({
-        eventId: event.eventId,
-        input: result.data,
-      });
-      onSaved();
-      toast.success('Event details saved.');
+      await update.mutateAsync({ eventId: event.eventId, input: result.data });
+      toast.success('Changes saved.');
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length > 0) {
         const serverErrors: DraftEventFormErrors = {};
@@ -250,25 +174,19 @@ function DraftEventForm({
   return (
     <form
       ref={formRef}
-      className="event-form"
+      className="event-form event-form--single-column"
       noValidate
-      onSubmit={(formEvent) => {
-        void submit(formEvent);
-      }}
+      onSubmit={(formEvent) => void submit(formEvent)}
     >
       {update.error === null ? null : conflict ? (
         <div className="conflict-notice" role="alert">
           <WarningCircleIcon aria-hidden="true" weight="fill" />
           <div>
             <strong>This event changed since you opened it</strong>
-            <p>
-              Your changes are still here. Load the latest event, then review
-              and save them again.
-            </p>
+            <p>Load the latest event, review your changes, then save again.</p>
             {reloadError ? (
               <p role="status">
-                We couldn’t load the latest event. Your changes are still here;
-                check your connection and try again.
+                The latest event could not be loaded. Try again.
               </p>
             ) : null}
             <Button
@@ -279,16 +197,12 @@ function DraftEventForm({
                 setReloadError(false);
                 setReloading(true);
                 void reload()
-                  .catch(() => {
-                    setReloadError(true);
-                  })
-                  .finally(() => {
-                    setReloading(false);
-                  });
+                  .catch(() => setReloadError(true))
+                  .finally(() => setReloading(false));
               }}
             >
               <ArrowsClockwiseIcon aria-hidden="true" />
-              {reloading ? 'Loading latest event…' : 'Load latest event'}
+              {reloading ? 'Loading…' : 'Load latest event'}
             </Button>
           </div>
         </div>
@@ -299,162 +213,14 @@ function DraftEventForm({
         </div>
       )}
 
-      <section
-        className="event-form__section"
-        aria-labelledby="event-details-title"
-      >
-        <div className="event-form__section-heading">
-          <CalendarBlankIcon aria-hidden="true" />
-          <div>
-            <h2 id="event-details-title">Event details</h2>
-            <p>Describe what guests can expect and when it takes place.</p>
-          </div>
-        </div>
+      <EventFormFields
+        idPrefix="edit-event"
+        values={values}
+        errors={errors}
+        onChange={change}
+      />
 
-        <div className="event-form__fields">
-          <TextField
-            id="draft-title"
-            label="Event title"
-            maxLength={160}
-            value={values.title}
-            error={errors.title}
-            onChange={(input) => change('title', input.target.value)}
-          />
-          <TextAreaField
-            id="draft-description"
-            label="Description"
-            maxLength={10_000}
-            rows={7}
-            value={values.description}
-            error={errors.description}
-            onChange={(input) => change('description', input.target.value)}
-          />
-          <TextField
-            id="draft-category"
-            label="Category"
-            maxLength={80}
-            placeholder="Design"
-            value={values.category}
-            error={errors.category}
-            onChange={(input) => change('category', input.target.value)}
-          />
-          <div className="event-form__grid">
-            <TextField
-              id="draft-start"
-              label="Starts"
-              type="datetime-local"
-              value={values.startsAt}
-              error={errors.startsAt}
-              onChange={(input) => change('startsAt', input.target.value)}
-            />
-            <TextField
-              id="draft-end"
-              label="Ends"
-              type="datetime-local"
-              value={values.endsAt}
-              error={errors.endsAt}
-              onChange={(input) => change('endsAt', input.target.value)}
-            />
-          </div>
-          <TextField
-            id="draft-timezone"
-            label="Time zone"
-            maxLength={64}
-            placeholder="Africa/Lagos"
-            value={values.timeZone}
-            error={errors.timeZone}
-            onChange={(input) => change('timeZone', input.target.value)}
-          />
-        </div>
-      </section>
-
-      <section className="event-form__section" aria-labelledby="venue-title">
-        <div className="event-form__section-heading">
-          <MapPinIcon aria-hidden="true" />
-          <div>
-            <h2 id="venue-title">Venue</h2>
-            <p>Give guests a complete, recognizable destination.</p>
-          </div>
-        </div>
-
-        <div className="event-form__fields">
-          <TextField
-            id="venue-name"
-            label="Venue name"
-            maxLength={160}
-            autoComplete="organization"
-            value={values.venueName}
-            error={errors.venueName}
-            onChange={(input) => change('venueName', input.target.value)}
-          />
-          <TextField
-            id="venue-address-one"
-            label="Address line 1"
-            maxLength={200}
-            autoComplete="address-line1"
-            value={values.addressLine1}
-            error={errors.addressLine1}
-            onChange={(input) => change('addressLine1', input.target.value)}
-          />
-          <TextField
-            id="venue-address-two"
-            label="Address line 2 (optional)"
-            maxLength={200}
-            autoComplete="address-line2"
-            value={values.addressLine2}
-            error={errors.addressLine2}
-            onChange={(input) => change('addressLine2', input.target.value)}
-          />
-          <div className="event-form__grid event-form__grid--address">
-            <TextField
-              id="venue-city"
-              label="City"
-              maxLength={120}
-              autoComplete="address-level2"
-              value={values.city}
-              error={errors.city}
-              onChange={(input) => change('city', input.target.value)}
-            />
-            <TextField
-              id="venue-region"
-              label="State or region (optional)"
-              maxLength={120}
-              autoComplete="address-level1"
-              value={values.region}
-              error={errors.region}
-              onChange={(input) => change('region', input.target.value)}
-            />
-            <TextField
-              id="venue-postal-code"
-              label="Postal code (optional)"
-              maxLength={32}
-              autoComplete="postal-code"
-              value={values.postalCode}
-              error={errors.postalCode}
-              onChange={(input) => change('postalCode', input.target.value)}
-            />
-            <TextField
-              id="venue-country"
-              label="Country code"
-              maxLength={2}
-              autoComplete="country"
-              placeholder="NG"
-              value={values.countryCode}
-              error={errors.countryCode}
-              onChange={(input) =>
-                change('countryCode', input.target.value.toUpperCase())
-              }
-            />
-          </div>
-        </div>
-      </section>
-
-      <footer className="event-form__actions">
-        <p aria-live="polite">
-          {dirty
-            ? 'You have unsaved changes.'
-            : 'All visible changes are saved.'}
-        </p>
+      <footer className="event-form__actions event-form__actions--end">
         <Button type="submit" busy={update.isPending} disabled={!dirty}>
           {update.isPending ? 'Saving changes…' : 'Save changes'}
         </Button>
@@ -463,78 +229,34 @@ function DraftEventForm({
   );
 }
 
-function TextAreaField({
-  error,
-  id,
-  label,
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & {
-  error?: string | undefined;
-  label: string;
-}) {
-  const errorId = `${String(id)}-error`;
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <textarea
-        {...props}
-        id={id}
-        aria-describedby={error === undefined ? undefined : errorId}
-        aria-invalid={error === undefined ? undefined : true}
-      />
-      {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function EventEditorLoading() {
   return (
     <main className="admin-page" aria-busy="true" aria-label="Loading event">
       <div className="event-loading__heading" />
-      <div className="event-loading__layout">
-        <div className="event-loading__panel" />
-        <div className="event-loading__aside" />
-      </div>
+      <div className="event-loading__panel" />
       <span className="visually-hidden">Loading event…</span>
     </main>
   );
 }
 
-function EventState({
-  title,
-  description,
-  retry,
-}: {
-  title: string;
-  description: string;
-  retry?: (() => Promise<unknown>) | undefined;
-}) {
+function EventState({ title, retry }: { title: string; retry?: () => void }) {
   return (
     <main className="admin-page">
       <div
         className="event-page-state"
         role={retry === undefined ? undefined : 'alert'}
       >
-        <WarningCircleIcon aria-hidden="true" weight="duotone" />
+        <WarningCircleIcon aria-hidden="true" />
         <h1>{title}</h1>
-        <p>{description}</p>
         <div>
-          {retry === undefined ? null : (
-            <Button
-              onClick={() => {
-                void retry();
-              }}
-            >
-              Try again
-            </Button>
-          )}
           <Link className="button button--secondary" to="/admin">
             Back to Events
           </Link>
+          {retry === undefined ? null : (
+            <Button type="button" onClick={retry}>
+              Try again
+            </Button>
+          )}
         </div>
       </div>
     </main>

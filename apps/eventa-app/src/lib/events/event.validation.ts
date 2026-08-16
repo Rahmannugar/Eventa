@@ -1,11 +1,15 @@
 import { z } from 'zod';
 
-import type { AdminEvent, UpdateDraftEventInput } from './event.types';
+import type {
+  AdminEvent,
+  CreateEventInput,
+  UpdateDraftEventInput,
+} from './event.types';
 
 export interface DraftEventFormValues {
   title: string;
   description: string;
-  category: string;
+  categories: string[];
   startsAt: string;
   endsAt: string;
   timeZone: string;
@@ -26,7 +30,10 @@ const formSchema = z
   .object({
     title: z.string().trim().min(1, 'Enter an event title.').max(160),
     description: z.string().trim().min(1, 'Describe the event.').max(10_000),
-    category: z.string().trim().min(1, 'Enter a category.').max(80),
+    categories: z
+      .array(z.string().trim().min(1).max(80))
+      .min(1, 'Choose at least one category.')
+      .max(5, 'Choose no more than five categories.'),
     startsAt: z.string().min(1, 'Choose a start date and time.'),
     endsAt: z.string().min(1, 'Choose an end date and time.'),
     timeZone: z
@@ -45,7 +52,7 @@ const formSchema = z
       .string()
       .trim()
       .toUpperCase()
-      .regex(/^[A-Z]{2}$/, 'Use a two-letter country code.'),
+      .regex(/^[A-Z]{2}$/, 'Choose a country.'),
   })
   .superRefine((value, context) => {
     try {
@@ -73,7 +80,7 @@ export function draftEventFormValues(event: AdminEvent): DraftEventFormValues {
   return {
     title: event.title,
     description: event.description ?? '',
-    category: event.category ?? '',
+    categories: event.categories,
     startsAt:
       event.startsAt === undefined
         ? ''
@@ -93,11 +100,50 @@ export function draftEventFormValues(event: AdminEvent): DraftEventFormValues {
   };
 }
 
+export function emptyEventFormValues(): DraftEventFormValues {
+  return {
+    title: '',
+    description: '',
+    categories: [],
+    startsAt: '',
+    endsAt: '',
+    timeZone: deviceTimeZone(),
+    venueName: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    region: '',
+    postalCode: '',
+    countryCode: '',
+  };
+}
+
+export function validateCreateEventForm(
+  values: DraftEventFormValues,
+):
+  | { success: true; data: CreateEventInput }
+  | { success: false; errors: DraftEventFormErrors } {
+  return validateEventForm(values);
+}
+
 export function validateDraftEventForm(
   values: DraftEventFormValues,
   expectedVersion: number,
 ):
   | { success: true; data: UpdateDraftEventInput }
+  | { success: false; errors: DraftEventFormErrors } {
+  const result = validateEventForm(values);
+  if (!result.success) return result;
+  return {
+    success: true,
+    data: { ...result.data, expectedVersion },
+  };
+}
+
+function validateEventForm(
+  values: DraftEventFormValues,
+):
+  | { success: true; data: CreateEventInput }
   | { success: false; errors: DraftEventFormErrors } {
   const result = formSchema.safeParse(values);
   if (!result.success) {
@@ -115,10 +161,9 @@ export function validateDraftEventForm(
   return {
     success: true,
     data: {
-      expectedVersion,
       title: value.title,
       description: value.description,
-      category: value.category,
+      categories: value.categories,
       startsAt: localDateTimeToIso(value.startsAt, value.timeZone),
       endsAt: localDateTimeToIso(value.endsAt, value.timeZone),
       timeZone: value.timeZone,

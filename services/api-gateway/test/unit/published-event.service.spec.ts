@@ -14,6 +14,7 @@ import type { DeadlineAwareEventServiceClient } from '../../src/domains/events/t
 
 const publishedEvent: PublishedEvent = {
   category: 'Community',
+  categories: ['Community'],
   description: 'An authoritative public event.',
   endsAt: '2026-08-12T12:00:00.000Z',
   eventId: '53f24606-184d-4c2f-bd68-9e27a9e034e9',

@@ -3,6 +3,7 @@ import {
   EventMediaSlot,
   EventMediaUploadStatus,
   EventStatus,
+  type AdminEventSummary,
   type Event,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -22,6 +23,9 @@ import {
 } from '../constants/event.constants';
 import type {
   AdminEventDto,
+  AdminEventListDto,
+  AdminEventSummaryDto,
+  CreateDraftEventDto,
   CreateEventMediaUploadDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
@@ -57,7 +61,7 @@ export class AdminEventService implements OnModuleInit {
 
   async createDraft(
     adminId: string,
-    title: string,
+    input: CreateDraftEventDto,
     requestId: string,
   ): Promise<AdminEventDto> {
     const events = this.requireClient();
@@ -65,7 +69,7 @@ export class AdminEventService implements OnModuleInit {
     try {
       const response = await firstValueFrom(
         events.createDraftEvent(
-          { adminId, title },
+          { adminId, ...input },
           this.metadata(requestId),
           this.deadline(),
         ),
@@ -73,6 +77,37 @@ export class AdminEventService implements OnModuleInit {
       return this.toAdminEvent(response.event);
     } catch (error: unknown) {
       this.translate(error, 'create');
+    }
+  }
+
+  async list(
+    limit: number,
+    cursor: string | undefined,
+    requestId: string,
+  ): Promise<AdminEventListDto> {
+    const events = this.requireClient();
+
+    try {
+      const response = await firstValueFrom(
+        events.listAdminEvents(
+          {
+            pageSize: limit,
+            ...(cursor === undefined ? {} : { pageToken: cursor }),
+          },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      return {
+        events: (response.events ?? []).map((event) =>
+          this.toAdminEventSummary(event),
+        ),
+        ...(response.nextPageToken === undefined
+          ? {}
+          : { nextCursor: response.nextPageToken }),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'read');
     }
   }
 
@@ -104,7 +139,12 @@ export class AdminEventService implements OnModuleInit {
     try {
       const response = await firstValueFrom(
         events.updateDraftEvent(
-          { adminId, eventId, ...input },
+          {
+            adminId,
+            eventId,
+            ...input,
+            category: input.categories[0] ?? '',
+          },
           this.metadata(requestId),
           this.deadline(),
         ),
@@ -284,7 +324,7 @@ export class AdminEventService implements OnModuleInit {
       eventId: event.eventId,
       title: event.title,
       description: event.description,
-      category: event.category,
+      categories: event.categories ?? [],
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       timeZone: event.timeZone,
@@ -324,6 +364,52 @@ export class AdminEventService implements OnModuleInit {
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
       publishedAt: event.publishedAt,
+    };
+  }
+
+  private toAdminEventSummary(event: AdminEventSummary): AdminEventSummaryDto {
+    if (
+      event.eventId === '' ||
+      event.title === '' ||
+      event.updatedAt === '' ||
+      ![
+        EventStatus.EVENT_STATUS_DRAFT,
+        EventStatus.EVENT_STATUS_PUBLISHED,
+      ].includes(event.status)
+    ) {
+      throw this.unavailable('EVENT_LIST_RESPONSE_INVALID');
+    }
+
+    return {
+      eventId: event.eventId,
+      title: event.title,
+      categories: event.categories ?? [],
+      status:
+        event.status === EventStatus.EVENT_STATUS_PUBLISHED
+          ? 'published'
+          : 'draft',
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      timeZone: event.timeZone,
+      venue:
+        event.venue === undefined
+          ? undefined
+          : {
+              name: event.venue.name,
+              addressLine1: event.venue.addressLine1,
+              ...(event.venue.addressLine2 === undefined
+                ? {}
+                : { addressLine2: event.venue.addressLine2 }),
+              city: event.venue.city,
+              ...(event.venue.region === undefined
+                ? {}
+                : { region: event.venue.region }),
+              ...(event.venue.postalCode === undefined
+                ? {}
+                : { postalCode: event.venue.postalCode }),
+              countryCode: event.venue.countryCode,
+            },
+      updatedAt: event.updatedAt,
     };
   }
 

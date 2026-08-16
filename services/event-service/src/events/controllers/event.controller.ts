@@ -11,6 +11,7 @@ import {
   type EventServiceController,
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
+  type ListAdminEventsResponse,
   type GetPublishedEventResponse,
   type PublishedEvent,
   type RemoveEventMediaResponse,
@@ -31,6 +32,7 @@ import {
 import {
   GetAdminEventDto,
   CreateDraftEventDto,
+  ListAdminEventsDto,
   PublishEventDto,
   UpdateDraftEventDto,
 } from '../dto/event-management.dto';
@@ -41,10 +43,12 @@ import {
 } from '../dto/event-media.dto';
 import { GetPublishedEventDto } from '../dto/published-event.dto';
 import {
+  EventCategoriesInvalidError,
   EventMediaNotFoundError,
   EventMediaUploadInProgressError,
   EventMediaUploadNotFoundError,
   EventNotFoundError,
+  EventPageTokenInvalidError,
   EventPublicationIncompleteError,
   EventScheduleInvalidError,
   EventVersionConflictError,
@@ -75,15 +79,13 @@ export class EventController implements EventServiceController {
     request: CreateDraftEventDto,
     metadata?: Metadata,
   ): Observable<CreateDraftEventResponse> {
-    return from(
-      this.eventService
-        .createDraft(
-          request.adminId,
-          request.title,
-          this.readRequestId(metadata),
-        )
-        .then((event) => ({ event: this.toContract(event) })),
-    );
+    return from(this.createEvent(request, this.readRequestId(metadata)));
+  }
+
+  listAdminEvents(
+    request: ListAdminEventsDto,
+  ): Observable<ListAdminEventsResponse> {
+    return from(this.listEvents(request));
   }
 
   getAdminEvent(request: GetAdminEventDto): Observable<GetAdminEventResponse> {
@@ -146,6 +148,87 @@ export class EventController implements EventServiceController {
     }
   }
 
+  private async createEvent(
+    request: CreateDraftEventDto,
+    requestId: string,
+  ): Promise<CreateDraftEventResponse> {
+    try {
+      return {
+        event: this.toContract(
+          await this.eventService.createDraft({
+            actorAdminId: request.adminId,
+            categories: request.categories,
+            description: request.description,
+            endsAt: request.endsAt,
+            requestId,
+            startsAt: request.startsAt,
+            timeZone: request.timeZone,
+            title: request.title,
+            venue: request.venue!,
+          }),
+        ),
+      };
+    } catch (error: unknown) {
+      if (
+        error instanceof EventCategoriesInvalidError ||
+        error instanceof EventScheduleInvalidError
+      ) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async listEvents(
+    request: ListAdminEventsDto,
+  ): Promise<ListAdminEventsResponse> {
+    try {
+      const page = await this.eventService.list(
+        request.pageSize,
+        request.pageToken,
+      );
+      return {
+        events: page.events.map((event) => ({
+          eventId: event.eventId,
+          title: event.title,
+          categories: event.categories,
+          status:
+            event.status === 'published'
+              ? EventStatus.EVENT_STATUS_PUBLISHED
+              : EventStatus.EVENT_STATUS_DRAFT,
+          startsAt: event.startsAt?.toISOString(),
+          endsAt: event.endsAt?.toISOString(),
+          timeZone: event.timeZone ?? undefined,
+          venue:
+            event.venue === null
+              ? undefined
+              : {
+                  name: event.venue.name,
+                  addressLine1: event.venue.addressLine1,
+                  addressLine2: event.venue.addressLine2 ?? undefined,
+                  city: event.venue.city,
+                  region: event.venue.region ?? undefined,
+                  postalCode: event.venue.postalCode ?? undefined,
+                  countryCode: event.venue.countryCode,
+                },
+          updatedAt: event.updatedAt.toISOString(),
+        })),
+        nextPageToken: page.nextPageToken,
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventPageTokenInvalidError) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   private async getPublished(
     eventId: string,
   ): Promise<GetPublishedEventResponse> {
@@ -170,14 +253,24 @@ export class EventController implements EventServiceController {
     request: UpdateDraftEventDto,
     requestId: string,
   ): Promise<UpdateDraftEventResponse> {
-    const { adminId, ...details } = request;
     try {
       return {
         event: this.toContract(
           await this.eventService.updateDraft({
-            ...details,
-            actorAdminId: adminId,
+            actorAdminId: request.adminId,
+            categories:
+              request.categories.length === 0 && request.category !== ''
+                ? [request.category]
+                : request.categories,
+            description: request.description,
+            endsAt: request.endsAt,
+            eventId: request.eventId,
+            expectedVersion: request.expectedVersion,
             requestId,
+            startsAt: request.startsAt,
+            timeZone: request.timeZone,
+            title: request.title,
+            venue: request.venue!,
           }),
         ),
       };
@@ -194,7 +287,10 @@ export class EventController implements EventServiceController {
           message: error.message,
         });
       }
-      if (error instanceof EventScheduleInvalidError) {
+      if (
+        error instanceof EventCategoriesInvalidError ||
+        error instanceof EventScheduleInvalidError
+      ) {
         throw new RpcException({
           code: status.INVALID_ARGUMENT,
           message: error.message,
@@ -363,7 +459,8 @@ export class EventController implements EventServiceController {
       eventId: event.eventId,
       title: event.title,
       description: event.description ?? undefined,
-      category: event.category ?? undefined,
+      category: event.categories[0],
+      categories: event.categories,
       startsAt: event.startsAt?.toISOString(),
       endsAt: event.endsAt?.toISOString(),
       timeZone: event.timeZone ?? undefined,
@@ -404,7 +501,7 @@ export class EventController implements EventServiceController {
     if (
       event.status !== 'published' ||
       event.description === null ||
-      event.category === null ||
+      event.categories.length === 0 ||
       event.startsAt === null ||
       event.endsAt === null ||
       event.timeZone === null ||
@@ -418,7 +515,8 @@ export class EventController implements EventServiceController {
       eventId: event.eventId,
       title: event.title,
       description: event.description,
-      category: event.category,
+      category: event.categories[0]!,
+      categories: event.categories,
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt.toISOString(),
       timeZone: event.timeZone,

@@ -4,6 +4,7 @@ import { ProtectedSessionBoundary } from '../components/auth/SessionBoundary';
 import { AdminDashboardShell } from '../components/events/AdminDashboardShell';
 import { AccountPage } from '../pages/AccountPage';
 import { AdminActivationPage } from '../pages/AdminActivationPage';
+import { AdminEventCreatePage } from '../pages/AdminEventCreatePage';
 import { AdminEventEditorPage } from '../pages/AdminEventEditorPage';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AttendeeEmailVerificationPage } from '../pages/AttendeeEmailVerificationPage';
@@ -48,6 +49,7 @@ export function AppRoutes() {
       <Route element={<ProtectedSessionBoundary actor="admin" />}>
         <Route element={<AdminDashboardShell />}>
           <Route path="/admin" element={<AdminEventsPage />} />
+          <Route path="/admin/events/new" element={<AdminEventCreatePage />} />
           <Route
             path="/admin/events/:eventId"
             element={<AdminEventEditorPage />}

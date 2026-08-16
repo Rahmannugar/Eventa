@@ -35,20 +35,21 @@ message Event {
   string updated_at = 6;
   int32 version = 7;
   optional string description = 8;
-  optional string category = 9;
+  optional string category = 9 [deprecated = true];
   optional string starts_at = 10;
   optional string ends_at = 11;
   optional string time_zone = 12;
   Venue venue = 13;
   repeated EventMedia media = 14;
   optional string published_at = 15;
+  repeated string categories = 16;
 }
 
 message PublishedEvent {
   string event_id = 1;
   string title = 2;
   string description = 3;
-  string category = 4;
+  string category = 4 [deprecated = true];
   string starts_at = 5;
   string ends_at = 6;
   string time_zone = 7;
@@ -56,6 +57,7 @@ message PublishedEvent {
   repeated EventMedia media = 9;
   string published_at = 10;
   int32 version = 11;
+  repeated string categories = 12;
 }
 
 message EventMedia {
@@ -81,6 +83,12 @@ message Venue {
 message CreateDraftEventRequest {
   string admin_id = 1;
   string title = 2;
+  string description = 3;
+  repeated string categories = 4;
+  string starts_at = 5;
+  string ends_at = 6;
+  string time_zone = 7;
+  Venue venue = 8;
 }
 
 message CreateDraftEventResponse {
@@ -93,6 +101,28 @@ message GetAdminEventRequest {
 
 message GetAdminEventResponse {
   Event event = 1;
+}
+
+message AdminEventSummary {
+  string event_id = 1;
+  string title = 2;
+  repeated string categories = 3;
+  EventStatus status = 4;
+  optional string starts_at = 5;
+  optional string ends_at = 6;
+  optional string time_zone = 7;
+  Venue venue = 8;
+  string updated_at = 9;
+}
+
+message ListAdminEventsRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListAdminEventsResponse {
+  repeated AdminEventSummary events = 1;
+  optional string next_page_token = 2;
 }
 
 message GetPublishedEventRequest {
@@ -109,11 +139,12 @@ message UpdateDraftEventRequest {
   int32 expected_version = 3;
   string title = 4;
   string description = 5;
-  string category = 6;
+  string category = 6 [deprecated = true];
   string starts_at = 7;
   string ends_at = 8;
   string time_zone = 9;
   Venue venue = 10;
+  repeated string categories = 11;
 }
 
 message UpdateDraftEventResponse {

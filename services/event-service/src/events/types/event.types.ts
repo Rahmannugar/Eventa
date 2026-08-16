@@ -12,7 +12,7 @@ export interface EventRecord {
   eventId: string;
   title: string;
   description: string | null;
-  category: string | null;
+  categories: string[];
   startsAt: Date | null;
   endsAt: Date | null;
   timeZone: string | null;
@@ -248,6 +248,59 @@ export interface CreateDraftEvent {
   actorAdminId: string;
   requestId: string;
   title: string;
+  description: string;
+  categories: string[];
+  startsAt: Date;
+  endsAt: Date;
+  timeZone: string;
+  venue: EventVenue;
+}
+
+export interface CreateDraftEventCommand {
+  actorAdminId: string;
+  requestId: string;
+  title: string;
+  description: string;
+  categories: string[];
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  venue: {
+    name: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    region?: string;
+    postalCode?: string;
+    countryCode: string;
+  };
+}
+
+export interface AdminEventSummaryRecord {
+  eventId: string;
+  title: string;
+  categories: string[];
+  startsAt: Date | null;
+  endsAt: Date | null;
+  timeZone: string | null;
+  venue: EventVenue | null;
+  status: 'draft' | 'published';
+  updatedAt: Date;
+}
+
+export interface EventListCursor {
+  eventId: string;
+  updatedAt: Date;
+}
+
+export interface ListAdminEvents {
+  cursor?: EventListCursor;
+  limit: number;
+}
+
+export interface AdminEventListPage {
+  events: AdminEventSummaryRecord[];
+  nextPageToken?: string;
 }
 
 export interface UpdateDraftEvent {
@@ -257,7 +310,7 @@ export interface UpdateDraftEvent {
   requestId: string;
   title: string;
   description: string;
-  category: string;
+  categories: string[];
   startsAt: Date;
   endsAt: Date;
   timeZone: string;
@@ -293,7 +346,7 @@ export interface UpdateDraftEventCommand {
   requestId: string;
   title: string;
   description: string;
-  category: string;
+  categories: string[];
   startsAt: string;
   endsAt: string;
   timeZone: string;
@@ -310,6 +363,7 @@ export interface UpdateDraftEventCommand {
 
 export interface EventRepository {
   createDraft(input: CreateDraftEvent): Promise<EventRecord>;
+  list(input: ListAdminEvents): Promise<AdminEventSummaryRecord[]>;
   findById(eventId: string): Promise<EventRecord | undefined>;
   findPublishedById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
@@ -317,11 +371,8 @@ export interface EventRepository {
 }
 
 export interface EventManagement {
-  createDraft(
-    actorAdminId: string,
-    title: string,
-    requestId: string,
-  ): Promise<EventRecord>;
+  createDraft(input: CreateDraftEventCommand): Promise<EventRecord>;
+  list(pageSize: number, pageToken?: string): Promise<AdminEventListPage>;
   getById(eventId: string): Promise<EventRecord>;
   getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;

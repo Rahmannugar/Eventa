@@ -22,7 +22,7 @@ export interface AdminEvent {
   eventId: string;
   title: string;
   description?: string | undefined;
-  category?: string | undefined;
+  categories: string[];
   startsAt?: string | undefined;
   endsAt?: string | undefined;
   timeZone?: string | undefined;
@@ -36,22 +36,40 @@ export interface AdminEvent {
   publishedAt?: string | undefined;
 }
 
-export interface CreateDraftEventInput {
-  title: string;
-}
-
-export interface UpdateDraftEventInput {
-  expectedVersion: number;
+export interface EventDetailsInput {
   title: string;
   description: string;
-  category: string;
+  categories: string[];
   startsAt: string;
   endsAt: string;
   timeZone: string;
   venue: EventVenue;
 }
 
+export type CreateEventInput = EventDetailsInput;
+
+export interface UpdateDraftEventInput extends EventDetailsInput {
+  expectedVersion: number;
+}
+
 export interface UpdateDraftEventCommand {
   eventId: string;
   input: UpdateDraftEventInput;
+}
+
+export interface AdminEventSummary {
+  eventId: string;
+  title: string;
+  categories: string[];
+  startsAt?: string | undefined;
+  endsAt?: string | undefined;
+  timeZone?: string | undefined;
+  venue?: EventVenue | undefined;
+  status: 'draft' | 'published';
+  updatedAt: string;
+}
+
+export interface AdminEventListPage {
+  events: AdminEventSummary[];
+  nextCursor?: string | undefined;
 }

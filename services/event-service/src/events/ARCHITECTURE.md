@@ -2,23 +2,26 @@
 
 ## State
 
-An event begins in `draft` at version 1. Creation requires only a normalized title. A full draft update supplies the description, category, schedule, IANA timezone, and one event-owned venue address. Publication requires those details, the venue, and one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations.
+An event begins in `draft` at version 1 with its normalized title, description, one to five categories, schedule, IANA timezone, and one event-owned venue address. Publication additionally requires one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations.
 
 ## Draft Creation
 
-1. The controller receives the authenticated admin ID, title, and propagated request ID.
-2. The application service normalizes the title.
+1. The controller receives the authenticated admin ID, event details, schedule, venue, and propagated request ID.
+2. The application service normalizes text and categories and validates the schedule.
 3. The repository opens one PostgreSQL transaction.
-4. It inserts the draft event.
-5. It appends `event.created` with the acting admin, event, request ID, and occurrence time.
-6. Both rows commit before the response is returned.
+4. It inserts the draft, venue, category rows, and `event.created` audit entry.
+5. All rows commit before the response is returned. A failure rolls back the complete creation.
 
 ## Draft Editing
 
 1. The client sends the version from its latest event representation. Gateway derives the acting admin ID from the authenticated server-backed session and attaches both values to the internal command.
 2. PostgreSQL updates the draft only when its ID, `draft` status, and version match, then increments the version.
-3. The same transaction upserts the event venue and appends `event.updated` with the resulting version.
+3. The same transaction replaces the categories, upserts the event venue, and appends `event.updated` with the resulting version.
 4. A competing update with the stale version changes nothing and returns a version conflict.
+
+## Admin Catalogue
+
+The management list reads Event-owned event, venue, and category data. It uses descending update time and event ID as a stable keyset order. Opaque page tokens carry only that cursor, and malformed tokens are rejected. Categories are loaded in one bounded query for the page rather than one query per event.
 
 ## Admin Access
 

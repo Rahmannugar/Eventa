@@ -2,6 +2,8 @@ import {
   type CreateDraftEventResponse,
   EventStatus,
   type Event,
+  type ListAdminEventsRequest,
+  type ListAdminEventsResponse,
   type PublishEventRequest,
   type PublishEventResponse,
 } from '@eventa/grpc-contracts';
@@ -14,7 +16,7 @@ import { AdminEventService } from '../../src/domains/events/services/admin-event
 import type { DeadlineAwareEventServiceClient } from '../../src/domains/events/types/event-grpc-client.types';
 
 const publishedEvent: Event = {
-  category: 'Community',
+  categories: ['Community'],
   createdAt: '2026-08-10T10:00:00.000Z',
   createdByAdminId: '1b878b2e-c0b8-44f6-b890-b15f237bb40e',
   description: 'A published event.',
@@ -37,6 +39,7 @@ const publishedEvent: Event = {
 };
 
 const draftEvent: Event = {
+  categories: [],
   createdAt: '2026-08-16T06:19:02.000Z',
   createdByAdminId: '1b878b2e-c0b8-44f6-b890-b15f237bb40e',
   eventId: '6a6cbaf7-7720-4ab6-9419-f8189b9d173c',
@@ -46,6 +49,21 @@ const draftEvent: Event = {
   updatedAt: '2026-08-16T06:19:02.000Z',
   venue: undefined,
   version: 1,
+};
+
+const createInput = {
+  categories: ['Community'],
+  description: 'A complete event.',
+  endsAt: '2026-08-20T12:00:00.000Z',
+  startsAt: '2026-08-20T10:00:00.000Z',
+  timeZone: 'Africa/Lagos',
+  title: draftEvent.title,
+  venue: {
+    addressLine1: '1 Marina Road',
+    city: 'Lagos',
+    countryCode: 'NG',
+    name: 'Eventa Hall',
+  },
 };
 
 function createService(
@@ -72,6 +90,18 @@ function createDraftService(
   return service;
 }
 
+function createListService(
+  listAdminEvents: DeadlineAwareEventServiceClient['listAdminEvents'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ listAdminEvents }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
 describe('AdminEventService draft creation', () => {
   it('accepts an omitted empty media list', async () => {
     const wireEvent = {
@@ -85,7 +115,7 @@ describe('AdminEventService draft creation', () => {
     await expect(
       service.createDraft(
         draftEvent.createdByAdminId,
-        draftEvent.title,
+        createInput,
         'draft-request',
       ),
     ).resolves.toMatchObject({
@@ -105,12 +135,63 @@ describe('AdminEventService draft creation', () => {
     await expect(
       service.createDraft(
         draftEvent.createdByAdminId,
-        draftEvent.title,
+        createInput,
         'draft-request',
       ),
     ).rejects.toMatchObject({
       diagnosticCode: 'EVENT_RESPONSE_INVALID',
     });
+  });
+});
+
+describe('AdminEventService catalogue', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('forwards pagination and maps event summaries', async () => {
+    let receivedRequest: ListAdminEventsRequest | undefined;
+    let receivedMetadata: Metadata | undefined;
+    let receivedOptions: CallOptions | undefined;
+    const service = createListService(
+      (request, metadata, options): Observable<ListAdminEventsResponse> => {
+        receivedRequest = request;
+        receivedMetadata = metadata;
+        receivedOptions = options;
+        return of({
+          events: [
+            {
+              categories: ['Outdoors', 'Sports'],
+              eventId: draftEvent.eventId,
+              startsAt: createInput.startsAt,
+              status: EventStatus.EVENT_STATUS_DRAFT,
+              timeZone: createInput.timeZone,
+              title: draftEvent.title,
+              updatedAt: draftEvent.updatedAt,
+              venue: createInput.venue,
+            },
+          ],
+          nextPageToken: 'next-page',
+        });
+      },
+    );
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    await expect(
+      service.list(20, 'page-token', 'list-request'),
+    ).resolves.toEqual({
+      events: [
+        expect.objectContaining({
+          categories: ['Outdoors', 'Sports'],
+          eventId: draftEvent.eventId,
+          status: 'draft',
+        }),
+      ],
+      nextCursor: 'next-page',
+    });
+    expect(receivedRequest).toEqual({ pageSize: 20, pageToken: 'page-token' });
+    expect(receivedMetadata?.get('x-request-id')).toEqual(['list-request']);
+    expect(receivedOptions).toEqual({ deadline: new Date(13_000) });
   });
 });
 

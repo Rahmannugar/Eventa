@@ -1,19 +1,22 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventCategories } from '../schema/event-category.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { eventPublicationOutbox } from '../schema/event-publication-outbox.schema';
 import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
   CreateDraftEvent,
+  AdminEventSummaryRecord,
   EventVenue,
   EventMediaRecord,
   EventRecord,
+  ListAdminEvents,
   EventRepository as EventRepositoryPort,
   PublishEvent,
   PublishEventResult,
@@ -25,7 +28,6 @@ const EVENT_COLUMNS = {
   eventId: events.id,
   title: events.title,
   description: events.description,
-  category: events.category,
   startsAt: events.startsAt,
   endsAt: events.endsAt,
   timeZone: events.timeZone,
@@ -72,6 +74,10 @@ export class EventManagementRepository implements EventRepositoryPort {
             .insert(events)
             .values({
               createdByAdminId: input.actorAdminId,
+              description: input.description,
+              endsAt: input.endsAt,
+              startsAt: input.startsAt,
+              timeZone: input.timeZone,
               title: input.title,
             })
             .returning(EVENT_COLUMNS);
@@ -79,6 +85,22 @@ export class EventManagementRepository implements EventRepositoryPort {
           if (event === undefined) {
             throw new Error('Event insert returned no row');
           }
+
+          const [venue] = await transaction
+            .insert(eventVenues)
+            .values({ eventId: event.eventId, ...input.venue })
+            .returning(VENUE_COLUMNS);
+
+          if (venue === undefined) {
+            throw new Error('Event venue insert returned no row');
+          }
+
+          await transaction.insert(eventCategories).values(
+            input.categories.map((category) => ({
+              category,
+              eventId: event.eventId,
+            })),
+          );
 
           await transaction.insert(eventAdminAuditLog).values({
             action: 'event.created',
@@ -88,9 +110,64 @@ export class EventManagementRepository implements EventRepositoryPort {
             requestId: input.requestId,
           });
 
-          return this.toEventRecord(event, null, []);
+          return this.toEventRecord(event, venue, [], input.categories);
         }),
       this.spanOptions('INSERT'),
+    );
+  }
+
+  list(input: ListAdminEvents): Promise<AdminEventSummaryRecord[]> {
+    return runWithOperationSpan(
+      'event.list_admin',
+      async () => {
+        const cursorCondition =
+          input.cursor === undefined
+            ? undefined
+            : or(
+                lt(events.updatedAt, input.cursor.updatedAt),
+                and(
+                  eq(events.updatedAt, input.cursor.updatedAt),
+                  lt(events.id, input.cursor.eventId),
+                ),
+              );
+        const results = await this.database
+          .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
+          .from(events)
+          .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+          .where(cursorCondition)
+          .orderBy(desc(events.updatedAt), desc(events.id))
+          .limit(input.limit);
+
+        if (results.length === 0) return [];
+
+        const categories = await this.database
+          .select({
+            category: eventCategories.category,
+            eventId: eventCategories.eventId,
+          })
+          .from(eventCategories)
+          .where(
+            inArray(
+              eventCategories.eventId,
+              results.map((result) => result.event.eventId),
+            ),
+          )
+          .orderBy(eventCategories.category);
+        const categoriesByEvent = this.groupCategories(categories);
+
+        return results.map(({ event, venue }) => ({
+          eventId: event.eventId,
+          title: event.title,
+          categories: categoriesByEvent.get(event.eventId) ?? [],
+          startsAt: event.startsAt,
+          endsAt: event.endsAt,
+          timeZone: event.timeZone,
+          venue,
+          status: event.status,
+          updatedAt: event.updatedAt,
+        }));
+      },
+      this.spanOptions('SELECT'),
     );
   }
 
@@ -109,13 +186,25 @@ export class EventManagementRepository implements EventRepositoryPort {
           return undefined;
         }
 
-        const media = await this.database
-          .select(MEDIA_COLUMNS)
-          .from(eventMedia)
-          .where(eq(eventMedia.eventId, eventId))
-          .orderBy(eventMedia.slot);
+        const [media, categories] = await Promise.all([
+          this.database
+            .select(MEDIA_COLUMNS)
+            .from(eventMedia)
+            .where(eq(eventMedia.eventId, eventId))
+            .orderBy(eventMedia.slot),
+          this.database
+            .select({ category: eventCategories.category })
+            .from(eventCategories)
+            .where(eq(eventCategories.eventId, eventId))
+            .orderBy(eventCategories.category),
+        ]);
 
-        return this.toEventRecord(result.event, result.venue, media);
+        return this.toEventRecord(
+          result.event,
+          result.venue,
+          media,
+          categories.map(({ category }) => category),
+        );
       },
       this.spanOptions('SELECT'),
     );
@@ -136,13 +225,25 @@ export class EventManagementRepository implements EventRepositoryPort {
           return undefined;
         }
 
-        const media = await this.database
-          .select(MEDIA_COLUMNS)
-          .from(eventMedia)
-          .where(eq(eventMedia.eventId, eventId))
-          .orderBy(eventMedia.slot);
+        const [media, categories] = await Promise.all([
+          this.database
+            .select(MEDIA_COLUMNS)
+            .from(eventMedia)
+            .where(eq(eventMedia.eventId, eventId))
+            .orderBy(eventMedia.slot),
+          this.database
+            .select({ category: eventCategories.category })
+            .from(eventCategories)
+            .where(eq(eventCategories.eventId, eventId))
+            .orderBy(eventCategories.category),
+        ]);
 
-        return this.toEventRecord(result.event, result.venue, media);
+        return this.toEventRecord(
+          result.event,
+          result.venue,
+          media,
+          categories.map(({ category }) => category),
+        );
       },
       this.spanOptions('SELECT'),
     );
@@ -158,7 +259,6 @@ export class EventManagementRepository implements EventRepositoryPort {
             .set({
               title: input.title,
               description: input.description,
-              category: input.category,
               startsAt: input.startsAt,
               endsAt: input.endsAt,
               timeZone: input.timeZone,
@@ -199,6 +299,16 @@ export class EventManagementRepository implements EventRepositoryPort {
             throw new Error('Event venue upsert returned no row');
           }
 
+          await transaction
+            .delete(eventCategories)
+            .where(eq(eventCategories.eventId, input.eventId));
+          await transaction.insert(eventCategories).values(
+            input.categories.map((category) => ({
+              category,
+              eventId: input.eventId,
+            })),
+          );
+
           await transaction.insert(eventAdminAuditLog).values({
             action: 'event.updated',
             actorAdminId: input.actorAdminId,
@@ -215,7 +325,7 @@ export class EventManagementRepository implements EventRepositoryPort {
 
           return {
             outcome: 'updated' as const,
-            event: this.toEventRecord(event, venue, media),
+            event: this.toEventRecord(event, venue, media, input.categories),
           };
         }),
       this.spanOptions('UPDATE'),
@@ -246,18 +356,32 @@ export class EventManagementRepository implements EventRepositoryPort {
             return { outcome: 'version_conflict' as const };
           }
 
-          const [cover] = await transaction
-            .select({ mediaId: eventMedia.id })
-            .from(eventMedia)
-            .where(
-              and(
-                eq(eventMedia.eventId, input.eventId),
-                eq(eventMedia.slot, 'cover'),
-              ),
-            )
-            .limit(1);
+          const [[cover], categoryRows] = await Promise.all([
+            transaction
+              .select({ mediaId: eventMedia.id })
+              .from(eventMedia)
+              .where(
+                and(
+                  eq(eventMedia.eventId, input.eventId),
+                  eq(eventMedia.slot, 'cover'),
+                ),
+              )
+              .limit(1),
+            transaction
+              .select({ category: eventCategories.category })
+              .from(eventCategories)
+              .where(eq(eventCategories.eventId, input.eventId))
+              .orderBy(eventCategories.category),
+          ]);
+          const categories = categoryRows.map(({ category }) => category);
 
-          if (!this.isPublicationComplete(result.event, result.venue, cover)) {
+          if (
+            !this.isPublicationComplete(
+              { ...result.event, categories },
+              result.venue,
+              cover,
+            )
+          ) {
             return { outcome: 'incomplete' as const };
           }
 
@@ -312,7 +436,7 @@ export class EventManagementRepository implements EventRepositoryPort {
 
           return {
             outcome: 'published' as const,
-            event: this.toEventRecord(event, result.venue, media),
+            event: this.toEventRecord(event, result.venue, media, categories),
           };
         }),
       this.spanOptions('UPDATE'),
@@ -322,14 +446,14 @@ export class EventManagementRepository implements EventRepositoryPort {
   private isPublicationComplete(
     event: Pick<
       EventRecord,
-      'category' | 'description' | 'endsAt' | 'startsAt' | 'timeZone'
+      'categories' | 'description' | 'endsAt' | 'startsAt' | 'timeZone'
     >,
     venue: EventVenue | null,
     cover: { mediaId: string } | undefined,
   ): boolean {
     return (
       event.description !== null &&
-      event.category !== null &&
+      event.categories.length > 0 &&
       event.startsAt !== null &&
       event.endsAt !== null &&
       event.timeZone !== null &&
@@ -339,11 +463,24 @@ export class EventManagementRepository implements EventRepositoryPort {
   }
 
   private toEventRecord(
-    event: Omit<EventRecord, 'venue' | 'media'>,
+    event: Omit<EventRecord, 'categories' | 'venue' | 'media'>,
     venue: EventVenue | null,
     media: EventMediaRecord[],
+    categories: string[],
   ): EventRecord {
-    return { ...event, venue, media };
+    return { ...event, categories, venue, media };
+  }
+
+  private groupCategories(
+    rows: Array<{ eventId: string; category: string }>,
+  ): Map<string, string[]> {
+    const grouped = new Map<string, string[]>();
+    for (const row of rows) {
+      const values = grouped.get(row.eventId) ?? [];
+      values.push(row.category);
+      grouped.set(row.eventId, values);
+    }
+    return grouped;
   }
 
   private spanOptions(operation: string): {

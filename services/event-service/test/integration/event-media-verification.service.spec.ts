@@ -12,6 +12,7 @@ import { EventMediaMutationRepository } from '../../src/events/repositories/even
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
+import { eventCategories } from '../../src/events/schema/event-category.schema';
 import { eventJobOutbox } from '../../src/events/schema/event-job-outbox.schema';
 import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
@@ -21,6 +22,7 @@ import { eventVenues } from '../../src/events/schema/event-venue.schema';
 import { events } from '../../src/events/schema/event.schema';
 import { EventMediaVerificationService } from '../../src/events/services/event-media-verification.service';
 import { EventMediaObjectDeletionService } from '../../src/events/services/event-media-object-deletion.service';
+import { EventManagementService } from '../../src/events/services/event-management.service';
 import type { EventMediaObjectStorage } from '../../src/events/types/event.types';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -75,6 +77,7 @@ const eventsRepository = new EventManagementRepository(database);
 const uploadsRepository = new EventMediaUploadRepository(database);
 const mediaRepository = new EventMediaMutationRepository(database);
 const deletionsRepository = new EventMediaObjectDeletionRepository(database);
+const eventManagement = new EventManagementService(eventsRepository);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -112,6 +115,7 @@ describe('Event mutation integration', () => {
     await database.delete(eventMediaObjectDeletions);
     await database.delete(eventMedia);
     await database.delete(eventMediaUploads);
+    await database.delete(eventCategories);
     await database.delete(eventVenues);
     await database.delete(events);
   });
@@ -120,13 +124,87 @@ describe('Event mutation integration', () => {
     await client.end();
   });
 
+  it('creates complete event state atomically', async () => {
+    const event = await createEventRecord('Community sports day');
+    const persisted = await eventsRepository.findById(event.eventId);
+
+    expect(persisted).toMatchObject({
+      categories: ['Community'],
+      description: 'A complete event.',
+      eventId: event.eventId,
+      timeZone: 'Africa/Lagos',
+      title: 'Community sports day',
+      venue: { city: 'Lagos', countryCode: 'NG', name: 'Eventa Hall' },
+    });
+    const [auditCount] = await database
+      .select({ value: count() })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.eventId, event.eventId));
+    expect(auditCount?.value).toBe(1);
+  });
+
+  it('rolls back creation when a category invariant fails', async () => {
+    const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
+    await expect(
+      eventsRepository.createDraft({
+        actorAdminId: randomUUID(),
+        categories: ['Sports', 'sports'],
+        description: 'A complete event.',
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1_000),
+        requestId: randomUUID(),
+        startsAt,
+        timeZone: 'Africa/Lagos',
+        title: 'Invalid duplicate categories',
+        venue: {
+          addressLine1: '1 Marina Road',
+          addressLine2: null,
+          city: 'Lagos',
+          countryCode: 'NG',
+          name: 'Eventa Hall',
+          postalCode: null,
+          region: 'Lagos',
+        },
+      }),
+    ).rejects.toBeDefined();
+
+    const [eventCount] = await database.select({ value: count() }).from(events);
+    const [venueCount] = await database
+      .select({ value: count() })
+      .from(eventVenues);
+    const [categoryCount] = await database
+      .select({ value: count() })
+      .from(eventCategories);
+    expect([
+      eventCount?.value,
+      venueCount?.value,
+      categoryCount?.value,
+    ]).toEqual([0, 0, 0]);
+  });
+
+  it('pages the admin event catalogue without duplicates', async () => {
+    await createEventRecord('First event');
+    await createEventRecord('Second event');
+    await createEventRecord('Third event');
+
+    const firstPage = await eventManagement.list(2);
+    const secondPage = await eventManagement.list(2, firstPage.nextPageToken);
+    const eventIds = [...firstPage.events, ...secondPage.events].map(
+      ({ eventId }) => eventId,
+    );
+
+    expect(firstPage.events).toHaveLength(2);
+    expect(firstPage.nextPageToken).toBeDefined();
+    expect(secondPage.events).toHaveLength(1);
+    expect(secondPage.nextPageToken).toBeUndefined();
+    expect(new Set(eventIds).size).toBe(3);
+    expect(
+      firstPage.events.every(({ categories }) => categories[0] === 'Community'),
+    ).toBe(true);
+  });
+
   it('attaches a verified upload once under duplicate delivery', async () => {
     const adminId = randomUUID();
-    const event = await eventsRepository.createDraft({
-      actorAdminId: adminId,
-      requestId: randomUUID(),
-      title: 'Media event',
-    });
+    const event = await createEventRecord('Media event', adminId);
     const uploadId = randomUUID();
     const upload = await uploadsRepository.createUpload({
       actorAdminId: adminId,
@@ -192,11 +270,7 @@ describe('Event mutation integration', () => {
 
   it('accepts a present object after the upload deadline', async () => {
     const adminId = randomUUID();
-    const event = await eventsRepository.createDraft({
-      actorAdminId: adminId,
-      requestId: randomUUID(),
-      title: 'Deadline event',
-    });
+    const event = await createEventRecord('Deadline event', adminId);
     const uploadId = randomUUID();
     await uploadsRepository.createUpload({
       actorAdminId: adminId,
@@ -431,11 +505,7 @@ describe('Event mutation integration', () => {
   });
 
   it('rejects incomplete publication without changing durable state', async () => {
-    const event = await eventsRepository.createDraft({
-      actorAdminId: randomUUID(),
-      requestId: randomUUID(),
-      title: 'Incomplete publication',
-    });
+    const event = await createEventRecord('Incomplete publication');
 
     await expect(
       eventsRepository.publish({
@@ -534,11 +604,7 @@ describe('Event mutation integration', () => {
   });
 
   it('returns published events without disclosing drafts', async () => {
-    const draft = await eventsRepository.createDraft({
-      actorAdminId: randomUUID(),
-      requestId: randomUUID(),
-      title: 'Private draft',
-    });
+    const draft = await createEventRecord('Private draft');
     await expect(
       eventsRepository.findPublishedById(draft.eventId),
     ).resolves.toBeUndefined();
@@ -573,11 +639,7 @@ async function createAttachedCover(title: string): Promise<{
   uploadId: string;
 }> {
   const adminId = randomUUID();
-  const event = await eventsRepository.createDraft({
-    actorAdminId: adminId,
-    requestId: randomUUID(),
-    title,
-  });
+  const event = await createEventRecord(title, adminId);
   const uploadId = randomUUID();
   const objectKey = `events/${event.eventId}/uploads/${uploadId}.jpg`;
   const upload = await uploadsRepository.createUpload({
@@ -608,7 +670,7 @@ async function createPublishableEvent(title: string): Promise<{
   const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
   const result = await eventsRepository.updateDraft({
     actorAdminId: event.adminId,
-    category: 'Community',
+    categories: ['Community'],
     description: 'A complete event ready for publication.',
     endsAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1_000),
     eventId: event.eventId,
@@ -635,4 +697,27 @@ async function createPublishableEvent(title: string): Promise<{
     eventId: event.eventId,
     version: result.event.version,
   };
+}
+
+async function createEventRecord(title: string, adminId = randomUUID()) {
+  const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
+  return eventsRepository.createDraft({
+    actorAdminId: adminId,
+    categories: ['Community'],
+    description: 'A complete event.',
+    endsAt: new Date(startsAt.getTime() + 2 * 60 * 60 * 1_000),
+    requestId: randomUUID(),
+    startsAt,
+    timeZone: 'Africa/Lagos',
+    title,
+    venue: {
+      addressLine1: '1 Marina Road',
+      addressLine2: null,
+      city: 'Lagos',
+      countryCode: 'NG',
+      name: 'Eventa Hall',
+      postalCode: null,
+      region: 'Lagos',
+    },
+  });
 }

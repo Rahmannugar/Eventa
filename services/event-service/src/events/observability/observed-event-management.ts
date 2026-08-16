@@ -7,6 +7,8 @@ import {
   EventVersionConflictError,
 } from '../errors/event.errors';
 import type {
+  AdminEventListPage,
+  CreateDraftEventCommand,
   EventManagement,
   EventRecord,
   UpdateDraftEventCommand,
@@ -16,23 +18,19 @@ import type {
 export class ObservedEventManagement implements EventManagement {
   constructor(private readonly eventManagement: EventManagement) {}
 
-  async createDraft(
-    actorAdminId: string,
-    title: string,
-    requestId: string,
-  ): Promise<EventRecord> {
+  async createDraft(input: CreateDraftEventCommand): Promise<EventRecord> {
     try {
-      const event = await this.eventManagement.createDraft(
-        actorAdminId,
-        title,
-        requestId,
-      );
+      const event = await this.eventManagement.createDraft(input);
       this.record('created');
       return event;
     } catch (error: unknown) {
       this.record('failed');
       throw error;
     }
+  }
+
+  list(pageSize: number, pageToken?: string): Promise<AdminEventListPage> {
+    return this.eventManagement.list(pageSize, pageToken);
   }
 
   getById(eventId: string): Promise<EventRecord> {

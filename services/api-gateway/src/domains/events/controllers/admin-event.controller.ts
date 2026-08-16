@@ -25,6 +25,8 @@ import { AdminClientOriginGuard } from '../../admins/guards/admin-client-origin.
 import type { AdminAuthenticatedRequest } from '../../admins/types/authenticated-admin.types';
 import {
   AdminEventDto,
+  AdminEventListDto,
+  AdminEventListQueryDto,
   AdminEventMediaUploadPathDto,
   AdminEventMediaPathDto,
   AdminEventPathDto,
@@ -68,9 +70,24 @@ export class AdminEventController {
   ): Promise<AdminEventDto> {
     return this.events.createDraft(
       request.adminSession.adminId,
-      input.title,
+      input,
       requestId,
     );
+  }
+
+  @Get()
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventReadRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'List events for admin management' })
+  @ApiResponse({ status: HttpStatus.OK, type: AdminEventListDto })
+  list(
+    @Query() query: AdminEventListQueryDto,
+    @RequestId() requestId: string,
+  ): Promise<AdminEventListDto> {
+    return this.events.list(query.limit, query.cursor, requestId);
   }
 
   @Get(':eventId')

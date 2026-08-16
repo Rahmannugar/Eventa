@@ -12,7 +12,8 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 
 | Method   | Path                                             | Outcome                                                                             |
 | -------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `POST`   | `/admin/events`                                  | Starts a draft event at version 1.                                                  |
+| `GET`    | `/admin/events`                                  | Lists events with bounded cursor pagination.                                        |
+| `POST`   | `/admin/events`                                  | Creates a complete private event at version 1.                                      |
 | `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
 | `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
 | `POST`   | `/admin/events/:eventId/publish`                 | Publishes a complete draft at the supplied version.                                 |
@@ -20,7 +21,7 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
 | `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
 
-Create accepts a trimmed title between one and 160 characters. Update accepts the expected version, title, description, category, schedule, IANA timezone, and venue address.
+Create accepts a title, description, one to five case-insensitively unique categories, schedule, IANA timezone, and venue address. Update accepts the same details plus the expected version. The list accepts a limit from one to 50 and an opaque cursor returned by the preceding page.
 
 ## Media uploads
 

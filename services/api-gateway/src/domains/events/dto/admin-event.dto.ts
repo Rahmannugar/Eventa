@@ -1,6 +1,9 @@
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
   IsDefined,
   IsIn,
   IsInt,
@@ -18,20 +21,24 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export class CreateDraftEventDto {
-  @ApiProperty({ example: 'Lagos Design Week', maxLength: 160 })
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @MinLength(1)
-  @MaxLength(160)
-  title!: string;
-}
-
 export class AdminEventPathDto {
   @IsUUID()
   eventId!: string;
+}
+
+export class AdminEventListQueryDto {
+  @ApiPropertyOptional({ default: 20, maximum: 50, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit = 20;
+
+  @ApiPropertyOptional({ description: 'Opaque pagination cursor' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(512)
+  cursor?: string;
 }
 
 export class AdminEventMediaUploadPathDto extends AdminEventPathDto {
@@ -116,6 +123,54 @@ export class EventVenueDto {
   countryCode!: string;
 }
 
+export class CreateDraftEventDto {
+  @ApiProperty({ example: 'Lagos Design Week', maxLength: 160 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  title!: string;
+
+  @ApiProperty({ maxLength: 10000 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  description!: string;
+
+  @ApiProperty({ example: ['Outdoors', 'Sports'], maxItems: 5 })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @ArrayUnique((category: string) => category.trim().toLocaleLowerCase('en'))
+  @IsString({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(80, { each: true })
+  categories!: string[];
+
+  @ApiProperty({ example: '2026-10-15T09:00:00+01:00' })
+  @IsISO8601({ strict: true, strictSeparator: true })
+  startsAt!: string;
+
+  @ApiProperty({ example: '2026-10-15T18:00:00+01:00' })
+  @IsISO8601({ strict: true, strictSeparator: true })
+  endsAt!: string;
+
+  @ApiProperty({ example: 'Africa/Lagos', maxLength: 64 })
+  @IsTimeZone()
+  @MaxLength(64)
+  timeZone!: string;
+
+  @ApiProperty({ type: EventVenueDto })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => EventVenueDto)
+  venue!: EventVenueDto;
+}
+
 export class UpdateDraftEventDto {
   @ApiProperty({ example: 1, minimum: 1 })
   @IsInt()
@@ -141,14 +196,14 @@ export class UpdateDraftEventDto {
   @MaxLength(10000)
   description!: string;
 
-  @ApiProperty({ example: 'Design', maxLength: 80 })
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
-  @IsString()
-  @MinLength(1)
-  @MaxLength(80)
-  category!: string;
+  @ApiProperty({ example: ['Outdoors', 'Sports'], maxItems: 5 })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @ArrayUnique((category: string) => category.trim().toLocaleLowerCase('en'))
+  @IsString({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(80, { each: true })
+  categories!: string[];
 
   @ApiProperty({ example: '2026-10-15T09:00:00+01:00' })
   @IsISO8601({ strict: true, strictSeparator: true })
@@ -180,8 +235,8 @@ export class AdminEventDto {
   @ApiPropertyOptional()
   description!: string | undefined;
 
-  @ApiPropertyOptional({ example: 'Design' })
-  category!: string | undefined;
+  @ApiProperty({ example: ['Design'], maxItems: 5 })
+  categories!: string[];
 
   @ApiPropertyOptional({ example: '2026-10-15T08:00:00.000Z' })
   startsAt!: string | undefined;
@@ -215,6 +270,43 @@ export class AdminEventDto {
 
   @ApiPropertyOptional({ example: '2026-07-30T10:05:00.000Z' })
   publishedAt!: string | undefined;
+}
+
+export class AdminEventSummaryDto {
+  @ApiProperty({ example: '8b3856cc-040d-4584-a952-412028d2b600' })
+  eventId!: string;
+
+  @ApiProperty({ example: 'Lagos Design Week' })
+  title!: string;
+
+  @ApiProperty({ example: ['Outdoors', 'Sports'], maxItems: 5 })
+  categories!: string[];
+
+  @ApiProperty({ enum: ['draft', 'published'], example: 'draft' })
+  status!: 'draft' | 'published';
+
+  @ApiPropertyOptional({ example: '2026-10-15T08:00:00.000Z' })
+  startsAt!: string | undefined;
+
+  @ApiPropertyOptional({ example: '2026-10-15T17:00:00.000Z' })
+  endsAt!: string | undefined;
+
+  @ApiPropertyOptional({ example: 'Africa/Lagos' })
+  timeZone!: string | undefined;
+
+  @ApiPropertyOptional({ type: EventVenueDto })
+  venue!: EventVenueDto | undefined;
+
+  @ApiProperty({ example: '2026-07-30T10:00:00.000Z' })
+  updatedAt!: string;
+}
+
+export class AdminEventListDto {
+  @ApiProperty({ type: () => [AdminEventSummaryDto] })
+  events!: AdminEventSummaryDto[];
+
+  @ApiPropertyOptional({ description: 'Opaque cursor for the next page' })
+  nextCursor?: string;
 }
 
 export class PublishEventDto {

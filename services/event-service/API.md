@@ -6,7 +6,8 @@ Event Service implements `eventa.event.v1.EventService`.
 
 | Operation                | Purpose                                                                           |
 | ------------------------ | --------------------------------------------------------------------------------- |
-| `CreateDraftEvent`       | Starts a title-only draft at version 1.                                           |
+| `CreateDraftEvent`       | Creates a complete private event at version 1.                                    |
+| `ListAdminEvents`        | Returns a cursor-paginated admin event catalogue.                                 |
 | `GetAdminEvent`          | Returns the latest admin event state, verified images, and version.               |
 | `GetPublishedEvent`      | Returns the public representation only when the event is published.               |
 | `UpdateDraftEvent`       | Saves complete draft details and returns the new version.                         |
