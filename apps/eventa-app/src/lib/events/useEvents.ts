@@ -18,6 +18,7 @@ import {
   getAdminEvent,
   getEventMediaUpload,
   listAdminEvents,
+  publishEvent,
   removeEventMedia,
   updateDraftEvent,
   uploadEventMedia,
@@ -29,6 +30,7 @@ import type {
   EventMediaContentType,
   EventMediaSlot,
   EventMediaUploadStatus,
+  PublishEventCommand,
   UpdateDraftEventCommand,
 } from './event.types';
 
@@ -80,6 +82,18 @@ export function useUpdateDraftEvent() {
 
   return useMutation({
     mutationFn: (command: UpdateDraftEventCommand) => updateDraftEvent(command),
+    onSuccess: (event) => {
+      queryClient.setQueryData(adminEventQueryKey(event.eventId), event);
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
+  });
+}
+
+export function usePublishEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: PublishEventCommand) => publishEvent(command),
     onSuccess: (event) => {
       queryClient.setQueryData(adminEventQueryKey(event.eventId), event);
       void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });

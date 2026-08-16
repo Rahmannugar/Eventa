@@ -9,6 +9,8 @@ import {
   useState,
   type ChangeEvent,
   type ChangeEventHandler,
+  type Dispatch,
+  type SetStateAction,
 } from 'react';
 
 import type {
@@ -27,27 +29,52 @@ const slots: ReadonlyArray<{ label: string; slot: EventMediaSlot }> = [
   { label: 'Gallery 4', slot: 'gallery_4' },
 ];
 
-export function EventMediaManager({ event }: { event: AdminEvent }) {
+export function EventMediaManager({
+  disabled = false,
+  event,
+  onOperationChange,
+}: {
+  disabled?: boolean;
+  event: AdminEvent;
+  onOperationChange: Dispatch<SetStateAction<boolean>>;
+}) {
   const media = useEventMedia(event);
   const [confirmingRemoval, setConfirmingRemoval] =
     useState<EventMediaSlot | null>(null);
-  const busy =
+  const operationBusy =
     media.operation.phase !== 'idle' && media.operation.phase !== 'error';
+  const busy = disabled || operationBusy;
 
-  function handleFile(slot: EventMediaSlot, change: ChangeEvent<HTMLInputElement>) {
+  async function handleFile(
+    slot: EventMediaSlot,
+    change: ChangeEvent<HTMLInputElement>,
+  ) {
     const file = change.target.files?.[0];
     change.target.value = '';
-    if (file !== undefined) void media.chooseFile(slot, file);
+    if (file === undefined || disabled) return;
+    onOperationChange(true);
+    try {
+      await media.chooseFile(slot, file);
+    } finally {
+      onOperationChange(false);
+    }
   }
 
   function requestRemoval(slot: EventMediaSlot) {
+    if (disabled) return;
     media.clearError();
     setConfirmingRemoval(slot);
   }
 
-  function confirmRemoval(slot: EventMediaSlot) {
+  async function confirmRemoval(slot: EventMediaSlot) {
+    if (disabled) return;
     setConfirmingRemoval(null);
-    void media.remove(slot);
+    onOperationChange(true);
+    try {
+      await media.remove(slot);
+    } finally {
+      onOperationChange(false);
+    }
   }
 
   return (
@@ -66,7 +93,7 @@ export function EventMediaManager({ event }: { event: AdminEvent }) {
         {slots.map(({ label, slot }) => {
           const item = event.media.find((candidate) => candidate.slot === slot);
           const active =
-            busy &&
+            operationBusy &&
             media.operation.phase !== 'idle' &&
             media.operation.slot === slot;
           return (
@@ -82,8 +109,8 @@ export function EventMediaManager({ event }: { event: AdminEvent }) {
               previewUrl={media.preview?.slot === slot ? media.preview.url : undefined}
               slot={slot}
               onCancelRemoval={() => setConfirmingRemoval(null)}
-              onConfirmRemoval={() => confirmRemoval(slot)}
-              onFile={(change) => handleFile(slot, change)}
+              onConfirmRemoval={() => void confirmRemoval(slot)}
+              onFile={(change) => void handleFile(slot, change)}
               onRequestRemoval={() => requestRemoval(slot)}
             />
           );
@@ -164,7 +191,12 @@ function MediaManagerSlot({
             <Button type="button" variant="quiet" onClick={onCancelRemoval}>
               Keep
             </Button>
-            <Button type="button" variant="danger" onClick={onConfirmRemoval}>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={busy}
+              onClick={onConfirmRemoval}
+            >
               Remove
             </Button>
           </div>

@@ -8,6 +8,7 @@ import type {
   CreateEventInput,
   EventMediaUploadIntent,
   EventMediaUploadStatus,
+  PublishEventCommand,
   RemoveEventMediaCommand,
   UpdateDraftEventCommand,
 } from './event.types';
@@ -49,6 +50,18 @@ const adminEventSchema = z.object({
   updatedAt: z.iso.datetime({ offset: true }),
   publishedAt: z.iso.datetime({ offset: true }).optional(),
 });
+
+const publishedAdminEventSchema: z.ZodType<AdminEvent> = adminEventSchema.superRefine(
+  (event, context) => {
+    if (event.status !== 'published' || event.publishedAt === undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Publication must return the published event.',
+        path: ['status'],
+      });
+    }
+  },
+);
 
 const adminEventSummarySchema = adminEventSchema.pick({
   eventId: true,
@@ -141,6 +154,17 @@ export function updateDraftEvent({
     body: input,
     method: 'PUT',
     responseSchema: adminEventSchema,
+  });
+}
+
+export function publishEvent({
+  eventId,
+  expectedVersion,
+}: PublishEventCommand): Promise<AdminEvent> {
+  return apiRequest(`/admin/events/${encodeURIComponent(eventId)}/publish`, {
+    body: { expectedVersion },
+    method: 'POST',
+    responseSchema: publishedAdminEventSchema,
   });
 }
 

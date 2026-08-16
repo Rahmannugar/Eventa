@@ -119,3 +119,8 @@ export interface RemoveEventMediaCommand {
   expectedVersion: number;
   slot: EventMediaSlot;
 }
+
+export interface PublishEventCommand {
+  eventId: string;
+  expectedVersion: number;
+}

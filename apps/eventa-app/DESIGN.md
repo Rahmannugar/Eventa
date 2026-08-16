@@ -57,6 +57,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 - Public login pages remain usable while session restoration is pending or unavailable. A valid restored session redirects to the protected route. Protected-route restoration uses a stable loading state, offers retry on dependency failure, and returns invalid sessions to the correct actor login.
 - Event drafts use explicit Save. A stale version preserves entered values, explains the conflict in the form, and requires an explicit reload before another attempt. Successful creation and saving navigate to event details after announcing the outcome; dependency and not-found failures remain in the page that owns recovery.
 - Cover and gallery actions live with the media they affect. Upload, verification, replacement, removal, conflicts, and terminal recovery remain explicit without exposing storage or worker terminology.
+- Publication readiness lives in the details lifecycle rail. Missing information links to the owning edit or cover action. Publishing uses a focused confirmation, and the backend rechecks readiness before the details page changes to its read-only Published state.
 - Draft retirement uses deliberate confirmation and recoverable language. Published cancellation is not presented as ordinary deletion.
 - Data-backed admin routes keep the organizer shell visible while page-shaped loading, empty, error, and recovery states change inside the workspace.
 

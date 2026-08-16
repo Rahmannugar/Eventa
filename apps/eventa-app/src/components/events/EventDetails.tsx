@@ -7,7 +7,7 @@ import {
   WarningCircleIcon,
 } from '@phosphor-icons/react';
 import { getName } from 'country-list';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -20,6 +20,7 @@ import type {
 import { useAdminEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
 import { EventMediaManager } from './EventMediaManager';
+import { EventPublication } from './EventPublication';
 
 const eventIdSchema = z.uuid();
 const gallerySlotOrder = ['gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'];
@@ -54,10 +55,30 @@ export function EventDetails({ eventId }: { eventId: string }) {
     );
   }
 
-  return <EventDetailsContent event={eventQuery.data} />;
+  return (
+    <EventDetailsContent
+      event={eventQuery.data}
+      reload={async () => {
+        const result = await eventQuery.refetch();
+        if (result.error !== null) throw result.error;
+        if (result.data === undefined) {
+          throw new Error('Event details were not returned.');
+        }
+        return result.data;
+      }}
+    />
+  );
 }
 
-function EventDetailsContent({ event }: { event: AdminEvent }) {
+function EventDetailsContent({
+  event,
+  reload,
+}: {
+  event: AdminEvent;
+  reload: () => Promise<AdminEvent>;
+}) {
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [publicationBusy, setPublicationBusy] = useState(false);
   const cover = event.media.find((media) => media.slot === 'cover');
   const gallery = event.media
     .filter((media) => media.slot !== 'cover')
@@ -117,7 +138,11 @@ function EventDetailsContent({ event }: { event: AdminEvent }) {
             </div>
             <div className="event-details-section__body event-details-media">
               {event.status === 'draft' ? (
-                <EventMediaManager event={event} />
+                <EventMediaManager
+                  disabled={publicationBusy}
+                  event={event}
+                  onOperationChange={setMediaBusy}
+                />
               ) : (
                 <>
                   <MediaSlot
@@ -148,29 +173,45 @@ function EventDetailsContent({ event }: { event: AdminEvent }) {
           </section>
         </div>
 
-        <aside className="event-details-summary" aria-label="Event summary">
-          <DetailGroup icon={<CalendarBlankIcon aria-hidden="true" />} title="Schedule">
-            <DetailValue label="Starts">
-              {formatEventInstant(event.startsAt, event.timeZone)}
-            </DetailValue>
-            <DetailValue label="Ends">
-              {formatEventInstant(event.endsAt, event.timeZone)}
-            </DetailValue>
-            <DetailValue label="Time zone">
-              {event.timeZone?.replaceAll('_', ' ') ?? 'Not set'}
-            </DetailValue>
-          </DetailGroup>
-          <DetailGroup icon={<MapPinIcon aria-hidden="true" />} title="Venue">
-            {event.venue === undefined ? (
-              <p>Not added</p>
+        <div className="event-details-rail">
+          <aside className="event-details-summary" aria-label="Event summary">
+            <DetailGroup icon={<CalendarBlankIcon aria-hidden="true" />} title="Schedule">
+              <DetailValue label="Starts">
+                {formatEventInstant(event.startsAt, event.timeZone)}
+              </DetailValue>
+              <DetailValue label="Ends">
+                {formatEventInstant(event.endsAt, event.timeZone)}
+              </DetailValue>
+              <DetailValue label="Time zone">
+                {event.timeZone?.replaceAll('_', ' ') ?? 'Not set'}
+              </DetailValue>
+            </DetailGroup>
+            <DetailGroup icon={<MapPinIcon aria-hidden="true" />} title="Venue">
+              {event.venue === undefined ? (
+                <p>Not added</p>
+              ) : (
+                <VenueDetails venue={event.venue} />
+              )}
+            </DetailGroup>
+            {event.status === 'published' ? (
+              <DetailGroup title="Published">
+                <p>{formatUpdatedAt(event.publishedAt ?? event.updatedAt)}</p>
+              </DetailGroup>
             ) : (
-              <VenueDetails venue={event.venue} />
+              <DetailGroup title="Last updated">
+                <p>{formatUpdatedAt(event.updatedAt)}</p>
+              </DetailGroup>
             )}
-          </DetailGroup>
-          <DetailGroup title="Last updated">
-            <p>{formatUpdatedAt(event.updatedAt)}</p>
-          </DetailGroup>
-        </aside>
+          </aside>
+          {event.status === 'draft' ? (
+            <EventPublication
+              event={event}
+              mediaBusy={mediaBusy}
+              onOperationChange={setPublicationBusy}
+              reload={reload}
+            />
+          ) : null}
+        </div>
       </div>
     </main>
   );
