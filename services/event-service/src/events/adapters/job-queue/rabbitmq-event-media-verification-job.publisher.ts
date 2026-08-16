@@ -25,7 +25,7 @@ export class RabbitMQEventMediaVerificationJobPublisher implements EventMediaVer
     const channel = await this.rabbitMQ.confirmChannel(
       'event-media-verification-job-publisher',
     );
-    await this.ensureTopology(channel);
+    await this.ensureMediaVerificationQueue(channel);
     const traceHeaders: Record<string, string> = {};
     propagation.inject(context.active(), traceHeaders);
     const body: EventMediaVerificationJob = {
@@ -62,7 +62,9 @@ export class RabbitMQEventMediaVerificationJobPublisher implements EventMediaVer
     );
   }
 
-  private async ensureTopology(channel: ConfirmChannel): Promise<void> {
+  private async ensureMediaVerificationQueue(
+    channel: ConfirmChannel,
+  ): Promise<void> {
     await channel.assertExchange(EVENT_MEDIA_JOB_EXCHANGE, 'direct', {
       durable: true,
     });
