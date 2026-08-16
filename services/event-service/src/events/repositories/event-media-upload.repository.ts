@@ -76,6 +76,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         const [event] = await transaction
           .select({
             id: events.id,
+            retiredAt: events.retiredAt,
             status: events.status,
             version: events.version,
           })
@@ -83,7 +84,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
           .where(eq(events.id, input.eventId))
           .for('update');
 
-        if (event === undefined) {
+        if (event === undefined || event.retiredAt !== null) {
           return { outcome: 'not_found' as const };
         }
         if (
@@ -159,10 +160,12 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         failureCode: eventMediaUploads.failureCode,
       })
       .from(eventMediaUploads)
+      .innerJoin(events, eq(events.id, eventMediaUploads.eventId))
       .where(
         and(
           eq(eventMediaUploads.id, uploadId),
           eq(eventMediaUploads.eventId, eventId),
+          isNull(events.retiredAt),
         ),
       )
       .limit(1);
@@ -350,6 +353,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
             eq(events.id, current.eventId),
             eq(events.status, 'draft'),
             eq(events.version, current.expectedEventVersion),
+            isNull(events.retiredAt),
           ),
         )
         .returning({ version: events.version });

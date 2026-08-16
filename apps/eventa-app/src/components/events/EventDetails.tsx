@@ -21,6 +21,7 @@ import { useAdminEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
 import { EventMediaManager } from './EventMediaManager';
 import { EventPublication } from './EventPublication';
+import { EventRetirement } from './EventRetirement';
 
 const eventIdSchema = z.uuid();
 const gallerySlotOrder = ['gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'];
@@ -79,6 +80,7 @@ function EventDetailsContent({
 }) {
   const [mediaBusy, setMediaBusy] = useState(false);
   const [publicationBusy, setPublicationBusy] = useState(false);
+  const [retirementBusy, setRetirementBusy] = useState(false);
   const cover = event.media.find((media) => media.slot === 'cover');
   const gallery = event.media
     .filter((media) => media.slot !== 'cover')
@@ -118,7 +120,10 @@ function EventDetailsContent({
 
       <div className="event-details-layout">
         <div className="event-details-main">
-          <section className="event-details-section" aria-labelledby="about-title">
+          <section
+            className="event-details-section"
+            aria-labelledby="about-title"
+          >
             <div className="event-details-section__heading">
               <h2 id="about-title">About</h2>
             </div>
@@ -132,7 +137,10 @@ function EventDetailsContent({
             </div>
           </section>
 
-          <section className="event-details-section" aria-labelledby="media-title">
+          <section
+            className="event-details-section"
+            aria-labelledby="media-title"
+          >
             <div className="event-details-section__heading">
               <h2 id="media-title">Images</h2>
             </div>
@@ -175,7 +183,10 @@ function EventDetailsContent({
 
         <div className="event-details-rail">
           <aside className="event-details-summary" aria-label="Event summary">
-            <DetailGroup icon={<CalendarBlankIcon aria-hidden="true" />} title="Schedule">
+            <DetailGroup
+              icon={<CalendarBlankIcon aria-hidden="true" />}
+              title="Schedule"
+            >
               <DetailValue label="Starts">
                 {formatEventInstant(event.startsAt, event.timeZone)}
               </DetailValue>
@@ -206,8 +217,16 @@ function EventDetailsContent({
           {event.status === 'draft' ? (
             <EventPublication
               event={event}
-              mediaBusy={mediaBusy}
+              mediaBusy={mediaBusy || retirementBusy}
               onOperationChange={setPublicationBusy}
+              reload={reload}
+            />
+          ) : null}
+          {event.status === 'draft' ? (
+            <EventRetirement
+              disabled={mediaBusy || publicationBusy}
+              event={event}
+              onOperationChange={setRetirementBusy}
               reload={reload}
             />
           ) : null}
@@ -289,7 +308,9 @@ function VenueDetails({ venue }: { venue: EventVenue }) {
     <address>
       <strong>{venue.name}</strong>
       <span>{venue.addressLine1}</span>
-      {venue.addressLine2 === undefined ? null : <span>{venue.addressLine2}</span>}
+      {venue.addressLine2 === undefined ? null : (
+        <span>{venue.addressLine2}</span>
+      )}
       <span>{locality}</span>
       <span>{country}</span>
     </address>

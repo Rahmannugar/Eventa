@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -27,12 +27,18 @@ export class EventMediaMutationRepository implements EventMediaMutationRepositor
   remove(input: RemoveEventMediaCommand): Promise<RemoveEventMediaResult> {
     return this.database.transaction(async (transaction) => {
       const [event] = await transaction
-        .select({ status: events.status, version: events.version })
+        .select({
+          retiredAt: events.retiredAt,
+          status: events.status,
+          version: events.version,
+        })
         .from(events)
         .where(eq(events.id, input.eventId))
         .for('update');
 
-      if (event === undefined) return { outcome: 'not_found' };
+      if (event === undefined || event.retiredAt !== null) {
+        return { outcome: 'not_found' };
+      }
       if (event.status !== 'draft' || event.version !== input.expectedVersion) {
         return { outcome: 'version_conflict' };
       }
@@ -59,6 +65,7 @@ export class EventMediaMutationRepository implements EventMediaMutationRepositor
             eq(events.id, input.eventId),
             eq(events.status, 'draft'),
             eq(events.version, input.expectedVersion),
+            isNull(events.retiredAt),
           ),
         )
         .returning({ version: events.version });

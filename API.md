@@ -20,6 +20,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST`   | `/admin/events`                                  | Creates a draft event.                                                                           |
 | `GET`    | `/admin/events/:eventId`                         | Returns an event to any authenticated admin.                                                     |
 | `PUT`    | `/admin/events/:eventId`                         | Replaces editable draft details when the supplied version is current.                            |
+| `DELETE` | `/admin/events/:eventId`                         | Recoverably removes a draft at the supplied event version.                                       |
 | `POST`   | `/admin/events/:eventId/publish`                 | Publishes a complete draft at the supplied event version.                                        |
 | `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image attachment or replacement.                                                 |
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether the image is still processing, attached, rejected, conflicted, or expired.       |

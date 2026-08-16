@@ -32,6 +32,8 @@ import type {
   EventRepository as EventRepositoryPort,
   PublishEvent,
   PublishEventResult,
+  RetireDraftEvent,
+  RetireDraftEventResult,
   UpdateDraftEvent,
   UpdateDraftEventResult,
 } from '../types/event.types';
@@ -49,6 +51,7 @@ const EVENT_COLUMNS = {
   createdAt: events.createdAt,
   updatedAt: events.updatedAt,
   publishedAt: events.publishedAt,
+  retiredAt: events.retiredAt,
 };
 
 const VENUE_COLUMNS = {
@@ -133,7 +136,7 @@ export class EventManagementRepository implements EventRepositoryPort {
     return runWithOperationSpan(
       'event.list_admin',
       async () => {
-        const conditions: SQL[] = [];
+        const conditions: SQL[] = [isNull(events.retiredAt)];
         if (input.search !== null) {
           const escapedSearch = input.search.replace(/[\\%_]/g, '\\$&');
           conditions.push(
@@ -244,7 +247,7 @@ export class EventManagementRepository implements EventRepositoryPort {
           .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
           .from(events)
           .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
-          .where(eq(events.id, eventId))
+          .where(and(eq(events.id, eventId), isNull(events.retiredAt)))
           .limit(1);
 
         if (result === undefined) {
@@ -283,7 +286,13 @@ export class EventManagementRepository implements EventRepositoryPort {
           .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
           .from(events)
           .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
-          .where(and(eq(events.id, eventId), eq(events.status, 'published')))
+          .where(
+            and(
+              eq(events.id, eventId),
+              eq(events.status, 'published'),
+              isNull(events.retiredAt),
+            ),
+          )
           .limit(1);
 
         if (result === undefined) {
@@ -335,18 +344,19 @@ export class EventManagementRepository implements EventRepositoryPort {
                 eq(events.id, input.eventId),
                 eq(events.status, 'draft'),
                 eq(events.version, input.expectedVersion),
+                isNull(events.retiredAt),
               ),
             )
             .returning(EVENT_COLUMNS);
 
           if (event === undefined) {
             const [existing] = await transaction
-              .select({ eventId: events.id })
+              .select({ eventId: events.id, retiredAt: events.retiredAt })
               .from(events)
               .where(eq(events.id, input.eventId))
               .limit(1);
 
-            return existing === undefined
+            return existing === undefined || existing.retiredAt !== null
               ? { outcome: 'not_found' as const }
               : { outcome: 'version_conflict' as const };
           }
@@ -414,6 +424,10 @@ export class EventManagementRepository implements EventRepositoryPort {
             return { outcome: 'not_found' as const };
           }
 
+          if (result.event.retiredAt !== null) {
+            return { outcome: 'not_found' as const };
+          }
+
           if (
             result.event.status !== 'draft' ||
             result.event.version !== input.expectedVersion
@@ -464,6 +478,7 @@ export class EventManagementRepository implements EventRepositoryPort {
                 eq(events.id, input.eventId),
                 eq(events.status, 'draft'),
                 eq(events.version, input.expectedVersion),
+                isNull(events.retiredAt),
               ),
             )
             .returning(EVENT_COLUMNS);
@@ -502,6 +517,74 @@ export class EventManagementRepository implements EventRepositoryPort {
           return {
             outcome: 'published' as const,
             event: this.toEventRecord(event, result.venue, media, categories),
+          };
+        }),
+      this.spanOptions('UPDATE'),
+    );
+  }
+
+  retire(input: RetireDraftEvent): Promise<RetireDraftEventResult> {
+    return runWithOperationSpan(
+      'event.retire_draft',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const [event] = await transaction
+            .select({
+              retiredAt: events.retiredAt,
+              status: events.status,
+              version: events.version,
+            })
+            .from(events)
+            .where(eq(events.id, input.eventId))
+            .limit(1)
+            .for('update');
+
+          if (event === undefined) return { outcome: 'not_found' as const };
+          if (event.retiredAt !== null) {
+            return {
+              outcome: 'retired' as const,
+              eventVersion: event.version,
+            };
+          }
+          if (event.status !== 'draft') {
+            return { outcome: 'not_draft' as const };
+          }
+          if (event.version !== input.expectedVersion) {
+            return { outcome: 'version_conflict' as const };
+          }
+
+          const retiredAt = new Date();
+          const [retired] = await transaction
+            .update(events)
+            .set({
+              retiredAt,
+              updatedAt: retiredAt,
+              version: sql`${events.version} + 1`,
+            })
+            .where(
+              and(
+                eq(events.id, input.eventId),
+                eq(events.status, 'draft'),
+                eq(events.version, input.expectedVersion),
+                isNull(events.retiredAt),
+              ),
+            )
+            .returning({ version: events.version });
+          if (retired === undefined) {
+            throw new Error('Locked event changed during retirement');
+          }
+
+          await transaction.insert(eventAdminAuditLog).values({
+            action: 'event.retired',
+            actorAdminId: input.actorAdminId,
+            eventId: input.eventId,
+            eventVersion: retired.version,
+            requestId: input.requestId,
+          });
+
+          return {
+            outcome: 'retired' as const,
+            eventVersion: retired.version,
           };
         }),
       this.spanOptions('UPDATE'),

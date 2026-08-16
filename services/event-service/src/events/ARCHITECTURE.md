@@ -2,7 +2,7 @@
 
 ## State
 
-An event begins in `draft` at version 1 with its normalized title, description, one to five categories, schedule, IANA timezone, and one event-owned venue address. Publication additionally requires one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations.
+An event begins in `draft` at version 1 with its normalized title, description, one to five categories, schedule, IANA timezone, and one event-owned venue address. Publication additionally requires one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations. A draft may carry a retirement time; retired rows remain recoverable but are excluded from ordinary reads and mutations.
 
 ## Draft Creation
 
@@ -24,6 +24,8 @@ An event begins in `draft` at version 1 with its normalized title, description, 
 The management list reads Event-owned event, venue, and category data. It uses stable keyset orders over update time or event date with event ID as the tie-breaker. Opaque page tokens bind the cursor to normalized search, venue filters, and sort criteria, so callers cannot reuse a cursor against another query shape. Categories are loaded in one bounded query for the page rather than one query per event.
 
 Trigram search indexes normalized event titles for substring matching. Composite venue-code and event time indexes support dependent location filters and both catalogue orders. Display region names remain content; only structured region codes participate in exact filtering.
+
+Catalogue time and title indexes are partial over active rows. Retired drafts therefore do not accumulate in the index paths used by ordinary management queries.
 
 ## Admin Access
 
@@ -59,8 +61,12 @@ Explicit removal locks the event, verifies draft state and expected version, rem
 
 Publication never waits for Kafka. PostgreSQL establishes both the published state and the durable fact before the admin response succeeds.
 
+## Draft Retirement
+
+Retirement locks the event row and accepts only an active draft at the expected version. One transaction sets the retirement time, increments the version, and appends `event.retired` with the acting admin and request ID. A repeated command returns the stored retirement version without another state change or audit entry. Published events remain active because cancellation is a separate lifecycle workflow.
+
 Kafka lifecycle facts and RabbitMQ job assignments use separate Debezium lanes over PostgreSQL logical WAL.
 
 ## Audit
 
-The audit table is append-only through the Event application boundary. It records only mutations, including `event.published` and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.
+The audit table is append-only through the Event application boundary. It records only mutations, including `event.published`, `event.retired`, and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.

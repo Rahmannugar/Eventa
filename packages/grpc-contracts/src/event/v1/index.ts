@@ -28,6 +28,8 @@ export {
   type PublishedEvent,
   type PublishEventRequest,
   type PublishEventResponse,
+  type RetireDraftEventRequest,
+  type RetireDraftEventResponse,
   type RemoveEventMediaRequest,
   type RemoveEventMediaResponse,
   type UpdateDraftEventRequest,

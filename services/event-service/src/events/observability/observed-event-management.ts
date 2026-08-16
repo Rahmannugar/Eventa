@@ -5,6 +5,7 @@ import {
   EventScheduleInvalidError,
   EventPublicationIncompleteError,
   EventVersionConflictError,
+  EventRetirementNotAllowedError,
 } from '../errors/event.errors';
 import type {
   AdminEventListPage,
@@ -14,6 +15,7 @@ import type {
   ListAdminEventsQuery,
   UpdateDraftEventCommand,
   PublishEventCommand,
+  RetireDraftEventCommand,
 } from '../types/event.types';
 
 export class ObservedEventManagement implements EventManagement {
@@ -80,6 +82,25 @@ export class ObservedEventManagement implements EventManagement {
     }
   }
 
+  async retire(input: RetireDraftEventCommand): Promise<number> {
+    try {
+      const version = await this.eventManagement.retire(input);
+      this.recordRetirement('retired');
+      return version;
+    } catch (error: unknown) {
+      if (error instanceof EventVersionConflictError) {
+        this.recordRetirement('conflict');
+      } else if (error instanceof EventNotFoundError) {
+        this.recordRetirement('not_found');
+      } else if (error instanceof EventRetirementNotAllowedError) {
+        this.recordRetirement('not_draft');
+      } else {
+        this.recordRetirement('failed');
+      }
+      throw error;
+    }
+  }
+
   private record(outcome: 'created' | 'failed'): void {
     recordBusinessOutcome({
       operation: 'event.draft_creation',
@@ -101,5 +122,11 @@ export class ObservedEventManagement implements EventManagement {
     outcome: 'published' | 'conflict' | 'not_found' | 'incomplete' | 'failed',
   ): void {
     recordBusinessOutcome({ operation: 'event.publication', outcome });
+  }
+
+  private recordRetirement(
+    outcome: 'retired' | 'conflict' | 'not_found' | 'not_draft' | 'failed',
+  ): void {
+    recordBusinessOutcome({ operation: 'event.draft_retirement', outcome });
   }
 }

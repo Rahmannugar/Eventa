@@ -15,6 +15,8 @@ import type {
   RemoveEventMediaResponse,
   PublishEventRequest,
   PublishEventResponse,
+  RetireDraftEventRequest,
+  RetireDraftEventResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
@@ -67,4 +69,9 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<PublishEventResponse>;
+  retireDraftEvent(
+    request: RetireDraftEventRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<RetireDraftEventResponse>;
 }

@@ -1637,6 +1637,66 @@ a {
   margin-top: 1.35rem;
 }
 
+.event-retirement {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid #e8c9c5;
+  border-radius: 1rem;
+  background: var(--paper);
+  padding: 1.1rem;
+}
+
+.event-retirement > div:first-child {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.event-retirement > div:first-child > svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: none;
+  color: #9b3d34;
+}
+
+.event-retirement h2,
+.event-retirement p {
+  margin: 0;
+}
+
+.event-retirement h2 {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.event-retirement p {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.event-retirement > .button {
+  width: 100%;
+  color: #84352e;
+}
+
+.event-retirement .form-alert {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1.2rem;
+}
+
+.event-retirement .form-alert .button {
+  width: fit-content;
+  margin-top: 0.25rem;
+}
+
+.event-retirement__dialog-actions {
+  margin-top: 1.35rem;
+}
+
 .event-details-summary__group {
   padding: 1.1rem;
 }
@@ -2620,12 +2680,14 @@ a {
   }
 
   .event-publication__dialog-actions,
+  .event-retirement__dialog-actions,
   .event-publication__actions {
     align-items: stretch;
     flex-direction: column;
   }
 
   .event-publication__dialog-actions .button,
+  .event-retirement__dialog-actions .button,
   .event-publication__actions .button {
     width: 100%;
   }

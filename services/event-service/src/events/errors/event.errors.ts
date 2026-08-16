@@ -47,6 +47,13 @@ export class EventPublicationIncompleteError extends Error {
   }
 }
 
+export class EventRetirementNotAllowedError extends Error {
+  constructor() {
+    super('EVENT_RETIREMENT_NOT_ALLOWED');
+    this.name = EventRetirementNotAllowedError.name;
+  }
+}
+
 export class EventMediaNotFoundError extends Error {
   constructor() {
     super('EVENT_MEDIA_NOT_FOUND');

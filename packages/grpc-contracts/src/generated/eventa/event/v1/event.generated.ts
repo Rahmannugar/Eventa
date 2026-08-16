@@ -238,4 +238,14 @@ export interface PublishEventResponse {
   event: Event | undefined;
 }
 
+export interface RetireDraftEventRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+}
+
+export interface RetireDraftEventResponse {
+  eventVersion: number;
+}
+
 export const EVENTA_EVENT_V1_PACKAGE_NAME = "eventa.event.v1";

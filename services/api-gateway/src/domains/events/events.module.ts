@@ -18,6 +18,7 @@ import {
   AdminEventCreateRateLimitGuard,
   AdminEventMediaUploadRateLimitGuard,
   AdminEventPublishRateLimitGuard,
+  AdminEventRetireRateLimitGuard,
   AdminEventRateLimitService,
   AdminEventReadRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
@@ -77,6 +78,7 @@ export class EventsModule {
         AdminEventReadRateLimitGuard,
         AdminEventMediaUploadRateLimitGuard,
         AdminEventPublishRateLimitGuard,
+        AdminEventRetireRateLimitGuard,
         AdminEventUpdateRateLimitGuard,
         {
           provide: PublishedEventRateLimitService,

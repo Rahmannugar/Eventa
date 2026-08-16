@@ -111,8 +111,27 @@ const PUBLISH_RULES = {
   },
 } as const satisfies HybridRateLimitRules;
 
+const RETIRE_RULES = {
+  routeKey: 'admin-event-retire',
+  tokenBucket: {
+    capacity: 10,
+    name: 'ip-burst',
+    refillIntervalMs: 6_000,
+  },
+  primarySlidingWindow: {
+    limit: 120,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 60,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;
+
 type AdminEventOperation =
-  'create' | 'media_upload' | 'publish' | 'read' | 'update';
+  'create' | 'media_upload' | 'publish' | 'read' | 'retire' | 'update';
 
 interface EventRequest {
   headers: { cookie?: string };
@@ -142,9 +161,11 @@ export class AdminEventRateLimitService {
           ? MEDIA_UPLOAD_RULES
           : operation === 'publish'
             ? PUBLISH_RULES
-            : operation === 'update'
-              ? UPDATE_RULES
-              : READ_RULES;
+            : operation === 'retire'
+              ? RETIRE_RULES
+              : operation === 'update'
+                ? UPDATE_RULES
+                : READ_RULES;
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
     const ipSubject = this.hash(`ip:${clientIp}`);
     const attempt = {
@@ -204,9 +225,11 @@ abstract class AdminEventRateLimitGuard implements CanActivate {
             ? 'EVENT_MEDIA_UPLOAD_RATE_LIMITED'
             : this.operation === 'publish'
               ? 'EVENT_PUBLISH_RATE_LIMITED'
-              : this.operation === 'update'
-                ? 'EVENT_UPDATE_RATE_LIMITED'
-                : 'EVENT_READ_RATE_LIMITED',
+              : this.operation === 'retire'
+                ? 'EVENT_RETIRE_RATE_LIMITED'
+                : this.operation === 'update'
+                  ? 'EVENT_UPDATE_RATE_LIMITED'
+                  : 'EVENT_READ_RATE_LIMITED',
         'Wait before trying this event action again.',
       );
     } catch (error: unknown) {
@@ -299,6 +322,18 @@ export class AdminEventMediaUploadRateLimitGuard extends AdminEventRateLimitGuar
 @Injectable()
 export class AdminEventPublishRateLimitGuard extends AdminEventRateLimitGuard {
   protected readonly operation = 'publish' as const;
+
+  constructor(
+    rateLimits: AdminEventRateLimitService,
+    sessionCookie: AdminSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AdminEventRetireRateLimitGuard extends AdminEventRateLimitGuard {
+  protected readonly operation = 'retire' as const;
 
   constructor(
     rateLimits: AdminEventRateLimitService,

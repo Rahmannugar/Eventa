@@ -446,6 +446,20 @@ export class RemoveEventMediaResponseDto {
   eventVersion!: number;
 }
 
+export class RetireDraftEventQueryDto {
+  @ApiProperty({ example: 3, minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class RetireDraftEventResponseDto {
+  @ApiProperty({ example: 4, minimum: 2 })
+  eventVersion!: number;
+}
+
 export class AdminEventMediaDto {
   @ApiProperty()
   mediaId!: string;

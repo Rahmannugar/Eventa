@@ -16,6 +16,7 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 | `POST`   | `/admin/events`                                  | Creates a complete private event at version 1.                                      |
 | `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
 | `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
+| `DELETE` | `/admin/events/:eventId`                         | Recoverably removes a draft at the supplied version.                                |
 | `POST`   | `/admin/events/:eventId/publish`                 | Publishes a complete draft at the supplied version.                                 |
 | `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image upload for an empty slot or replacement.                      |
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
@@ -45,4 +46,6 @@ Removal takes `expectedVersion` as a query parameter. It immediately removes the
 
 Publication requires complete details, one venue, and a verified cover image. It takes `expectedVersion`, returns the published event with its incremented version and publication time, and freezes draft mutations. An incomplete event returns `422 EVENT_PUBLICATION_INCOMPLETE`; a stale version or an already-published event returns `409 EVENT_VERSION_CONFLICT`.
 
-Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/removal, publication, media-intent, and read operations have separate budgets by protected session and client IP.
+Draft removal takes `expectedVersion` as a query parameter and returns the resulting event version. Repeating a completed removal succeeds with the same version. Retired drafts disappear from lists and direct reads. Published events return `422 EVENT_RETIREMENT_NOT_ALLOWED`.
+
+Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/media removal, draft removal, publication, media-intent, and read operations have separate budgets by protected session and client IP.

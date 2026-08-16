@@ -3,6 +3,7 @@ import {
   EventNotFoundError,
   EventPageTokenInvalidError,
   EventPublicationIncompleteError,
+  EventRetirementNotAllowedError,
   EventScheduleInvalidError,
   EventVersionConflictError,
   EventVenueInvalidError,
@@ -16,6 +17,7 @@ import type {
   EventRecord,
   EventRepository,
   PublishEventCommand,
+  RetireDraftEventCommand,
   UpdateDraftEventCommand,
 } from '../types/event.types';
 import { EVENT_CATEGORY_LIMIT } from '../constants/event.constants';
@@ -152,6 +154,20 @@ export class EventManagementService implements EventManagement {
     }
 
     return result.event;
+  }
+
+  async retire(input: RetireDraftEventCommand): Promise<number> {
+    const result = await this.events.retire(input);
+
+    if (result.outcome === 'not_found') throw new EventNotFoundError();
+    if (result.outcome === 'not_draft') {
+      throw new EventRetirementNotAllowedError();
+    }
+    if (result.outcome === 'version_conflict') {
+      throw new EventVersionConflictError();
+    }
+
+    return result.eventVersion;
   }
 
   private normalizeOptional(value: string | undefined): string | null {

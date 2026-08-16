@@ -217,3 +217,13 @@ message PublishEventRequest {
 message PublishEventResponse {
   Event event = 1;
 }
+
+message RetireDraftEventRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+}
+
+message RetireDraftEventResponse {
+  int32 event_version = 1;
+}

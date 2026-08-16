@@ -11,6 +11,7 @@ import type {
   EventMediaUploadStatus,
   PublishEventCommand,
   RemoveEventMediaCommand,
+  RetireDraftEventCommand,
   UpdateDraftEventCommand,
 } from './event.types';
 
@@ -128,6 +129,10 @@ const removeEventMediaResponseSchema = z.object({
   eventVersion: z.number().int().positive(),
 });
 
+const retireDraftEventResponseSchema = z.object({
+  eventVersion: z.number().int().min(2),
+});
+
 export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   return apiRequest('/admin/events', {
     body: input,
@@ -182,6 +187,19 @@ export function publishEvent({
     method: 'POST',
     responseSchema: publishedAdminEventSchema,
   });
+}
+
+export async function retireDraftEvent({
+  eventId,
+  expectedVersion,
+}: RetireDraftEventCommand): Promise<void> {
+  const search = new URLSearchParams({
+    expectedVersion: String(expectedVersion),
+  });
+  await apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}?${search.toString()}`,
+    { method: 'DELETE', responseSchema: retireDraftEventResponseSchema },
+  );
 }
 
 export function createEventMediaUpload(

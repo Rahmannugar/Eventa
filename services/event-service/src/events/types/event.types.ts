@@ -25,6 +25,7 @@ export interface EventRecord {
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
+  retiredAt: Date | null;
 }
 
 export type EventMediaSlot =
@@ -359,6 +360,21 @@ export type PublishEventResult =
 
 export type PublishEventCommand = PublishEvent;
 
+export interface RetireDraftEvent {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+}
+
+export type RetireDraftEventResult =
+  | { outcome: 'retired'; eventVersion: number }
+  | { outcome: 'not_found' }
+  | { outcome: 'not_draft' }
+  | { outcome: 'version_conflict' };
+
+export type RetireDraftEventCommand = RetireDraftEvent;
+
 export type { EventPublishedEvent as EventPublishedFact } from '@eventa/messaging-contracts/event/event-lifecycle.events';
 
 export interface UpdateDraftEventCommand {
@@ -391,6 +407,7 @@ export interface EventRepository {
   findPublishedById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
   publish(input: PublishEvent): Promise<PublishEventResult>;
+  retire(input: RetireDraftEvent): Promise<RetireDraftEventResult>;
 }
 
 export interface EventManagement {
@@ -400,4 +417,5 @@ export interface EventManagement {
   getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
   publish(input: PublishEventCommand): Promise<EventRecord>;
+  retire(input: RetireDraftEventCommand): Promise<number>;
 }

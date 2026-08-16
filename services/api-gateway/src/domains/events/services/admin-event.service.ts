@@ -33,6 +33,7 @@ import type {
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
   RemoveEventMediaResponseDto,
+  RetireDraftEventResponseDto,
   PublishEventDto,
   UpdateDraftEventDto,
 } from '../dto/admin-event.dto';
@@ -327,6 +328,33 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async retire(
+    adminId: string,
+    eventId: string,
+    expectedVersion: number,
+    requestId: string,
+  ): Promise<RetireDraftEventResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.retireDraftEvent(
+          { adminId, eventId, expectedVersion },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        !Number.isInteger(response.eventVersion) ||
+        response.eventVersion < 2
+      ) {
+        throw this.unavailable('EVENT_RETIRE_RESPONSE_INVALID');
+      }
+      return response;
+    } catch (error: unknown) {
+      this.translate(error, 'retire');
+    }
+  }
+
   private deadline() {
     return { deadline: new Date(Date.now() + this.deadlineMs) };
   }
@@ -448,6 +476,7 @@ export class AdminEventService implements OnModuleInit {
       | 'media_upload'
       | 'read'
       | 'publish'
+      | 'retire'
       | 'update',
   ): never {
     if (error instanceof ApiHttpException) {
@@ -493,6 +522,13 @@ export class AdminEventService implements OnModuleInit {
             'That event media slot is empty.',
           );
         }
+        if (operation === 'retire') {
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'EVENT_RETIREMENT_NOT_ALLOWED',
+            'Published events cannot be removed.',
+          );
+        }
         throw this.unavailable('EVENT_MEDIA_PRECONDITION_INVALID');
       case status.ALREADY_EXISTS:
         throw new ApiHttpException(
@@ -516,7 +552,9 @@ export class AdminEventService implements OnModuleInit {
                     ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
                     : operation === 'publish'
                       ? 'EVENT_PUBLISH_RPC_UNAVAILABLE'
-                      : 'EVENT_READ_RPC_UNAVAILABLE',
+                      : operation === 'retire'
+                        ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
+                        : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

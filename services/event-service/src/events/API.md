@@ -4,7 +4,7 @@
 
 `ListAdminEvents` accepts a bounded page size, optional case-insensitive name search, country and dependent state or region codes, a supported update-time or event-date sort, and an optional opaque page token. It returns status, categories, schedule, timezone, venue, and an opaque token when another page exists. A token is valid only with the criteria that produced it.
 
-`GetAdminEvent` accepts an event ID. Gateway authentication admits the management request, and any authenticated admin may retrieve any event. A missing event returns gRPC `NOT_FOUND`.
+`GetAdminEvent` accepts an event ID. Gateway authentication admits the management request, and any authenticated admin may retrieve any active event. Missing and retired events return gRPC `NOT_FOUND`.
 
 `GetPublishedEvent` accepts an event ID and returns content, schedule, venue, verified media, publication time, and version only when the authoritative event state is `published`. It omits creator provenance and draft lifecycle state. Draft and missing IDs both return gRPC `NOT_FOUND`.
 
@@ -19,5 +19,7 @@ Accepted media appears in Event responses with its fixed slot, public URL, verif
 `RemoveEventMedia` accepts the acting admin, event ID, expected version, and fixed slot. The verified reference disappears immediately and the response returns the incremented event version. Physical object deletion continues through durable background work. A stale version returns `ABORTED`, a missing event returns `NOT_FOUND`, and an empty slot returns `FAILED_PRECONDITION`.
 
 `PublishEvent` accepts the acting admin, event ID, and expected version. Publication requires complete details, one venue, and a verified cover image. It returns the event as `published` with an incremented version and publication time. A missing event returns `NOT_FOUND`, an incomplete draft returns `FAILED_PRECONDITION`, and a stale version or already-published event returns `ABORTED`.
+
+`RetireDraftEvent` accepts the acting admin, event ID, and expected version. It timestamps the draft as retired, increments its version, and returns that version. Repeating the command returns the stored resulting version without changing state again. Missing events return `NOT_FOUND`, stale active drafts return `ABORTED`, and published events return `FAILED_PRECONDITION`.
 
 Exact message fields remain authoritative in the `eventa.event.v1` protobuf schemas.

@@ -37,6 +37,8 @@ import {
   RemoveEventMediaQueryDto,
   RemoveEventMediaResponseDto,
   PublishEventDto,
+  RetireDraftEventQueryDto,
+  RetireDraftEventResponseDto,
   UpdateDraftEventDto,
 } from '../dto/admin-event.dto';
 import {
@@ -44,6 +46,7 @@ import {
   AdminEventMediaUploadRateLimitGuard,
   AdminEventReadRateLimitGuard,
   AdminEventPublishRateLimitGuard,
+  AdminEventRetireRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
 } from '../rate-limit/admin-event-rate-limit';
 import { AdminEventService } from '../services/admin-event.service';
@@ -145,6 +148,28 @@ export class AdminEventController {
       request.adminSession.adminId,
       path.eventId,
       input,
+      requestId,
+    );
+  }
+
+  @Delete(':eventId')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventRetireRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Remove a draft event' })
+  @ApiResponse({ status: HttpStatus.OK, type: RetireDraftEventResponseDto })
+  retire(
+    @Param() path: AdminEventPathDto,
+    @Query() query: RetireDraftEventQueryDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<RetireDraftEventResponseDto> {
+    return this.events.retire(
+      request.adminSession.adminId,
+      path.eventId,
+      query.expectedVersion,
       requestId,
     );
   }

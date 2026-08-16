@@ -17,6 +17,7 @@ import {
   type PublishedEvent,
   type RemoveEventMediaResponse,
   type PublishEventResponse,
+  type RetireDraftEventResponse,
   type UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -35,6 +36,7 @@ import {
   CreateDraftEventDto,
   ListAdminEventsDto,
   PublishEventDto,
+  RetireDraftEventDto,
   UpdateDraftEventDto,
 } from '../dto/event-management.dto';
 import {
@@ -51,6 +53,7 @@ import {
   EventNotFoundError,
   EventPageTokenInvalidError,
   EventPublicationIncompleteError,
+  EventRetirementNotAllowedError,
   EventScheduleInvalidError,
   EventVersionConflictError,
   EventVenueInvalidError,
@@ -135,6 +138,13 @@ export class EventController implements EventServiceController {
     return from(this.publish(request, this.readRequestId(metadata)));
   }
 
+  retireDraftEvent(
+    request: RetireDraftEventDto,
+    metadata?: Metadata,
+  ): Observable<RetireDraftEventResponse> {
+    return from(this.retire(request, this.readRequestId(metadata)));
+  }
+
   private async getEvent(eventId: string): Promise<GetAdminEventResponse> {
     try {
       return {
@@ -144,6 +154,42 @@ export class EventController implements EventServiceController {
       if (error instanceof EventNotFoundError) {
         throw new RpcException({
           code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async retire(
+    request: RetireDraftEventDto,
+    requestId: string,
+  ): Promise<RetireDraftEventResponse> {
+    try {
+      return {
+        eventVersion: await this.eventService.retire({
+          actorAdminId: request.adminId,
+          eventId: request.eventId,
+          expectedVersion: request.expectedVersion,
+          requestId,
+        }),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventRetirementNotAllowedError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
           message: error.message,
         });
       }

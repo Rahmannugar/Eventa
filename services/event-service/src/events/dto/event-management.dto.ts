@@ -3,6 +3,7 @@ import type {
   GetAdminEventRequest,
   ListAdminEventsRequest,
   PublishEventRequest,
+  RetireDraftEventRequest,
   UpdateDraftEventRequest,
   Venue,
 } from '@eventa/grpc-contracts';
@@ -242,6 +243,19 @@ export class UpdateDraftEventDto implements UpdateDraftEventRequest {
 }
 
 export class PublishEventDto implements PublishEventRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class RetireDraftEventDto implements RetireDraftEventRequest {
   @IsUUID()
   adminId!: string;
 

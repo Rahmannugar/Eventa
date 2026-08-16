@@ -798,6 +798,118 @@ describe('Event mutation integration', () => {
       version: publishable.version + 1,
     });
   });
+
+  it('retires a draft once across repeated delivery', async () => {
+    const event = await createEventRecord('Retired draft');
+    const firstRequestId = randomUUID();
+    const repeatedRequestId = randomUUID();
+
+    const outcomes = await Promise.all([
+      eventsRepository.retire({
+        actorAdminId: event.createdByAdminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: firstRequestId,
+      }),
+      eventsRepository.retire({
+        actorAdminId: event.createdByAdminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: repeatedRequestId,
+      }),
+    ]);
+
+    const [persisted] = await database
+      .select({ retiredAt: events.retiredAt, version: events.version })
+      .from(events)
+      .where(eq(events.id, event.eventId));
+    const audits = await database
+      .select({
+        actorAdminId: eventAdminAuditLog.actorAdminId,
+        eventVersion: eventAdminAuditLog.eventVersion,
+        requestId: eventAdminAuditLog.requestId,
+      })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.action, 'event.retired'));
+
+    expect(outcomes).toEqual([
+      { outcome: 'retired', eventVersion: 2 },
+      { outcome: 'retired', eventVersion: 2 },
+    ]);
+    expect(persisted?.retiredAt).toBeInstanceOf(Date);
+    expect(persisted?.version).toBe(2);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actorAdminId: event.createdByAdminId,
+      eventVersion: 2,
+    });
+    expect([firstRequestId, repeatedRequestId]).toContain(audits[0]?.requestId);
+  });
+
+  it('excludes retired drafts from management reads', async () => {
+    const event = await createEventRecord('Hidden retired draft');
+    await eventsRepository.retire({
+      actorAdminId: event.createdByAdminId,
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+
+    await expect(
+      eventsRepository.findById(event.eventId),
+    ).resolves.toBeUndefined();
+    await expect(
+      eventsRepository.list({
+        countryCode: null,
+        limit: 20,
+        regionCode: null,
+        search: null,
+        sort: 'updated_desc',
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it('rejects stale and published retirement commands', async () => {
+    const draft = await createEventRecord('Changed draft');
+    const updated = await eventsRepository.updateDraft({
+      actorAdminId: draft.createdByAdminId,
+      categories: draft.categories,
+      description: draft.description!,
+      endsAt: draft.endsAt!,
+      eventId: draft.eventId,
+      expectedVersion: draft.version,
+      requestId: randomUUID(),
+      startsAt: draft.startsAt!,
+      timeZone: draft.timeZone!,
+      title: draft.title,
+      venue: draft.venue!,
+    });
+    if (updated.outcome !== 'updated') throw new Error('Update setup failed');
+    const published = await createPublishableEvent('Published retirement');
+    await eventsRepository.publish({
+      actorAdminId: published.adminId,
+      eventId: published.eventId,
+      expectedVersion: published.version,
+      requestId: randomUUID(),
+    });
+
+    await expect(
+      eventsRepository.retire({
+        actorAdminId: draft.createdByAdminId,
+        eventId: draft.eventId,
+        expectedVersion: draft.version,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'version_conflict' });
+    await expect(
+      eventsRepository.retire({
+        actorAdminId: published.adminId,
+        eventId: published.eventId,
+        expectedVersion: published.version + 1,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'not_draft' });
+  });
 });
 
 async function createAttachedCover(title: string): Promise<{

@@ -25,6 +25,8 @@ import {
   PublishEventResponse,
   RemoveEventMediaRequest,
   RemoveEventMediaResponse,
+  RetireDraftEventRequest,
+  RetireDraftEventResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
 } from "./event.generated";
@@ -57,6 +59,8 @@ export interface EventServiceClient {
   removeEventMedia(request: RemoveEventMediaRequest, metadata?: Metadata): Observable<RemoveEventMediaResponse>;
 
   publishEvent(request: PublishEventRequest, metadata?: Metadata): Observable<PublishEventResponse>;
+
+  retireDraftEvent(request: RetireDraftEventRequest, metadata?: Metadata): Observable<RetireDraftEventResponse>;
 }
 
 export interface EventServiceController {
@@ -83,6 +87,8 @@ export interface EventServiceController {
   removeEventMedia(request: RemoveEventMediaRequest, metadata?: Metadata): Observable<RemoveEventMediaResponse>;
 
   publishEvent(request: PublishEventRequest, metadata?: Metadata): Observable<PublishEventResponse>;
+
+  retireDraftEvent(request: RetireDraftEventRequest, metadata?: Metadata): Observable<RetireDraftEventResponse>;
 }
 
 export function EventServiceControllerMethods() {
@@ -97,6 +103,7 @@ export function EventServiceControllerMethods() {
       "getEventMediaUpload",
       "removeEventMedia",
       "publishEvent",
+      "retireDraftEvent",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);

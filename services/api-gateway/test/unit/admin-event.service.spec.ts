@@ -8,6 +8,8 @@ import {
   type ListAdminEventsResponse,
   type PublishEventRequest,
   type PublishEventResponse,
+  type RetireDraftEventRequest,
+  type RetireDraftEventResponse,
 } from '@eventa/grpc-contracts';
 import { status, type CallOptions, type Metadata } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
@@ -100,6 +102,18 @@ function createListService(
 ): AdminEventService {
   const grpcClient = {
     getService: () => ({ listAdminEvents }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createRetireService(
+  retireDraftEvent: DeadlineAwareEventServiceClient['retireDraftEvent'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ retireDraftEvent }),
   } as unknown as ClientGrpc;
   const service = new AdminEventService(grpcClient, deadlineMs);
   service.onModuleInit();
@@ -289,6 +303,71 @@ describe('AdminEventService publication', () => {
         code: 'EVENT_PUBLICATION_INCOMPLETE',
         message:
           'Complete the event details, venue, and cover image before publishing.',
+        statusCode: 422,
+      },
+      status: 422,
+    });
+  });
+});
+
+describe('AdminEventService retirement', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('forwards retirement identity, correlation, and deadline', async () => {
+    let receivedRequest: RetireDraftEventRequest | undefined;
+    let receivedMetadata: Metadata | undefined;
+    let receivedOptions: CallOptions | undefined;
+    const service = createRetireService(
+      (
+        request: RetireDraftEventRequest,
+        metadata?: Metadata,
+        options?: CallOptions,
+      ): Observable<RetireDraftEventResponse> => {
+        receivedRequest = request;
+        receivedMetadata = metadata;
+        receivedOptions = options;
+        return of({ eventVersion: 2 });
+      },
+    );
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    await expect(
+      service.retire(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        1,
+        'retirement-request',
+      ),
+    ).resolves.toEqual({ eventVersion: 2 });
+    expect(receivedRequest).toEqual({
+      adminId: draftEvent.createdByAdminId,
+      eventId: draftEvent.eventId,
+      expectedVersion: 1,
+    });
+    expect(receivedMetadata?.get('x-request-id')).toEqual([
+      'retirement-request',
+    ]);
+    expect(receivedOptions).toEqual({ deadline: new Date(13_000) });
+  });
+
+  it('rejects published retirement through the public contract', async () => {
+    const service = createRetireService(() =>
+      throwError(() => ({ code: status.FAILED_PRECONDITION })),
+    );
+
+    await expect(
+      service.retire(
+        publishedEvent.createdByAdminId,
+        publishedEvent.eventId,
+        publishedEvent.version,
+        'retirement-request',
+      ),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'EVENT_RETIREMENT_NOT_ALLOWED',
+        message: 'Published events cannot be removed.',
         statusCode: 422,
       },
       status: 422,

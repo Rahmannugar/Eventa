@@ -128,3 +128,8 @@ export interface PublishEventCommand {
   eventId: string;
   expectedVersion: number;
 }
+
+export interface RetireDraftEventCommand {
+  eventId: string;
+  expectedVersion: number;
+}

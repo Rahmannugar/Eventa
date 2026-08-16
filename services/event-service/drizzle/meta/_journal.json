@@ -57,6 +57,13 @@
       "when": 1786892779459,
       "tag": "0007_index_event_catalogue",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786899756204,
+      "tag": "0008_retire_draft_events",
+      "breakpoints": true
     }
   ]
 }

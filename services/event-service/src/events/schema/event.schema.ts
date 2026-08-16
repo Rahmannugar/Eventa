@@ -28,6 +28,10 @@ export const events = pgTable(
       mode: 'date',
       withTimezone: true,
     }),
+    retiredAt: timestamp('retired_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', {
       mode: 'date',
       withTimezone: true,
@@ -42,13 +46,18 @@ export const events = pgTable(
       .notNull(),
   },
   (table) => [
-    index('events_status_created_at_index').on(table.status, table.createdAt),
-    index('events_starts_at_id_index').on(table.startsAt, table.id),
-    index('events_updated_at_id_index').on(table.updatedAt, table.id),
-    index('events_title_search_index').using(
-      'gin',
-      sql`lower(${table.title}) gin_trgm_ops`,
-    ),
+    index('events_status_created_at_index')
+      .on(table.status, table.createdAt)
+      .where(sql`${table.retiredAt} IS NULL`),
+    index('events_starts_at_id_index')
+      .on(table.startsAt, table.id)
+      .where(sql`${table.retiredAt} IS NULL`),
+    index('events_updated_at_id_index')
+      .on(table.updatedAt, table.id)
+      .where(sql`${table.retiredAt} IS NULL`),
+    index('events_title_search_index')
+      .using('gin', sql`lower(${table.title}) gin_trgm_ops`)
+      .where(sql`${table.retiredAt} IS NULL`),
     check(
       'events_title_normalized',
       sql`${table.title} = btrim(${table.title})`,
@@ -85,6 +94,10 @@ export const events = pgTable(
     check(
       'events_published_at_shape',
       sql`(${table.status} = 'published') = (${table.publishedAt} IS NOT NULL)`,
+    ),
+    check(
+      'events_retired_draft_only',
+      sql`${table.retiredAt} IS NULL OR ${table.status} = 'draft'`,
     ),
   ],
 );
