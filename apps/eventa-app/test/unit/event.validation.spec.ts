@@ -63,4 +63,20 @@ describe('event creation validation', () => {
       }),
     });
   });
+
+  it('rejects a local time skipped by daylight saving', () => {
+    const result = validateCreateEventForm({
+      ...completeForm(),
+      startsAt: '2026-03-08T02:30',
+      endsAt: '2026-03-08T04:00',
+      timeZone: 'America/New_York',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      errors: expect.objectContaining({
+        startsAt: 'Check the date, time, and time zone.',
+      }),
+    });
+  });
 });

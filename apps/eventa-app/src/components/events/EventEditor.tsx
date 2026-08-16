@@ -3,8 +3,20 @@ import {
   ArrowsClockwiseIcon,
   WarningCircleIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -28,6 +40,7 @@ const eventIdSchema = z.uuid();
 
 export function EventEditor({ eventId }: { eventId: string }) {
   const location = useLocation();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const validEventId = eventIdSchema.safeParse(eventId).success;
   const eventQuery = useAdminEvent(eventId, validEventId);
 
@@ -59,32 +72,38 @@ export function EventEditor({ eventId }: { eventId: string }) {
   return (
     <main className="admin-page admin-page--editor">
       <header className="event-editor-header">
-        <Link className="back-link" to="/admin">
+        <Link
+          className="back-link"
+          to={`/admin/events/${eventQuery.data.eventId}`}
+          onClick={(clickEvent) => {
+            if (
+              hasUnsavedChanges &&
+              !window.confirm('Leave without saving your changes?')
+            ) {
+              clickEvent.preventDefault();
+            }
+          }}
+        >
           <ArrowLeftIcon aria-hidden="true" />
-          Events
+          Event details
         </Link>
         <div className="event-editor-header__title">
-          <h1>{eventQuery.data.title}</h1>
+          <h1>Edit {eventQuery.data.title}</h1>
           <span
             className={`status-badge status-badge--${eventQuery.data.status}`}
           >
-            {eventQuery.data.status === 'draft' ? 'Private' : 'Published'}
+            {eventQuery.data.status === 'draft' ? 'Draft' : 'Published'}
           </span>
         </div>
       </header>
 
       {eventQuery.data.status === 'published' ? (
-        <div className="event-locked" role="status">
-          <WarningCircleIcon aria-hidden="true" weight="fill" />
-          <div>
-            <h2>This event is published</h2>
-            <p>Published events are read-only.</p>
-          </div>
-        </div>
+        <Navigate replace to={`/admin/events/${eventQuery.data.eventId}`} />
       ) : (
         <DraftEventForm
           key={`${eventQuery.data.eventId}:${String(eventQuery.data.version)}`}
           event={eventQuery.data}
+          onDirtyChange={setHasUnsavedChanges}
           reload={async () => {
             const result = await eventQuery.refetch();
             if (result.error !== null) throw result.error;
@@ -97,11 +116,14 @@ export function EventEditor({ eventId }: { eventId: string }) {
 
 function DraftEventForm({
   event,
+  onDirtyChange,
   reload,
 }: {
   event: AdminEvent;
+  onDirtyChange: Dispatch<SetStateAction<boolean>>;
   reload: () => Promise<unknown>;
 }) {
+  const navigate = useNavigate();
   const update = useUpdateDraftEvent();
   const formRef = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState(() => draftEventFormValues(event));
@@ -113,6 +135,11 @@ function DraftEventForm({
   const conflict =
     update.error instanceof ApiError &&
     update.error.code === 'EVENT_VERSION_CONFLICT';
+
+  useEffect(() => {
+    onDirtyChange(dirty);
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -152,8 +179,12 @@ function DraftEventForm({
     setErrors({});
     update.reset();
     try {
-      await update.mutateAsync({ eventId: event.eventId, input: result.data });
+      const saved = await update.mutateAsync({
+        eventId: event.eventId,
+        input: result.data,
+      });
       toast.success('Changes saved.');
+      void navigate(`/admin/events/${saved.eventId}`);
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length > 0) {
         const serverErrors: DraftEventFormErrors = {};
@@ -230,6 +261,17 @@ function DraftEventForm({
       />
 
       <footer className="event-form__actions event-form__actions--end">
+        <Link
+          className="button button--secondary"
+          to={`/admin/events/${event.eventId}`}
+          onClick={(clickEvent) => {
+            if (dirty && !window.confirm('Leave without saving your changes?')) {
+              clickEvent.preventDefault();
+            }
+          }}
+        >
+          Cancel
+        </Link>
         <Button type="submit" busy={update.isPending} disabled={!dirty}>
           {update.isPending ? 'Saving changes…' : 'Save changes'}
         </Button>

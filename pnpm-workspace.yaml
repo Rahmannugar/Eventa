@@ -13,3 +13,6 @@ allowBuilds:
   sharp: true
 
 injectWorkspacePackages: true
+
+minimumReleaseAgeExclude:
+  - byte-datepicker@3.0.1

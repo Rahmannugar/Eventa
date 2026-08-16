@@ -97,7 +97,7 @@ function EventListItem({ event }: { event: AdminEventSummary }) {
         <div className="event-list__name-line">
           <strong>{event.title}</strong>
           <span className={`status-badge status-badge--${event.status}`}>
-            {event.status === 'draft' ? 'Private' : 'Published'}
+            {event.status === 'draft' ? 'Draft' : 'Published'}
           </span>
         </div>
         {event.categories.length === 0 ? null : (

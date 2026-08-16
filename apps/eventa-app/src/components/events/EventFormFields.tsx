@@ -8,8 +8,8 @@ import {
   TagIcon,
   XIcon,
 } from '@phosphor-icons/react';
+import { ByteDateTimePicker } from 'byte-datepicker';
 import { Command } from 'cmdk';
-import { format, isValid, parse } from 'date-fns';
 import {
   useId,
   useMemo,
@@ -17,7 +17,6 @@ import {
   type Dispatch,
   type TextareaHTMLAttributes,
 } from 'react';
-import { DayPicker } from 'react-day-picker';
 import { getData } from 'country-list';
 
 import type {
@@ -403,10 +402,6 @@ function DateTimeField({
   onChange: Dispatch<string>;
   value: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [datePart = '', timePart = ''] = value.split('T');
-  const selected =
-    datePart === '' ? undefined : parse(datePart, 'yyyy-MM-dd', new Date());
   const errorId = `${id}-error`;
 
   return (
@@ -414,62 +409,37 @@ function DateTimeField({
       <label id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
-      <div
-        className="date-time-field"
-        aria-describedby={error === undefined ? undefined : errorId}
+      <ByteDateTimePicker
+        className="event-date-time-picker"
+        dateFormatString="dd mmm yyyy"
+        error={error !== undefined}
+        hideInput
+        hourFormat={12}
+        minuteStep={1}
+        value={value === '' ? null : value}
+        onChange={(date) => onChange(formatLocalDateTime(date))}
       >
-        <Popover.Root open={open} onOpenChange={setOpen}>
-          <Popover.Trigger asChild>
-            <button
-              id={id}
-              type="button"
-              className="date-picker__trigger"
-              aria-labelledby={`${id}-label`}
-              aria-describedby={error === undefined ? undefined : errorId}
-              aria-invalid={error === undefined ? undefined : true}
-            >
-              <CalendarBlankIcon aria-hidden="true" />
-              {selected !== undefined && isValid(selected) ? (
-                format(selected, 'EEE, d MMM yyyy')
-              ) : (
-                <span className="select-placeholder">Choose date</span>
-              )}
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              className="calendar-popover"
-              align="start"
-              sideOffset={6}
-            >
-              <DayPicker
-                mode="single"
-                {...(selected === undefined
-                  ? {}
-                  : { selected, defaultMonth: selected })}
-                onSelect={(date) => {
-                  if (date === undefined) return;
-                  onChange(
-                    `${format(date, 'yyyy-MM-dd')}T${timePart || '09:00'}`,
-                  );
-                  setOpen(false);
-                }}
-              />
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-        <input
-          aria-label={`${label} time`}
-          aria-describedby={error === undefined ? undefined : errorId}
-          type="time"
-          value={timePart}
-          aria-invalid={error === undefined ? undefined : true}
-          onChange={(event) => {
-            const date = datePart || format(new Date(), 'yyyy-MM-dd');
-            onChange(`${date}T${event.target.value}`);
-          }}
-        />
-      </div>
+        {({ formattedValue, isOpen, open }) => (
+          <button
+            id={id}
+            type="button"
+            className="date-picker__trigger"
+            aria-describedby={error === undefined ? undefined : errorId}
+            aria-expanded={isOpen}
+            aria-haspopup="dialog"
+            aria-invalid={error === undefined ? undefined : true}
+            aria-labelledby={`${id}-label`}
+            onClick={open}
+          >
+            <CalendarBlankIcon aria-hidden="true" />
+            {formattedValue === '' ? (
+              <span className="select-placeholder">Choose date and time</span>
+            ) : (
+              <span>{formattedValue}</span>
+            )}
+          </button>
+        )}
+      </ByteDateTimePicker>
       {error === undefined ? null : (
         <p className="field__error" id={errorId}>
           {error}
@@ -477,6 +447,14 @@ function DateTimeField({
       )}
     </div>
   );
+}
+
+function formatLocalDateTime(date: Date | null): string {
+  if (date === null) return '';
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${String(date.getFullYear()).padStart(4, '0')}-${pad(
+    date.getMonth() + 1,
+  )}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function SearchSelect({
