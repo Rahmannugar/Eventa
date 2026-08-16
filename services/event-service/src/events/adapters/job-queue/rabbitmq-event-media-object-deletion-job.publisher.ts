@@ -4,9 +4,9 @@ import { context, propagation } from '@opentelemetry/api';
 import type { RuntimeConfig } from '../../../config/runtime-config';
 import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.client';
 import {
+  EVENT_MEDIA_JOB_EXCHANGE,
   EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,
   EVENT_MEDIA_OBJECT_DELETION_QUEUE,
-  EVENT_MEDIA_JOB_EXCHANGE,
 } from '../../constants/event-media.constants';
 import type { EventMediaObjectDeletionJobPublisher } from '../../types/event.types';
 

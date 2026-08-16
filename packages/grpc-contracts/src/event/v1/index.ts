@@ -6,6 +6,7 @@ export {
   type EventServiceController,
 } from '../../generated/eventa/event/v1/event_service.generated';
 export {
+  AdminEventSort,
   EventStatus,
   EventMediaSlot,
   EventMediaUploadStatus,

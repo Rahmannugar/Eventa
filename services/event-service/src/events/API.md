@@ -1,8 +1,8 @@
 # Events API
 
-`CreateDraftEvent` accepts the authenticated admin ID, title, description, one to five categories, ISO-8601 start and end instants, IANA timezone, and venue address. Event Service normalizes those values, requires the end to follow the start, creates the complete private event at version 1, and returns its state.
+`CreateDraftEvent` accepts the authenticated admin ID, title, description, one to five categories, ISO-8601 start and end instants, IANA timezone, and venue address. The venue may include a structured state or region code alongside its display name. Event Service normalizes those values, requires the end to follow the start, creates the complete private event at version 1, and returns its state.
 
-`ListAdminEvents` accepts a bounded page size and optional opaque page token. It returns events ordered by latest update, including status, categories, schedule, timezone, venue, and an opaque token when another page exists.
+`ListAdminEvents` accepts a bounded page size, optional case-insensitive name search, country and dependent state or region codes, a supported update-time or event-date sort, and an optional opaque page token. It returns status, categories, schedule, timezone, venue, and an opaque token when another page exists. A token is valid only with the criteria that produced it.
 
 `GetAdminEvent` accepts an event ID. Gateway authentication admits the management request, and any authenticated admin may retrieve any event. A missing event returns gRPC `NOT_FOUND`.
 

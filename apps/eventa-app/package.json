@@ -18,6 +18,7 @@
     "byte-datepicker": "3.0.1",
     "cmdk": "^1.1.1",
     "country-list": "^2.4.1",
+    "country-region-data": "^4.1.0",
     "input-otp": "^1.4.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

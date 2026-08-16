@@ -11,7 +11,11 @@ import { EventMediaUploadRepository } from '../../src/events/repositories/event-
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
-import { EventScheduleInvalidError } from '../../src/events/errors/event.errors';
+import {
+  EventPageTokenInvalidError,
+  EventScheduleInvalidError,
+  EventVenueInvalidError,
+} from '../../src/events/errors/event.errors';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventCategories } from '../../src/events/schema/event-category.schema';
 import { eventJobOutbox } from '../../src/events/schema/event-job-outbox.schema';
@@ -164,6 +168,7 @@ describe('Event mutation integration', () => {
           name: 'Eventa Hall',
           postalCode: null,
           region: 'Lagos',
+          regionCode: 'LA',
         },
       }),
     ).rejects.toBeDefined();
@@ -208,13 +213,46 @@ describe('Event mutation integration', () => {
     expect(eventCount?.value).toBe(0);
   });
 
+  it('rejects a region code without a region name', async () => {
+    const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
+    await expect(
+      eventManagement.createDraft({
+        actorAdminId: randomUUID(),
+        categories: ['Community'],
+        description: 'A complete event.',
+        endsAt: new Date(startsAt.getTime() + 60 * 60 * 1_000).toISOString(),
+        requestId: randomUUID(),
+        startsAt: startsAt.toISOString(),
+        timeZone: 'Europe/Copenhagen',
+        title: 'Invalid venue',
+        venue: {
+          addressLine1: '1 Harbour Road',
+          city: 'Copenhagen',
+          countryCode: 'DK',
+          name: 'Eventa Hall',
+          regionCode: 'DK-84',
+        },
+      }),
+    ).rejects.toBeInstanceOf(EventVenueInvalidError);
+  });
+
   it('pages the admin event catalogue without duplicates', async () => {
     await createEventRecord('First event');
     await createEventRecord('Second event');
     await createEventRecord('Third event');
 
-    const firstPage = await eventManagement.list(2);
-    const secondPage = await eventManagement.list(2, firstPage.nextPageToken);
+    const firstPage = await eventManagement.list({
+      pageSize: 2,
+      sort: 'updated_desc',
+    });
+    if (firstPage.nextPageToken === undefined) {
+      throw new Error('Expected another catalogue page');
+    }
+    const secondPage = await eventManagement.list({
+      pageSize: 2,
+      pageToken: firstPage.nextPageToken,
+      sort: 'updated_desc',
+    });
     const eventIds = [...firstPage.events, ...secondPage.events].map(
       ({ eventId }) => eventId,
     );
@@ -227,6 +265,109 @@ describe('Event mutation integration', () => {
     expect(
       firstPage.events.every(({ categories }) => categories[0] === 'Community'),
     ).toBe(true);
+  });
+
+  it('filters the catalogue by name and venue codes', async () => {
+    await createEventRecord('Lagos Design Forum');
+    await createEventRecord('Lagos Music Night', randomUUID(), {
+      region: 'Oyo',
+      regionCode: 'OY',
+    });
+    await createEventRecord('Copenhagen Design Forum', randomUUID(), {
+      city: 'Copenhagen',
+      countryCode: 'DK',
+      region: 'Hovedstaden',
+      regionCode: 'DK-84',
+    });
+
+    const page = await eventManagement.list({
+      countryCode: 'ng',
+      pageSize: 20,
+      regionCode: 'la',
+      search: ' DESIGN ',
+      sort: 'updated_desc',
+    });
+
+    expect(page.events.map(({ title }) => title)).toEqual([
+      'Lagos Design Forum',
+    ]);
+    await expect(
+      eventManagement.list({
+        countryCode: 'DK',
+        pageSize: 20,
+        regionCode: 'DK-84',
+        search: 'design',
+        sort: 'updated_desc',
+      }),
+    ).resolves.toMatchObject({
+      events: [{ title: 'Copenhagen Design Forum' }],
+    });
+  });
+
+  it('treats search punctuation literally', async () => {
+    await createEventRecord('100% Community Day');
+    await createEventRecord('Plain Community Day');
+
+    const page = await eventManagement.list({
+      pageSize: 20,
+      search: '%',
+      sort: 'updated_desc',
+    });
+
+    expect(page.events.map(({ title }) => title)).toEqual([
+      '100% Community Day',
+    ]);
+  });
+
+  it('orders event-date pages without duplicates', async () => {
+    await createEventRecord('Middle event', randomUUID(), {
+      startsAt: new Date('2027-03-02T10:00:00.000Z'),
+    });
+    await createEventRecord('Last event', randomUUID(), {
+      startsAt: new Date('2027-03-03T10:00:00.000Z'),
+    });
+    await createEventRecord('First event', randomUUID(), {
+      startsAt: new Date('2027-03-01T10:00:00.000Z'),
+    });
+
+    const firstPage = await eventManagement.list({
+      pageSize: 2,
+      sort: 'event_date_asc',
+    });
+    if (firstPage.nextPageToken === undefined) {
+      throw new Error('Expected another catalogue page');
+    }
+    const secondPage = await eventManagement.list({
+      pageSize: 2,
+      pageToken: firstPage.nextPageToken,
+      sort: 'event_date_asc',
+    });
+
+    expect(
+      [...firstPage.events, ...secondPage.events].map(({ title }) => title),
+    ).toEqual(['First event', 'Middle event', 'Last event']);
+  });
+
+  it('rejects a cursor reused with different criteria', async () => {
+    await createEventRecord('First event');
+    await createEventRecord('Second event');
+    const firstPage = await eventManagement.list({
+      pageSize: 1,
+      search: 'event',
+      sort: 'updated_desc',
+    });
+    if (firstPage.nextPageToken === undefined) {
+      throw new Error('Expected another catalogue page');
+    }
+
+    await expect(
+      eventManagement.list({
+        pageSize: 1,
+        pageToken: firstPage.nextPageToken,
+        search: 'second',
+        sort: 'updated_desc',
+      }),
+    ).rejects.toBeInstanceOf(EventPageTokenInvalidError);
   });
 
   it('attaches a verified upload once under duplicate delivery', async () => {
@@ -714,6 +855,7 @@ async function createPublishableEvent(title: string): Promise<{
       name: 'Eventa Hall',
       postalCode: null,
       region: 'Lagos',
+      regionCode: 'LA',
     },
   });
   if (result.outcome !== 'updated') {
@@ -726,8 +868,19 @@ async function createPublishableEvent(title: string): Promise<{
   };
 }
 
-async function createEventRecord(title: string, adminId = randomUUID()) {
-  const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
+async function createEventRecord(
+  title: string,
+  adminId = randomUUID(),
+  options: {
+    city?: string;
+    countryCode?: string;
+    region?: string;
+    regionCode?: string;
+    startsAt?: Date;
+  } = {},
+) {
+  const startsAt =
+    options.startsAt ?? new Date(Date.now() + 24 * 60 * 60 * 1_000);
   return eventsRepository.createDraft({
     actorAdminId: adminId,
     categories: ['Community'],
@@ -740,11 +893,12 @@ async function createEventRecord(title: string, adminId = randomUUID()) {
     venue: {
       addressLine1: '1 Marina Road',
       addressLine2: null,
-      city: 'Lagos',
-      countryCode: 'NG',
+      city: options.city ?? 'Lagos',
+      countryCode: options.countryCode ?? 'NG',
       name: 'Eventa Hall',
       postalCode: null,
-      region: 'Lagos',
+      region: options.region ?? 'Lagos',
+      regionCode: options.regionCode ?? 'LA',
     },
   });
 }

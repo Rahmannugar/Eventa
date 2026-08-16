@@ -17,12 +17,15 @@ import {
   type Dispatch,
   type TextareaHTMLAttributes,
 } from 'react';
-import { getData } from 'country-list';
-
 import type {
   DraftEventFormErrors,
   DraftEventFormValues,
 } from '../../lib/events/event.validation';
+import {
+  countryOptions,
+  regionNameForCode,
+  regionOptions,
+} from '../../lib/location/location-data';
 import { TextField } from '../ui/TextField';
 
 const categorySuggestions = [
@@ -38,10 +41,6 @@ const categorySuggestions = [
   'Sports',
   'Technology',
 ];
-
-const countries = getData()
-  .map(({ code, name }) => ({ label: name, value: code }))
-  .sort((first, second) => first.label.localeCompare(second.label));
 
 const fallbackTimeZones = [
   'Africa/Lagos',
@@ -92,6 +91,10 @@ export function EventFormFields({
   values: DraftEventFormValues;
 }) {
   const timeZones = useMemo(() => timeZoneOptions(), []);
+  const regions = useMemo(
+    () => regionOptions(values.countryCode),
+    [values.countryCode],
+  );
 
   return (
     <>
@@ -215,15 +218,6 @@ export function EventFormFields({
               onChange={(input) => onChange('city', input.target.value)}
             />
             <TextField
-              id={`${idPrefix}-region`}
-              label="State or region (optional)"
-              maxLength={120}
-              autoComplete="address-level1"
-              value={values.region}
-              error={errors.region}
-              onChange={(input) => onChange('region', input.target.value)}
-            />
-            <TextField
               id={`${idPrefix}-postal-code`}
               label="Postal code (optional)"
               maxLength={32}
@@ -235,12 +229,53 @@ export function EventFormFields({
             <SearchSelect
               id={`${idPrefix}-country`}
               label="Country"
-              options={countries}
+              options={countryOptions}
               value={values.countryCode}
               error={errors.countryCode}
               placeholder="Choose a country"
-              onChange={(value) => onChange('countryCode', value)}
+              onChange={(value) => {
+                onChange('countryCode', value);
+                onChange('region', '');
+                onChange('regionCode', '');
+              }}
             />
+            {regions.length === 0 ? (
+              <TextField
+                id={`${idPrefix}-region`}
+                label="State or region (optional)"
+                maxLength={120}
+                autoComplete="address-level1"
+                disabled={values.countryCode === ''}
+                value={values.region}
+                error={errors.region}
+                onChange={(input) => {
+                  onChange('region', input.target.value);
+                  onChange('regionCode', '');
+                }}
+              />
+            ) : (
+              <SearchSelect
+                id={`${idPrefix}-region`}
+                label="State or region (optional)"
+                options={[
+                  { label: 'No state or region', value: '' },
+                  ...regions,
+                ]}
+                value={values.regionCode}
+                fallbackLabel={values.region}
+                error={errors.region}
+                placeholder="Choose a state or region"
+                onChange={(value) => {
+                  onChange('regionCode', value);
+                  onChange(
+                    'region',
+                    value === ''
+                      ? ''
+                      : regionNameForCode(values.countryCode, value),
+                  );
+                }}
+              />
+            )}
           </div>
         </div>
       </section>
@@ -457,8 +492,10 @@ function formatLocalDateTime(date: Date | null): string {
   )}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function SearchSelect({
+export function SearchSelect({
   error,
+  fallbackLabel,
+  disabled = false,
   id,
   label,
   onChange,
@@ -467,6 +504,8 @@ function SearchSelect({
   value,
 }: {
   error?: string | undefined;
+  disabled?: boolean;
+  fallbackLabel?: string | undefined;
   id: string;
   label: string;
   onChange: Dispatch<string>;
@@ -488,6 +527,7 @@ function SearchSelect({
           <button
             id={id}
             type="button"
+            disabled={disabled}
             className="search-select__trigger"
             role="combobox"
             aria-expanded={open}
@@ -498,7 +538,7 @@ function SearchSelect({
             <span
               className={selected === undefined ? 'select-placeholder' : ''}
             >
-              {selected?.label ?? placeholder}
+              {selected?.label ?? fallbackLabel ?? placeholder}
             </span>
             <CaretDownIcon aria-hidden="true" />
           </button>

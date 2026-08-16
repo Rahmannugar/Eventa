@@ -4,6 +4,7 @@ import { apiRequest } from '../api/api-client';
 import type {
   AdminEvent,
   AdminEventListPage,
+  AdminEventListCriteria,
   CreateEventMediaUploadCommand,
   CreateEventInput,
   EventMediaUploadIntent,
@@ -19,6 +20,10 @@ const eventVenueSchema = z.object({
   addressLine2: z.string().min(1).optional(),
   city: z.string().min(1),
   region: z.string().min(1).optional(),
+  regionCode: z
+    .string()
+    .regex(/^[A-Z0-9][A-Z0-9-]{0,7}$/)
+    .optional(),
   postalCode: z.string().min(1).optional(),
   countryCode: z.string().length(2),
 });
@@ -51,8 +56,8 @@ const adminEventSchema = z.object({
   publishedAt: z.iso.datetime({ offset: true }).optional(),
 });
 
-const publishedAdminEventSchema: z.ZodType<AdminEvent> = adminEventSchema.superRefine(
-  (event, context) => {
+const publishedAdminEventSchema: z.ZodType<AdminEvent> =
+  adminEventSchema.superRefine((event, context) => {
     if (event.status !== 'published' || event.publishedAt === undefined) {
       context.addIssue({
         code: 'custom',
@@ -60,8 +65,7 @@ const publishedAdminEventSchema: z.ZodType<AdminEvent> = adminEventSchema.superR
         path: ['status'],
       });
     }
-  },
-);
+  });
 
 const adminEventSummarySchema = adminEventSchema.pick({
   eventId: true,
@@ -88,13 +92,14 @@ const eventMediaSlotSchema = z.enum([
   'gallery_4',
 ]);
 
-const eventMediaUploadIntentSchema: z.ZodType<EventMediaUploadIntent> = z.object({
-  uploadId: z.uuid(),
-  uploadUrl: z.url(),
-  requiredHeaders: z.record(z.string(), z.string()),
-  expiresAt: z.iso.datetime({ offset: true }),
-  verificationDeadlineAt: z.iso.datetime({ offset: true }),
-});
+const eventMediaUploadIntentSchema: z.ZodType<EventMediaUploadIntent> =
+  z.object({
+    uploadId: z.uuid(),
+    uploadUrl: z.url(),
+    requiredHeaders: z.record(z.string(), z.string()),
+    expiresAt: z.iso.datetime({ offset: true }),
+    verificationDeadlineAt: z.iso.datetime({ offset: true }),
+  });
 
 const eventMediaUploadStatusSchema: z.ZodType<EventMediaUploadStatus> = z
   .object({
@@ -107,7 +112,10 @@ const eventMediaUploadStatusSchema: z.ZodType<EventMediaUploadStatus> = z
     failureCode: z.string().min(1).optional(),
   })
   .superRefine((value, context) => {
-    if (value.status === 'attached' && value.attachedEventVersion === undefined) {
+    if (
+      value.status === 'attached' &&
+      value.attachedEventVersion === undefined
+    ) {
       context.addIssue({
         code: 'custom',
         message: 'Attached media must include the resulting event version.',
@@ -128,9 +136,17 @@ export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   });
 }
 
-export function listAdminEvents(cursor?: string): Promise<AdminEventListPage> {
+export function listAdminEvents(
+  criteria: AdminEventListCriteria,
+  cursor?: string,
+): Promise<AdminEventListPage> {
   const search = new URLSearchParams({ limit: '20' });
   if (cursor !== undefined) search.set('cursor', cursor);
+  if (criteria.search !== '') search.set('search', criteria.search);
+  if (criteria.countryCode !== '')
+    search.set('countryCode', criteria.countryCode);
+  if (criteria.regionCode !== '') search.set('regionCode', criteria.regionCode);
+  search.set('sort', criteria.sort);
   return apiRequest<AdminEventListPage>(`/admin/events?${search.toString()}`, {
     responseSchema: adminEventListPageSchema,
   });
@@ -172,12 +188,15 @@ export function createEventMediaUpload(
   { eventId, input }: CreateEventMediaUploadCommand,
   signal?: AbortSignal,
 ): Promise<EventMediaUploadIntent> {
-  return apiRequest(`/admin/events/${encodeURIComponent(eventId)}/media-uploads`, {
-    body: input,
-    method: 'POST',
-    responseSchema: eventMediaUploadIntentSchema,
-    ...(signal === undefined ? {} : { signal }),
-  });
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/media-uploads`,
+    {
+      body: input,
+      method: 'POST',
+      responseSchema: eventMediaUploadIntentSchema,
+      ...(signal === undefined ? {} : { signal }),
+    },
+  );
 }
 
 export function getEventMediaUpload(
@@ -199,7 +218,9 @@ export async function removeEventMedia({
   expectedVersion,
   slot,
 }: RemoveEventMediaCommand): Promise<AdminEvent> {
-  const search = new URLSearchParams({ expectedVersion: String(expectedVersion) });
+  const search = new URLSearchParams({
+    expectedVersion: String(expectedVersion),
+  });
   const response = await apiRequest(
     `/admin/events/${encodeURIComponent(eventId)}/media/${encodeURIComponent(slot)}?${search.toString()}`,
     { method: 'DELETE', responseSchema: removeEventMediaResponseSchema },

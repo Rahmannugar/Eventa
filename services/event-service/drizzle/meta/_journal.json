@@ -50,6 +50,13 @@
       "when": 1786872884131,
       "tag": "0006_support_event_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786892779459,
+      "tag": "0007_index_event_catalogue",
+      "breakpoints": true
     }
   ]
 }

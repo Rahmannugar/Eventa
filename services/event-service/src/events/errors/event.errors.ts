@@ -26,6 +26,13 @@ export class EventCategoriesInvalidError extends Error {
   }
 }
 
+export class EventVenueInvalidError extends Error {
+  constructor() {
+    super('EVENT_VENUE_INVALID');
+    this.name = EventVenueInvalidError.name;
+  }
+}
+
 export class EventPageTokenInvalidError extends Error {
   constructor() {
     super('EVENT_PAGE_TOKEN_INVALID');

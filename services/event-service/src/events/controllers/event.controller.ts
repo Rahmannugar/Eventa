@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import {
+  AdminEventSort,
   EventMediaSlot,
   EventMediaUploadStatus,
   EventServiceControllerMethods,
@@ -52,9 +53,11 @@ import {
   EventPublicationIncompleteError,
   EventScheduleInvalidError,
   EventVersionConflictError,
+  EventVenueInvalidError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
+  AdminEventSort as DomainAdminEventSort,
   EventMediaManagement,
   EventMediaSlot as DomainEventMediaSlot,
   EventMediaUploadStatus as DomainEventMediaUploadStatus,
@@ -177,7 +180,8 @@ export class EventController implements EventServiceController {
     } catch (error: unknown) {
       if (
         error instanceof EventCategoriesInvalidError ||
-        error instanceof EventScheduleInvalidError
+        error instanceof EventScheduleInvalidError ||
+        error instanceof EventVenueInvalidError
       ) {
         throw new RpcException({
           code: status.INVALID_ARGUMENT,
@@ -192,10 +196,26 @@ export class EventController implements EventServiceController {
     request: ListAdminEventsDto,
   ): Promise<ListAdminEventsResponse> {
     try {
-      const page = await this.eventService.list(
-        request.pageSize,
-        request.pageToken,
-      );
+      if (
+        request.regionCode !== undefined &&
+        request.countryCode === undefined
+      ) {
+        throw new EventPageTokenInvalidError();
+      }
+      const page = await this.eventService.list({
+        pageSize: request.pageSize,
+        ...(request.pageToken === undefined
+          ? {}
+          : { pageToken: request.pageToken }),
+        ...(request.search === undefined ? {} : { search: request.search }),
+        ...(request.countryCode === undefined
+          ? {}
+          : { countryCode: request.countryCode }),
+        ...(request.regionCode === undefined
+          ? {}
+          : { regionCode: request.regionCode }),
+        sort: this.toDomainSort(request.sort),
+      });
       return {
         events: page.events.map((event) => ({
           eventId: event.eventId,
@@ -219,6 +239,7 @@ export class EventController implements EventServiceController {
                   addressLineTwo: event.venue.addressLine2 ?? undefined,
                   city: event.venue.city,
                   region: event.venue.region ?? undefined,
+                  regionCode: event.venue.regionCode ?? undefined,
                   postalCode: event.venue.postalCode ?? undefined,
                   countryCode: event.venue.countryCode,
                 },
@@ -303,7 +324,8 @@ export class EventController implements EventServiceController {
       }
       if (
         error instanceof EventCategoriesInvalidError ||
-        error instanceof EventScheduleInvalidError
+        error instanceof EventScheduleInvalidError ||
+        error instanceof EventVenueInvalidError
       ) {
         throw new RpcException({
           code: status.INVALID_ARGUMENT,
@@ -489,6 +511,7 @@ export class EventController implements EventServiceController {
               addressLineTwo: event.venue.addressLine2 ?? undefined,
               city: event.venue.city,
               region: event.venue.region ?? undefined,
+              regionCode: event.venue.regionCode ?? undefined,
               postalCode: event.venue.postalCode ?? undefined,
               countryCode: event.venue.countryCode,
             },
@@ -544,6 +567,7 @@ export class EventController implements EventServiceController {
         addressLineTwo: event.venue.addressLine2 ?? undefined,
         city: event.venue.city,
         region: event.venue.region ?? undefined,
+        regionCode: event.venue.regionCode ?? undefined,
         postalCode: event.venue.postalCode ?? undefined,
         countryCode: event.venue.countryCode,
       },
@@ -577,6 +601,22 @@ export class EventController implements EventServiceController {
         throw new RpcException({
           code: status.INVALID_ARGUMENT,
           message: 'Event media slot is invalid',
+        });
+    }
+  }
+
+  private toDomainSort(sort: AdminEventSort): DomainAdminEventSort {
+    switch (sort) {
+      case AdminEventSort.ADMIN_EVENT_SORT_UPDATED_DESC:
+        return 'updated_desc';
+      case AdminEventSort.ADMIN_EVENT_SORT_EVENT_DATE_ASC:
+        return 'event_date_asc';
+      case AdminEventSort.ADMIN_EVENT_SORT_EVENT_DATE_DESC:
+        return 'event_date_desc';
+      default:
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: 'Event sort is invalid',
         });
     }
   }

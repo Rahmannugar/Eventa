@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { check, index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
 import { events } from './event.schema';
 
@@ -14,10 +14,16 @@ export const eventVenues = pgTable(
     addressLine2: text('address_line_2'),
     city: text('city').notNull(),
     region: text('region'),
+    regionCode: text('region_code'),
     postalCode: text('postal_code'),
     countryCode: text('country_code').notNull(),
   },
   (table) => [
+    index('event_venues_country_region_event_index').on(
+      table.countryCode,
+      table.regionCode,
+      table.eventId,
+    ),
     check(
       'event_venues_name_normalized',
       sql`${table.name} = btrim(${table.name})`,
@@ -69,6 +75,10 @@ export const eventVenues = pgTable(
     check(
       'event_venues_country_code',
       sql`${table.countryCode} ~ '^[A-Z]{2}$'`,
+    ),
+    check(
+      'event_venues_region_code',
+      sql`${table.regionCode} IS NULL OR (${table.region} IS NOT NULL AND ${table.regionCode} ~ '^[A-Z0-9][A-Z0-9-]{0,7}$')`,
     ),
   ],
 );

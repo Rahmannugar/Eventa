@@ -11,6 +11,7 @@ import type {
   CreateDraftEventCommand,
   EventManagement,
   EventRecord,
+  ListAdminEventsQuery,
   UpdateDraftEventCommand,
   PublishEventCommand,
 } from '../types/event.types';
@@ -29,8 +30,8 @@ export class ObservedEventManagement implements EventManagement {
     }
   }
 
-  list(pageSize: number, pageToken?: string): Promise<AdminEventListPage> {
-    return this.eventManagement.list(pageSize, pageToken);
+  list(input: ListAdminEventsQuery): Promise<AdminEventListPage> {
+    return this.eventManagement.list(input);
   }
 
   getById(eventId: string): Promise<EventRecord> {

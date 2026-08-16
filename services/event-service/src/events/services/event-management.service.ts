@@ -5,12 +5,14 @@ import {
   EventPublicationIncompleteError,
   EventScheduleInvalidError,
   EventVersionConflictError,
+  EventVenueInvalidError,
 } from '../errors/event.errors';
 import type {
   AdminEventListPage,
   CreateDraftEventCommand,
   EventManagement,
   EventListCursor,
+  ListAdminEventsQuery,
   EventRecord,
   EventRepository,
   PublishEventCommand,
@@ -40,18 +42,32 @@ export class EventManagementService implements EventManagement {
     });
   }
 
-  async list(
-    pageSize: number,
-    pageToken?: string,
-  ): Promise<AdminEventListPage> {
+  async list(input: ListAdminEventsQuery): Promise<AdminEventListPage> {
+    const search =
+      this.normalizeOptional(input.search)?.toLocaleLowerCase('en') ?? null;
+    const countryCode =
+      this.normalizeOptional(input.countryCode)?.toUpperCase() ?? null;
+    const regionCode =
+      this.normalizeOptional(input.regionCode)?.toUpperCase() ?? null;
     const cursor =
-      pageToken === undefined ? undefined : this.decodePageToken(pageToken);
+      input.pageToken === undefined
+        ? undefined
+        : this.decodePageToken(input.pageToken, {
+            search,
+            countryCode,
+            regionCode,
+            sort: input.sort,
+          });
     const events = await this.events.list({
-      limit: pageSize + 1,
+      limit: input.pageSize + 1,
+      search,
+      countryCode,
+      regionCode,
+      sort: input.sort,
       ...(cursor === undefined ? {} : { cursor }),
     });
-    const hasNextPage = events.length > pageSize;
-    const page = hasNextPage ? events.slice(0, pageSize) : events;
+    const hasNextPage = events.length > input.pageSize;
+    const page = hasNextPage ? events.slice(0, input.pageSize) : events;
     const lastEvent = page.at(-1);
 
     return {
@@ -60,7 +76,14 @@ export class EventManagementService implements EventManagement {
         ? {
             nextPageToken: this.encodePageToken({
               eventId: lastEvent.eventId,
-              updatedAt: lastEvent.updatedAt,
+              sortValue:
+                input.sort === 'updated_desc'
+                  ? lastEvent.updatedAt
+                  : lastEvent.startsAt,
+              search,
+              countryCode,
+              regionCode,
+              sort: input.sort,
             }),
           }
         : {}),
@@ -167,12 +190,20 @@ export class EventManagementService implements EventManagement {
   }
 
   private normalizeVenue(input: CreateDraftEventCommand['venue']) {
+    const region = this.normalizeOptional(input.region);
+    const regionCode =
+      this.normalizeOptional(input.regionCode)?.toUpperCase() ?? null;
+    if (regionCode !== null && region === null) {
+      throw new EventVenueInvalidError();
+    }
+
     return {
       name: input.name.trim(),
       addressLine1: input.addressLine1.trim(),
       addressLine2: this.normalizeOptional(input.addressLine2),
       city: input.city.trim(),
-      region: this.normalizeOptional(input.region),
+      region,
+      regionCode,
       postalCode: this.normalizeOptional(input.postalCode),
       countryCode: input.countryCode.toUpperCase(),
     };
@@ -182,12 +213,19 @@ export class EventManagementService implements EventManagement {
     return Buffer.from(
       JSON.stringify({
         eventId: cursor.eventId,
-        updatedAt: cursor.updatedAt.toISOString(),
+        sortValue: cursor.sortValue?.toISOString() ?? null,
+        search: cursor.search,
+        countryCode: cursor.countryCode,
+        regionCode: cursor.regionCode,
+        sort: cursor.sort,
       }),
     ).toString('base64url');
   }
 
-  private decodePageToken(value: string): EventListCursor {
+  private decodePageToken(
+    value: string,
+    criteria: Omit<EventListCursor, 'eventId' | 'sortValue'>,
+  ): EventListCursor {
     try {
       const parsed: unknown = JSON.parse(
         Buffer.from(value, 'base64url').toString('utf8'),
@@ -198,21 +236,31 @@ export class EventManagementService implements EventManagement {
         !('eventId' in parsed) ||
         typeof parsed.eventId !== 'string' ||
         !UUID_PATTERN.test(parsed.eventId) ||
-        !('updatedAt' in parsed) ||
-        typeof parsed.updatedAt !== 'string'
+        !('sortValue' in parsed) ||
+        (parsed.sortValue !== null && typeof parsed.sortValue !== 'string') ||
+        !('search' in parsed) ||
+        !('countryCode' in parsed) ||
+        !('regionCode' in parsed) ||
+        !('sort' in parsed) ||
+        parsed.search !== criteria.search ||
+        parsed.countryCode !== criteria.countryCode ||
+        parsed.regionCode !== criteria.regionCode ||
+        parsed.sort !== criteria.sort
       ) {
         throw new EventPageTokenInvalidError();
       }
 
-      const updatedAt = new Date(parsed.updatedAt);
+      const sortValue =
+        parsed.sortValue === null ? null : new Date(parsed.sortValue);
       if (
-        Number.isNaN(updatedAt.getTime()) ||
-        updatedAt.toISOString() !== parsed.updatedAt
-      ) {
+        (criteria.sort === 'updated_desc' && sortValue === null) ||
+        (sortValue !== null &&
+          (Number.isNaN(sortValue.getTime()) ||
+            sortValue.toISOString() !== parsed.sortValue))
+      )
         throw new EventPageTokenInvalidError();
-      }
 
-      return { eventId: parsed.eventId, updatedAt };
+      return { eventId: parsed.eventId, sortValue, ...criteria };
     } catch (error: unknown) {
       if (error instanceof EventPageTokenInvalidError) throw error;
       throw new EventPageTokenInvalidError();

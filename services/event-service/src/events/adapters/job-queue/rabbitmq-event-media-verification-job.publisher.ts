@@ -1,14 +1,12 @@
-import { Buffer } from 'node:buffer';
-
 import { context, propagation } from '@opentelemetry/api';
 import type { ConfirmChannel } from 'amqplib';
-
+import { Buffer } from 'node:buffer';
 import type { RuntimeConfig } from '../../../config/runtime-config';
 import type { RabbitMQClient } from '../../../infrastructure/clients/rabbitmq.client';
 import {
+  EVENT_MEDIA_JOB_EXCHANGE,
   EVENT_MEDIA_VERIFICATION_JOB_TYPE,
   EVENT_MEDIA_VERIFICATION_QUEUE,
-  EVENT_MEDIA_JOB_EXCHANGE,
 } from '../../constants/event-media.constants';
 import type { EventMediaVerificationJobPublisher } from '../../types/event.types';
 

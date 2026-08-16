@@ -16,6 +16,7 @@ Authrail informs the split authentication canvas, restrained controls, explicit 
 ## Event Management
 
 - The Events landing route is a management list. Its header pairs the `Events` heading with the primary `Create event` action. Creation has its own route and does not replace the catalog.
+- The management list keeps name search, dependent country and state or region filters, and sorting in the URL. Changing criteria starts a fresh server-side result set while retaining the preceding rows during the request.
 - Wide layouts use a compact, scannable table. Narrow layouts use stacked event cards with the same information and one clear row-level navigation target.
 - Selecting an event opens its details page. Details are the event's management home and present its Draft or Published state, categories, schedule, venue, cover, gallery, and available actions. Editing is a separate explicit route. Successful creation and editing return to details.
 - Event creation collects the complete event and venue in one form. Creation and editing share category, date-time, time-zone, and country controls so the same information never behaves differently between routes.

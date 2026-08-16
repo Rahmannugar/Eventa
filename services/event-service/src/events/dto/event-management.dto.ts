@@ -6,12 +6,14 @@ import type {
   UpdateDraftEventRequest,
   Venue,
 } from '@eventa/grpc-contracts';
+import { AdminEventSort } from '@eventa/grpc-contracts';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsDefined,
+  IsEnum,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -25,6 +27,7 @@ import {
   Min,
   MinLength,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 
 export class GetAdminEventDto implements GetAdminEventRequest {
@@ -38,10 +41,29 @@ export class ListAdminEventsDto implements ListAdminEventsRequest {
   @Max(50)
   pageSize!: number;
 
-  @IsOptional()
+  @ValidateIf(
+    (venue: EventVenueDto) =>
+      venue.region !== undefined || venue.regionCode !== undefined,
+  )
   @IsString()
   @MaxLength(512)
   pageToken?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  search?: string;
+
+  @IsOptional()
+  @Matches(/^[A-Z]{2}$/)
+  countryCode?: string;
+
+  @IsOptional()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{0,7}$/)
+  regionCode?: string;
+
+  @IsEnum(AdminEventSort)
+  sort!: AdminEventSort;
 }
 
 export class EventVenueDto implements Venue {
@@ -94,6 +116,13 @@ export class EventVenueDto implements Venue {
   @MinLength(1)
   @MaxLength(120)
   region?: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsOptional()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{0,7}$/)
+  regionCode?: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

@@ -19,6 +19,7 @@ import {
   Min,
   MinLength,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 
 export class AdminEventPathDto {
@@ -35,10 +36,46 @@ export class AdminEventListQueryDto {
   limit = 20;
 
   @ApiPropertyOptional({ description: 'Opaque pagination cursor' })
-  @IsOptional()
+  @ValidateIf(
+    (venue: EventVenueDto) =>
+      venue.region !== undefined || venue.regionCode !== undefined,
+  )
   @IsString()
   @MaxLength(512)
   cursor?: string;
+
+  @ApiPropertyOptional({ maxLength: 160 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  search?: string;
+
+  @ApiPropertyOptional({ example: 'NG' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsOptional()
+  @Matches(/^[A-Z]{2}$/)
+  countryCode?: string;
+
+  @ApiPropertyOptional({ example: 'LA' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsOptional()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{0,7}$/)
+  regionCode?: string;
+
+  @ApiPropertyOptional({
+    default: 'updated_desc',
+    enum: ['updated_desc', 'event_date_asc', 'event_date_desc'],
+  })
+  @IsIn(['updated_desc', 'event_date_asc', 'event_date_desc'])
+  sort: 'updated_desc' | 'event_date_asc' | 'event_date_desc' = 'updated_desc';
 }
 
 export class AdminEventMediaUploadPathDto extends AdminEventPathDto {
@@ -102,6 +139,14 @@ export class EventVenueDto {
   @MinLength(1)
   @MaxLength(120)
   region?: string;
+
+  @ApiPropertyOptional({ example: 'LA', maxLength: 8 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsOptional()
+  @Matches(/^[A-Z0-9][A-Z0-9-]{0,7}$/)
+  regionCode?: string;
 
   @ApiPropertyOptional({ example: '101241', maxLength: 32 })
   @Transform(({ value }: { value: unknown }) =>

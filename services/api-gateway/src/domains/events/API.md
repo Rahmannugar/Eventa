@@ -12,7 +12,7 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 
 | Method   | Path                                             | Outcome                                                                             |
 | -------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `GET`    | `/admin/events`                                  | Lists events with bounded cursor pagination.                                        |
+| `GET`    | `/admin/events`                                  | Lists events with bounded search, venue filters, sorting, and cursor pagination.    |
 | `POST`   | `/admin/events`                                  | Creates a complete private event at version 1.                                      |
 | `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
 | `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
@@ -21,7 +21,9 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
 | `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
 
-Create accepts a title, description, one to five case-insensitively unique categories, schedule, IANA timezone, and venue address. Update accepts the same details plus the expected version. The list accepts a limit from one to 50 and an opaque cursor returned by the preceding page.
+Create accepts a title, description, one to five case-insensitively unique categories, schedule, IANA timezone, and venue address. A venue may carry a structured state or region code alongside its display name. Update accepts the same details plus the expected version.
+
+The list accepts a limit from one to 50, case-insensitive event-name search, an ISO country code, a dependent state or region code, and `updated_desc`, `event_date_asc`, or `event_date_desc` sorting. A state or region filter requires a country. Its opaque cursor is valid only with the search, filter, and sort criteria that produced it.
 
 ## Media uploads
 

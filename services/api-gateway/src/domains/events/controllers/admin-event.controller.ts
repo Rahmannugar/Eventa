@@ -87,7 +87,7 @@ export class AdminEventController {
     @Query() query: AdminEventListQueryDto,
     @RequestId() requestId: string,
   ): Promise<AdminEventListDto> {
-    return this.events.list(query.limit, query.cursor, requestId);
+    return this.events.list(query, requestId);
   }
 
   @Get(':eventId')

@@ -2,21 +2,43 @@ import {
   ArrowRightIcon,
   CalendarBlankIcon,
   MapPinIcon,
+  MagnifyingGlassIcon,
   PlusIcon,
   WarningCircleIcon,
 } from '@phosphor-icons/react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { getName } from 'country-list';
-import type { ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+} from 'react';
 
 import { isSessionInvalid } from '../../lib/api/api-error';
-import type { AdminEventSummary } from '../../lib/events/event.types';
+import type {
+  AdminEventListCriteria,
+  AdminEventSort,
+  AdminEventSummary,
+} from '../../lib/events/event.types';
 import { useAdminEvents } from '../../lib/events/useEvents';
+import {
+  countryOptions,
+  regionOptions,
+} from '../../lib/location/location-data';
 import { Button } from '../ui/Button';
+import { SearchSelect } from './EventFormFields';
 
 export function EventList() {
   const location = useLocation();
-  const query = useAdminEvents();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const criteria = readCriteria(searchParams);
+  const regions = useMemo(
+    () => regionOptions(criteria.countryCode),
+    [criteria.countryCode],
+  );
+  const query = useAdminEvents(criteria);
 
   if (query.error !== null && isSessionInvalid(query.error)) {
     return (
@@ -40,12 +62,72 @@ export function EventList() {
         </Link>
       </header>
 
+      <section className="event-catalogue-controls" aria-label="Find events">
+        <CatalogueSearch
+          key={criteria.search}
+          initialValue={criteria.search}
+          onChange={(value) =>
+            setCatalogueParam(setSearchParams, 'q', value, true)
+          }
+        />
+        <SearchSelect
+          id="event-country-filter"
+          label="Country"
+          options={[{ label: 'All countries', value: '' }, ...countryOptions]}
+          value={criteria.countryCode}
+          placeholder="All countries"
+          onChange={(value) => {
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current);
+              if (value === '') next.delete('country');
+              else next.set('country', value);
+              next.delete('region');
+              return next;
+            });
+          }}
+        />
+        <SearchSelect
+          id="event-region-filter"
+          label="State or region"
+          disabled={criteria.countryCode === '' || regions.length === 0}
+          options={[{ label: 'All states or regions', value: '' }, ...regions]}
+          value={criteria.regionCode}
+          placeholder={
+            criteria.countryCode === ''
+              ? 'Choose a country first'
+              : 'All states or regions'
+          }
+          onChange={(value) =>
+            setCatalogueParam(setSearchParams, 'region', value)
+          }
+        />
+        <div className="field">
+          <label htmlFor="event-sort">Sort by</label>
+          <select
+            id="event-sort"
+            value={criteria.sort}
+            onChange={(event) =>
+              setCatalogueParam(setSearchParams, 'sort', event.target.value)
+            }
+          >
+            <option value="updated_desc">Recently updated</option>
+            <option value="event_date_asc">Event date, earliest</option>
+            <option value="event_date_desc">Event date, latest</option>
+          </select>
+        </div>
+      </section>
+
       {query.isPending ? (
         <EventListLoading />
       ) : query.error !== null && events.length === 0 ? (
         <EventListError retry={() => void query.refetch()} />
       ) : events.length === 0 ? (
-        <EventListEmpty />
+        <EventListEmpty
+          filtered={hasCriteria(criteria)}
+          clear={() => {
+            setSearchParams({});
+          }}
+        />
       ) : (
         <>
           {query.error === null ? null : (
@@ -60,7 +142,11 @@ export function EventList() {
               </Button>
             </div>
           )}
-          <div className="event-list" aria-label="Events">
+          <div
+            className="event-list"
+            aria-label="Events"
+            aria-busy={query.isFetching && !query.isFetchingNextPage}
+          >
             <div className="event-list__head" aria-hidden="true">
               <span>Event</span>
               <span>Date</span>
@@ -87,6 +173,40 @@ export function EventList() {
         </>
       )}
     </main>
+  );
+}
+
+function CatalogueSearch({
+  initialValue,
+  onChange,
+}: {
+  initialValue: string;
+  onChange: Dispatch<string>;
+}) {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const normalized = value.trim();
+      if (normalized !== initialValue) onChange(normalized);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [initialValue, onChange, value]);
+
+  return (
+    <div className="field event-catalogue-controls__search">
+      <label htmlFor="event-search">Search by name</label>
+      <div className="event-catalogue-controls__search-input">
+        <MagnifyingGlassIcon aria-hidden="true" />
+        <input
+          id="event-search"
+          type="search"
+          maxLength={160}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -142,16 +262,85 @@ function EventDatum({
   );
 }
 
-function EventListEmpty() {
+function EventListEmpty({
+  clear,
+  filtered,
+}: {
+  clear: () => void;
+  filtered: boolean;
+}) {
   return (
     <section className="event-list-state">
       <CalendarBlankIcon aria-hidden="true" />
-      <h2>No events yet</h2>
-      <Link className="button button--primary" to="/admin/events/new">
-        <PlusIcon aria-hidden="true" />
-        Create event
-      </Link>
+      <h2>{filtered ? 'No events found' : 'No events yet'}</h2>
+      {filtered ? (
+        <Button type="button" variant="secondary" onClick={clear}>
+          Clear filters
+        </Button>
+      ) : (
+        <Link className="button button--primary" to="/admin/events/new">
+          <PlusIcon aria-hidden="true" />
+          Create event
+        </Link>
+      )}
     </section>
+  );
+}
+
+function readCriteria(searchParams: URLSearchParams): AdminEventListCriteria {
+  const countryCode = searchParams.get('country')?.toUpperCase() ?? '';
+  const validCountry = countryOptions.some(({ value }) => value === countryCode)
+    ? countryCode
+    : '';
+  const requestedRegion = searchParams.get('region')?.toUpperCase() ?? '';
+  const regionCode = regionOptions(validCountry).some(
+    ({ value }) => value === requestedRegion,
+  )
+    ? requestedRegion
+    : '';
+  const requestedSort = searchParams.get('sort');
+  const sort: AdminEventSort = [
+    'event_date_asc',
+    'event_date_desc',
+    'updated_desc',
+  ].includes(requestedSort ?? '')
+    ? (requestedSort as AdminEventSort)
+    : 'updated_desc';
+
+  return {
+    search: (searchParams.get('q') ?? '').trim().slice(0, 160),
+    countryCode: validCountry,
+    regionCode,
+    sort,
+  };
+}
+
+function hasCriteria(criteria: AdminEventListCriteria): boolean {
+  return (
+    criteria.search !== '' ||
+    criteria.countryCode !== '' ||
+    criteria.regionCode !== '' ||
+    criteria.sort !== 'updated_desc'
+  );
+}
+
+function setCatalogueParam(
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+  name: string,
+  value: string,
+  replace = false,
+) {
+  setSearchParams(
+    (current) => {
+      const next = new URLSearchParams(current);
+      if (value === '' || (name === 'sort' && value === 'updated_desc')) {
+        next.delete(name);
+      } else {
+        next.set(name, value);
+      }
+      return next;
+    },
+    { replace },
   );
 }
 

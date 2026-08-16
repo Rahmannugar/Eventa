@@ -1,5 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { check, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  check,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import type {
   EVENT_MEDIA_OBJECT_DELETION_JOB_TYPE,

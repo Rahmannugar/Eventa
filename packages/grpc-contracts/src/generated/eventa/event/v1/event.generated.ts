@@ -15,6 +15,14 @@ export enum EventStatus {
   UNRECOGNIZED = -1,
 }
 
+export enum AdminEventSort {
+  ADMIN_EVENT_SORT_UNSPECIFIED = 0,
+  ADMIN_EVENT_SORT_UPDATED_DESC = 1,
+  ADMIN_EVENT_SORT_EVENT_DATE_ASC = 2,
+  ADMIN_EVENT_SORT_EVENT_DATE_DESC = 3,
+  UNRECOGNIZED = -1,
+}
+
 export enum EventMediaSlot {
   EVENT_MEDIA_SLOT_UNSPECIFIED = 0,
   EVENT_MEDIA_SLOT_COVER = 1,
@@ -93,6 +101,7 @@ export interface Venue {
   countryCode: string;
   addressLineOne: string;
   addressLineTwo?: string | undefined;
+  regionCode?: string | undefined;
 }
 
 export interface CreateDraftEventRequest {
@@ -133,6 +142,10 @@ export interface AdminEventSummary {
 export interface ListAdminEventsRequest {
   pageSize: number;
   pageToken?: string | undefined;
+  search?: string | undefined;
+  countryCode?: string | undefined;
+  regionCode?: string | undefined;
+  sort: AdminEventSort;
 }
 
 export interface ListAdminEventsResponse {

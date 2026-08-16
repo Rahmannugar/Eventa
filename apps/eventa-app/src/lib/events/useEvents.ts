@@ -1,5 +1,6 @@
 import {
   type InfiniteData,
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -25,6 +26,7 @@ import {
 } from './event.service';
 import type {
   AdminEvent,
+  AdminEventListCriteria,
   AdminEventListPage,
   CreateEventInput,
   EventMediaContentType,
@@ -40,18 +42,20 @@ export function adminEventQueryKey(eventId: string) {
 
 export const adminEventListQueryKey = ['events', 'admin', 'list'] as const;
 
-export function useAdminEvents() {
+export function useAdminEvents(criteria: AdminEventListCriteria) {
+  const queryKey = [...adminEventListQueryKey, criteria] as const;
   return useInfiniteQuery<
     AdminEventListPage,
     Error,
     InfiniteData<AdminEventListPage>,
-    typeof adminEventListQueryKey,
+    typeof queryKey,
     string | undefined
   >({
     getNextPageParam: (page) => page.nextCursor,
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => listAdminEvents(pageParam),
-    queryKey: adminEventListQueryKey,
+    placeholderData: keepPreviousData,
+    queryFn: ({ pageParam }) => listAdminEvents(criteria, pageParam),
+    queryKey,
     retry: false,
   });
 }
@@ -121,7 +125,9 @@ export function useEventMedia(event: AdminEvent) {
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
   const previewUrlRef = useRef<string | null>(null);
-  const [operation, setOperation] = useState<EventMediaOperation>({ phase: 'idle' });
+  const [operation, setOperation] = useState<EventMediaOperation>({
+    phase: 'idle',
+  });
   const [preview, setPreview] = useState<{
     slot: EventMediaSlot;
     url: string;
@@ -171,7 +177,8 @@ export function useEventMedia(event: AdminEvent) {
       await refreshAfterConflict(() => refreshEvent(undefined, signal));
       throw new Error('EVENT_MEDIA_VERSION_CONFLICT');
     }
-    if (result.status === 'expired') throw new Error('EVENT_MEDIA_UPLOAD_EXPIRED');
+    if (result.status === 'expired')
+      throw new Error('EVENT_MEDIA_UPLOAD_EXPIRED');
     throw new Error('EVENT_MEDIA_UPLOAD_REJECTED');
   }
 
@@ -234,7 +241,11 @@ export function useEventMedia(event: AdminEvent) {
       setOperation({ phase: 'verifying', slot });
       const result = await waitForEventMediaUpload({
         readStatus: () =>
-          getEventMediaUpload(event.eventId, intent.uploadId, controller.signal),
+          getEventMediaUpload(
+            event.eventId,
+            intent.uploadId,
+            controller.signal,
+          ),
         signal: controller.signal,
       });
       if (result.uploadId !== intent.uploadId || result.slot !== slot) {
@@ -245,8 +256,13 @@ export function useEventMedia(event: AdminEvent) {
       setOperation({ phase: 'idle' });
     } catch (error: unknown) {
       if (isAbortError(error)) return;
-      if (error instanceof ApiError && error.code === 'EVENT_VERSION_CONFLICT') {
-        await refreshAfterConflict(() => refreshEvent(undefined, controller.signal));
+      if (
+        error instanceof ApiError &&
+        error.code === 'EVENT_VERSION_CONFLICT'
+      ) {
+        await refreshAfterConflict(() =>
+          refreshEvent(undefined, controller.signal),
+        );
       }
       if (controller.signal.aborted) return;
       setOperation({ message: mediaErrorMessage(error), phase: 'error', slot });
@@ -271,11 +287,17 @@ export function useEventMedia(event: AdminEvent) {
         expectedVersion: event.version,
         slot,
       });
-      queryClient.setQueryData(adminEventQueryKey(event.eventId), refreshedEvent);
+      queryClient.setQueryData(
+        adminEventQueryKey(event.eventId),
+        refreshedEvent,
+      );
       void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
       setOperation({ phase: 'idle' });
     } catch (error: unknown) {
-      if (error instanceof ApiError && error.code === 'EVENT_VERSION_CONFLICT') {
+      if (
+        error instanceof ApiError &&
+        error.code === 'EVENT_VERSION_CONFLICT'
+      ) {
         await refreshAfterConflict(refreshEvent);
       }
       setOperation({ message: mediaErrorMessage(error), phase: 'error', slot });
@@ -326,7 +348,10 @@ function mediaErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.code === 'EVENT_VERSION_CONFLICT') {
     return 'The event changed. Its latest images are now shown; try again.';
   }
-  if (error instanceof ApiError && error.code === 'EVENT_MEDIA_UPLOAD_IN_PROGRESS') {
+  if (
+    error instanceof ApiError &&
+    error.code === 'EVENT_MEDIA_UPLOAD_IN_PROGRESS'
+  ) {
     return 'This image is still being processed. Try again shortly.';
   }
   return userFacingApiError(error);

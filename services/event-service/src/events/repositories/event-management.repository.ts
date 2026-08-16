@@ -1,6 +1,18 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
-import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -45,6 +57,7 @@ const VENUE_COLUMNS = {
   addressLine2: eventVenues.addressLine2,
   city: eventVenues.city,
   region: eventVenues.region,
+  regionCode: eventVenues.regionCode,
   postalCode: eventVenues.postalCode,
   countryCode: eventVenues.countryCode,
 };
@@ -120,22 +133,34 @@ export class EventManagementRepository implements EventRepositoryPort {
     return runWithOperationSpan(
       'event.list_admin',
       async () => {
-        const cursorCondition =
-          input.cursor === undefined
-            ? undefined
-            : or(
-                lt(events.updatedAt, input.cursor.updatedAt),
-                and(
-                  eq(events.updatedAt, input.cursor.updatedAt),
-                  lt(events.id, input.cursor.eventId),
-                ),
-              );
+        const conditions: SQL[] = [];
+        if (input.search !== null) {
+          const escapedSearch = input.search.replace(/[\\%_]/g, '\\$&');
+          conditions.push(
+            sql`lower(${events.title}) LIKE ${`%${escapedSearch}%`} ESCAPE '\\'`,
+          );
+        }
+        if (input.countryCode !== null) {
+          conditions.push(eq(eventVenues.countryCode, input.countryCode));
+        }
+        if (input.regionCode !== null) {
+          conditions.push(eq(eventVenues.regionCode, input.regionCode));
+        }
+        const cursorCondition = this.cursorCondition(input);
+        if (cursorCondition !== undefined) conditions.push(cursorCondition);
+
+        const order =
+          input.sort === 'updated_desc'
+            ? [desc(events.updatedAt), desc(events.id)]
+            : input.sort === 'event_date_asc'
+              ? [sql`${events.startsAt} ASC NULLS LAST`, asc(events.id)]
+              : [sql`${events.startsAt} DESC NULLS LAST`, desc(events.id)];
         const results = await this.database
           .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
           .from(events)
           .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
-          .where(cursorCondition)
-          .orderBy(desc(events.updatedAt), desc(events.id))
+          .where(and(...conditions))
+          .orderBy(...order)
           .limit(input.limit);
 
         if (results.length === 0) return [];
@@ -168,6 +193,46 @@ export class EventManagementRepository implements EventRepositoryPort {
         }));
       },
       this.spanOptions('SELECT'),
+    );
+  }
+
+  private cursorCondition(input: ListAdminEvents): SQL | undefined {
+    const cursor = input.cursor;
+    if (cursor === undefined) return undefined;
+
+    if (input.sort === 'updated_desc') {
+      if (cursor.sortValue === null) return undefined;
+      return or(
+        lt(events.updatedAt, cursor.sortValue),
+        and(
+          eq(events.updatedAt, cursor.sortValue),
+          lt(events.id, cursor.eventId),
+        ),
+      );
+    }
+
+    if (cursor.sortValue === null) {
+      return and(
+        isNull(events.startsAt),
+        input.sort === 'event_date_asc'
+          ? gt(events.id, cursor.eventId)
+          : lt(events.id, cursor.eventId),
+      );
+    }
+
+    const dateComparison =
+      input.sort === 'event_date_asc'
+        ? gt(events.startsAt, cursor.sortValue)
+        : lt(events.startsAt, cursor.sortValue);
+    const idComparison =
+      input.sort === 'event_date_asc'
+        ? gt(events.id, cursor.eventId)
+        : lt(events.id, cursor.eventId);
+
+    return or(
+      dateComparison,
+      isNull(events.startsAt),
+      and(eq(events.startsAt, cursor.sortValue), idComparison),
     );
   }
 

@@ -8,6 +8,13 @@ enum EventStatus {
   EVENT_STATUS_PUBLISHED = 2;
 }
 
+enum AdminEventSort {
+  ADMIN_EVENT_SORT_UNSPECIFIED = 0;
+  ADMIN_EVENT_SORT_UPDATED_DESC = 1;
+  ADMIN_EVENT_SORT_EVENT_DATE_ASC = 2;
+  ADMIN_EVENT_SORT_EVENT_DATE_DESC = 3;
+}
+
 enum EventMediaSlot {
   EVENT_MEDIA_SLOT_UNSPECIFIED = 0;
   EVENT_MEDIA_SLOT_COVER = 1;
@@ -80,6 +87,7 @@ message Venue {
   string country_code = 7;
   string address_line_one = 8;
   optional string address_line_two = 9;
+  optional string region_code = 10;
 }
 
 message CreateDraftEventRequest {
@@ -120,6 +128,10 @@ message AdminEventSummary {
 message ListAdminEventsRequest {
   int32 page_size = 1;
   optional string page_token = 2;
+  optional string search = 3;
+  optional string country_code = 4;
+  optional string region_code = 5;
+  AdminEventSort sort = 6;
 }
 
 message ListAdminEventsResponse {

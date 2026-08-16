@@ -4,6 +4,7 @@ export interface EventVenue {
   addressLine2: string | null;
   city: string;
   region: string | null;
+  regionCode: string | null;
   postalCode: string | null;
   countryCode: string;
 }
@@ -271,6 +272,7 @@ export interface CreateDraftEventCommand {
     addressLine2?: string;
     city: string;
     region?: string;
+    regionCode?: string;
     postalCode?: string;
     countryCode: string;
   };
@@ -288,14 +290,34 @@ export interface AdminEventSummaryRecord {
   updatedAt: Date;
 }
 
+export type AdminEventSort =
+  'updated_desc' | 'event_date_asc' | 'event_date_desc';
+
 export interface EventListCursor {
   eventId: string;
-  updatedAt: Date;
+  sortValue: Date | null;
+  search: string | null;
+  countryCode: string | null;
+  regionCode: string | null;
+  sort: AdminEventSort;
 }
 
 export interface ListAdminEvents {
   cursor?: EventListCursor;
   limit: number;
+  search: string | null;
+  countryCode: string | null;
+  regionCode: string | null;
+  sort: AdminEventSort;
+}
+
+export interface ListAdminEventsQuery {
+  pageSize: number;
+  pageToken?: string;
+  search?: string;
+  countryCode?: string;
+  regionCode?: string;
+  sort: AdminEventSort;
 }
 
 export interface AdminEventListPage {
@@ -356,6 +378,7 @@ export interface UpdateDraftEventCommand {
     addressLine2?: string;
     city: string;
     region?: string;
+    regionCode?: string;
     postalCode?: string;
     countryCode: string;
   };
@@ -372,7 +395,7 @@ export interface EventRepository {
 
 export interface EventManagement {
   createDraft(input: CreateDraftEventCommand): Promise<EventRecord>;
-  list(pageSize: number, pageToken?: string): Promise<AdminEventListPage>;
+  list(input: ListAdminEventsQuery): Promise<AdminEventListPage>;
   getById(eventId: string): Promise<EventRecord>;
   getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;

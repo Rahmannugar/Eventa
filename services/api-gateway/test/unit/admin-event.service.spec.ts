@@ -1,4 +1,5 @@
 import {
+  AdminEventSort,
   type CreateDraftEventRequest,
   type CreateDraftEventResponse,
   EventStatus,
@@ -190,7 +191,17 @@ describe('AdminEventService catalogue', () => {
     vi.spyOn(Date, 'now').mockReturnValue(10_000);
 
     await expect(
-      service.list(20, 'page-token', 'list-request'),
+      service.list(
+        {
+          limit: 20,
+          cursor: 'page-token',
+          search: 'lagos',
+          countryCode: 'NG',
+          regionCode: 'LA',
+          sort: 'event_date_asc',
+        },
+        'list-request',
+      ),
     ).resolves.toEqual({
       events: [
         expect.objectContaining({
@@ -201,7 +212,14 @@ describe('AdminEventService catalogue', () => {
       ],
       nextCursor: 'next-page',
     });
-    expect(receivedRequest).toEqual({ pageSize: 20, pageToken: 'page-token' });
+    expect(receivedRequest).toEqual({
+      pageSize: 20,
+      pageToken: 'page-token',
+      search: 'lagos',
+      countryCode: 'NG',
+      regionCode: 'LA',
+      sort: AdminEventSort.ADMIN_EVENT_SORT_EVENT_DATE_ASC,
+    });
     expect(receivedMetadata?.get('x-request-id')).toEqual(['list-request']);
     expect(receivedOptions).toEqual({ deadline: new Date(13_000) });
   });

@@ -1,5 +1,6 @@
 import {
   EVENT_SERVICE_NAME,
+  AdminEventSort,
   EventMediaSlot,
   EventMediaUploadStatus,
   EventStatus,
@@ -25,6 +26,7 @@ import {
 import type {
   AdminEventDto,
   AdminEventListDto,
+  AdminEventListQueryDto,
   AdminEventSummaryDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
@@ -90,18 +92,42 @@ export class AdminEventService implements OnModuleInit {
   }
 
   async list(
-    limit: number,
-    cursor: string | undefined,
+    query: AdminEventListQueryDto,
     requestId: string,
   ): Promise<AdminEventListDto> {
     const events = this.requireClient();
+
+    if (query.regionCode !== undefined && query.countryCode === undefined) {
+      throw new ApiHttpException(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        'VALIDATION_FAILED',
+        'Check the request and try again.',
+        {
+          errors: [
+            {
+              field: 'regionCode',
+              code: 'COUNTRY_REQUIRED',
+              message: 'Choose a country before choosing a state or region.',
+            },
+          ],
+        },
+      );
+    }
 
     try {
       const response = await firstValueFrom(
         events.listAdminEvents(
           {
-            pageSize: limit,
-            ...(cursor === undefined ? {} : { pageToken: cursor }),
+            pageSize: query.limit,
+            ...(query.cursor === undefined ? {} : { pageToken: query.cursor }),
+            ...(query.search === undefined ? {} : { search: query.search }),
+            ...(query.countryCode === undefined
+              ? {}
+              : { countryCode: query.countryCode }),
+            ...(query.regionCode === undefined
+              ? {}
+              : { regionCode: query.regionCode }),
+            sort: this.toContractSort(query.sort),
           },
           this.metadata(requestId),
           this.deadline(),
@@ -403,6 +429,9 @@ export class AdminEventService implements OnModuleInit {
       ...(addressLine2 === undefined ? {} : { addressLine2 }),
       city: venue.city,
       ...(venue.region === undefined ? {} : { region: venue.region }),
+      ...(venue.regionCode === undefined
+        ? {}
+        : { regionCode: venue.regionCode }),
       ...(venue.postalCode === undefined
         ? {}
         : { postalCode: venue.postalCode }),
@@ -502,6 +531,14 @@ export class AdminEventService implements OnModuleInit {
       gallery_3: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_3,
       gallery_4: EventMediaSlot.EVENT_MEDIA_SLOT_GALLERY_4,
     }[slot];
+  }
+
+  private toContractSort(sort: AdminEventListQueryDto['sort']): AdminEventSort {
+    return {
+      updated_desc: AdminEventSort.ADMIN_EVENT_SORT_UPDATED_DESC,
+      event_date_asc: AdminEventSort.ADMIN_EVENT_SORT_EVENT_DATE_ASC,
+      event_date_desc: AdminEventSort.ADMIN_EVENT_SORT_EVENT_DATE_DESC,
+    }[sort];
   }
 
   private toPublicMediaSlot(

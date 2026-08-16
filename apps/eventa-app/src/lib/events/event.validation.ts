@@ -5,6 +5,7 @@ import type {
   CreateEventInput,
   UpdateDraftEventInput,
 } from './event.types';
+import { regionCodeForName } from '../location/location-data';
 
 export interface DraftEventFormValues {
   title: string;
@@ -18,6 +19,7 @@ export interface DraftEventFormValues {
   addressLine2: string;
   city: string;
   region: string;
+  regionCode: string;
   postalCode: string;
   countryCode: string;
 }
@@ -47,6 +49,11 @@ const formSchema = z
     addressLine2: z.string().trim().max(200),
     city: z.string().trim().min(1, 'Enter a city.').max(120),
     region: z.string().trim().max(120),
+    regionCode: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^$|^[A-Z0-9][A-Z0-9-]{0,7}$/),
     postalCode: z.string().trim().max(32),
     countryCode: z
       .string()
@@ -95,6 +102,12 @@ export function draftEventFormValues(event: AdminEvent): DraftEventFormValues {
     addressLine2: event.venue?.addressLine2 ?? '',
     city: event.venue?.city ?? '',
     region: event.venue?.region ?? '',
+    regionCode:
+      event.venue?.regionCode ??
+      regionCodeForName(
+        event.venue?.countryCode ?? '',
+        event.venue?.region ?? '',
+      ),
     postalCode: event.venue?.postalCode ?? '',
     countryCode: event.venue?.countryCode ?? '',
   };
@@ -113,6 +126,7 @@ export function emptyEventFormValues(): DraftEventFormValues {
     addressLine2: '',
     city: '',
     region: '',
+    regionCode: '',
     postalCode: '',
     countryCode: '',
   };
@@ -175,6 +189,7 @@ function validateEventForm(
           : { addressLine2: value.addressLine2 }),
         city: value.city,
         ...(value.region === '' ? {} : { region: value.region }),
+        ...(value.regionCode === '' ? {} : { regionCode: value.regionCode }),
         ...(value.postalCode === '' ? {} : { postalCode: value.postalCode }),
         countryCode: value.countryCode,
       },

@@ -4,21 +4,15 @@ export interface EventVenue {
   addressLine2?: string | undefined;
   city: string;
   region?: string | undefined;
+  regionCode?: string | undefined;
   postalCode?: string | undefined;
   countryCode: string;
 }
 
 export type EventMediaSlot =
-  | 'cover'
-  | 'gallery_1'
-  | 'gallery_2'
-  | 'gallery_3'
-  | 'gallery_4';
+  'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
 
-export type EventMediaContentType =
-  | 'image/jpeg'
-  | 'image/png'
-  | 'image/webp';
+export type EventMediaContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 export interface AdminEventMedia {
   mediaId: string;
@@ -79,6 +73,16 @@ export interface AdminEventSummary {
   venue?: EventVenue | undefined;
   status: 'draft' | 'published';
   updatedAt: string;
+}
+
+export type AdminEventSort =
+  'updated_desc' | 'event_date_asc' | 'event_date_desc';
+
+export interface AdminEventListCriteria {
+  search: string;
+  countryCode: string;
+  regionCode: string;
+  sort: AdminEventSort;
 }
 
 export interface AdminEventListPage {

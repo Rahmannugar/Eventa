@@ -21,7 +21,9 @@ An event begins in `draft` at version 1 with its normalized title, description, 
 
 ## Admin Catalogue
 
-The management list reads Event-owned event, venue, and category data. It uses descending update time and event ID as a stable keyset order. Opaque page tokens carry only that cursor, and malformed tokens are rejected. Categories are loaded in one bounded query for the page rather than one query per event.
+The management list reads Event-owned event, venue, and category data. It uses stable keyset orders over update time or event date with event ID as the tie-breaker. Opaque page tokens bind the cursor to normalized search, venue filters, and sort criteria, so callers cannot reuse a cursor against another query shape. Categories are loaded in one bounded query for the page rather than one query per event.
+
+Trigram search indexes normalized event titles for substring matching. Composite venue-code and event time indexes support dependent location filters and both catalogue orders. Display region names remain content; only structured region codes participate in exact filtering.
 
 ## Admin Access
 

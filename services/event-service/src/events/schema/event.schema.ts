@@ -43,6 +43,12 @@ export const events = pgTable(
   },
   (table) => [
     index('events_status_created_at_index').on(table.status, table.createdAt),
+    index('events_starts_at_id_index').on(table.startsAt, table.id),
+    index('events_updated_at_id_index').on(table.updatedAt, table.id),
+    index('events_title_search_index').using(
+      'gin',
+      sql`lower(${table.title}) gin_trgm_ops`,
+    ),
     check(
       'events_title_normalized',
       sql`${table.title} = btrim(${table.title})`,
