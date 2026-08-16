@@ -8,7 +8,6 @@
     "dev": "vite --host 127.0.0.1 --port 5273",
     "lint": "eslint src vite.config.ts --max-warnings 0",
     "preview": "vite preview --host 127.0.0.1 --port 5273",
-    "test:unit": "vitest run test/unit",
     "typecheck": "tsc --noEmit --project tsconfig.json --pretty false"
   },
   "dependencies": {
