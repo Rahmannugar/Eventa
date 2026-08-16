@@ -59,7 +59,6 @@ export function AdminDashboardShell() {
           </div>
           <button
             type="button"
-            data-navigation
             className="admin-account__signout"
             aria-label="Sign out"
             disabled={logout.isPending}
@@ -80,7 +79,6 @@ export function AdminDashboardShell() {
           </NavLink>
           <Button
             variant="quiet"
-            data-navigation
             aria-label="Sign out"
             busy={logout.isPending}
             onClick={() => {

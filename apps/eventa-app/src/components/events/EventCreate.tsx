@@ -11,7 +11,6 @@ import {
   type DraftEventFormValues,
 } from '../../lib/events/event.validation';
 import { useCreateEvent } from '../../lib/events/useEvents';
-import { useUnsavedChanges } from '../../lib/navigation/useUnsavedChanges';
 import { Button } from '../ui/Button';
 import { EventFormFields } from './EventFormFields';
 
@@ -22,8 +21,6 @@ export function EventCreate() {
   const formRef = useRef<HTMLFormElement>(null);
   const [values, setValues] = useState(emptyEventFormValues);
   const [errors, setErrors] = useState<DraftEventFormErrors>({});
-  const dirty = JSON.stringify(values) !== JSON.stringify(emptyEventFormValues);
-  useUnsavedChanges(dirty, 'Leave without creating this event?');
 
   if (create.error !== null && isSessionInvalid(create.error)) {
     return (

@@ -21,7 +21,6 @@ import {
 } from '../../lib/events/event.validation';
 import type { AdminEvent } from '../../lib/events/event.types';
 import { useAdminEvent, useUpdateDraftEvent } from '../../lib/events/useEvents';
-import { useUnsavedChanges } from '../../lib/navigation/useUnsavedChanges';
 import { Button } from '../ui/Button';
 import { EventFormFields } from './EventFormFields';
 
@@ -112,8 +111,6 @@ function DraftEventForm({
   const conflict =
     update.error instanceof ApiError &&
     update.error.code === 'EVENT_VERSION_CONFLICT';
-
-  useUnsavedChanges(dirty, 'Leave without saving your changes?');
 
   function change<K extends keyof DraftEventFormValues>(
     field: K,
