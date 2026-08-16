@@ -1,4 +1,5 @@
 import {
+  type CreateDraftEventRequest,
   type CreateDraftEventResponse,
   EventStatus,
   type Event,
@@ -31,6 +32,7 @@ const publishedEvent: Event = {
   updatedAt: '2026-08-10T10:05:00.000Z',
   venue: {
     addressLine1: '1 Marina Road',
+    addressLineOne: '1 Marina Road',
     city: 'Lagos',
     countryCode: 'NG',
     name: 'Eventa Hall',
@@ -60,6 +62,7 @@ const createInput = {
   title: draftEvent.title,
   venue: {
     addressLine1: '1 Marina Road',
+    addressLineOne: '1 Marina Road',
     city: 'Lagos',
     countryCode: 'NG',
     name: 'Eventa Hall',
@@ -104,12 +107,17 @@ function createListService(
 
 describe('AdminEventService draft creation', () => {
   it('accepts an omitted empty media list', async () => {
+    let receivedRequest: CreateDraftEventRequest | undefined;
     const wireEvent = {
       ...draftEvent,
       media: undefined,
     } as unknown as Event;
-    const createDraftEvent = (): Observable<CreateDraftEventResponse> =>
-      of({ event: wireEvent });
+    const createDraftEvent = (
+      request: CreateDraftEventRequest,
+    ): Observable<CreateDraftEventResponse> => {
+      receivedRequest = request;
+      return of({ event: wireEvent });
+    };
     const service = createDraftService(createDraftEvent);
 
     await expect(
@@ -123,6 +131,10 @@ describe('AdminEventService draft creation', () => {
       media: [],
       status: 'draft',
       version: 1,
+    });
+    expect(receivedRequest?.venue).toMatchObject({
+      addressLine1: '1 Marina Road',
+      addressLineOne: '1 Marina Road',
     });
   });
 

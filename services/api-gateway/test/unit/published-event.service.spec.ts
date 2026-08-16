@@ -35,6 +35,7 @@ const publishedEvent: PublishedEvent = {
   title: 'Published event',
   venue: {
     addressLine1: '1 Marina Road',
+    addressLineOne: '1 Marina Road',
     city: 'Lagos',
     countryCode: 'NG',
     name: 'Eventa Hall',
@@ -81,6 +82,12 @@ describe('PublishedEventService', () => {
       service.getById(publishedEvent.eventId, 'published-read-request'),
     ).resolves.toEqual({
       ...publishedEvent,
+      venue: {
+        addressLine1: '1 Marina Road',
+        city: 'Lagos',
+        countryCode: 'NG',
+        name: 'Eventa Hall',
+      },
       media: [
         {
           ...publishedEvent.media[0],

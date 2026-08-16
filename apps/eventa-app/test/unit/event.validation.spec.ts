@@ -50,10 +50,10 @@ describe('event creation validation', () => {
     });
   });
 
-  it('rejects an end time that does not follow the start', () => {
+  it('rejects equal start and end times', () => {
     const result = validateCreateEventForm({
       ...completeForm(),
-      endsAt: '2026-10-15T08:00',
+      endsAt: '2026-10-15T09:00',
     });
 
     expect(result).toEqual({

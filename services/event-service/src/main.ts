@@ -40,7 +40,7 @@ async function bootstrap(): Promise<void> {
       options: {
         package: EVENTA_EVENT_V1_PACKAGE_NAME,
         protoPath: getEventProtoPaths(),
-        loader: { includeDirs: getEventProtoIncludeDirs() },
+        loader: { arrays: true, includeDirs: getEventProtoIncludeDirs() },
         url: `${config.grpcHost}:${config.grpcPort}`,
       },
     },

@@ -61,8 +61,10 @@ export function EventCreate() {
       const created = await create.mutateAsync(result.data);
       toast.success('Event created.');
       void navigate(`/admin/events/${created.eventId}`);
-    } catch {
-      // The mutation keeps the error visible and allows an immediate retry.
+    } catch (error) {
+      toast.error('Event not created.', {
+        description: userFacingApiError(error),
+      });
     }
   }
 

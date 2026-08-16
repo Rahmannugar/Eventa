@@ -164,7 +164,13 @@ export class EventController implements EventServiceController {
             startsAt: request.startsAt,
             timeZone: request.timeZone,
             title: request.title,
-            venue: request.venue!,
+            venue: {
+              ...request.venue!,
+              addressLine1: request.venue!.addressLineOne,
+              ...(request.venue!.addressLineTwo === undefined
+                ? {}
+                : { addressLine2: request.venue!.addressLineTwo }),
+            },
           }),
         ),
       };
@@ -209,6 +215,8 @@ export class EventController implements EventServiceController {
                   name: event.venue.name,
                   addressLine1: event.venue.addressLine1,
                   addressLine2: event.venue.addressLine2 ?? undefined,
+                  addressLineOne: event.venue.addressLine1,
+                  addressLineTwo: event.venue.addressLine2 ?? undefined,
                   city: event.venue.city,
                   region: event.venue.region ?? undefined,
                   postalCode: event.venue.postalCode ?? undefined,
@@ -270,7 +278,13 @@ export class EventController implements EventServiceController {
             startsAt: request.startsAt,
             timeZone: request.timeZone,
             title: request.title,
-            venue: request.venue!,
+            venue: {
+              ...request.venue!,
+              addressLine1: request.venue!.addressLineOne,
+              ...(request.venue!.addressLineTwo === undefined
+                ? {}
+                : { addressLine2: request.venue!.addressLineTwo }),
+            },
           }),
         ),
       };
@@ -471,6 +485,8 @@ export class EventController implements EventServiceController {
               name: event.venue.name,
               addressLine1: event.venue.addressLine1,
               addressLine2: event.venue.addressLine2 ?? undefined,
+              addressLineOne: event.venue.addressLine1,
+              addressLineTwo: event.venue.addressLine2 ?? undefined,
               city: event.venue.city,
               region: event.venue.region ?? undefined,
               postalCode: event.venue.postalCode ?? undefined,
@@ -524,6 +540,8 @@ export class EventController implements EventServiceController {
         name: event.venue.name,
         addressLine1: event.venue.addressLine1,
         addressLine2: event.venue.addressLine2 ?? undefined,
+        addressLineOne: event.venue.addressLine1,
+        addressLineTwo: event.venue.addressLine2 ?? undefined,
         city: event.venue.city,
         region: event.venue.region ?? undefined,
         postalCode: event.venue.postalCode ?? undefined,

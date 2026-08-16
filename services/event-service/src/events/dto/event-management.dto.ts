@@ -59,7 +59,7 @@ export class EventVenueDto implements Venue {
   @IsString()
   @MinLength(1)
   @MaxLength(200)
-  addressLine1!: string;
+  addressLineOne!: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -68,6 +68,14 @@ export class EventVenueDto implements Venue {
   @IsString()
   @MinLength(1)
   @MaxLength(200)
+  addressLineTwo?: string;
+
+  @IsOptional()
+  @IsString()
+  addressLine1!: string;
+
+  @IsOptional()
+  @IsString()
   addressLine2?: string;
 
   @Transform(({ value }: { value: unknown }) =>

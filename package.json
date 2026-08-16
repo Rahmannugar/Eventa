@@ -14,7 +14,7 @@
     "db:migrate:identity": "docker compose run --rm --build identity-migration",
     "db:migrate:notification": "docker compose run --rm --build notification-migration",
     "db:reset:all": "docker compose down --volumes && pnpm services:start",
-    "db:reset:event": "docker compose down && docker volume rm eventa_event-database-data && pnpm services:start",
+    "db:reset:event": "docker compose down && docker volume rm eventa_event-database-data eventa_event-kafka-cdc-data eventa_event-rabbitmq-cdc-data && pnpm services:start",
     "db:reset:identity": "docker compose down && docker volume rm eventa_identity-database-data && pnpm services:start",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

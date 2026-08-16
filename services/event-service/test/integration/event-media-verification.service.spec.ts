@@ -11,6 +11,7 @@ import { EventMediaUploadRepository } from '../../src/events/repositories/event-
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
+import { EventScheduleInvalidError } from '../../src/events/errors/event.errors';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventCategories } from '../../src/events/schema/event-category.schema';
 import { eventJobOutbox } from '../../src/events/schema/event-job-outbox.schema';
@@ -179,6 +180,32 @@ describe('Event mutation integration', () => {
       venueCount?.value,
       categoryCount?.value,
     ]).toEqual([0, 0, 0]);
+  });
+
+  it('rejects equal start and end times before persistence', async () => {
+    const instant = new Date(Date.now() + 24 * 60 * 60 * 1_000).toISOString();
+
+    await expect(
+      eventManagement.createDraft({
+        actorAdminId: randomUUID(),
+        categories: ['Community'],
+        description: 'A complete event.',
+        endsAt: instant,
+        requestId: randomUUID(),
+        startsAt: instant,
+        timeZone: 'Africa/Lagos',
+        title: 'Invalid schedule',
+        venue: {
+          addressLine1: '1 Marina Road',
+          city: 'Lagos',
+          countryCode: 'NG',
+          name: 'Eventa Hall',
+        },
+      }),
+    ).rejects.toBeInstanceOf(EventScheduleInvalidError);
+
+    const [eventCount] = await database.select({ value: count() }).from(events);
+    expect(eventCount?.value).toBe(0);
   });
 
   it('pages the admin event catalogue without duplicates', async () => {

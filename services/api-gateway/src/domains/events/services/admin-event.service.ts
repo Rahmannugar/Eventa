@@ -5,6 +5,7 @@ import {
   EventStatus,
   type AdminEventSummary,
   type Event,
+  type Venue,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
 import {
@@ -69,7 +70,15 @@ export class AdminEventService implements OnModuleInit {
     try {
       const response = await firstValueFrom(
         events.createDraftEvent(
-          { adminId, ...input },
+          {
+            adminId,
+            ...input,
+            venue: {
+              ...input.venue,
+              addressLineOne: input.venue.addressLine1,
+              addressLineTwo: input.venue.addressLine2,
+            },
+          },
           this.metadata(requestId),
           this.deadline(),
         ),
@@ -144,6 +153,11 @@ export class AdminEventService implements OnModuleInit {
             eventId,
             ...input,
             category: input.categories[0] ?? '',
+            venue: {
+              ...input.venue,
+              addressLineOne: input.venue.addressLine1,
+              addressLineTwo: input.venue.addressLine2,
+            },
           },
           this.metadata(requestId),
           this.deadline(),
@@ -329,23 +343,7 @@ export class AdminEventService implements OnModuleInit {
       endsAt: event.endsAt,
       timeZone: event.timeZone,
       venue:
-        event.venue === undefined
-          ? undefined
-          : {
-              name: event.venue.name,
-              addressLine1: event.venue.addressLine1,
-              ...(event.venue.addressLine2 === undefined
-                ? {}
-                : { addressLine2: event.venue.addressLine2 }),
-              city: event.venue.city,
-              ...(event.venue.region === undefined
-                ? {}
-                : { region: event.venue.region }),
-              ...(event.venue.postalCode === undefined
-                ? {}
-                : { postalCode: event.venue.postalCode }),
-              countryCode: event.venue.countryCode,
-            },
+        event.venue === undefined ? undefined : this.toAdminVenue(event.venue),
       media: (event.media ?? []).map((media) => ({
         mediaId: media.mediaId,
         slot: this.toPublicMediaSlot(media.slot),
@@ -392,24 +390,23 @@ export class AdminEventService implements OnModuleInit {
       endsAt: event.endsAt,
       timeZone: event.timeZone,
       venue:
-        event.venue === undefined
-          ? undefined
-          : {
-              name: event.venue.name,
-              addressLine1: event.venue.addressLine1,
-              ...(event.venue.addressLine2 === undefined
-                ? {}
-                : { addressLine2: event.venue.addressLine2 }),
-              city: event.venue.city,
-              ...(event.venue.region === undefined
-                ? {}
-                : { region: event.venue.region }),
-              ...(event.venue.postalCode === undefined
-                ? {}
-                : { postalCode: event.venue.postalCode }),
-              countryCode: event.venue.countryCode,
-            },
+        event.venue === undefined ? undefined : this.toAdminVenue(event.venue),
       updatedAt: event.updatedAt,
+    };
+  }
+
+  private toAdminVenue(venue: Venue): AdminEventDto['venue'] {
+    const addressLine2 = venue.addressLineTwo ?? venue.addressLine2;
+    return {
+      name: venue.name,
+      addressLine1: venue.addressLineOne || venue.addressLine1,
+      ...(addressLine2 === undefined ? {} : { addressLine2 }),
+      city: venue.city,
+      ...(venue.region === undefined ? {} : { region: venue.region }),
+      ...(venue.postalCode === undefined
+        ? {}
+        : { postalCode: venue.postalCode }),
+      countryCode: venue.countryCode,
     };
   }
 

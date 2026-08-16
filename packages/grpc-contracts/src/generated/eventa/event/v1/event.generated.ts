@@ -91,6 +91,8 @@ export interface Venue {
   region?: string | undefined;
   postalCode?: string | undefined;
   countryCode: string;
+  addressLineOne: string;
+  addressLineTwo?: string | undefined;
 }
 
 export interface CreateDraftEventRequest {

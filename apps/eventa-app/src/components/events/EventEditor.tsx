@@ -167,6 +167,15 @@ function DraftEventForm({
         }
         setErrors(serverErrors);
         focusFirstInvalidField();
+        return;
+      }
+      if (
+        !(error instanceof ApiError) ||
+        error.code !== 'EVENT_VERSION_CONFLICT'
+      ) {
+        toast.error('Changes not saved.', {
+          description: userFacingApiError(error),
+        });
       }
     }
   }
