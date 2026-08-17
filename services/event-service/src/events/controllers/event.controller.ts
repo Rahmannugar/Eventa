@@ -25,6 +25,8 @@ import {
   type RemoveEventMediaResponse,
   type PublishEventResponse,
   type RetireDraftEventResponse,
+  type RetireEventTicketTypeResponse,
+  type UpdateEventTicketTypeResponse,
   type UpdateDraftEventResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -57,6 +59,8 @@ import {
   AddEventTicketTypeDto,
   DefineEventTicketCurrencyDto,
   GetEventTicketCatalogueDto,
+  RetireEventTicketTypeDto,
+  UpdateEventTicketTypeDto,
 } from '../dto/event-ticket-type.dto';
 import {
   EventCategoriesInvalidError,
@@ -76,6 +80,10 @@ import {
   EventTicketTypeLimitReachedError,
   EventTicketTypeMutationNotAllowedError,
   EventTicketTypeNameConflictError,
+  EventTicketTypeNotFoundError,
+  EventTicketTypeCapacityBelowCommittedError,
+  EventTicketTypeCommercialTermsLockedError,
+  EventTicketTypeRetirementNotAllowedError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
@@ -163,6 +171,20 @@ export class EventController implements EventServiceController {
     metadata?: Metadata,
   ): Observable<AddEventTicketTypeResponse> {
     return from(this.createTicketType(request, this.readRequestId(metadata)));
+  }
+
+  updateEventTicketType(
+    request: UpdateEventTicketTypeDto,
+    metadata?: Metadata,
+  ): Observable<UpdateEventTicketTypeResponse> {
+    return from(this.updateTicketType(request, this.readRequestId(metadata)));
+  }
+
+  retireEventTicketType(
+    request: RetireEventTicketTypeDto,
+    metadata?: Metadata,
+  ): Observable<RetireEventTicketTypeResponse> {
+    return from(this.retireTicketType(request, this.readRequestId(metadata)));
   }
 
   getEventTicketCatalogue(
@@ -649,6 +671,108 @@ export class EventController implements EventServiceController {
     }
   }
 
+  private async updateTicketType(
+    request: UpdateEventTicketTypeDto,
+    requestId: string,
+  ): Promise<UpdateEventTicketTypeResponse> {
+    try {
+      const result = await this.ticketTypeService.update({
+        actorAdminId: request.adminId,
+        capacity: request.capacity,
+        ...(request.description === undefined
+          ? {}
+          : { description: request.description }),
+        eventId: request.eventId,
+        expectedVersion: request.expectedVersion,
+        name: request.name,
+        priceMinor: request.priceMinor,
+        requestId,
+        salesEndAt: request.salesEndAt,
+        salesStartAt: request.salesStartAt,
+        ticketTypeId: request.ticketTypeId,
+      });
+      return {
+        eventVersion: result.eventVersion,
+        ticketType: this.toTicketTypeContract(result.ticketType),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventTicketTypeNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (
+        error instanceof EventTicketTypeInvalidError ||
+        error instanceof EventTicketTypeNameConflictError
+      ) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      if (
+        error instanceof EventTicketTypeCapacityBelowCommittedError ||
+        error instanceof EventTicketTypeCommercialTermsLockedError
+      ) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async retireTicketType(
+    request: RetireEventTicketTypeDto,
+    requestId: string,
+  ): Promise<RetireEventTicketTypeResponse> {
+    try {
+      return {
+        eventVersion: await this.ticketTypeService.retire({
+          actorAdminId: request.adminId,
+          eventId: request.eventId,
+          expectedVersion: request.expectedVersion,
+          requestId,
+          ticketTypeId: request.ticketTypeId,
+        }),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventTicketTypeNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventTicketTypeInvalidError) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventTicketTypeRetirementNotAllowedError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   private async defineTicketCurrency(
     request: DefineEventTicketCurrencyDto,
     requestId: string,
@@ -728,6 +852,12 @@ export class EventController implements EventServiceController {
     return {
       allocation: ticketType.capacity,
       capacity: ticketType.capacity,
+      reservedQuantity: ticketType.reservedQuantity,
+      soldQuantity: ticketType.soldQuantity,
+      availableQuantity:
+        ticketType.capacity -
+        ticketType.reservedQuantity -
+        ticketType.soldQuantity,
       createdAt: ticketType.createdAt.toISOString(),
       description: ticketType.description ?? undefined,
       eventId: ticketType.eventId,

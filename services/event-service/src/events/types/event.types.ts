@@ -428,6 +428,8 @@ export interface EventTicketTypeRecord {
   description: string | null;
   priceMinor: number;
   capacity: number;
+  reservedQuantity: number;
+  soldQuantity: number;
   salesStartAt: Date;
   salesEndAt: Date;
   createdAt: Date;
@@ -517,11 +519,72 @@ export type CreateEventTicketTypeResult =
   | { outcome: 'invalid_window' }
   | { outcome: 'limit_reached' };
 
+export interface UpdateEventTicketTypeCommand {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  ticketTypeId: string;
+  name: string;
+  description?: string;
+  priceMinor: number;
+  capacity: number;
+  salesStartAt: string;
+  salesEndAt: string;
+}
+
+export interface UpdateEventTicketType {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  ticketTypeId: string;
+  name: string;
+  description: string | null;
+  priceMinor: number;
+  capacity: number;
+  salesStartAt: Date;
+  salesEndAt: Date;
+}
+
+export type UpdateEventTicketTypeResult =
+  | {
+      outcome: 'updated';
+      eventVersion: number;
+      ticketType: EventTicketTypeRecord;
+    }
+  | { outcome: 'not_found' }
+  | { outcome: 'version_conflict' }
+  | { outcome: 'name_conflict' }
+  | { outcome: 'invalid_window' }
+  | { outcome: 'capacity_below_committed' }
+  | { outcome: 'commercial_terms_locked' };
+
+export interface RetireEventTicketTypeCommand {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  ticketTypeId: string;
+}
+
+export type RetireEventTicketTypeResult =
+  | { outcome: 'retired'; eventVersion: number }
+  | { outcome: 'already_retired'; eventVersion: number }
+  | { outcome: 'not_found' }
+  | { outcome: 'version_conflict' }
+  | { outcome: 'committed_inventory' }
+  | { outcome: 'last_published_type' };
+
 export interface EventTicketTypeRepository {
   defineCurrency(
     input: DefineEventTicketCurrency,
   ): Promise<DefineEventTicketCurrencyResult>;
   create(input: CreateEventTicketType): Promise<CreateEventTicketTypeResult>;
+  update(input: UpdateEventTicketType): Promise<UpdateEventTicketTypeResult>;
+  retire(
+    input: RetireEventTicketTypeCommand,
+  ): Promise<RetireEventTicketTypeResult>;
   list(eventId: string): Promise<EventTicketTypesRecord | undefined>;
 }
 
@@ -534,5 +597,10 @@ export interface EventTicketTypeManagement {
     eventVersion: number;
     ticketType: EventTicketTypeRecord;
   }>;
+  update(input: UpdateEventTicketTypeCommand): Promise<{
+    eventVersion: number;
+    ticketType: EventTicketTypeRecord;
+  }>;
+  retire(input: RetireEventTicketTypeCommand): Promise<number>;
   list(eventId: string): Promise<EventTicketTypesRecord>;
 }

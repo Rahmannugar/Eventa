@@ -460,7 +460,12 @@ export class EventManagementRepository implements EventRepositoryPort {
                 eventTicketCurrencies,
                 eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
               )
-              .where(eq(eventTicketCurrencies.eventId, input.eventId))
+              .where(
+                and(
+                  eq(eventTicketCurrencies.eventId, input.eventId),
+                  isNull(eventTicketTypes.retiredAt),
+                ),
+              )
               .limit(1),
           ]);
           const categories = categoryRows.map(({ category }) => category);

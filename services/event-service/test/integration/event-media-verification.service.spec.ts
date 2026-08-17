@@ -298,6 +298,154 @@ describe('Event mutation integration', () => {
     expect(listed.eventVersion).toBe(3);
   });
 
+  it('updates and idempotently retires an unused ticket type', async () => {
+    const event = await createEventRecord('Editable ticket setup');
+    const currency = await ticketTypes.defineCurrency({
+      actorAdminId: randomUUID(),
+      currency: 'NGN',
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    const salesStartAt = new Date(Date.now() + 60 * 60 * 1_000);
+    const salesEndAt = new Date(event.startsAt!.getTime() - 60 * 60 * 1_000);
+    const created = await ticketTypes.create({
+      actorAdminId: randomUUID(),
+      capacity: 100,
+      eventId: event.eventId,
+      expectedVersion: currency.eventVersion,
+      name: 'General admission',
+      priceMinor: 2_500_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+      ticketCurrencyId: currency.ticketCurrency.ticketCurrencyId,
+    });
+    const updated = await ticketTypes.update({
+      actorAdminId: randomUUID(),
+      capacity: 120,
+      description: 'Updated details',
+      eventId: event.eventId,
+      expectedVersion: created.eventVersion,
+      name: 'Standard',
+      priceMinor: 3_000_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+      ticketTypeId: created.ticketType.ticketTypeId,
+    });
+    const retiredVersion = await ticketTypes.retire({
+      actorAdminId: randomUUID(),
+      eventId: event.eventId,
+      expectedVersion: updated.eventVersion,
+      requestId: randomUUID(),
+      ticketTypeId: created.ticketType.ticketTypeId,
+    });
+    const repeatedVersion = await ticketTypes.retire({
+      actorAdminId: randomUUID(),
+      eventId: event.eventId,
+      expectedVersion: updated.eventVersion,
+      requestId: randomUUID(),
+      ticketTypeId: created.ticketType.ticketTypeId,
+    });
+
+    expect(updated).toMatchObject({
+      eventVersion: 4,
+      ticketType: { capacity: 120, name: 'Standard', priceMinor: 3_000_000 },
+    });
+    expect(retiredVersion).toBe(5);
+    expect(repeatedVersion).toBe(5);
+    expect((await ticketTypes.list(event.eventId)).ticketTypes).toHaveLength(0);
+    const auditRows = await database
+      .select({ action: eventAdminAuditLog.action })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.eventId, event.eventId));
+    expect(auditRows).toHaveLength(5);
+    expect(auditRows.map(({ action }) => action)).toEqual(
+      expect.arrayContaining([
+        'event.created',
+        'event.ticket_currency_defined',
+        'event.ticket_type_created',
+        'event.ticket_type_updated',
+        'event.ticket_type_retired',
+      ]),
+    );
+  });
+
+  it('protects committed inventory during ticket type changes', async () => {
+    const event = await createEventRecord('Committed ticket setup');
+    const currency = await ticketTypes.defineCurrency({
+      actorAdminId: randomUUID(),
+      currency: 'NGN',
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    const salesStartAt = new Date(Date.now() + 60 * 60 * 1_000);
+    const salesEndAt = new Date(event.startsAt!.getTime() - 60 * 60 * 1_000);
+    const created = await ticketTypes.create({
+      actorAdminId: randomUUID(),
+      capacity: 100,
+      eventId: event.eventId,
+      expectedVersion: currency.eventVersion,
+      name: 'General admission',
+      priceMinor: 2_500_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+      ticketCurrencyId: currency.ticketCurrency.ticketCurrencyId,
+    });
+    await database
+      .update(eventTicketTypes)
+      .set({ reservedQuantity: 2, soldQuantity: 3 })
+      .where(eq(eventTicketTypes.id, created.ticketType.ticketTypeId));
+    const base = {
+      actorAdminId: randomUUID(),
+      capacity: 100,
+      eventId: event.eventId,
+      expectedVersion: created.eventVersion,
+      name: 'General admission',
+      priceMinor: 2_500_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+      ticketTypeId: created.ticketType.ticketTypeId,
+    };
+
+    await expect(
+      ticketTypes.update({ ...base, capacity: 4 }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED',
+    });
+    await expect(
+      ticketTypes.update({ ...base, priceMinor: 3_000_000 }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED',
+    });
+    await expect(
+      ticketTypes.retire({
+        actorAdminId: randomUUID(),
+        eventId: event.eventId,
+        expectedVersion: created.eventVersion,
+        requestId: randomUUID(),
+        ticketTypeId: created.ticketType.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_TICKET_TYPE_HAS_COMMITTED_INVENTORY',
+    });
+    await expect(
+      ticketTypes.update({ ...base, capacity: 5, name: 'Standard' }),
+    ).resolves.toMatchObject({
+      eventVersion: 4,
+      ticketType: {
+        capacity: 5,
+        name: 'Standard',
+        reservedQuantity: 2,
+        soldQuantity: 3,
+      },
+    });
+  });
+
   it('rolls back creation when a category invariant fails', async () => {
     const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1_000);
     await expect(
@@ -932,6 +1080,34 @@ describe('Event mutation integration', () => {
         requestId: randomUUID(),
       }),
     ).resolves.toEqual({ outcome: 'incomplete' });
+  });
+
+  it('keeps one active ticket type on a published event', async () => {
+    const event = await createPublishableEvent('Published inventory floor');
+    const publication = await eventsRepository.publish({
+      actorAdminId: event.adminId,
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    if (publication.outcome !== 'published') {
+      throw new Error('Expected publication to succeed');
+    }
+    const [ticketType] = (await ticketTypes.list(event.eventId)).ticketTypes;
+    if (ticketType === undefined) throw new Error('Ticket type missing');
+
+    await expect(
+      ticketTypes.retire({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion: publication.event.version,
+        requestId: randomUUID(),
+        ticketTypeId: ticketType.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_TICKET_TYPE_LAST_PUBLISHED_TYPE',
+    });
+    expect((await ticketTypes.list(event.eventId)).ticketTypes).toHaveLength(1);
   });
 
   it('returns published events without disclosing drafts', async () => {

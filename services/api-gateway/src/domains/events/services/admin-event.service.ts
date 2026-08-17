@@ -42,8 +42,11 @@ import type {
   EventTicketTypeListDto,
   RemoveEventMediaResponseDto,
   RetireDraftEventResponseDto,
+  RetireEventTicketTypeResponseDto,
   PublishEventDto,
   UpdateDraftEventDto,
+  UpdateEventTicketTypeDto,
+  UpdateEventTicketTypeResponseDto,
 } from '../dto/admin-event.dto';
 import type { DeadlineAwareEventServiceClient } from '../types/event-grpc-client.types';
 
@@ -386,6 +389,67 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async updateTicketType(
+    adminId: string,
+    eventId: string,
+    ticketTypeId: string,
+    input: UpdateEventTicketTypeDto,
+    requestId: string,
+  ): Promise<UpdateEventTicketTypeResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.updateEventTicketType(
+          { adminId, eventId, ticketTypeId, ...input },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        response.ticketType === undefined ||
+        response.eventVersion < 2 ||
+        response.ticketType.eventId !== eventId ||
+        response.ticketType.ticketTypeId !== ticketTypeId
+      ) {
+        throw this.unavailable('EVENT_TICKET_TYPE_UPDATE_RESPONSE_INVALID');
+      }
+      return {
+        eventVersion: response.eventVersion,
+        ticketType: this.toEventTicketType(response.ticketType),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'ticket_type_update');
+    }
+  }
+
+  async retireTicketType(
+    adminId: string,
+    eventId: string,
+    ticketTypeId: string,
+    expectedVersion: number,
+    requestId: string,
+  ): Promise<RetireEventTicketTypeResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.retireEventTicketType(
+          { adminId, eventId, expectedVersion, ticketTypeId },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        !Number.isInteger(response.eventVersion) ||
+        response.eventVersion < 2
+      ) {
+        throw this.unavailable('EVENT_TICKET_TYPE_RETIRE_RESPONSE_INVALID');
+      }
+      return response;
+    } catch (error: unknown) {
+      this.translate(error, 'ticket_type_retire');
+    }
+  }
+
   async listTicketTypes(
     eventId: string,
     requestId: string,
@@ -586,12 +650,24 @@ export class AdminEventService implements OnModuleInit {
       ticketType.priceMinor < 0 ||
       !Number.isInteger(ticketType.capacity) ||
       ticketType.capacity < 1 ||
+      !Number.isInteger(ticketType.reservedQuantity) ||
+      ticketType.reservedQuantity < 0 ||
+      !Number.isInteger(ticketType.soldQuantity) ||
+      ticketType.soldQuantity < 0 ||
+      ticketType.availableQuantity !==
+        ticketType.capacity -
+          ticketType.reservedQuantity -
+          ticketType.soldQuantity ||
+      ticketType.availableQuantity < 0 ||
       ticketType.ticketCurrencyId === ''
     ) {
       throw this.unavailable('EVENT_TICKET_TYPE_RESPONSE_INVALID');
     }
     return {
       capacity: ticketType.capacity,
+      reservedQuantity: ticketType.reservedQuantity,
+      soldQuantity: ticketType.soldQuantity,
+      availableQuantity: ticketType.availableQuantity,
       createdAt: ticketType.createdAt,
       description: ticketType.description,
       eventId: ticketType.eventId,
@@ -649,6 +725,8 @@ export class AdminEventService implements OnModuleInit {
       | 'publish'
       | 'retire'
       | 'ticket_type'
+      | 'ticket_type_update'
+      | 'ticket_type_retire'
       | 'ticket_type_read'
       | 'ticket_currency'
       | 'update',
@@ -663,10 +741,16 @@ export class AdminEventService implements OnModuleInit {
           HttpStatus.NOT_FOUND,
           operation === 'media_status'
             ? 'EVENT_MEDIA_UPLOAD_NOT_FOUND'
-            : 'EVENT_NOT_FOUND',
+            : operation === 'ticket_type_update' ||
+                operation === 'ticket_type_retire'
+              ? 'EVENT_TICKET_TYPE_NOT_FOUND'
+              : 'EVENT_NOT_FOUND',
           operation === 'media_status'
             ? 'Media upload was not found.'
-            : 'Event was not found.',
+            : operation === 'ticket_type_update' ||
+                operation === 'ticket_type_retire'
+              ? 'Ticket type was not found.'
+              : 'Event was not found.',
         );
       case status.INVALID_ARGUMENT:
         if (operation === 'ticket_currency') {
@@ -680,7 +764,7 @@ export class AdminEventService implements OnModuleInit {
               : 'Choose a valid currency.',
           );
         }
-        if (operation === 'ticket_type') {
+        if (operation === 'ticket_type' || operation === 'ticket_type_update') {
           const message = readErrorMessage(error);
           const nameConflict = message === 'EVENT_TICKET_TYPE_NAME_CONFLICT';
           const currencyMissing = message === 'EVENT_TICKET_CURRENCY_NOT_FOUND';
@@ -731,6 +815,33 @@ export class AdminEventService implements OnModuleInit {
               : 'Ticket types can only be added while the event is a draft.',
           );
         }
+        if (operation === 'ticket_type_update') {
+          const message = readErrorMessage(error);
+          const capacityLocked =
+            message === 'EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED';
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            capacityLocked
+              ? 'EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED'
+              : 'EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED',
+            capacityLocked
+              ? 'Capacity cannot be lower than the number already reserved or sold.'
+              : 'Price and sales dates cannot change while tickets are reserved or sold.',
+          );
+        }
+        if (operation === 'ticket_type_retire') {
+          const lastType =
+            readErrorMessage(error) === 'EVENT_TICKET_TYPE_LAST_PUBLISHED_TYPE';
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            lastType
+              ? 'EVENT_TICKET_TYPE_LAST_PUBLISHED_TYPE'
+              : 'EVENT_TICKET_TYPE_HAS_COMMITTED_INVENTORY',
+            lastType
+              ? 'A published event must keep at least one ticket type.'
+              : 'A ticket type with reserved or sold tickets cannot be retired.',
+          );
+        }
         if (operation === 'publish') {
           throw new ApiHttpException(
             HttpStatus.UNPROCESSABLE_ENTITY,
@@ -779,11 +890,15 @@ export class AdminEventService implements OnModuleInit {
                         ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
                         : operation === 'ticket_type'
                           ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
-                          : operation === 'ticket_currency'
-                            ? 'EVENT_TICKET_CURRENCY_RPC_UNAVAILABLE'
-                            : operation === 'ticket_type_read'
-                              ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
-                              : 'EVENT_READ_RPC_UNAVAILABLE',
+                          : operation === 'ticket_type_update'
+                            ? 'EVENT_TICKET_TYPE_UPDATE_RPC_UNAVAILABLE'
+                            : operation === 'ticket_type_retire'
+                              ? 'EVENT_TICKET_TYPE_RETIRE_RPC_UNAVAILABLE'
+                              : operation === 'ticket_currency'
+                                ? 'EVENT_TICKET_CURRENCY_RPC_UNAVAILABLE'
+                                : operation === 'ticket_type_read'
+                                  ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
+                                  : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

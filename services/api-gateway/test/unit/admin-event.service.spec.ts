@@ -14,6 +14,10 @@ import {
   type PublishEventResponse,
   type RetireDraftEventRequest,
   type RetireDraftEventResponse,
+  type RetireEventTicketTypeRequest,
+  type RetireEventTicketTypeResponse,
+  type UpdateEventTicketTypeRequest,
+  type UpdateEventTicketTypeResponse,
 } from '@eventa/grpc-contracts';
 import { status, type CallOptions, type Metadata } from '@grpc/grpc-js';
 import type { ClientGrpc } from '@nestjs/microservices';
@@ -142,6 +146,30 @@ function createTicketCurrencyService(
 ): AdminEventService {
   const grpcClient = {
     getService: () => ({ defineEventTicketCurrency }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createTicketTypeUpdateService(
+  updateEventTicketType: DeadlineAwareEventServiceClient['updateEventTicketType'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ updateEventTicketType }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createTicketTypeRetireService(
+  retireEventTicketType: DeadlineAwareEventServiceClient['retireEventTicketType'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ retireEventTicketType }),
   } as unknown as ClientGrpc;
   const service = new AdminEventService(grpcClient, deadlineMs);
   service.onModuleInit();
@@ -279,6 +307,9 @@ describe('AdminEventService ticket types', () => {
         ticketType: {
           allocation: request.capacity,
           capacity: request.capacity,
+          reservedQuantity: 0,
+          soldQuantity: 0,
+          availableQuantity: request.capacity,
           createdAt: '2026-08-17T05:00:00.000Z',
           eventId: request.eventId,
           name: request.name,
@@ -359,6 +390,94 @@ describe('AdminEventService ticket types', () => {
       currency: 'NGN',
       eventId: draftEvent.eventId,
       expectedVersion: 1,
+    });
+  });
+
+  it('forwards a versioned ticket type update and validates inventory', async () => {
+    let receivedRequest: UpdateEventTicketTypeRequest | undefined;
+    const service = createTicketTypeUpdateService(
+      (
+        request: UpdateEventTicketTypeRequest,
+      ): Observable<UpdateEventTicketTypeResponse> => {
+        receivedRequest = request;
+        return of({
+          eventVersion: 5,
+          ticketType: {
+            allocation: request.capacity,
+            availableQuantity: request.capacity - 8,
+            capacity: request.capacity,
+            createdAt: '2026-08-17T05:00:00.000Z',
+            eventId: request.eventId,
+            name: request.name,
+            priceMinor: request.priceMinor,
+            reservedQuantity: 3,
+            salesEndAt: request.salesEndAt,
+            salesStartAt: request.salesStartAt,
+            soldQuantity: 5,
+            ticketCurrencyId: 'da77b895-fe35-46f2-a26b-8cc875d0abb0',
+            ticketTypeId: request.ticketTypeId,
+            updatedAt: '2026-08-17T06:00:00.000Z',
+          },
+        });
+      },
+    );
+
+    await expect(
+      service.updateTicketType(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+        {
+          capacity: 600,
+          expectedVersion: 4,
+          name: 'General admission',
+          priceMinor: 2_500_000,
+          salesEndAt: '2026-08-20T08:00:00.000Z',
+          salesStartAt: '2026-08-17T08:00:00.000Z',
+        },
+        'ticket-update-request',
+      ),
+    ).resolves.toMatchObject({
+      eventVersion: 5,
+      ticketType: {
+        availableQuantity: 592,
+        reservedQuantity: 3,
+        soldQuantity: 5,
+      },
+    });
+    expect(receivedRequest).toMatchObject({
+      adminId: draftEvent.createdByAdminId,
+      eventId: draftEvent.eventId,
+      expectedVersion: 4,
+      ticketTypeId: '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+    });
+  });
+
+  it('forwards idempotent ticket type retirement', async () => {
+    let receivedRequest: RetireEventTicketTypeRequest | undefined;
+    const service = createTicketTypeRetireService(
+      (
+        request: RetireEventTicketTypeRequest,
+      ): Observable<RetireEventTicketTypeResponse> => {
+        receivedRequest = request;
+        return of({ eventVersion: 5 });
+      },
+    );
+
+    await expect(
+      service.retireTicketType(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+        4,
+        'ticket-retire-request',
+      ),
+    ).resolves.toEqual({ eventVersion: 5 });
+    expect(receivedRequest).toEqual({
+      adminId: draftEvent.createdByAdminId,
+      eventId: draftEvent.eventId,
+      expectedVersion: 4,
+      ticketTypeId: '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
     });
   });
 });

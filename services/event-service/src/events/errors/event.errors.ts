@@ -116,3 +116,31 @@ export class EventTicketTypeMutationNotAllowedError extends Error {
     this.name = EventTicketTypeMutationNotAllowedError.name;
   }
 }
+
+export class EventTicketTypeNotFoundError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_NOT_FOUND');
+    this.name = EventTicketTypeNotFoundError.name;
+  }
+}
+
+export class EventTicketTypeCapacityBelowCommittedError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED');
+    this.name = EventTicketTypeCapacityBelowCommittedError.name;
+  }
+}
+
+export class EventTicketTypeCommercialTermsLockedError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED');
+    this.name = EventTicketTypeCommercialTermsLockedError.name;
+  }
+}
+
+export class EventTicketTypeRetirementNotAllowedError extends Error {
+  constructor(message = 'EVENT_TICKET_TYPE_RETIREMENT_NOT_ALLOWED') {
+    super(message);
+    this.name = EventTicketTypeRetirementNotAllowedError.name;
+  }
+}

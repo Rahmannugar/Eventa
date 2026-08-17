@@ -25,7 +25,9 @@ import {
   publishEvent,
   removeEventMedia,
   retireDraftEvent,
+  retireEventTicketType,
   updateDraftEvent,
+  updateEventTicketType,
   uploadEventMedia,
 } from './event.service';
 import type {
@@ -41,7 +43,9 @@ import type {
   EventMediaUploadStatus,
   PublishEventCommand,
   RetireDraftEventCommand,
+  RetireEventTicketTypeCommand,
   UpdateDraftEventCommand,
+  UpdateEventTicketTypeCommand,
 } from './event.types';
 
 export function adminEventQueryKey(eventId: string) {
@@ -133,6 +137,66 @@ export function useDefineEventTicketCurrency() {
             result.ticketCurrency,
           ],
           ticketTypes: current?.ticketTypes ?? [],
+        }),
+      );
+      queryClient.setQueryData<AdminEvent>(
+        adminEventQueryKey(command.eventId),
+        (current) =>
+          current === undefined
+            ? current
+            : { ...current, version: result.eventVersion },
+      );
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
+  });
+}
+
+export function useUpdateEventTicketType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: UpdateEventTicketTypeCommand) =>
+      updateEventTicketType(command),
+    onSuccess: (result, command) => {
+      queryClient.setQueryData<EventTicketTypeList>(
+        adminEventTicketTypesQueryKey(command.eventId),
+        (current) => ({
+          eventVersion: result.eventVersion,
+          ticketCurrencies: current?.ticketCurrencies ?? [],
+          ticketTypes: (current?.ticketTypes ?? []).map((ticketType) =>
+            ticketType.ticketTypeId === result.ticketType.ticketTypeId
+              ? result.ticketType
+              : ticketType,
+          ),
+        }),
+      );
+      queryClient.setQueryData<AdminEvent>(
+        adminEventQueryKey(command.eventId),
+        (current) =>
+          current === undefined
+            ? current
+            : { ...current, version: result.eventVersion },
+      );
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
+  });
+}
+
+export function useRetireEventTicketType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: RetireEventTicketTypeCommand) =>
+      retireEventTicketType(command),
+    onSuccess: (result, command) => {
+      queryClient.setQueryData<EventTicketTypeList>(
+        adminEventTicketTypesQueryKey(command.eventId),
+        (current) => ({
+          eventVersion: result.eventVersion,
+          ticketCurrencies: current?.ticketCurrencies ?? [],
+          ticketTypes: (current?.ticketTypes ?? []).filter(
+            ({ ticketTypeId }) => ticketTypeId !== command.ticketTypeId,
+          ),
         }),
       );
       queryClient.setQueryData<AdminEvent>(

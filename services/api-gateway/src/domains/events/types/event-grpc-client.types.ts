@@ -23,8 +23,12 @@ import type {
   PublishEventResponse,
   RetireDraftEventRequest,
   RetireDraftEventResponse,
+  RetireEventTicketTypeRequest,
+  RetireEventTicketTypeResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
+  UpdateEventTicketTypeRequest,
+  UpdateEventTicketTypeResponse,
 } from '@eventa/grpc-contracts';
 import type { CallOptions, Metadata } from '@grpc/grpc-js';
 import type { Observable } from 'rxjs';
@@ -65,6 +69,16 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<AddEventTicketTypeResponse>;
+  updateEventTicketType(
+    request: UpdateEventTicketTypeRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<UpdateEventTicketTypeResponse>;
+  retireEventTicketType(
+    request: RetireEventTicketTypeRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<RetireEventTicketTypeResponse>;
   getEventTicketCatalogue(
     request: GetEventTicketCatalogueRequest,
     metadata: Metadata,

@@ -37,8 +37,12 @@ import {
   RemoveEventMediaResponse,
   RetireDraftEventRequest,
   RetireDraftEventResponse,
+  RetireEventTicketTypeRequest,
+  RetireEventTicketTypeResponse,
   UpdateDraftEventRequest,
   UpdateDraftEventResponse,
+  UpdateEventTicketTypeRequest,
+  UpdateEventTicketTypeResponse,
 } from "./event.generated";
 
 export const protobufPackage = "eventa.event.v1";
@@ -76,6 +80,16 @@ export interface EventServiceClient {
   ): Observable<ListEventTicketTypesResponse>;
 
   addEventTicketType(request: AddEventTicketTypeRequest, metadata?: Metadata): Observable<AddEventTicketTypeResponse>;
+
+  updateEventTicketType(
+    request: UpdateEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<UpdateEventTicketTypeResponse>;
+
+  retireEventTicketType(
+    request: RetireEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<RetireEventTicketTypeResponse>;
 
   getEventTicketCatalogue(
     request: GetEventTicketCatalogueRequest,
@@ -127,6 +141,16 @@ export interface EventServiceController {
 
   addEventTicketType(request: AddEventTicketTypeRequest, metadata?: Metadata): Observable<AddEventTicketTypeResponse>;
 
+  updateEventTicketType(
+    request: UpdateEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<UpdateEventTicketTypeResponse>;
+
+  retireEventTicketType(
+    request: RetireEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<RetireEventTicketTypeResponse>;
+
   getEventTicketCatalogue(
     request: GetEventTicketCatalogueRequest,
     metadata?: Metadata,
@@ -161,6 +185,8 @@ export function EventServiceControllerMethods() {
       "createEventTicketType",
       "listEventTicketTypes",
       "addEventTicketType",
+      "updateEventTicketType",
+      "retireEventTicketType",
       "getEventTicketCatalogue",
       "createEventMediaUpload",
       "getEventMediaUpload",

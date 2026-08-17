@@ -194,6 +194,9 @@ export interface EventTicketType {
   updatedAt: string;
   ticketCurrencyId: string;
   capacity: number;
+  reservedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
 }
 
 export interface EventTicketCurrency {
@@ -245,6 +248,35 @@ export interface AddEventTicketTypeRequest {
 
 export interface AddEventTicketTypeResponse {
   ticketType: EventTicketType | undefined;
+  eventVersion: number;
+}
+
+export interface UpdateEventTicketTypeRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  ticketTypeId: string;
+  name: string;
+  description?: string | undefined;
+  priceMinor: number;
+  capacity: number;
+  salesStartAt: string;
+  salesEndAt: string;
+}
+
+export interface UpdateEventTicketTypeResponse {
+  ticketType: EventTicketType | undefined;
+  eventVersion: number;
+}
+
+export interface RetireEventTicketTypeRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  ticketTypeId: string;
+}
+
+export interface RetireEventTicketTypeResponse {
   eventVersion: number;
 }
 

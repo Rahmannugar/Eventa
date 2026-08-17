@@ -17,7 +17,11 @@ import type {
   PublishEventCommand,
   RemoveEventMediaCommand,
   RetireDraftEventCommand,
+  RetireEventTicketTypeCommand,
+  RetireEventTicketTypeResult,
   UpdateDraftEventCommand,
+  UpdateEventTicketTypeCommand,
+  UpdateEventTicketTypeResult,
 } from './event.types';
 
 const eventVenueSchema = z.object({
@@ -138,19 +142,35 @@ const retireDraftEventResponseSchema = z.object({
   eventVersion: z.number().int().min(2),
 });
 
-const eventTicketTypeSchema = z.object({
-  ticketTypeId: z.uuid(),
-  eventId: z.uuid(),
-  ticketCurrencyId: z.uuid(),
-  name: z.string().min(1),
-  description: z.string().min(1).optional(),
-  priceMinor: z.number().int().nonnegative(),
-  capacity: z.number().int().positive(),
-  salesStartAt: z.iso.datetime({ offset: true }),
-  salesEndAt: z.iso.datetime({ offset: true }),
-  createdAt: z.iso.datetime({ offset: true }),
-  updatedAt: z.iso.datetime({ offset: true }),
-});
+const eventTicketTypeSchema = z
+  .object({
+    ticketTypeId: z.uuid(),
+    eventId: z.uuid(),
+    ticketCurrencyId: z.uuid(),
+    name: z.string().min(1),
+    description: z.string().min(1).optional(),
+    priceMinor: z.number().int().nonnegative(),
+    capacity: z.number().int().positive(),
+    reservedQuantity: z.number().int().nonnegative(),
+    soldQuantity: z.number().int().nonnegative(),
+    availableQuantity: z.number().int().nonnegative(),
+    salesStartAt: z.iso.datetime({ offset: true }),
+    salesEndAt: z.iso.datetime({ offset: true }),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.availableQuantity !==
+      value.capacity - value.reservedQuantity - value.soldQuantity
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Ticket availability is inconsistent.',
+        path: ['availableQuantity'],
+      });
+    }
+  });
 
 const eventTicketCurrencySchema = z.object({
   ticketCurrencyId: z.uuid(),
@@ -177,6 +197,10 @@ const defineEventTicketCurrencyResultSchema: z.ZodType<DefineEventTicketCurrency
     eventVersion: z.number().int().min(2),
     ticketCurrency: eventTicketCurrencySchema,
   });
+
+const retireEventTicketTypeResultSchema = z.object({
+  eventVersion: z.number().int().min(2),
+});
 
 export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   return apiRequest('/admin/events', {
@@ -261,6 +285,35 @@ export function defineEventTicketCurrency({
       method: 'POST',
       responseSchema: defineEventTicketCurrencyResultSchema,
     },
+  );
+}
+
+export function updateEventTicketType({
+  eventId,
+  ticketTypeId,
+  input,
+}: UpdateEventTicketTypeCommand): Promise<UpdateEventTicketTypeResult> {
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/ticket-types/${encodeURIComponent(ticketTypeId)}`,
+    {
+      body: input,
+      method: 'PUT',
+      responseSchema: createEventTicketTypeResultSchema,
+    },
+  );
+}
+
+export function retireEventTicketType({
+  eventId,
+  ticketTypeId,
+  expectedVersion,
+}: RetireEventTicketTypeCommand): Promise<RetireEventTicketTypeResult> {
+  const search = new URLSearchParams({
+    expectedVersion: String(expectedVersion),
+  });
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/ticket-types/${encodeURIComponent(ticketTypeId)}?${search.toString()}`,
+    { method: 'DELETE', responseSchema: retireEventTicketTypeResultSchema },
   );
 }
 

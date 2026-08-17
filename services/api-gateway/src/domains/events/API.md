@@ -10,20 +10,22 @@ The route uses an IP-only read budget. Event dependency or deadline failures ret
 
 All routes require the opaque `eventa_admin_session` cookie. A present browser `Origin` must match the configured Eventa web origin. Any authenticated admin may manage any event.
 
-| Method   | Path                                             | Outcome                                                                             |
-| -------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `GET`    | `/admin/events`                                  | Lists events with bounded search, venue filters, sorting, and cursor pagination.    |
-| `POST`   | `/admin/events`                                  | Creates a complete private event at version 1.                                      |
-| `GET`    | `/admin/events/:eventId`                         | Returns the latest draft details, verified images, and version.                     |
-| `PUT`    | `/admin/events/:eventId`                         | Saves complete draft details and returns the new version.                           |
-| `DELETE` | `/admin/events/:eventId`                         | Recoverably removes a draft at the supplied version.                                |
-| `POST`   | `/admin/events/:eventId/publish`                 | Publishes a complete draft at the supplied version.                                 |
-| `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image upload for an empty slot or replacement.                      |
-| `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
-| `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
-| `GET`    | `/admin/events/:eventId/ticket-types`            | Returns the event's ticket currencies, version, and ticket types.                   |
-| `POST`   | `/admin/events/:eventId/ticket-currencies`       | Defines another ticket currency for a draft and returns the new event version.      |
-| `POST`   | `/admin/events/:eventId/ticket-types`            | Adds a ticket type to a draft and returns the new event version.                    |
+| Method   | Path                                                | Outcome                                                                             |
+| -------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET`    | `/admin/events`                                     | Lists events with bounded search, venue filters, sorting, and cursor pagination.    |
+| `POST`   | `/admin/events`                                     | Creates a complete private event at version 1.                                      |
+| `GET`    | `/admin/events/:eventId`                            | Returns the latest draft details, verified images, and version.                     |
+| `PUT`    | `/admin/events/:eventId`                            | Saves complete draft details and returns the new version.                           |
+| `DELETE` | `/admin/events/:eventId`                            | Recoverably removes a draft at the supplied version.                                |
+| `POST`   | `/admin/events/:eventId/publish`                    | Publishes a complete draft at the supplied version.                                 |
+| `POST`   | `/admin/events/:eventId/media-uploads`              | Starts a direct image upload for an empty slot or replacement.                      |
+| `GET`    | `/admin/events/:eventId/media-uploads/:uploadId`    | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
+| `DELETE` | `/admin/events/:eventId/media/:slot`                | Clears the selected verified image and returns the new event version.               |
+| `GET`    | `/admin/events/:eventId/ticket-types`               | Returns the event's ticket currencies, version, and ticket types.                   |
+| `POST`   | `/admin/events/:eventId/ticket-currencies`          | Defines another ticket currency for a draft and returns the new event version.      |
+| `POST`   | `/admin/events/:eventId/ticket-types`               | Adds a ticket type to a draft and returns the new event version.                    |
+| `PUT`    | `/admin/events/:eventId/ticket-types/:ticketTypeId` | Updates a ticket type and returns the new event version.                            |
+| `DELETE` | `/admin/events/:eventId/ticket-types/:ticketTypeId` | Retires an unused ticket type at the supplied event version.                        |
 
 Create accepts a title, description, one to five case-insensitively unique categories, schedule, IANA timezone, and venue address. A venue may carry a structured state or region code alongside its display name. Update accepts the same details plus the expected version.
 
@@ -51,6 +53,6 @@ Publication requires complete details, one venue, a verified cover image, and at
 
 Draft removal takes `expectedVersion` as a query parameter and returns the resulting event version. Repeating a completed removal succeeds with the same version. Retired drafts disappear from lists and direct reads. Published events return `422 EVENT_RETIREMENT_NOT_ALLOWED`.
 
-Currency definition takes `expectedVersion` and an ISO 4217 currency. An event may define several currencies but cannot define the same currency twice. Ticket-type creation takes `expectedVersion`, an event-owned `ticketCurrencyId`, name, optional description, integer price in minor units, capacity, and ISO-8601 sales bounds. Event Service accepts no more than 20 types across the event, requires sales to end no later than the event start, and owns all mutation invariants. Invalid parents, duplicate names within a currency, duplicate currencies, windows, and fields return `422`; stale event state returns `409 EVENT_VERSION_CONFLICT`. Reads use the ordinary event-read budget. Both mutations use the separate ticket-catalogue budget by session and client IP.
+Currency definition takes `expectedVersion` and an ISO 4217 currency. An event may define several currencies but cannot define the same currency twice. Ticket-type creation takes `expectedVersion`, an event-owned `ticketCurrencyId`, name, optional description, integer price in minor units, capacity, and ISO-8601 sales bounds. Event Service accepts no more than 20 active types across the event, requires sales to end no later than the event start, and owns all mutation invariants. Updates use the same fields except the immutable currency parent. Price and sales bounds stop changing after a reservation or sale; capacity cannot fall below reserved plus sold. Retirement requires no reserved or sold quantity, and published events retain at least one active type. Invalid parents, duplicate names within a currency, duplicate currencies, windows, and fields return `422`; stale event state returns `409 EVENT_VERSION_CONFLICT`. Reads use the ordinary event-read budget. Ticket mutations use the separate ticket-catalogue budget by session and client IP.
 
 Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/media removal, draft removal, publication, media-intent, media-status polling, and ordinary read operations have separate budgets by protected session and client IP.

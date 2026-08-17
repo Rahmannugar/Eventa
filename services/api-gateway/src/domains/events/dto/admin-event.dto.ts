@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -24,6 +24,11 @@ import {
 export class AdminEventPathDto {
   @IsUUID()
   eventId!: string;
+}
+
+export class AdminEventTicketTypePathDto extends AdminEventPathDto {
+  @IsUUID()
+  ticketTypeId!: string;
 }
 
 export class AdminEventListQueryDto {
@@ -432,6 +437,15 @@ export class EventTicketTypeDto {
   capacity!: number;
 
   @ApiProperty()
+  reservedQuantity!: number;
+
+  @ApiProperty()
+  soldQuantity!: number;
+
+  @ApiProperty()
+  availableQuantity!: number;
+
+  @ApiProperty()
   salesStartAt!: string;
 
   @ApiProperty()
@@ -491,6 +505,26 @@ export class CreateEventTicketTypeResponseDto {
 
   @ApiProperty({ type: EventTicketTypeDto })
   ticketType!: EventTicketTypeDto;
+}
+
+export class UpdateEventTicketTypeDto extends OmitType(
+  CreateEventTicketTypeDto,
+  ['ticketCurrencyId'] as const,
+) {}
+
+export class UpdateEventTicketTypeResponseDto extends CreateEventTicketTypeResponseDto {}
+
+export class RetireEventTicketTypeQueryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class RetireEventTicketTypeResponseDto {
+  @ApiProperty()
+  eventVersion!: number;
 }
 
 export class EventTicketTypeListDto {

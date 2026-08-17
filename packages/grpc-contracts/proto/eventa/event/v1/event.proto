@@ -178,6 +178,9 @@ message EventTicketType {
   string updated_at = 10;
   string ticket_currency_id = 11;
   int32 capacity = 12;
+  int32 reserved_quantity = 13;
+  int32 sold_quantity = 14;
+  int32 available_quantity = 15;
 }
 
 message EventTicketCurrency {
@@ -230,6 +233,35 @@ message AddEventTicketTypeRequest {
 message AddEventTicketTypeResponse {
   EventTicketType ticket_type = 1;
   int32 event_version = 2;
+}
+
+message UpdateEventTicketTypeRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string ticket_type_id = 4;
+  string name = 5;
+  optional string description = 6;
+  int32 price_minor = 7;
+  int32 capacity = 8;
+  string sales_start_at = 9;
+  string sales_end_at = 10;
+}
+
+message UpdateEventTicketTypeResponse {
+  EventTicketType ticket_type = 1;
+  int32 event_version = 2;
+}
+
+message RetireEventTicketTypeRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string ticket_type_id = 4;
+}
+
+message RetireEventTicketTypeResponse {
+  int32 event_version = 1;
 }
 
 message CreateEventTicketTypeResponse {

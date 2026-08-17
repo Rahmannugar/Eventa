@@ -85,6 +85,13 @@
       "when": 1786952491044,
       "tag": "0011_group_ticket_types_by_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786965637312,
+      "tag": "0012_evolve_ticket_types_safely",
+      "breakpoints": true
     }
   ]
 }

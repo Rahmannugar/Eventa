@@ -142,6 +142,9 @@ export interface EventTicketType {
   description?: string | undefined;
   priceMinor: number;
   capacity: number;
+  reservedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
   salesStartAt: string;
   salesEndAt: string;
   createdAt: string;
@@ -191,4 +194,22 @@ export interface CreateEventTicketTypeCommand {
 export interface CreateEventTicketTypeResult {
   eventVersion: number;
   ticketType: EventTicketType;
+}
+
+export interface UpdateEventTicketTypeCommand {
+  eventId: string;
+  ticketTypeId: string;
+  input: Omit<CreateEventTicketTypeInput, 'ticketCurrencyId'>;
+}
+
+export type UpdateEventTicketTypeResult = CreateEventTicketTypeResult;
+
+export interface RetireEventTicketTypeCommand {
+  eventId: string;
+  ticketTypeId: string;
+  expectedVersion: number;
+}
+
+export interface RetireEventTicketTypeResult {
+  eventVersion: number;
 }

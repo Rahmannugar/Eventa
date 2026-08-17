@@ -1,6 +1,6 @@
 import { runWithOperationSpan } from '@eventa/observability';
 import { Inject } from '@nestjs/common';
-import { and, asc, count, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -18,6 +18,10 @@ import type {
   EventTicketTypeRecord,
   EventTicketTypeRepository as EventTicketTypeRepositoryPort,
   EventTicketTypesRecord,
+  RetireEventTicketTypeCommand,
+  RetireEventTicketTypeResult,
+  UpdateEventTicketType,
+  UpdateEventTicketTypeResult,
 } from '../types/event.types';
 
 const TICKET_TYPE_COLUMNS = {
@@ -27,6 +31,8 @@ const TICKET_TYPE_COLUMNS = {
   description: eventTicketTypes.description,
   priceMinor: eventTicketTypes.priceMinor,
   capacity: eventTicketTypes.capacity,
+  reservedQuantity: eventTicketTypes.reservedQuantity,
+  soldQuantity: eventTicketTypes.soldQuantity,
   salesStartAt: eventTicketTypes.salesStartAt,
   salesEndAt: eventTicketTypes.salesEndAt,
   createdAt: eventTicketTypes.createdAt,
@@ -134,7 +140,12 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
               eventTicketCurrencies,
               eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
             )
-            .where(eq(eventTicketCurrencies.eventId, input.eventId));
+            .where(
+              and(
+                eq(eventTicketCurrencies.eventId, input.eventId),
+                isNull(eventTicketTypes.retiredAt),
+              ),
+            );
           if ((ticketTypeCount?.value ?? 0) >= EVENT_TICKET_TYPE_LIMIT) {
             return { outcome: 'limit_reached' as const };
           }
@@ -146,6 +157,7 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
               and(
                 eq(eventTicketTypes.ticketCurrencyId, input.ticketCurrencyId),
                 sql`lower(${eventTicketTypes.name}) = lower(${input.name})`,
+                isNull(eventTicketTypes.retiredAt),
               ),
             )
             .limit(1);
@@ -192,6 +204,219 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
     );
   }
 
+  update(input: UpdateEventTicketType): Promise<UpdateEventTicketTypeResult> {
+    return runWithOperationSpan(
+      'event.ticket_type.update',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const event = await this.lockActiveEvent(transaction, input);
+          if (event.outcome !== 'locked') return event;
+          if (event.version !== input.expectedVersion) {
+            return { outcome: 'version_conflict' as const };
+          }
+          if (event.startsAt === null || input.salesEndAt > event.startsAt) {
+            return { outcome: 'invalid_window' as const };
+          }
+
+          const [ticketType] = await transaction
+            .select({
+              ...TICKET_TYPE_COLUMNS,
+              eventId: eventTicketCurrencies.eventId,
+            })
+            .from(eventTicketTypes)
+            .innerJoin(
+              eventTicketCurrencies,
+              eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+            )
+            .where(
+              and(
+                eq(eventTicketTypes.id, input.ticketTypeId),
+                eq(eventTicketCurrencies.eventId, input.eventId),
+                isNull(eventTicketTypes.retiredAt),
+              ),
+            )
+            .limit(1);
+          if (ticketType === undefined) {
+            return { outcome: 'not_found' as const };
+          }
+
+          const committed =
+            ticketType.reservedQuantity + ticketType.soldQuantity;
+          if (input.capacity < committed) {
+            return { outcome: 'capacity_below_committed' as const };
+          }
+          if (
+            committed > 0 &&
+            (input.priceMinor !== ticketType.priceMinor ||
+              input.salesStartAt.getTime() !==
+                ticketType.salesStartAt.getTime() ||
+              input.salesEndAt.getTime() !== ticketType.salesEndAt.getTime())
+          ) {
+            return { outcome: 'commercial_terms_locked' as const };
+          }
+
+          const [existingName] = await transaction
+            .select({ id: eventTicketTypes.id })
+            .from(eventTicketTypes)
+            .where(
+              and(
+                eq(
+                  eventTicketTypes.ticketCurrencyId,
+                  ticketType.ticketCurrencyId,
+                ),
+                sql`lower(${eventTicketTypes.name}) = lower(${input.name})`,
+                ne(eventTicketTypes.id, input.ticketTypeId),
+                isNull(eventTicketTypes.retiredAt),
+              ),
+            )
+            .limit(1);
+          if (existingName !== undefined) {
+            return { outcome: 'name_conflict' as const };
+          }
+
+          const [updated] = await transaction
+            .update(eventTicketTypes)
+            .set({
+              capacity: input.capacity,
+              description: input.description,
+              name: input.name,
+              priceMinor: input.priceMinor,
+              salesEndAt: input.salesEndAt,
+              salesStartAt: input.salesStartAt,
+              updatedAt: sql`now()`,
+            })
+            .where(
+              and(
+                eq(eventTicketTypes.id, input.ticketTypeId),
+                isNull(eventTicketTypes.retiredAt),
+              ),
+            )
+            .returning(TICKET_TYPE_COLUMNS);
+          if (updated === undefined) {
+            throw new Error('Locked ticket type changed during update');
+          }
+          const eventVersion = await this.advanceEventVersion(
+            transaction,
+            input,
+            'event.ticket_type_updated',
+          );
+          return {
+            outcome: 'updated' as const,
+            eventVersion,
+            ticketType: { ...updated, eventId: input.eventId },
+          };
+        }),
+      {
+        attributes: {
+          'db.collection.name': 'event_ticket_types',
+          'db.namespace': 'eventa_event',
+          'db.operation.name': 'UPDATE',
+          'db.system.name': 'postgresql',
+        },
+        kind: 'client',
+      },
+    );
+  }
+
+  retire(
+    input: RetireEventTicketTypeCommand,
+  ): Promise<RetireEventTicketTypeResult> {
+    return runWithOperationSpan(
+      'event.ticket_type.retire',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const event = await this.lockActiveEvent(transaction, input);
+          if (event.outcome !== 'locked') return event;
+
+          const [ticketType] = await transaction
+            .select({
+              reservedQuantity: eventTicketTypes.reservedQuantity,
+              retiredEventVersion: eventTicketTypes.retiredEventVersion,
+              soldQuantity: eventTicketTypes.soldQuantity,
+            })
+            .from(eventTicketTypes)
+            .innerJoin(
+              eventTicketCurrencies,
+              eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+            )
+            .where(
+              and(
+                eq(eventTicketTypes.id, input.ticketTypeId),
+                eq(eventTicketCurrencies.eventId, input.eventId),
+              ),
+            )
+            .limit(1);
+          if (ticketType === undefined) {
+            return { outcome: 'not_found' as const };
+          }
+          if (ticketType.retiredEventVersion !== null) {
+            return {
+              outcome: 'already_retired' as const,
+              eventVersion: ticketType.retiredEventVersion,
+            };
+          }
+          if (event.version !== input.expectedVersion) {
+            return { outcome: 'version_conflict' as const };
+          }
+          if (ticketType.reservedQuantity > 0 || ticketType.soldQuantity > 0) {
+            return { outcome: 'committed_inventory' as const };
+          }
+          if (event.status === 'published') {
+            const [activeCount] = await transaction
+              .select({ value: count() })
+              .from(eventTicketTypes)
+              .innerJoin(
+                eventTicketCurrencies,
+                eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+              )
+              .where(
+                and(
+                  eq(eventTicketCurrencies.eventId, input.eventId),
+                  isNull(eventTicketTypes.retiredAt),
+                ),
+              );
+            if ((activeCount?.value ?? 0) <= 1) {
+              return { outcome: 'last_published_type' as const };
+            }
+          }
+
+          const resultingVersion = input.expectedVersion + 1;
+          const [retired] = await transaction
+            .update(eventTicketTypes)
+            .set({
+              retiredAt: sql`now()`,
+              retiredEventVersion: resultingVersion,
+              updatedAt: sql`now()`,
+            })
+            .where(
+              and(
+                eq(eventTicketTypes.id, input.ticketTypeId),
+                isNull(eventTicketTypes.retiredAt),
+              ),
+            )
+            .returning({ id: eventTicketTypes.id });
+          if (retired === undefined) {
+            throw new Error('Locked ticket type changed during retirement');
+          }
+          const eventVersion = await this.advanceEventVersion(
+            transaction,
+            input,
+            'event.ticket_type_retired',
+          );
+          return { outcome: 'retired' as const, eventVersion };
+        }),
+      {
+        attributes: {
+          'db.collection.name': 'event_ticket_types',
+          'db.namespace': 'eventa_event',
+          'db.operation.name': 'UPDATE',
+          'db.system.name': 'postgresql',
+        },
+        kind: 'client',
+      },
+    );
+  }
+
   list(eventId: string): Promise<EventTicketTypesRecord | undefined> {
     return runWithOperationSpan(
       'event.ticket_type.list',
@@ -209,7 +434,10 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
           )
           .leftJoin(
             eventTicketTypes,
-            eq(eventTicketTypes.ticketCurrencyId, eventTicketCurrencies.id),
+            and(
+              eq(eventTicketTypes.ticketCurrencyId, eventTicketCurrencies.id),
+              isNull(eventTicketTypes.retiredAt),
+            ),
           )
           .where(and(eq(events.id, eventId), isNull(events.retiredAt)))
           .orderBy(
@@ -274,6 +502,24 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
     return { outcome: 'locked' as const, startsAt: event.startsAt };
   }
 
+  private async lockActiveEvent(
+    transaction: Parameters<Parameters<EventDatabase['transaction']>[0]>[0],
+    input: { eventId: string },
+  ) {
+    const [event] = await transaction
+      .select({
+        startsAt: events.startsAt,
+        status: events.status,
+        version: events.version,
+      })
+      .from(events)
+      .where(and(eq(events.id, input.eventId), isNull(events.retiredAt)))
+      .limit(1)
+      .for('update', { of: events });
+    if (event === undefined) return { outcome: 'not_found' as const };
+    return { outcome: 'locked' as const, ...event };
+  }
+
   private async advanceEventVersion(
     transaction: Parameters<Parameters<EventDatabase['transaction']>[0]>[0],
     input: {
@@ -282,7 +528,11 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
       expectedVersion: number;
       requestId: string;
     },
-    action: 'event.ticket_currency_defined' | 'event.ticket_type_created',
+    action:
+      | 'event.ticket_currency_defined'
+      | 'event.ticket_type_created'
+      | 'event.ticket_type_updated'
+      | 'event.ticket_type_retired',
   ): Promise<number> {
     const [updatedEvent] = await transaction
       .update(events)
@@ -290,7 +540,6 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
       .where(
         and(
           eq(events.id, input.eventId),
-          eq(events.status, 'draft'),
           eq(events.version, input.expectedVersion),
           isNull(events.retiredAt),
         ),

@@ -18,6 +18,8 @@ service EventService {
     option deprecated = true;
   }
   rpc AddEventTicketType(AddEventTicketTypeRequest) returns (AddEventTicketTypeResponse);
+  rpc UpdateEventTicketType(UpdateEventTicketTypeRequest) returns (UpdateEventTicketTypeResponse);
+  rpc RetireEventTicketType(RetireEventTicketTypeRequest) returns (RetireEventTicketTypeResponse);
   rpc GetEventTicketCatalogue(GetEventTicketCatalogueRequest) returns (GetEventTicketCatalogueResponse);
   rpc CreateEventMediaUpload(CreateEventMediaUploadRequest) returns (CreateEventMediaUploadResponse);
   rpc GetEventMediaUpload(GetEventMediaUploadRequest) returns (GetEventMediaUploadResponse);

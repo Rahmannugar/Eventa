@@ -42,10 +42,14 @@ export {
   type PublishEventResponse,
   type RetireDraftEventRequest,
   type RetireDraftEventResponse,
+  type RetireEventTicketTypeRequest,
+  type RetireEventTicketTypeResponse,
   type RemoveEventMediaRequest,
   type RemoveEventMediaResponse,
   type UpdateDraftEventRequest,
   type UpdateDraftEventResponse,
+  type UpdateEventTicketTypeRequest,
+  type UpdateEventTicketTypeResponse,
   type Venue,
 } from '../../generated/eventa/event/v1/event.generated';
 export * from './proto-paths';

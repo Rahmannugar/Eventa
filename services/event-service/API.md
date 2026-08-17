@@ -16,9 +16,11 @@ Event Service implements `eventa.event.v1.EventService`.
 | `RemoveEventMedia`          | Clears a verified image and returns the new event version.                        |
 | `PublishEvent`              | Publishes a complete draft at the expected version.                               |
 | `RetireDraftEvent`          | Recoverably removes a draft at the expected version.                              |
-| `CreateEventTicketType`     | Adds a priced ticket type with capacity to a draft at the expected version.       |
+| `AddEventTicketType`        | Adds a priced ticket type with capacity to a draft at the expected version.       |
 | `DefineEventTicketCurrency` | Defines a unique event ticket currency at the expected version.                   |
-| `ListEventTicketTypes`      | Returns bounded ticket currencies and types for an active event.                  |
+| `UpdateEventTicketType`     | Safely changes an active ticket type at the expected event version.               |
+| `RetireEventTicketType`     | Retires an unused ticket type at the expected event version.                      |
+| `GetEventTicketCatalogue`   | Returns bounded ticket currencies and active types for an event.                  |
 
 The protobuf schemas in `packages/grpc-contracts/proto/eventa/event/v1` are authoritative for exact messages and service declarations.
 

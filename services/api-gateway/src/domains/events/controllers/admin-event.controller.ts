@@ -30,6 +30,7 @@ import {
   AdminEventMediaUploadPathDto,
   AdminEventMediaPathDto,
   AdminEventPathDto,
+  AdminEventTicketTypePathDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
   CreateEventTicketTypeDto,
@@ -44,7 +45,11 @@ import {
   PublishEventDto,
   RetireDraftEventQueryDto,
   RetireDraftEventResponseDto,
+  RetireEventTicketTypeQueryDto,
+  RetireEventTicketTypeResponseDto,
   UpdateDraftEventDto,
+  UpdateEventTicketTypeDto,
+  UpdateEventTicketTypeResponseDto,
 } from '../dto/admin-event.dto';
 import {
   AdminEventCreateRateLimitGuard,
@@ -152,6 +157,58 @@ export class AdminEventController {
       request.adminSession.adminId,
       path.eventId,
       input,
+      requestId,
+    );
+  }
+
+  @Put(':eventId/ticket-types/:ticketTypeId')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventTicketTypeRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Update a ticket type' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: UpdateEventTicketTypeResponseDto,
+  })
+  updateTicketType(
+    @Param() path: AdminEventTicketTypePathDto,
+    @Body() input: UpdateEventTicketTypeDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<UpdateEventTicketTypeResponseDto> {
+    return this.events.updateTicketType(
+      request.adminSession.adminId,
+      path.eventId,
+      path.ticketTypeId,
+      input,
+      requestId,
+    );
+  }
+
+  @Delete(':eventId/ticket-types/:ticketTypeId')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventTicketTypeRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Retire an unused ticket type' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: RetireEventTicketTypeResponseDto,
+  })
+  retireTicketType(
+    @Param() path: AdminEventTicketTypePathDto,
+    @Query() query: RetireEventTicketTypeQueryDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<RetireEventTicketTypeResponseDto> {
+    return this.events.retireTicketType(
+      request.adminSession.adminId,
+      path.eventId,
+      path.ticketTypeId,
+      query.expectedVersion,
       requestId,
     );
   }
