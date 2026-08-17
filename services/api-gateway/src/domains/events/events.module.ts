@@ -23,6 +23,7 @@ import {
   AdminEventRateLimitService,
   AdminEventReadRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
+  AdminEventTicketTypeRateLimitGuard,
 } from './rate-limit/admin-event-rate-limit';
 import {
   PublishedEventRateLimitService,
@@ -82,6 +83,7 @@ export class EventsModule {
         AdminEventPublishRateLimitGuard,
         AdminEventRetireRateLimitGuard,
         AdminEventUpdateRateLimitGuard,
+        AdminEventTicketTypeRateLimitGuard,
         {
           provide: PublishedEventRateLimitService,
           useFactory: (state: RateLimitState) =>

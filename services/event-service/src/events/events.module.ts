@@ -16,6 +16,8 @@ import {
   EVENT_MEDIA_OBJECT_STORAGE,
   EVENT_MEDIA_UPLOAD_REPOSITORY,
   EVENT_MEDIA_VERIFICATION_JOB_PUBLISHER,
+  EVENT_TICKET_TYPE_MANAGEMENT,
+  EVENT_TICKET_TYPE_REPOSITORY,
 } from './constants/event.constants';
 import { EventController } from './controllers/event.controller';
 import { EventMediaVerificationConsumer } from './jobs/event-media-verification.consumer';
@@ -28,10 +30,12 @@ import { EventMediaUploadRepository } from './repositories/event-media-upload.re
 import { EventMediaMutationRepository } from './repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from './repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from './repositories/event-management.repository';
+import { EventTicketTypeRepository } from './repositories/event-ticket-type.repository';
 import { EventMediaApplicationService } from './services/event-media.service';
 import { EventMediaObjectDeletionService } from './services/event-media-object-deletion.service';
 import { EventMediaVerificationService } from './services/event-media-verification.service';
 import { EventManagementService } from './services/event-management.service';
+import { EventTicketTypeService } from './services/event-ticket-type.service';
 import type {
   EventMediaObjectStorage,
   EventMediaMutationRepository as EventMediaMutationRepositoryPort,
@@ -40,6 +44,7 @@ import type {
   EventMediaUploadRepository as EventMediaUploadRepositoryPort,
   EventMediaVerificationJobPublisher,
   EventRepository as EventRepositoryPort,
+  EventTicketTypeRepository as EventTicketTypeRepositoryPort,
 } from './types/event.types';
 
 @Module({
@@ -47,9 +52,20 @@ import type {
   controllers: [EventController],
   providers: [
     EventManagementRepository,
+    EventTicketTypeRepository,
     EventMediaUploadRepository,
     EventMediaMutationRepository,
     EventMediaObjectDeletionRepository,
+    {
+      provide: EVENT_TICKET_TYPE_REPOSITORY,
+      useExisting: EventTicketTypeRepository,
+    },
+    {
+      provide: EVENT_TICKET_TYPE_MANAGEMENT,
+      inject: [EVENT_TICKET_TYPE_REPOSITORY],
+      useFactory: (ticketTypes: EventTicketTypeRepositoryPort) =>
+        new EventTicketTypeService(ticketTypes),
+    },
     {
       provide: EVENT_MEDIA_MUTATION_REPOSITORY,
       useExisting: EventMediaMutationRepository,

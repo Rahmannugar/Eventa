@@ -13,6 +13,8 @@ import {
   CreateDraftEventResponse,
   CreateEventMediaUploadRequest,
   CreateEventMediaUploadResponse,
+  CreateEventTicketTypeRequest,
+  CreateEventTicketTypeResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
@@ -21,6 +23,8 @@ import {
   GetPublishedEventResponse,
   ListAdminEventsRequest,
   ListAdminEventsResponse,
+  ListEventTicketTypesRequest,
+  ListEventTicketTypesResponse,
   PublishEventRequest,
   PublishEventResponse,
   RemoveEventMediaRequest,
@@ -45,6 +49,16 @@ export interface EventServiceClient {
   getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
+
+  createEventTicketType(
+    request: CreateEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<CreateEventTicketTypeResponse>;
+
+  listEventTicketTypes(
+    request: ListEventTicketTypesRequest,
+    metadata?: Metadata,
+  ): Observable<ListEventTicketTypesResponse>;
 
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
@@ -74,6 +88,16 @@ export interface EventServiceController {
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
+  createEventTicketType(
+    request: CreateEventTicketTypeRequest,
+    metadata?: Metadata,
+  ): Observable<CreateEventTicketTypeResponse>;
+
+  listEventTicketTypes(
+    request: ListEventTicketTypesRequest,
+    metadata?: Metadata,
+  ): Observable<ListEventTicketTypesResponse>;
+
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata?: Metadata,
@@ -99,6 +123,8 @@ export function EventServiceControllerMethods() {
       "getAdminEvent",
       "getPublishedEvent",
       "updateDraftEvent",
+      "createEventTicketType",
+      "listEventTicketTypes",
       "createEventMediaUpload",
       "getEventMediaUpload",
       "removeEventMedia",

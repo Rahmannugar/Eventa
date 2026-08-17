@@ -21,6 +21,8 @@ All routes require the opaque `eventa_admin_session` cookie. A present browser `
 | `POST`   | `/admin/events/:eventId/media-uploads`           | Starts a direct image upload for an empty slot or replacement.                      |
 | `GET`    | `/admin/events/:eventId/media-uploads/:uploadId` | Reports whether that upload is waiting, attached, rejected, conflicted, or expired. |
 | `DELETE` | `/admin/events/:eventId/media/:slot`             | Clears the selected verified image and returns the new event version.               |
+| `GET`    | `/admin/events/:eventId/ticket-types`            | Returns the event currency, version, and configured ticket types.                   |
+| `POST`   | `/admin/events/:eventId/ticket-types`            | Adds a ticket type to a draft and returns the new event version.                    |
 
 Create accepts a title, description, one to five case-insensitively unique categories, schedule, IANA timezone, and venue address. A venue may carry a structured state or region code alongside its display name. Update accepts the same details plus the expected version.
 
@@ -44,8 +46,10 @@ Upload status tells the client what to do:
 
 Removal takes `expectedVersion` as a query parameter. It immediately removes the verified reference and returns the new event version; physical object deletion continues as recoverable background work.
 
-Publication requires complete details, one venue, and a verified cover image. It takes `expectedVersion`, returns the published event with its incremented version and publication time, and freezes draft mutations. An incomplete event returns `422 EVENT_PUBLICATION_INCOMPLETE`; a stale version or an already-published event returns `409 EVENT_VERSION_CONFLICT`.
+Publication requires complete details, one venue, a verified cover image, and at least one ticket type. It takes `expectedVersion`, returns the published event with its incremented version and publication time, and freezes draft mutations. An incomplete event returns `422 EVENT_PUBLICATION_INCOMPLETE`; a stale version or an already-published event returns `409 EVENT_VERSION_CONFLICT`.
 
 Draft removal takes `expectedVersion` as a query parameter and returns the resulting event version. Repeating a completed removal succeeds with the same version. Retired drafts disappear from lists and direct reads. Published events return `422 EVENT_RETIREMENT_NOT_ALLOWED`.
+
+Ticket-type creation takes `expectedVersion`, name, optional description, currency, integer price in minor units, allocation, and ISO-8601 sales bounds. Event Service fixes one currency per event, accepts no more than 20 types, requires sales to end no later than the event start, and owns all mutation invariants. Name, currency, window, and field conflicts return `422`; stale event state returns `409 EVENT_VERSION_CONFLICT`. Reads use the ordinary event-read budget. Mutations use a separate ticket-configuration budget by session and client IP.
 
 Missing events return `404 EVENT_NOT_FOUND`; missing uploads and empty removal slots return `404 EVENT_MEDIA_UPLOAD_NOT_FOUND` and `404 EVENT_MEDIA_NOT_FOUND`. A stale mutation returns `409 EVENT_VERSION_CONFLICT`. A pending upload for the slot returns `409 EVENT_MEDIA_UPLOAD_IN_PROGRESS`. Invalid fields return `422 VALIDATION_FAILED`. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`. Create, update/media removal, draft removal, publication, media-intent, media-status polling, and ordinary read operations have separate budgets by protected session and client IP.

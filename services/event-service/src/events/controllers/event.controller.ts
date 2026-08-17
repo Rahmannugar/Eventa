@@ -8,11 +8,14 @@ import {
   EventStatus,
   type CreateDraftEventResponse,
   type CreateEventMediaUploadResponse,
+  type CreateEventTicketTypeResponse,
   type Event,
+  type EventTicketType,
   type EventServiceController,
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
   type ListAdminEventsResponse,
+  type ListEventTicketTypesResponse,
   type GetPublishedEventResponse,
   type PublishedEvent,
   type RemoveEventMediaResponse,
@@ -30,6 +33,7 @@ import { RUNTIME_CONFIG } from '../../config/runtime.constants';
 import {
   EVENT_MANAGEMENT,
   EVENT_MEDIA_MANAGEMENT,
+  EVENT_TICKET_TYPE_MANAGEMENT,
 } from '../constants/event.constants';
 import {
   GetAdminEventDto,
@@ -46,6 +50,10 @@ import {
 } from '../dto/event-media.dto';
 import { GetPublishedEventDto } from '../dto/published-event.dto';
 import {
+  CreateEventTicketTypeDto,
+  ListEventTicketTypesDto,
+} from '../dto/event-ticket-type.dto';
+import {
   EventCategoriesInvalidError,
   EventMediaNotFoundError,
   EventMediaUploadInProgressError,
@@ -57,6 +65,11 @@ import {
   EventScheduleInvalidError,
   EventVersionConflictError,
   EventVenueInvalidError,
+  EventTicketTypeCurrencyConflictError,
+  EventTicketTypeInvalidError,
+  EventTicketTypeLimitReachedError,
+  EventTicketTypeMutationNotAllowedError,
+  EventTicketTypeNameConflictError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
@@ -65,6 +78,8 @@ import type {
   EventMediaSlot as DomainEventMediaSlot,
   EventMediaUploadStatus as DomainEventMediaUploadStatus,
   EventRecord,
+  EventTicketTypeManagement,
+  EventTicketTypeRecord,
 } from '../types/event.types';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -77,6 +92,8 @@ export class EventController implements EventServiceController {
     private readonly eventService: EventManagement,
     @Inject(EVENT_MEDIA_MANAGEMENT)
     private readonly mediaService: EventMediaManagement,
+    @Inject(EVENT_TICKET_TYPE_MANAGEMENT)
+    private readonly ticketTypeService: EventTicketTypeManagement,
     @Inject(RUNTIME_CONFIG)
     private readonly config: RuntimeConfig,
   ) {}
@@ -109,6 +126,19 @@ export class EventController implements EventServiceController {
     metadata?: Metadata,
   ): Observable<UpdateDraftEventResponse> {
     return from(this.updateEvent(request, this.readRequestId(metadata)));
+  }
+
+  createEventTicketType(
+    request: CreateEventTicketTypeDto,
+    metadata?: Metadata,
+  ): Observable<CreateEventTicketTypeResponse> {
+    return from(this.createTicketType(request, this.readRequestId(metadata)));
+  }
+
+  listEventTicketTypes(
+    request: ListEventTicketTypesDto,
+  ): Observable<ListEventTicketTypesResponse> {
+    return from(this.listTicketTypes(request.eventId));
   }
 
   createEventMediaUpload(
@@ -527,6 +557,106 @@ export class EventController implements EventServiceController {
       }
       throw error;
     }
+  }
+
+  private async createTicketType(
+    request: CreateEventTicketTypeDto,
+    requestId: string,
+  ): Promise<CreateEventTicketTypeResponse> {
+    try {
+      const result = await this.ticketTypeService.create({
+        actorAdminId: request.adminId,
+        allocation: request.allocation,
+        currency: request.currency,
+        ...(request.description === undefined
+          ? {}
+          : { description: request.description }),
+        eventId: request.eventId,
+        expectedVersion: request.expectedVersion,
+        name: request.name,
+        priceMinor: request.priceMinor,
+        requestId,
+        salesEndAt: request.salesEndAt,
+        salesStartAt: request.salesStartAt,
+      });
+      return {
+        eventVersion: result.eventVersion,
+        ticketType: this.toTicketTypeContract(result.ticketType),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (
+        error instanceof EventTicketTypeInvalidError ||
+        error instanceof EventTicketTypeCurrencyConflictError ||
+        error instanceof EventTicketTypeNameConflictError
+      ) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      if (
+        error instanceof EventTicketTypeLimitReachedError ||
+        error instanceof EventTicketTypeMutationNotAllowedError
+      ) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async listTicketTypes(
+    eventId: string,
+  ): Promise<ListEventTicketTypesResponse> {
+    try {
+      const result = await this.ticketTypeService.list(eventId);
+      return {
+        currency: result.currency ?? undefined,
+        eventVersion: result.eventVersion,
+        ticketTypes: result.ticketTypes.map((ticketType) =>
+          this.toTicketTypeContract(ticketType),
+        ),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private toTicketTypeContract(
+    ticketType: EventTicketTypeRecord,
+  ): EventTicketType {
+    return {
+      allocation: ticketType.allocation,
+      createdAt: ticketType.createdAt.toISOString(),
+      description: ticketType.description ?? undefined,
+      eventId: ticketType.eventId,
+      name: ticketType.name,
+      priceMinor: ticketType.priceMinor,
+      salesEndAt: ticketType.salesEndAt.toISOString(),
+      salesStartAt: ticketType.salesStartAt.toISOString(),
+      ticketTypeId: ticketType.ticketTypeId,
+      updatedAt: ticketType.updatedAt.toISOString(),
+    };
   }
 
   private readRequestId(metadata?: Metadata): string {

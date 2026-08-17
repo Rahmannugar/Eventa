@@ -32,6 +32,9 @@ import {
   AdminEventPathDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
+  CreateEventTicketTypeDto,
+  CreateEventTicketTypeResponseDto,
+  EventTicketTypeListDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
   RemoveEventMediaQueryDto,
@@ -49,6 +52,7 @@ import {
   AdminEventPublishRateLimitGuard,
   AdminEventRetireRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
+  AdminEventTicketTypeRateLimitGuard,
 } from '../rate-limit/admin-event-rate-limit';
 import { AdminEventService } from '../services/admin-event.service';
 
@@ -107,6 +111,47 @@ export class AdminEventController {
     @RequestId() requestId: string,
   ): Promise<AdminEventDto> {
     return this.events.getById(path.eventId, requestId);
+  }
+
+  @Get(':eventId/ticket-types')
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventReadRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'List ticket types for an event' })
+  @ApiResponse({ status: HttpStatus.OK, type: EventTicketTypeListDto })
+  listTicketTypes(
+    @Param() path: AdminEventPathDto,
+    @RequestId() requestId: string,
+  ): Promise<EventTicketTypeListDto> {
+    return this.events.listTicketTypes(path.eventId, requestId);
+  }
+
+  @Post(':eventId/ticket-types')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventTicketTypeRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Create a ticket type for a draft event' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    type: CreateEventTicketTypeResponseDto,
+  })
+  createTicketType(
+    @Param() path: AdminEventPathDto,
+    @Body() input: CreateEventTicketTypeDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<CreateEventTicketTypeResponseDto> {
+    return this.events.createTicketType(
+      request.adminSession.adminId,
+      path.eventId,
+      input,
+      requestId,
+    );
   }
 
   @Put(':eventId')

@@ -165,6 +165,47 @@ message UpdateDraftEventResponse {
   Event event = 1;
 }
 
+message EventTicketType {
+  string ticket_type_id = 1;
+  string event_id = 2;
+  string name = 3;
+  optional string description = 4;
+  int32 price_minor = 5;
+  int32 allocation = 6;
+  string sales_start_at = 7;
+  string sales_end_at = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message CreateEventTicketTypeRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string name = 4;
+  optional string description = 5;
+  string currency = 6;
+  int32 price_minor = 7;
+  int32 allocation = 8;
+  string sales_start_at = 9;
+  string sales_end_at = 10;
+}
+
+message CreateEventTicketTypeResponse {
+  EventTicketType ticket_type = 1;
+  int32 event_version = 2;
+}
+
+message ListEventTicketTypesRequest {
+  string event_id = 1;
+}
+
+message ListEventTicketTypesResponse {
+  optional string currency = 1;
+  int32 event_version = 2;
+  repeated EventTicketType ticket_types = 3;
+}
+
 message CreateEventMediaUploadRequest {
   string admin_id = 1;
   string event_id = 2;

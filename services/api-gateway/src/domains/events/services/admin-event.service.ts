@@ -6,6 +6,7 @@ import {
   EventStatus,
   type AdminEventSummary,
   type Event,
+  type EventTicketType,
   type Venue,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -30,8 +31,12 @@ import type {
   AdminEventSummaryDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
+  CreateEventTicketTypeDto,
+  CreateEventTicketTypeResponseDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
+  EventTicketTypeDto,
+  EventTicketTypeListDto,
   RemoveEventMediaResponseDto,
   RetireDraftEventResponseDto,
   PublishEventDto,
@@ -43,6 +48,12 @@ function readErrorCode(error: unknown): unknown {
   return typeof error === 'object' && error !== null && 'code' in error
     ? Reflect.get(error, 'code')
     : undefined;
+}
+
+function readErrorMessage(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const details: unknown = Reflect.get(error, 'details');
+  return typeof details === 'string' ? details : undefined;
 }
 
 @Injectable()
@@ -307,6 +318,77 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async createTicketType(
+    adminId: string,
+    eventId: string,
+    input: CreateEventTicketTypeDto,
+    requestId: string,
+  ): Promise<CreateEventTicketTypeResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.createEventTicketType(
+          {
+            adminId,
+            eventId,
+            ...input,
+          },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (response.ticketType === undefined || response.eventVersion < 2) {
+        throw this.unavailable('EVENT_TICKET_TYPE_RESPONSE_INVALID');
+      }
+      if (response.ticketType.eventId !== eventId) {
+        throw this.unavailable('EVENT_TICKET_TYPE_RESPONSE_INVALID');
+      }
+      return {
+        eventVersion: response.eventVersion,
+        ticketType: this.toEventTicketType(response.ticketType),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'ticket_type');
+    }
+  }
+
+  async listTicketTypes(
+    eventId: string,
+    requestId: string,
+  ): Promise<EventTicketTypeListDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.listEventTicketTypes(
+          { eventId },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (response.eventVersion < 1) {
+        throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
+      }
+      if (
+        (response.ticketTypes?.length ?? 0) > 0 &&
+        response.currency === undefined
+      ) {
+        throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
+      }
+      return {
+        currency: response.currency,
+        eventVersion: response.eventVersion,
+        ticketTypes: (response.ticketTypes ?? []).map((ticketType) => {
+          if (ticketType.eventId !== eventId) {
+            throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
+          }
+          return this.toEventTicketType(ticketType);
+        }),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'ticket_type_read');
+    }
+  }
+
   async publish(
     adminId: string,
     eventId: string,
@@ -449,6 +531,28 @@ export class AdminEventService implements OnModuleInit {
     };
   }
 
+  private toEventTicketType(ticketType: EventTicketType): EventTicketTypeDto {
+    if (
+      ticketType.ticketTypeId === '' ||
+      ticketType.eventId === '' ||
+      ticketType.name === '' ||
+      ticketType.salesStartAt === '' ||
+      ticketType.salesEndAt === '' ||
+      ticketType.createdAt === '' ||
+      ticketType.updatedAt === '' ||
+      !Number.isInteger(ticketType.priceMinor) ||
+      ticketType.priceMinor < 0 ||
+      !Number.isInteger(ticketType.allocation) ||
+      ticketType.allocation < 1
+    ) {
+      throw this.unavailable('EVENT_TICKET_TYPE_RESPONSE_INVALID');
+    }
+    return {
+      ...ticketType,
+      description: ticketType.description,
+    };
+  }
+
   private toAdminVenue(venue: Venue): AdminEventDto['venue'] {
     const addressLine2 = venue.addressLineTwo ?? venue.addressLine2;
     return {
@@ -477,6 +581,8 @@ export class AdminEventService implements OnModuleInit {
       | 'read'
       | 'publish'
       | 'retire'
+      | 'ticket_type'
+      | 'ticket_type_read'
       | 'update',
   ): never {
     if (error instanceof ApiHttpException) {
@@ -495,6 +601,25 @@ export class AdminEventService implements OnModuleInit {
             : 'Event was not found.',
         );
       case status.INVALID_ARGUMENT:
+        if (operation === 'ticket_type') {
+          const message = readErrorMessage(error);
+          const nameConflict = message === 'EVENT_TICKET_TYPE_NAME_CONFLICT';
+          const currencyConflict =
+            message === 'EVENT_TICKET_TYPE_CURRENCY_CONFLICT';
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            nameConflict
+              ? 'EVENT_TICKET_TYPE_NAME_CONFLICT'
+              : currencyConflict
+                ? 'EVENT_TICKET_TYPE_CURRENCY_CONFLICT'
+                : 'VALIDATION_FAILED',
+            nameConflict
+              ? 'Use a different ticket type name.'
+              : currencyConflict
+                ? 'Use the event currency for every ticket type.'
+                : 'Check the ticket details and try again.',
+          );
+        }
         throw new ApiHttpException(
           HttpStatus.UNPROCESSABLE_ENTITY,
           'VALIDATION_FAILED',
@@ -508,11 +633,24 @@ export class AdminEventService implements OnModuleInit {
           'The event changed. Reload it and apply your changes again.',
         );
       case status.FAILED_PRECONDITION:
+        if (operation === 'ticket_type') {
+          const limitReached =
+            readErrorMessage(error) === 'EVENT_TICKET_TYPE_LIMIT_REACHED';
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            limitReached
+              ? 'EVENT_TICKET_TYPE_LIMIT_REACHED'
+              : 'EVENT_TICKET_TYPE_MUTATION_NOT_ALLOWED',
+            limitReached
+              ? 'This event already has the maximum number of ticket types.'
+              : 'Ticket types can only be added while the event is a draft.',
+          );
+        }
         if (operation === 'publish') {
           throw new ApiHttpException(
             HttpStatus.UNPROCESSABLE_ENTITY,
             'EVENT_PUBLICATION_INCOMPLETE',
-            'Complete the event details, venue, and cover image before publishing.',
+            'Complete the event details, venue, cover image, and tickets before publishing.',
           );
         }
         if (operation === 'media_remove') {
@@ -552,8 +690,12 @@ export class AdminEventService implements OnModuleInit {
                     ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
                     : operation === 'publish'
                       ? 'EVENT_PUBLISH_RPC_UNAVAILABLE'
-                      : operation === 'retire'
-                        ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
+                  : operation === 'retire'
+                    ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
+                    : operation === 'ticket_type'
+                      ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
+                      : operation === 'ticket_type_read'
+                        ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
                         : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }

@@ -1,6 +1,8 @@
 import type {
   CreateEventMediaUploadRequest,
   CreateEventMediaUploadResponse,
+  CreateEventTicketTypeRequest,
+  CreateEventTicketTypeResponse,
   CreateDraftEventRequest,
   CreateDraftEventResponse,
   GetAdminEventRequest,
@@ -11,6 +13,8 @@ import type {
   GetPublishedEventResponse,
   ListAdminEventsRequest,
   ListAdminEventsResponse,
+  ListEventTicketTypesRequest,
+  ListEventTicketTypesResponse,
   RemoveEventMediaRequest,
   RemoveEventMediaResponse,
   PublishEventRequest,
@@ -49,6 +53,16 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<UpdateDraftEventResponse>;
+  createEventTicketType(
+    request: CreateEventTicketTypeRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<CreateEventTicketTypeResponse>;
+  listEventTicketTypes(
+    request: ListEventTicketTypesRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<ListEventTicketTypesResponse>;
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata: Metadata,

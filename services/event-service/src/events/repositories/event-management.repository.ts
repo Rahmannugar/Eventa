@@ -20,6 +20,7 @@ import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
 import { eventCategories } from '../schema/event-category.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { eventPublicationOutbox } from '../schema/event-publication-outbox.schema';
+import { eventTicketTypes } from '../schema/event-ticket-type.schema';
 import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
@@ -435,7 +436,7 @@ export class EventManagementRepository implements EventRepositoryPort {
             return { outcome: 'version_conflict' as const };
           }
 
-          const [[cover], categoryRows] = await Promise.all([
+          const [[cover], categoryRows, [ticketType]] = await Promise.all([
             transaction
               .select({ mediaId: eventMedia.id })
               .from(eventMedia)
@@ -451,6 +452,11 @@ export class EventManagementRepository implements EventRepositoryPort {
               .from(eventCategories)
               .where(eq(eventCategories.eventId, input.eventId))
               .orderBy(eventCategories.category),
+            transaction
+              .select({ ticketTypeId: eventTicketTypes.id })
+              .from(eventTicketTypes)
+              .where(eq(eventTicketTypes.eventId, input.eventId))
+              .limit(1),
           ]);
           const categories = categoryRows.map(({ category }) => category);
 
@@ -459,6 +465,7 @@ export class EventManagementRepository implements EventRepositoryPort {
               { ...result.event, categories },
               result.venue,
               cover,
+              ticketType,
             )
           ) {
             return { outcome: 'incomplete' as const };
@@ -598,6 +605,7 @@ export class EventManagementRepository implements EventRepositoryPort {
     >,
     venue: EventVenue | null,
     cover: { mediaId: string } | undefined,
+    ticketType: { ticketTypeId: string } | undefined,
   ): boolean {
     return (
       event.description !== null &&
@@ -606,7 +614,8 @@ export class EventManagementRepository implements EventRepositoryPort {
       event.endsAt !== null &&
       event.timeZone !== null &&
       venue !== null &&
-      cover !== undefined
+      cover !== undefined &&
+      ticketType !== undefined
     );
   }
 

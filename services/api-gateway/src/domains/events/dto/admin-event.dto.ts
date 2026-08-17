@@ -358,6 +358,112 @@ export class PublishEventDto {
   expectedVersion!: number;
 }
 
+export class CreateEventTicketTypeDto {
+  @ApiProperty({ example: 3, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @ApiProperty({ example: 'General admission', maxLength: 80 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value,
+  )
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name!: string;
+
+  @ApiPropertyOptional({ maxLength: 500 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  description?: string;
+
+  @ApiProperty({ example: 'NGN', minLength: 3, maxLength: 3 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @Length(3, 3)
+  @Matches(/^[A-Z]{3}$/)
+  currency!: string;
+
+  @ApiProperty({ example: 2500000, minimum: 0 })
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  priceMinor!: number;
+
+  @ApiProperty({ example: 500, maximum: 1000000, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(1_000_000)
+  allocation!: number;
+
+  @ApiProperty({ example: '2026-08-20T09:00:00+01:00' })
+  @IsISO8601({ strict: true, strictSeparator: true })
+  salesStartAt!: string;
+
+  @ApiProperty({ example: '2026-10-14T23:59:00+01:00' })
+  @IsISO8601({ strict: true, strictSeparator: true })
+  salesEndAt!: string;
+}
+
+export class EventTicketTypeDto {
+  @ApiProperty()
+  ticketTypeId!: string;
+
+  @ApiProperty()
+  eventId!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiPropertyOptional()
+  description!: string | undefined;
+
+  @ApiProperty()
+  priceMinor!: number;
+
+  @ApiProperty()
+  allocation!: number;
+
+  @ApiProperty()
+  salesStartAt!: string;
+
+  @ApiProperty()
+  salesEndAt!: string;
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiProperty()
+  updatedAt!: string;
+}
+
+export class CreateEventTicketTypeResponseDto {
+  @ApiProperty()
+  eventVersion!: number;
+
+  @ApiProperty({ type: EventTicketTypeDto })
+  ticketType!: EventTicketTypeDto;
+}
+
+export class EventTicketTypeListDto {
+  @ApiPropertyOptional()
+  currency!: string | undefined;
+
+  @ApiProperty()
+  eventVersion!: number;
+
+  @ApiProperty({ type: () => [EventTicketTypeDto] })
+  ticketTypes!: EventTicketTypeDto[];
+}
+
 export class CreateEventMediaUploadDto {
   @ApiProperty({ example: 2, minimum: 1 })
   @IsInt()

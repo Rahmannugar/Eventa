@@ -180,6 +180,47 @@ export interface UpdateDraftEventResponse {
   event: Event | undefined;
 }
 
+export interface EventTicketType {
+  ticketTypeId: string;
+  eventId: string;
+  name: string;
+  description?: string | undefined;
+  priceMinor: number;
+  allocation: number;
+  salesStartAt: string;
+  salesEndAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEventTicketTypeRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  name: string;
+  description?: string | undefined;
+  currency: string;
+  priceMinor: number;
+  allocation: number;
+  salesStartAt: string;
+  salesEndAt: string;
+}
+
+export interface CreateEventTicketTypeResponse {
+  ticketType: EventTicketType | undefined;
+  eventVersion: number;
+}
+
+export interface ListEventTicketTypesRequest {
+  eventId: string;
+}
+
+export interface ListEventTicketTypesResponse {
+  currency?: string | undefined;
+  eventVersion: number;
+  ticketTypes: EventTicketType[];
+}
+
 export interface CreateEventMediaUploadRequest {
   adminId: string;
   eventId: string;

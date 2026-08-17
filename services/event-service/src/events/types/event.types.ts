@@ -419,3 +419,79 @@ export interface EventManagement {
   publish(input: PublishEventCommand): Promise<EventRecord>;
   retire(input: RetireDraftEventCommand): Promise<number>;
 }
+
+export interface EventTicketTypeRecord {
+  ticketTypeId: string;
+  eventId: string;
+  name: string;
+  description: string | null;
+  priceMinor: number;
+  allocation: number;
+  salesStartAt: Date;
+  salesEndAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EventTicketTypesRecord {
+  currency: string | null;
+  eventVersion: number;
+  ticketTypes: EventTicketTypeRecord[];
+}
+
+export interface CreateEventTicketTypeCommand {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  name: string;
+  description?: string;
+  currency: string;
+  priceMinor: number;
+  allocation: number;
+  salesStartAt: string;
+  salesEndAt: string;
+}
+
+export interface CreateEventTicketType {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  name: string;
+  description: string | null;
+  currency: string;
+  priceMinor: number;
+  allocation: number;
+  salesStartAt: Date;
+  salesEndAt: Date;
+}
+
+export type CreateEventTicketTypeResult =
+  | {
+      outcome: 'created';
+      eventVersion: number;
+      ticketType: EventTicketTypeRecord;
+    }
+  | { outcome: 'not_found' }
+  | { outcome: 'not_draft' }
+  | { outcome: 'version_conflict' }
+  | { outcome: 'currency_conflict' }
+  | { outcome: 'name_conflict' }
+  | { outcome: 'invalid_window' }
+  | { outcome: 'limit_reached' };
+
+export interface EventTicketTypeRepository {
+  create(
+    input: CreateEventTicketType,
+  ): Promise<CreateEventTicketTypeResult>;
+  list(eventId: string): Promise<EventTicketTypesRecord | undefined>;
+}
+
+export interface EventTicketTypeManagement {
+  create(input: CreateEventTicketTypeCommand): Promise<{
+    eventVersion: number;
+    ticketType: EventTicketTypeRecord;
+  }>;
+  list(eventId: string): Promise<EventTicketTypesRecord>;
+}

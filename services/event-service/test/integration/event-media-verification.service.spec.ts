@@ -11,10 +11,12 @@ import { EventMediaUploadRepository } from '../../src/events/repositories/event-
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
+import { EventTicketTypeRepository } from '../../src/events/repositories/event-ticket-type.repository';
 import {
   EventPageTokenInvalidError,
   EventScheduleInvalidError,
   EventVenueInvalidError,
+  EventVersionConflictError,
 } from '../../src/events/errors/event.errors';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventCategories } from '../../src/events/schema/event-category.schema';
@@ -23,11 +25,14 @@ import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-o
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
 import { eventMedia } from '../../src/events/schema/event-media.schema';
 import { eventPublicationOutbox } from '../../src/events/schema/event-publication-outbox.schema';
+import { eventTicketConfigurations } from '../../src/events/schema/event-ticket-configuration.schema';
+import { eventTicketTypes } from '../../src/events/schema/event-ticket-type.schema';
 import { eventVenues } from '../../src/events/schema/event-venue.schema';
 import { events } from '../../src/events/schema/event.schema';
 import { EventMediaVerificationService } from '../../src/events/services/event-media-verification.service';
 import { EventMediaObjectDeletionService } from '../../src/events/services/event-media-object-deletion.service';
 import { EventManagementService } from '../../src/events/services/event-management.service';
+import { EventTicketTypeService } from '../../src/events/services/event-ticket-type.service';
 import type { EventMediaObjectStorage } from '../../src/events/types/event.types';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -83,6 +88,8 @@ const uploadsRepository = new EventMediaUploadRepository(database);
 const mediaRepository = new EventMediaMutationRepository(database);
 const deletionsRepository = new EventMediaObjectDeletionRepository(database);
 const eventManagement = new EventManagementService(eventsRepository);
+const ticketTypesRepository = new EventTicketTypeRepository(database);
+const ticketTypes = new EventTicketTypeService(ticketTypesRepository);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -117,6 +124,8 @@ describe('Event mutation integration', () => {
     await database.delete(eventJobOutbox);
     await database.delete(eventPublicationOutbox);
     await database.delete(eventAdminAuditLog);
+    await database.delete(eventTicketTypes);
+    await database.delete(eventTicketConfigurations);
     await database.delete(eventMediaObjectDeletions);
     await database.delete(eventMedia);
     await database.delete(eventMediaUploads);
@@ -146,6 +155,101 @@ describe('Event mutation integration', () => {
       .from(eventAdminAuditLog)
       .where(eq(eventAdminAuditLog.eventId, event.eventId));
     expect(auditCount?.value).toBe(1);
+  });
+
+  it('creates and lists a ticket type atomically', async () => {
+    const event = await createEventRecord('Ticketed event');
+    const salesStartAt = new Date(Date.now() + 60 * 60 * 1_000);
+    const salesEndAt = new Date(event.startsAt!.getTime() - 60 * 60 * 1_000);
+
+    const created = await ticketTypes.create({
+      actorAdminId: randomUUID(),
+      allocation: 500,
+      currency: 'NGN',
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      name: '  General   admission  ',
+      priceMinor: 2_500_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+    });
+    const listed = await ticketTypes.list(event.eventId);
+
+    expect(created).toMatchObject({
+      eventVersion: 2,
+      ticketType: {
+        allocation: 500,
+        name: 'General admission',
+        priceMinor: 2_500_000,
+      },
+    });
+    expect(listed).toMatchObject({
+      currency: 'NGN',
+      eventVersion: 2,
+      ticketTypes: [{ ticketTypeId: created.ticketType.ticketTypeId }],
+    });
+  });
+
+  it('requires ticket configuration for every ticket type', async () => {
+    const event = await createEventRecord('Configuration integrity');
+
+    await expect(
+      database.insert(eventTicketTypes).values({
+        allocation: 100,
+        eventId: event.eventId,
+        name: 'General admission',
+        priceMinor: 2_500_000,
+        salesEndAt: new Date(event.startsAt!.getTime() - 60 * 60 * 1_000),
+        salesStartAt: new Date(Date.now() + 60 * 60 * 1_000),
+      }),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23503',
+        constraint_name: 'event_ticket_types_configuration_fk',
+      },
+    });
+  });
+
+  it('serializes ticket type creation against the event version', async () => {
+    const event = await createEventRecord('Concurrent ticket setup');
+    const command = {
+      actorAdminId: randomUUID(),
+      allocation: 100,
+      currency: 'NGN',
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      priceMinor: 0,
+      salesEndAt: new Date(
+        event.startsAt!.getTime() - 60 * 60 * 1_000,
+      ).toISOString(),
+      salesStartAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+    };
+
+    const results = await Promise.allSettled([
+      ticketTypes.create({
+        ...command,
+        name: 'General admission',
+        requestId: randomUUID(),
+      }),
+      ticketTypes.create({
+        ...command,
+        name: 'VIP',
+        requestId: randomUUID(),
+      }),
+    ]);
+    const listed = await ticketTypes.list(event.eventId);
+
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(
+      1,
+    );
+    const rejected = results.find(({ status }) => status === 'rejected');
+    if (rejected?.status !== 'rejected') {
+      throw new Error('Expected one ticket type creation conflict');
+    }
+    expect(rejected.reason).toBeInstanceOf(EventVersionConflictError);
+    expect(listed.ticketTypes).toHaveLength(1);
+    expect(listed.eventVersion).toBe(2);
   });
 
   it('rolls back creation when a category invariant fails', async () => {
@@ -771,6 +875,19 @@ describe('Event mutation integration', () => {
     });
   });
 
+  it('rejects publication without a ticket type', async () => {
+    const event = await createPublishableEvent('Ticketless event', false);
+
+    await expect(
+      eventsRepository.publish({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'incomplete' });
+  });
+
   it('returns published events without disclosing drafts', async () => {
     const draft = await createEventRecord('Private draft');
     await expect(
@@ -941,7 +1058,10 @@ async function createAttachedCover(title: string): Promise<{
   return { adminId, eventId: event.eventId, objectKey, uploadId };
 }
 
-async function createPublishableEvent(title: string): Promise<{
+async function createPublishableEvent(
+  title: string,
+  withTicketType = true,
+): Promise<{
   adminId: string;
   eventId: string;
   version: number;
@@ -973,10 +1093,29 @@ async function createPublishableEvent(title: string): Promise<{
   if (result.outcome !== 'updated') {
     throw new Error('Publishable event setup failed');
   }
+  if (!withTicketType) {
+    return {
+      adminId: event.adminId,
+      eventId: event.eventId,
+      version: result.event.version,
+    };
+  }
+  const ticketType = await ticketTypes.create({
+    actorAdminId: event.adminId,
+    allocation: 100,
+    currency: 'NGN',
+    eventId: event.eventId,
+    expectedVersion: result.event.version,
+    name: 'General admission',
+    priceMinor: 0,
+    requestId: randomUUID(),
+    salesEndAt: new Date(startsAt.getTime() - 60 * 60 * 1_000).toISOString(),
+    salesStartAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+  });
   return {
     adminId: event.adminId,
     eventId: event.eventId,
-    version: result.event.version,
+    version: ticketType.eventVersion,
   };
 }
 

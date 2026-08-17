@@ -6,9 +6,12 @@ import type {
   AdminEventListPage,
   AdminEventListCriteria,
   CreateEventMediaUploadCommand,
+  CreateEventTicketTypeCommand,
+  CreateEventTicketTypeResult,
   CreateEventInput,
   EventMediaUploadIntent,
   EventMediaUploadStatus,
+  EventTicketTypeList,
   PublishEventCommand,
   RemoveEventMediaCommand,
   RetireDraftEventCommand,
@@ -133,6 +136,31 @@ const retireDraftEventResponseSchema = z.object({
   eventVersion: z.number().int().min(2),
 });
 
+const eventTicketTypeSchema = z.object({
+  ticketTypeId: z.uuid(),
+  eventId: z.uuid(),
+  name: z.string().min(1),
+  description: z.string().min(1).optional(),
+  priceMinor: z.number().int().nonnegative(),
+  allocation: z.number().int().positive(),
+  salesStartAt: z.iso.datetime({ offset: true }),
+  salesEndAt: z.iso.datetime({ offset: true }),
+  createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+
+const eventTicketTypeListSchema: z.ZodType<EventTicketTypeList> = z.object({
+  currency: z.string().length(3).optional(),
+  eventVersion: z.number().int().positive(),
+  ticketTypes: z.array(eventTicketTypeSchema).max(20),
+});
+
+const createEventTicketTypeResultSchema: z.ZodType<CreateEventTicketTypeResult> =
+  z.object({
+    eventVersion: z.number().int().min(2),
+    ticketType: eventTicketTypeSchema,
+  });
+
 export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
   return apiRequest('/admin/events', {
     body: input,
@@ -176,6 +204,33 @@ export function updateDraftEvent({
     method: 'PUT',
     responseSchema: adminEventSchema,
   });
+}
+
+export function listEventTicketTypes(
+  eventId: string,
+  signal?: AbortSignal,
+): Promise<EventTicketTypeList> {
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/ticket-types`,
+    {
+      responseSchema: eventTicketTypeListSchema,
+      ...(signal === undefined ? {} : { signal }),
+    },
+  );
+}
+
+export function createEventTicketType({
+  eventId,
+  input,
+}: CreateEventTicketTypeCommand): Promise<CreateEventTicketTypeResult> {
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/ticket-types`,
+    {
+      body: input,
+      method: 'POST',
+      responseSchema: createEventTicketTypeResultSchema,
+    },
+  );
 }
 
 export function publishEvent({

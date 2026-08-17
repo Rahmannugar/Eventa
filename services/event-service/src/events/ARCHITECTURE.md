@@ -2,7 +2,7 @@
 
 ## State
 
-An event begins in `draft` at version 1 with its normalized title, description, one to five categories, schedule, IANA timezone, and one event-owned venue address. Publication additionally requires one verified cover image. A published event has an immutable publication time and no longer accepts draft or media mutations. A draft may carry a retirement time; retired rows remain recoverable but are excluded from ordinary reads and mutations.
+An event begins in `draft` at version 1 with its normalized title, description, one to five categories, schedule, IANA timezone, and one event-owned venue address. Publication additionally requires one verified cover image and at least one ticket type. A published event has an immutable publication time and no longer accepts draft, media, or ticket-type mutations. A draft may carry a retirement time; retired rows remain recoverable but are excluded from ordinary reads and mutations.
 
 ## Draft Creation
 
@@ -31,6 +31,14 @@ Catalogue time and title indexes are partial over active rows. Retired drafts th
 
 Admin identity authorizes the management surface, not ownership of an individual event. We retain `created_by_admin_id` for provenance. We do not filter reads or mutations by creator.
 
+## Ticket-Type Configuration
+
+The first ticket type creates the event's one currency configuration. Every ticket type references that configuration by event ID, so catalogue rows cannot exist without the shared currency. Ticket types store normalized names, optional descriptions, face values in integer minor units, allocations, and sales windows. Event capacity is derived from allocations rather than duplicated as an independently editable event total.
+
+Creation locks the event row, verifies active draft state and expected version, checks currency, name, count, and schedule invariants, inserts the ticket type, increments the event version, and appends `event.ticket_type_created` in one transaction. The event-row lock serializes concurrent ticket-type mutations. The database also enforces price, allocation, window, normalization, foreign-key, and case-insensitive name uniqueness constraints.
+
+Ticket-type reads use the configuration foreign key and stable `(event_id, created_at, id)` index. At most 20 rows can belong to one event, so the management read remains bounded.
+
 ## Published Access
 
 The published-event repository query combines event ID and `published` status before loading the event-owned venue and verified media. Drafts never cross the internal published-read boundary, and callers cannot distinguish them from missing IDs. The dedicated contract excludes `created_by_admin_id` and draft lifecycle state.
@@ -54,7 +62,7 @@ Explicit removal locks the event, verifies draft state and expected version, rem
 ## Publication
 
 1. The client supplies the version from its latest admin event representation.
-2. The repository locks the event and verifies draft state, expected version, complete details, venue presence, and a verified cover reference.
+2. The repository locks the event and verifies draft state, expected version, complete details, venue presence, a verified cover reference, and at least one ticket type.
 3. One transaction changes the status to `published`, records the publication time, increments the version, appends `event.published`, and inserts one `event.published.v1` outbox fact.
 4. Debezium reads the immutable outbox insert from PostgreSQL logical WAL and publishes it to `eventa.event.lifecycle.v1` keyed by event ID.
 5. Debezium persists its WAL offset and resumes after failure. Delivery remains at least once, so consumers deduplicate the event ID and version.
@@ -69,4 +77,4 @@ Kafka lifecycle facts and RabbitMQ job assignments use separate Debezium lanes o
 
 ## Audit
 
-The audit table is append-only through the Event application boundary. It records only mutations, including `event.published`, `event.retired`, and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.
+The audit table is append-only through the Event application boundary. It records only mutations, including `event.ticket_type_created`, `event.published`, `event.retired`, and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.

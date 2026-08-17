@@ -64,6 +64,13 @@
       "when": 1786899756204,
       "tag": "0008_retire_draft_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786939656053,
+      "tag": "0009_add_event_ticket_types",
+      "breakpoints": true
     }
   ]
 }

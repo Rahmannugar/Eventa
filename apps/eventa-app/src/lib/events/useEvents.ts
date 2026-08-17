@@ -16,9 +16,11 @@ import {
 import {
   createEvent,
   createEventMediaUpload,
+  createEventTicketType,
   getAdminEvent,
   getEventMediaUpload,
   listAdminEvents,
+  listEventTicketTypes,
   publishEvent,
   removeEventMedia,
   retireDraftEvent,
@@ -30,6 +32,8 @@ import type {
   AdminEventListCriteria,
   AdminEventListPage,
   CreateEventInput,
+  CreateEventTicketTypeCommand,
+  EventTicketTypeList,
   EventMediaContentType,
   EventMediaSlot,
   EventMediaUploadStatus,
@@ -68,6 +72,49 @@ export function useAdminEvent(eventId: string, enabled = true) {
     queryFn: ({ signal }) => getAdminEvent(eventId, signal),
     queryKey: adminEventQueryKey(eventId),
     retry: false,
+  });
+}
+
+export function adminEventTicketTypesQueryKey(eventId: string) {
+  return ['events', 'admin', eventId, 'ticket-types'] as const;
+}
+
+export function useEventTicketTypes(eventId: string, enabled = true) {
+  return useQuery({
+    enabled,
+    queryFn: ({ signal }) => listEventTicketTypes(eventId, signal),
+    queryKey: adminEventTicketTypesQueryKey(eventId),
+    retry: false,
+  });
+}
+
+export function useCreateEventTicketType() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: CreateEventTicketTypeCommand) =>
+      createEventTicketType(command),
+    onSuccess: (result, command) => {
+      queryClient.setQueryData<EventTicketTypeList>(
+        adminEventTicketTypesQueryKey(command.eventId),
+        (current) => ({
+          currency: current?.currency ?? command.input.currency,
+          eventVersion: result.eventVersion,
+          ticketTypes: [
+            ...(current?.ticketTypes ?? []),
+            result.ticketType,
+          ],
+        }),
+      );
+      queryClient.setQueryData<AdminEvent>(
+        adminEventQueryKey(command.eventId),
+        (current) =>
+          current === undefined
+            ? current
+            : { ...current, version: result.eventVersion },
+      );
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
   });
 }
 

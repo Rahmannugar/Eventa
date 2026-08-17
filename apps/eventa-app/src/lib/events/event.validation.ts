@@ -214,12 +214,12 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-function isoToLocalDateTime(value: string, timeZone: string): string {
+export function isoToLocalDateTime(value: string, timeZone: string): string {
   const parts = dateTimeParts(new Date(value), timeZone);
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
-function localDateTimeToIso(value: string, timeZone: string): string {
+export function localDateTimeToIso(value: string, timeZone: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
   if (match === null) throw new Error('Invalid local date and time.');
 

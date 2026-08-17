@@ -74,3 +74,38 @@ export class EventMediaUploadNotFoundError extends Error {
     this.name = 'EventMediaUploadNotFoundError';
   }
 }
+
+export class EventTicketTypeInvalidError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_INVALID');
+    this.name = EventTicketTypeInvalidError.name;
+  }
+}
+
+export class EventTicketTypeNameConflictError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_NAME_CONFLICT');
+    this.name = EventTicketTypeNameConflictError.name;
+  }
+}
+
+export class EventTicketTypeCurrencyConflictError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_CURRENCY_CONFLICT');
+    this.name = EventTicketTypeCurrencyConflictError.name;
+  }
+}
+
+export class EventTicketTypeLimitReachedError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_LIMIT_REACHED');
+    this.name = EventTicketTypeLimitReachedError.name;
+  }
+}
+
+export class EventTicketTypeMutationNotAllowedError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_MUTATION_NOT_ALLOWED');
+    this.name = EventTicketTypeMutationNotAllowedError.name;
+  }
+}

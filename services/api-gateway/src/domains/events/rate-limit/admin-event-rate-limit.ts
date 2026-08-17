@@ -149,6 +149,25 @@ const RETIRE_RULES = {
   },
 } as const satisfies HybridRateLimitRules;
 
+const TICKET_TYPE_RULES = {
+  routeKey: 'admin-event-ticket-type',
+  tokenBucket: {
+    capacity: 20,
+    name: 'ip-burst',
+    refillIntervalMs: 3_000,
+  },
+  primarySlidingWindow: {
+    limit: 300,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 100,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;
+
 type AdminEventOperation =
   | 'create'
   | 'media_status'
@@ -156,6 +175,7 @@ type AdminEventOperation =
   | 'publish'
   | 'read'
   | 'retire'
+  | 'ticket_type'
   | 'update';
 
 interface EventRequest {
@@ -188,9 +208,11 @@ export class AdminEventRateLimitService {
             ? MEDIA_UPLOAD_RULES
             : operation === 'publish'
               ? PUBLISH_RULES
-              : operation === 'retire'
-                ? RETIRE_RULES
-                : operation === 'update'
+            : operation === 'retire'
+              ? RETIRE_RULES
+              : operation === 'ticket_type'
+                ? TICKET_TYPE_RULES
+              : operation === 'update'
                   ? UPDATE_RULES
                   : READ_RULES;
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
@@ -256,6 +278,8 @@ abstract class AdminEventRateLimitGuard implements CanActivate {
                 ? 'EVENT_PUBLISH_RATE_LIMITED'
                 : this.operation === 'retire'
                   ? 'EVENT_RETIRE_RATE_LIMITED'
+                  : this.operation === 'ticket_type'
+                    ? 'EVENT_TICKET_TYPE_RATE_LIMITED'
                   : this.operation === 'update'
                     ? 'EVENT_UPDATE_RATE_LIMITED'
                     : 'EVENT_READ_RATE_LIMITED',
@@ -375,6 +399,18 @@ export class AdminEventPublishRateLimitGuard extends AdminEventRateLimitGuard {
 @Injectable()
 export class AdminEventRetireRateLimitGuard extends AdminEventRateLimitGuard {
   protected readonly operation = 'retire' as const;
+
+  constructor(
+    rateLimits: AdminEventRateLimitService,
+    sessionCookie: AdminSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AdminEventTicketTypeRateLimitGuard extends AdminEventRateLimitGuard {
+  protected readonly operation = 'ticket_type' as const;
 
   constructor(
     rateLimits: AdminEventRateLimitService,

@@ -23,7 +23,10 @@ import {
   type EventPublicationRequirement,
 } from '../../lib/events/event-publication';
 import type { AdminEvent } from '../../lib/events/event.types';
-import { usePublishEvent } from '../../lib/events/useEvents';
+import {
+  useEventTicketTypes,
+  usePublishEvent,
+} from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
 
 const requirementLabels: Record<EventPublicationRequirement, string> = {
@@ -31,6 +34,7 @@ const requirementLabels: Record<EventPublicationRequirement, string> = {
   cover: 'A cover image',
   description: 'A description',
   schedule: 'A complete schedule and time zone',
+  tickets: 'At least one ticket type',
   venue: 'A venue',
 };
 
@@ -47,6 +51,7 @@ export function EventPublication({
 }) {
   const location = useLocation();
   const publication = usePublishEvent();
+  const ticketTypes = useEventTicketTypes(event.eventId);
   const dialogRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -55,7 +60,10 @@ export function EventPublication({
   const [open, setOpen] = useState(false);
   const [reloading, setReloading] = useState(false);
   const [reloadFailed, setReloadFailed] = useState(false);
-  const missing = missingEventPublicationRequirements(event);
+  const missing = missingEventPublicationRequirements(
+    event,
+    (ticketTypes.data?.ticketTypes.length ?? 0) > 0,
+  );
   const versionConflict =
     publication.error instanceof ApiError &&
     publication.error.code === 'EVENT_VERSION_CONFLICT';
@@ -142,7 +150,11 @@ export function EventPublication({
     reloadingRef.current = true;
     try {
       const latest = await reload();
-      const latestMissing = missingEventPublicationRequirements(latest);
+      const latestTickets = await ticketTypes.refetch();
+      const latestMissing = missingEventPublicationRequirements(
+        latest,
+        (latestTickets.data?.ticketTypes.length ?? 0) > 0,
+      );
       if (versionConflict || latestMissing.length > 0) publication.reset();
       if (latest.status === 'published' || latestMissing.length > 0) {
         setOpen(false);
@@ -192,6 +204,18 @@ export function EventPublication({
         </>
       ) : (
         <>
+          {ticketTypes.error !== null ? (
+            <div className="form-alert form-alert--error" role="alert">
+              <span>Ticket details could not be checked.</span>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void ticketTypes.refetch()}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : null}
           <p>Add the following before publishing:</p>
           <ul>
             {missing.map((requirement) => (
@@ -199,7 +223,10 @@ export function EventPublication({
             ))}
           </ul>
           <div className="event-publication__actions">
-            {missing.some((requirement) => requirement !== 'cover') ? (
+            {missing.some(
+              (requirement) =>
+                requirement !== 'cover' && requirement !== 'tickets',
+            ) ? (
               <Link
                 className="button button--secondary"
                 to={`/admin/events/${event.eventId}/edit`}
@@ -210,6 +237,11 @@ export function EventPublication({
             {missing.includes('cover') ? (
               <a className="button button--secondary" href="#media-title">
                 Add cover image
+              </a>
+            ) : null}
+            {missing.includes('tickets') ? (
+              <a className="button button--secondary" href="#tickets-title">
+                Add ticket type
               </a>
             ) : null}
           </div>

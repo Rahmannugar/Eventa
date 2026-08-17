@@ -2,6 +2,8 @@ import {
   AdminEventSort,
   type CreateDraftEventRequest,
   type CreateDraftEventResponse,
+  type CreateEventTicketTypeRequest,
+  type CreateEventTicketTypeResponse,
   EventStatus,
   type Event,
   type ListAdminEventsRequest,
@@ -114,6 +116,18 @@ function createRetireService(
 ): AdminEventService {
   const grpcClient = {
     getService: () => ({ retireDraftEvent }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createTicketTypeService(
+  createEventTicketType: DeadlineAwareEventServiceClient['createEventTicketType'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ createEventTicketType }),
   } as unknown as ClientGrpc;
   const service = new AdminEventService(grpcClient, deadlineMs);
   service.onModuleInit();
@@ -239,6 +253,61 @@ describe('AdminEventService catalogue', () => {
   });
 });
 
+describe('AdminEventService ticket types', () => {
+  it('forwards ticket configuration and validates ownership', async () => {
+    let receivedRequest: CreateEventTicketTypeRequest | undefined;
+    const createEventTicketType = (
+      request: CreateEventTicketTypeRequest,
+    ): Observable<CreateEventTicketTypeResponse> => {
+      receivedRequest = request;
+      return of({
+        eventVersion: 2,
+        ticketType: {
+          allocation: request.allocation,
+          createdAt: '2026-08-17T05:00:00.000Z',
+          eventId: request.eventId,
+          name: request.name,
+          priceMinor: request.priceMinor,
+          salesEndAt: request.salesEndAt,
+          salesStartAt: request.salesStartAt,
+          ticketTypeId: '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+          updatedAt: '2026-08-17T05:00:00.000Z',
+        },
+      });
+    };
+    const service = createTicketTypeService(createEventTicketType);
+
+    await expect(
+      service.createTicketType(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        {
+          allocation: 500,
+          currency: 'NGN',
+          expectedVersion: 1,
+          name: 'General admission',
+          priceMinor: 2_500_000,
+          salesEndAt: '2026-08-20T08:00:00.000Z',
+          salesStartAt: '2026-08-17T08:00:00.000Z',
+        },
+        'ticket-type-request',
+      ),
+    ).resolves.toMatchObject({
+      eventVersion: 2,
+      ticketType: {
+        eventId: draftEvent.eventId,
+        name: 'General admission',
+      },
+    });
+    expect(receivedRequest).toMatchObject({
+      adminId: draftEvent.createdByAdminId,
+      currency: 'NGN',
+      eventId: draftEvent.eventId,
+      expectedVersion: 1,
+    });
+  });
+});
+
 describe('AdminEventService publication', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -302,7 +371,7 @@ describe('AdminEventService publication', () => {
       response: {
         code: 'EVENT_PUBLICATION_INCOMPLETE',
         message:
-          'Complete the event details, venue, and cover image before publishing.',
+          'Complete the event details, venue, cover image, and tickets before publishing.',
         statusCode: 422,
       },
       status: 422,

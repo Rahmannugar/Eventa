@@ -22,6 +22,7 @@ import { Button } from '../ui/Button';
 import { EventMediaManager } from './EventMediaManager';
 import { EventPublication } from './EventPublication';
 import { EventRetirement } from './EventRetirement';
+import { EventTicketTypes } from './EventTicketTypes';
 
 const eventIdSchema = z.uuid();
 const gallerySlotOrder = ['gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'];
@@ -81,6 +82,7 @@ function EventDetailsContent({
   const [mediaBusy, setMediaBusy] = useState(false);
   const [publicationBusy, setPublicationBusy] = useState(false);
   const [retirementBusy, setRetirementBusy] = useState(false);
+  const [ticketTypeBusy, setTicketTypeBusy] = useState(false);
   const cover = event.media.find((media) => media.slot === 'cover');
   const gallery = event.media
     .filter((media) => media.slot !== 'cover')
@@ -137,6 +139,13 @@ function EventDetailsContent({
             </div>
           </section>
 
+          <EventTicketTypes
+            disabled={mediaBusy || publicationBusy || retirementBusy}
+            event={event}
+            onOperationChange={setTicketTypeBusy}
+            reload={reload}
+          />
+
           <section
             className="event-details-section"
             aria-labelledby="media-title"
@@ -147,7 +156,7 @@ function EventDetailsContent({
             <div className="event-details-section__body event-details-media">
               {event.status === 'draft' ? (
                 <EventMediaManager
-                  disabled={publicationBusy || retirementBusy}
+                  disabled={publicationBusy || retirementBusy || ticketTypeBusy}
                   event={event}
                   onOperationChange={setMediaBusy}
                 />
@@ -217,14 +226,14 @@ function EventDetailsContent({
           {event.status === 'draft' ? (
             <EventPublication
               event={event}
-              mediaBusy={mediaBusy || retirementBusy}
+              mediaBusy={mediaBusy || retirementBusy || ticketTypeBusy}
               onOperationChange={setPublicationBusy}
               reload={reload}
             />
           ) : null}
           {event.status === 'draft' ? (
             <EventRetirement
-              disabled={mediaBusy || publicationBusy}
+              disabled={mediaBusy || publicationBusy || ticketTypeBusy}
               event={event}
               onOperationChange={setRetirementBusy}
               reload={reload}

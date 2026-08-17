@@ -2,7 +2,7 @@
 
 ## Responsibility
 
-Event Service owns event state, event lifecycle rules, authoritative published-event filtering, and durable audit history for admin event mutations. It owns its PostgreSQL database and never reads Identity data. The authenticated admin ID arrives through the Gateway's internal gRPC command.
+Event Service owns event state, ticket types, capacity, event lifecycle rules, authoritative published-event filtering, and durable audit history for admin event mutations. It owns its PostgreSQL database and never reads Identity data. The authenticated admin ID arrives through the Gateway's internal gRPC command.
 
 Any authenticated admin may manage any event. `created_by_admin_id` records provenance and does not grant exclusive ownership.
 
@@ -18,7 +18,7 @@ Controllers translate gRPC. Application services own use-case behavior. Reposito
 
 ## Persistence and Audit
 
-The `events` table is authoritative event state, including recoverable draft retirement. `event_venues` stores one event-owned venue address. `event_media` stores only verified R2 objects in one cover slot and four fixed gallery slots. `event_media_uploads` is the durable authority for pending verification, claims, retry timing, terminal outcomes, and rejected-object deletion. `event_media_object_deletions` owns retry and terminal state for formerly accepted objects removed by replacement or explicit removal. RabbitMQ messages contain only the owning record ID and never replace PostgreSQL state. `event_publication_outbox` is an immutable source of lifecycle facts, and `event_job_outbox` is an immutable source of initial media job assignments.
+The `events` table is authoritative event state, including recoverable draft retirement. `event_venues` stores one event-owned venue address. `event_ticket_configurations` fixes one currency per event, and every `event_ticket_types` row references that configuration while storing the normalized catalogue, integer minor-unit face value, allocation, and sales window. `event_media` stores only verified R2 objects in one cover slot and four fixed gallery slots. `event_media_uploads` is the durable authority for pending verification, claims, retry timing, terminal outcomes, and rejected-object deletion. `event_media_object_deletions` owns retry and terminal state for formerly accepted objects removed by replacement or explicit removal. RabbitMQ messages contain only the owning record ID and never replace PostgreSQL state. `event_publication_outbox` is an immutable source of lifecycle facts, and `event_job_outbox` is an immutable source of initial media job assignments.
 
 Every event carries a monotonically increasing version. A draft update changes the event only when its expected version matches, increments the version, upserts the venue, and appends `event.updated` in one transaction. This prevents silent overwrites when admins edit concurrently.
 
