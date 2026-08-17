@@ -384,13 +384,9 @@ export class CreateEventTicketTypeDto {
   @MaxLength(500)
   description?: string;
 
-  @ApiProperty({ example: 'NGN', minLength: 3, maxLength: 3 })
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim().toUpperCase() : value,
-  )
-  @Length(3, 3)
-  @Matches(/^[A-Z]{3}$/)
-  currency!: string;
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  ticketCurrencyId!: string;
 
   @ApiProperty({ example: 2500000, minimum: 0 })
   @IsInt()
@@ -402,7 +398,7 @@ export class CreateEventTicketTypeDto {
   @IsInt()
   @Min(1)
   @Max(1_000_000)
-  allocation!: number;
+  capacity!: number;
 
   @ApiProperty({ example: '2026-08-20T09:00:00+01:00' })
   @IsISO8601({ strict: true, strictSeparator: true })
@@ -421,6 +417,9 @@ export class EventTicketTypeDto {
   eventId!: string;
 
   @ApiProperty()
+  ticketCurrencyId!: string;
+
+  @ApiProperty()
   name!: string;
 
   @ApiPropertyOptional()
@@ -430,7 +429,7 @@ export class EventTicketTypeDto {
   priceMinor!: number;
 
   @ApiProperty()
-  allocation!: number;
+  capacity!: number;
 
   @ApiProperty()
   salesStartAt!: string;
@@ -445,6 +444,47 @@ export class EventTicketTypeDto {
   updatedAt!: string;
 }
 
+export class DefineEventTicketCurrencyDto {
+  @ApiProperty({ example: 3, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @ApiProperty({ example: 'NGN', minLength: 3, maxLength: 3 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @Length(3, 3)
+  @Matches(/^[A-Z]{3}$/)
+  currency!: string;
+}
+
+export class EventTicketCurrencyDto {
+  @ApiProperty()
+  ticketCurrencyId!: string;
+
+  @ApiProperty()
+  eventId!: string;
+
+  @ApiProperty()
+  currency!: string;
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiProperty()
+  updatedAt!: string;
+}
+
+export class DefineEventTicketCurrencyResponseDto {
+  @ApiProperty()
+  eventVersion!: number;
+
+  @ApiProperty({ type: EventTicketCurrencyDto })
+  ticketCurrency!: EventTicketCurrencyDto;
+}
+
 export class CreateEventTicketTypeResponseDto {
   @ApiProperty()
   eventVersion!: number;
@@ -454,8 +494,8 @@ export class CreateEventTicketTypeResponseDto {
 }
 
 export class EventTicketTypeListDto {
-  @ApiPropertyOptional()
-  currency!: string | undefined;
+  @ApiProperty({ type: () => [EventTicketCurrencyDto] })
+  ticketCurrencies!: EventTicketCurrencyDto[];
 
   @ApiProperty()
   eventVersion!: number;

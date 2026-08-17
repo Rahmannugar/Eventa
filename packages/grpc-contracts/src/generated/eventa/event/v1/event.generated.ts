@@ -186,13 +186,37 @@ export interface EventTicketType {
   name: string;
   description?: string | undefined;
   priceMinor: number;
+  /** @deprecated */
   allocation: number;
   salesStartAt: string;
   salesEndAt: string;
   createdAt: string;
   updatedAt: string;
+  ticketCurrencyId: string;
+  capacity: number;
 }
 
+export interface EventTicketCurrency {
+  ticketCurrencyId: string;
+  eventId: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DefineEventTicketCurrencyRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  currency: string;
+}
+
+export interface DefineEventTicketCurrencyResponse {
+  ticketCurrency: EventTicketCurrency | undefined;
+  eventVersion: number;
+}
+
+/** @deprecated */
 export interface CreateEventTicketTypeRequest {
   adminId: string;
   eventId: string;
@@ -206,17 +230,48 @@ export interface CreateEventTicketTypeRequest {
   salesEndAt: string;
 }
 
+export interface AddEventTicketTypeRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+  name: string;
+  description?: string | undefined;
+  ticketCurrencyId: string;
+  priceMinor: number;
+  capacity: number;
+  salesStartAt: string;
+  salesEndAt: string;
+}
+
+export interface AddEventTicketTypeResponse {
+  ticketType: EventTicketType | undefined;
+  eventVersion: number;
+}
+
+/** @deprecated */
 export interface CreateEventTicketTypeResponse {
   ticketType: EventTicketType | undefined;
   eventVersion: number;
 }
 
+/** @deprecated */
 export interface ListEventTicketTypesRequest {
   eventId: string;
 }
 
+/** @deprecated */
 export interface ListEventTicketTypesResponse {
   currency?: string | undefined;
+  eventVersion: number;
+  ticketTypes: EventTicketType[];
+}
+
+export interface GetEventTicketCatalogueRequest {
+  eventId: string;
+}
+
+export interface GetEventTicketCatalogueResponse {
+  ticketCurrencies: EventTicketCurrency[];
   eventVersion: number;
   ticketTypes: EventTicketType[];
 }

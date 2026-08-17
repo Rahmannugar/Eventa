@@ -2,8 +2,10 @@ import {
   AdminEventSort,
   type CreateDraftEventRequest,
   type CreateDraftEventResponse,
-  type CreateEventTicketTypeRequest,
-  type CreateEventTicketTypeResponse,
+  type AddEventTicketTypeRequest,
+  type AddEventTicketTypeResponse,
+  type DefineEventTicketCurrencyRequest,
+  type DefineEventTicketCurrencyResponse,
   EventStatus,
   type Event,
   type ListAdminEventsRequest,
@@ -123,11 +125,23 @@ function createRetireService(
 }
 
 function createTicketTypeService(
-  createEventTicketType: DeadlineAwareEventServiceClient['createEventTicketType'],
+  addEventTicketType: DeadlineAwareEventServiceClient['addEventTicketType'],
   deadlineMs = 3_000,
 ): AdminEventService {
   const grpcClient = {
-    getService: () => ({ createEventTicketType }),
+    getService: () => ({ addEventTicketType }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createTicketCurrencyService(
+  defineEventTicketCurrency: DeadlineAwareEventServiceClient['defineEventTicketCurrency'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ defineEventTicketCurrency }),
   } as unknown as ClientGrpc;
   const service = new AdminEventService(grpcClient, deadlineMs);
   service.onModuleInit();
@@ -254,16 +268,17 @@ describe('AdminEventService catalogue', () => {
 });
 
 describe('AdminEventService ticket types', () => {
-  it('forwards ticket configuration and validates ownership', async () => {
-    let receivedRequest: CreateEventTicketTypeRequest | undefined;
-    const createEventTicketType = (
-      request: CreateEventTicketTypeRequest,
-    ): Observable<CreateEventTicketTypeResponse> => {
+  it('forwards a ticket type under its currency parent', async () => {
+    let receivedRequest: AddEventTicketTypeRequest | undefined;
+    const addEventTicketType = (
+      request: AddEventTicketTypeRequest,
+    ): Observable<AddEventTicketTypeResponse> => {
       receivedRequest = request;
       return of({
         eventVersion: 2,
         ticketType: {
-          allocation: request.allocation,
+          allocation: request.capacity,
+          capacity: request.capacity,
           createdAt: '2026-08-17T05:00:00.000Z',
           eventId: request.eventId,
           name: request.name,
@@ -271,24 +286,25 @@ describe('AdminEventService ticket types', () => {
           salesEndAt: request.salesEndAt,
           salesStartAt: request.salesStartAt,
           ticketTypeId: '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+          ticketCurrencyId: request.ticketCurrencyId,
           updatedAt: '2026-08-17T05:00:00.000Z',
         },
       });
     };
-    const service = createTicketTypeService(createEventTicketType);
+    const service = createTicketTypeService(addEventTicketType);
 
     await expect(
       service.createTicketType(
         draftEvent.createdByAdminId,
         draftEvent.eventId,
         {
-          allocation: 500,
-          currency: 'NGN',
+          capacity: 500,
           expectedVersion: 1,
           name: 'General admission',
           priceMinor: 2_500_000,
           salesEndAt: '2026-08-20T08:00:00.000Z',
           salesStartAt: '2026-08-17T08:00:00.000Z',
+          ticketCurrencyId: 'da77b895-fe35-46f2-a26b-8cc875d0abb0',
         },
         'ticket-type-request',
       ),
@@ -300,6 +316,45 @@ describe('AdminEventService ticket types', () => {
       },
     });
     expect(receivedRequest).toMatchObject({
+      adminId: draftEvent.createdByAdminId,
+      eventId: draftEvent.eventId,
+      expectedVersion: 1,
+      ticketCurrencyId: 'da77b895-fe35-46f2-a26b-8cc875d0abb0',
+    });
+  });
+
+  it('forwards a separately defined event currency', async () => {
+    let receivedRequest: DefineEventTicketCurrencyRequest | undefined;
+    const service = createTicketCurrencyService(
+      (
+        request: DefineEventTicketCurrencyRequest,
+      ): Observable<DefineEventTicketCurrencyResponse> => {
+        receivedRequest = request;
+        return of({
+          eventVersion: 2,
+          ticketCurrency: {
+            createdAt: '2026-08-17T05:00:00.000Z',
+            currency: request.currency,
+            eventId: request.eventId,
+            ticketCurrencyId: 'da77b895-fe35-46f2-a26b-8cc875d0abb0',
+            updatedAt: '2026-08-17T05:00:00.000Z',
+          },
+        });
+      },
+    );
+
+    await expect(
+      service.defineTicketCurrency(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        { currency: 'NGN', expectedVersion: 1 },
+        'ticket-currency-request',
+      ),
+    ).resolves.toMatchObject({
+      eventVersion: 2,
+      ticketCurrency: { currency: 'NGN', eventId: draftEvent.eventId },
+    });
+    expect(receivedRequest).toEqual({
       adminId: draftEvent.createdByAdminId,
       currency: 'NGN',
       eventId: draftEvent.eventId,

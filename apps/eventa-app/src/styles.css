@@ -1382,6 +1382,47 @@ a {
   gap: 0.9rem;
 }
 
+.ticket-currencies {
+  display: grid;
+  gap: 1rem;
+}
+
+.ticket-currency {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.ticket-currency__heading,
+.ticket-currency__heading > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ticket-currency__heading h3,
+.ticket-currency__empty {
+  margin: 0;
+}
+
+.ticket-currency__heading span,
+.ticket-currency__empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ticket-currency-form {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
 .ticket-type-card {
   display: grid;
   gap: 1rem;
@@ -1391,7 +1432,7 @@ a {
   background: #faf8f1;
 }
 
-.ticket-type-card h3,
+.ticket-type-card h4,
 .ticket-type-card p,
 .ticket-type-card dl,
 .ticket-type-card dd {
@@ -2832,18 +2873,25 @@ a {
   }
 
   .ticket-types__heading,
+  .ticket-currency__heading,
+  .ticket-currency-form,
   .ticket-type-form__actions {
     align-items: stretch;
     flex-direction: column;
   }
 
   .ticket-types__heading .button,
+  .ticket-currency__heading .button,
   .ticket-type-form__actions .button {
     width: 100%;
   }
 
   .ticket-type-form__grid,
   .ticket-type-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-currency-form {
     grid-template-columns: 1fr;
   }
 

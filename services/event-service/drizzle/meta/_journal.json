@@ -71,6 +71,20 @@
       "when": 1786939656053,
       "tag": "0009_add_event_ticket_types",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786952439844,
+      "tag": "0010_rename_event_ticket_currencies",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786952491044,
+      "tag": "0011_group_ticket_types_by_currency",
+      "breakpoints": true
     }
   ]
 }

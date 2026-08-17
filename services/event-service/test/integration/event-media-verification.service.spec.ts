@@ -25,7 +25,7 @@ import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-o
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
 import { eventMedia } from '../../src/events/schema/event-media.schema';
 import { eventPublicationOutbox } from '../../src/events/schema/event-publication-outbox.schema';
-import { eventTicketConfigurations } from '../../src/events/schema/event-ticket-configuration.schema';
+import { eventTicketCurrencies } from '../../src/events/schema/event-ticket-currency.schema';
 import { eventTicketTypes } from '../../src/events/schema/event-ticket-type.schema';
 import { eventVenues } from '../../src/events/schema/event-venue.schema';
 import { events } from '../../src/events/schema/event.schema';
@@ -125,7 +125,7 @@ describe('Event mutation integration', () => {
     await database.delete(eventPublicationOutbox);
     await database.delete(eventAdminAuditLog);
     await database.delete(eventTicketTypes);
-    await database.delete(eventTicketConfigurations);
+    await database.delete(eventTicketCurrencies);
     await database.delete(eventMediaObjectDeletions);
     await database.delete(eventMedia);
     await database.delete(eventMediaUploads);
@@ -157,73 +157,119 @@ describe('Event mutation integration', () => {
     expect(auditCount?.value).toBe(1);
   });
 
-  it('creates and lists a ticket type atomically', async () => {
+  it('groups ticket types under multiple event currencies', async () => {
     const event = await createEventRecord('Ticketed event');
     const salesStartAt = new Date(Date.now() + 60 * 60 * 1_000);
     const salesEndAt = new Date(event.startsAt!.getTime() - 60 * 60 * 1_000);
 
-    const created = await ticketTypes.create({
+    const ngn = await ticketTypes.defineCurrency({
       actorAdminId: randomUUID(),
-      allocation: 500,
       currency: 'NGN',
       eventId: event.eventId,
       expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    const usd = await ticketTypes.defineCurrency({
+      actorAdminId: randomUUID(),
+      currency: 'USD',
+      eventId: event.eventId,
+      expectedVersion: ngn.eventVersion,
+      requestId: randomUUID(),
+    });
+    const generalNgn = await ticketTypes.create({
+      actorAdminId: randomUUID(),
+      capacity: 500,
+      eventId: event.eventId,
+      expectedVersion: usd.eventVersion,
       name: '  General   admission  ',
       priceMinor: 2_500_000,
       requestId: randomUUID(),
       salesEndAt: salesEndAt.toISOString(),
       salesStartAt: salesStartAt.toISOString(),
+      ticketCurrencyId: ngn.ticketCurrency.ticketCurrencyId,
+    });
+    const generalUsd = await ticketTypes.create({
+      actorAdminId: randomUUID(),
+      capacity: 500,
+      eventId: event.eventId,
+      expectedVersion: generalNgn.eventVersion,
+      name: 'General admission',
+      priceMinor: 20_000,
+      requestId: randomUUID(),
+      salesEndAt: salesEndAt.toISOString(),
+      salesStartAt: salesStartAt.toISOString(),
+      ticketCurrencyId: usd.ticketCurrency.ticketCurrencyId,
     });
     const listed = await ticketTypes.list(event.eventId);
 
-    expect(created).toMatchObject({
-      eventVersion: 2,
+    expect(generalNgn).toMatchObject({
+      eventVersion: 4,
       ticketType: {
-        allocation: 500,
+        capacity: 500,
         name: 'General admission',
         priceMinor: 2_500_000,
       },
     });
     expect(listed).toMatchObject({
-      currency: 'NGN',
-      eventVersion: 2,
-      ticketTypes: [{ ticketTypeId: created.ticketType.ticketTypeId }],
+      eventVersion: 5,
+      ticketCurrencies: [{ currency: 'NGN' }, { currency: 'USD' }],
+      ticketTypes: [
+        { ticketTypeId: generalNgn.ticketType.ticketTypeId },
+        { ticketTypeId: generalUsd.ticketType.ticketTypeId },
+      ],
     });
   });
 
-  it('requires ticket configuration for every ticket type', async () => {
-    const event = await createEventRecord('Configuration integrity');
+  it('rejects a ticket currency owned by another event', async () => {
+    const event = await createEventRecord('Currency integrity');
+    const otherEvent = await createEventRecord('Other currency owner');
+    const currency = await ticketTypes.defineCurrency({
+      actorAdminId: randomUUID(),
+      currency: 'NGN',
+      eventId: otherEvent.eventId,
+      expectedVersion: otherEvent.version,
+      requestId: randomUUID(),
+    });
 
     await expect(
-      database.insert(eventTicketTypes).values({
-        allocation: 100,
+      ticketTypes.create({
+        actorAdminId: randomUUID(),
+        capacity: 100,
         eventId: event.eventId,
+        expectedVersion: event.version,
         name: 'General admission',
         priceMinor: 2_500_000,
-        salesEndAt: new Date(event.startsAt!.getTime() - 60 * 60 * 1_000),
-        salesStartAt: new Date(Date.now() + 60 * 60 * 1_000),
+        requestId: randomUUID(),
+        salesEndAt: new Date(
+          event.startsAt!.getTime() - 60 * 60 * 1_000,
+        ).toISOString(),
+        salesStartAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+        ticketCurrencyId: currency.ticketCurrency.ticketCurrencyId,
       }),
-    ).rejects.toMatchObject({
-      cause: {
-        code: '23503',
-        constraint_name: 'event_ticket_types_configuration_fk',
-      },
-    });
+    ).rejects.toMatchObject({ message: 'EVENT_TICKET_CURRENCY_NOT_FOUND' });
+    expect((await ticketTypes.list(event.eventId)).ticketTypes).toHaveLength(0);
   });
 
   it('serializes ticket type creation against the event version', async () => {
     const event = await createEventRecord('Concurrent ticket setup');
-    const command = {
+    const currency = await ticketTypes.defineCurrency({
       actorAdminId: randomUUID(),
-      allocation: 100,
       currency: 'NGN',
       eventId: event.eventId,
       expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    const command = {
+      actorAdminId: randomUUID(),
+      capacity: 100,
+      eventId: event.eventId,
+      expectedVersion: currency.eventVersion,
       priceMinor: 0,
       salesEndAt: new Date(
         event.startsAt!.getTime() - 60 * 60 * 1_000,
       ).toISOString(),
       salesStartAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+      ticketCurrencyId: currency.ticketCurrency.ticketCurrencyId,
     };
 
     const results = await Promise.allSettled([
@@ -249,7 +295,7 @@ describe('Event mutation integration', () => {
     }
     expect(rejected.reason).toBeInstanceOf(EventVersionConflictError);
     expect(listed.ticketTypes).toHaveLength(1);
-    expect(listed.eventVersion).toBe(2);
+    expect(listed.eventVersion).toBe(3);
   });
 
   it('rolls back creation when a category invariant fails', async () => {
@@ -1100,17 +1146,24 @@ async function createPublishableEvent(
       version: result.event.version,
     };
   }
-  const ticketType = await ticketTypes.create({
+  const currency = await ticketTypes.defineCurrency({
     actorAdminId: event.adminId,
-    allocation: 100,
     currency: 'NGN',
     eventId: event.eventId,
     expectedVersion: result.event.version,
+    requestId: randomUUID(),
+  });
+  const ticketType = await ticketTypes.create({
+    actorAdminId: event.adminId,
+    capacity: 100,
+    eventId: event.eventId,
+    expectedVersion: currency.eventVersion,
     name: 'General admission',
     priceMinor: 0,
     requestId: randomUUID(),
     salesEndAt: new Date(startsAt.getTime() - 60 * 60 * 1_000).toISOString(),
     salesStartAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+    ticketCurrencyId: currency.ticketCurrency.ticketCurrencyId,
   });
   return {
     adminId: event.adminId,

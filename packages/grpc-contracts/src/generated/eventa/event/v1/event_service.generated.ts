@@ -9,16 +9,22 @@ import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
 import {
+  AddEventTicketTypeRequest,
+  AddEventTicketTypeResponse,
   CreateDraftEventRequest,
   CreateDraftEventResponse,
   CreateEventMediaUploadRequest,
   CreateEventMediaUploadResponse,
   CreateEventTicketTypeRequest,
   CreateEventTicketTypeResponse,
+  DefineEventTicketCurrencyRequest,
+  DefineEventTicketCurrencyResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
+  GetEventTicketCatalogueRequest,
+  GetEventTicketCatalogueResponse,
   GetPublishedEventRequest,
   GetPublishedEventResponse,
   ListAdminEventsRequest,
@@ -50,15 +56,31 @@ export interface EventServiceClient {
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
+  defineEventTicketCurrency(
+    request: DefineEventTicketCurrencyRequest,
+    metadata?: Metadata,
+  ): Observable<DefineEventTicketCurrencyResponse>;
+
+  /** @deprecated */
+
   createEventTicketType(
     request: CreateEventTicketTypeRequest,
     metadata?: Metadata,
   ): Observable<CreateEventTicketTypeResponse>;
 
+  /** @deprecated */
+
   listEventTicketTypes(
     request: ListEventTicketTypesRequest,
     metadata?: Metadata,
   ): Observable<ListEventTicketTypesResponse>;
+
+  addEventTicketType(request: AddEventTicketTypeRequest, metadata?: Metadata): Observable<AddEventTicketTypeResponse>;
+
+  getEventTicketCatalogue(
+    request: GetEventTicketCatalogueRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventTicketCatalogueResponse>;
 
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
@@ -88,6 +110,11 @@ export interface EventServiceController {
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
+  defineEventTicketCurrency(
+    request: DefineEventTicketCurrencyRequest,
+    metadata?: Metadata,
+  ): Observable<DefineEventTicketCurrencyResponse>;
+
   createEventTicketType(
     request: CreateEventTicketTypeRequest,
     metadata?: Metadata,
@@ -97,6 +124,13 @@ export interface EventServiceController {
     request: ListEventTicketTypesRequest,
     metadata?: Metadata,
   ): Observable<ListEventTicketTypesResponse>;
+
+  addEventTicketType(request: AddEventTicketTypeRequest, metadata?: Metadata): Observable<AddEventTicketTypeResponse>;
+
+  getEventTicketCatalogue(
+    request: GetEventTicketCatalogueRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventTicketCatalogueResponse>;
 
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
@@ -123,8 +157,11 @@ export function EventServiceControllerMethods() {
       "getAdminEvent",
       "getPublishedEvent",
       "updateDraftEvent",
+      "defineEventTicketCurrency",
       "createEventTicketType",
       "listEventTicketTypes",
+      "addEventTicketType",
+      "getEventTicketCatalogue",
       "createEventMediaUpload",
       "getEventMediaUpload",
       "removeEventMedia",

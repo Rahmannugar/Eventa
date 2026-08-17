@@ -8,6 +8,8 @@ import type {
   CreateEventMediaUploadCommand,
   CreateEventTicketTypeCommand,
   CreateEventTicketTypeResult,
+  DefineEventTicketCurrencyCommand,
+  DefineEventTicketCurrencyResult,
   CreateEventInput,
   EventMediaUploadIntent,
   EventMediaUploadStatus,
@@ -139,19 +141,28 @@ const retireDraftEventResponseSchema = z.object({
 const eventTicketTypeSchema = z.object({
   ticketTypeId: z.uuid(),
   eventId: z.uuid(),
+  ticketCurrencyId: z.uuid(),
   name: z.string().min(1),
   description: z.string().min(1).optional(),
   priceMinor: z.number().int().nonnegative(),
-  allocation: z.number().int().positive(),
+  capacity: z.number().int().positive(),
   salesStartAt: z.iso.datetime({ offset: true }),
   salesEndAt: z.iso.datetime({ offset: true }),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
 });
 
+const eventTicketCurrencySchema = z.object({
+  ticketCurrencyId: z.uuid(),
+  eventId: z.uuid(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+
 const eventTicketTypeListSchema: z.ZodType<EventTicketTypeList> = z.object({
-  currency: z.string().length(3).optional(),
   eventVersion: z.number().int().positive(),
+  ticketCurrencies: z.array(eventTicketCurrencySchema),
   ticketTypes: z.array(eventTicketTypeSchema).max(20),
 });
 
@@ -159,6 +170,12 @@ const createEventTicketTypeResultSchema: z.ZodType<CreateEventTicketTypeResult> 
   z.object({
     eventVersion: z.number().int().min(2),
     ticketType: eventTicketTypeSchema,
+  });
+
+const defineEventTicketCurrencyResultSchema: z.ZodType<DefineEventTicketCurrencyResult> =
+  z.object({
+    eventVersion: z.number().int().min(2),
+    ticketCurrency: eventTicketCurrencySchema,
   });
 
 export function createEvent(input: CreateEventInput): Promise<AdminEvent> {
@@ -229,6 +246,20 @@ export function createEventTicketType({
       body: input,
       method: 'POST',
       responseSchema: createEventTicketTypeResultSchema,
+    },
+  );
+}
+
+export function defineEventTicketCurrency({
+  eventId,
+  input,
+}: DefineEventTicketCurrencyCommand): Promise<DefineEventTicketCurrencyResult> {
+  return apiRequest(
+    `/admin/events/${encodeURIComponent(eventId)}/ticket-currencies`,
+    {
+      body: input,
+      method: 'POST',
+      responseSchema: defineEventTicketCurrencyResultSchema,
     },
   );
 }

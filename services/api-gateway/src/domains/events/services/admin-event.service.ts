@@ -7,6 +7,7 @@ import {
   type AdminEventSummary,
   type Event,
   type EventTicketType,
+  type EventTicketCurrency,
   type Venue,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -33,6 +34,8 @@ import type {
   CreateEventMediaUploadDto,
   CreateEventTicketTypeDto,
   CreateEventTicketTypeResponseDto,
+  DefineEventTicketCurrencyDto,
+  DefineEventTicketCurrencyResponseDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
   EventTicketTypeDto,
@@ -327,7 +330,7 @@ export class AdminEventService implements OnModuleInit {
     const events = this.requireClient();
     try {
       const response = await firstValueFrom(
-        events.createEventTicketType(
+        events.addEventTicketType(
           {
             adminId,
             eventId,
@@ -352,6 +355,37 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async defineTicketCurrency(
+    adminId: string,
+    eventId: string,
+    input: DefineEventTicketCurrencyDto,
+    requestId: string,
+  ): Promise<DefineEventTicketCurrencyResponseDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.defineEventTicketCurrency(
+          { adminId, eventId, ...input },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      if (
+        response.ticketCurrency === undefined ||
+        response.eventVersion < 2 ||
+        response.ticketCurrency.eventId !== eventId
+      ) {
+        throw this.unavailable('EVENT_TICKET_CURRENCY_RESPONSE_INVALID');
+      }
+      return {
+        eventVersion: response.eventVersion,
+        ticketCurrency: this.toEventTicketCurrency(response.ticketCurrency),
+      };
+    } catch (error: unknown) {
+      this.translate(error, 'ticket_currency');
+    }
+  }
+
   async listTicketTypes(
     eventId: string,
     requestId: string,
@@ -359,7 +393,7 @@ export class AdminEventService implements OnModuleInit {
     const events = this.requireClient();
     try {
       const response = await firstValueFrom(
-        events.listEventTicketTypes(
+        events.getEventTicketCatalogue(
           { eventId },
           this.metadata(requestId),
           this.deadline(),
@@ -368,17 +402,25 @@ export class AdminEventService implements OnModuleInit {
       if (response.eventVersion < 1) {
         throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
       }
-      if (
-        (response.ticketTypes?.length ?? 0) > 0 &&
-        response.currency === undefined
-      ) {
-        throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
-      }
+      const ticketCurrencies = (response.ticketCurrencies ?? []).map(
+        (ticketCurrency) => {
+          if (ticketCurrency.eventId !== eventId) {
+            throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
+          }
+          return this.toEventTicketCurrency(ticketCurrency);
+        },
+      );
+      const currencyIds = new Set(
+        ticketCurrencies.map(({ ticketCurrencyId }) => ticketCurrencyId),
+      );
       return {
-        currency: response.currency,
         eventVersion: response.eventVersion,
+        ticketCurrencies,
         ticketTypes: (response.ticketTypes ?? []).map((ticketType) => {
-          if (ticketType.eventId !== eventId) {
+          if (
+            ticketType.eventId !== eventId ||
+            !currencyIds.has(ticketType.ticketCurrencyId)
+          ) {
             throw this.unavailable('EVENT_TICKET_TYPE_LIST_RESPONSE_INVALID');
           }
           return this.toEventTicketType(ticketType);
@@ -542,15 +584,40 @@ export class AdminEventService implements OnModuleInit {
       ticketType.updatedAt === '' ||
       !Number.isInteger(ticketType.priceMinor) ||
       ticketType.priceMinor < 0 ||
-      !Number.isInteger(ticketType.allocation) ||
-      ticketType.allocation < 1
+      !Number.isInteger(ticketType.capacity) ||
+      ticketType.capacity < 1 ||
+      ticketType.ticketCurrencyId === ''
     ) {
       throw this.unavailable('EVENT_TICKET_TYPE_RESPONSE_INVALID');
     }
     return {
-      ...ticketType,
+      capacity: ticketType.capacity,
+      createdAt: ticketType.createdAt,
       description: ticketType.description,
+      eventId: ticketType.eventId,
+      name: ticketType.name,
+      priceMinor: ticketType.priceMinor,
+      salesEndAt: ticketType.salesEndAt,
+      salesStartAt: ticketType.salesStartAt,
+      ticketCurrencyId: ticketType.ticketCurrencyId,
+      ticketTypeId: ticketType.ticketTypeId,
+      updatedAt: ticketType.updatedAt,
     };
+  }
+
+  private toEventTicketCurrency(
+    ticketCurrency: EventTicketCurrency,
+  ): DefineEventTicketCurrencyResponseDto['ticketCurrency'] {
+    if (
+      ticketCurrency.ticketCurrencyId === '' ||
+      ticketCurrency.eventId === '' ||
+      !/^[A-Z]{3}$/.test(ticketCurrency.currency) ||
+      ticketCurrency.createdAt === '' ||
+      ticketCurrency.updatedAt === ''
+    ) {
+      throw this.unavailable('EVENT_TICKET_CURRENCY_RESPONSE_INVALID');
+    }
+    return ticketCurrency;
   }
 
   private toAdminVenue(venue: Venue): AdminEventDto['venue'] {
@@ -583,6 +650,7 @@ export class AdminEventService implements OnModuleInit {
       | 'retire'
       | 'ticket_type'
       | 'ticket_type_read'
+      | 'ticket_currency'
       | 'update',
   ): never {
     if (error instanceof ApiHttpException) {
@@ -601,22 +669,32 @@ export class AdminEventService implements OnModuleInit {
             : 'Event was not found.',
         );
       case status.INVALID_ARGUMENT:
+        if (operation === 'ticket_currency') {
+          const duplicate =
+            readErrorMessage(error) === 'EVENT_TICKET_CURRENCY_CONFLICT';
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            duplicate ? 'EVENT_TICKET_CURRENCY_CONFLICT' : 'VALIDATION_FAILED',
+            duplicate
+              ? 'That currency is already defined for this event.'
+              : 'Choose a valid currency.',
+          );
+        }
         if (operation === 'ticket_type') {
           const message = readErrorMessage(error);
           const nameConflict = message === 'EVENT_TICKET_TYPE_NAME_CONFLICT';
-          const currencyConflict =
-            message === 'EVENT_TICKET_TYPE_CURRENCY_CONFLICT';
+          const currencyMissing = message === 'EVENT_TICKET_CURRENCY_NOT_FOUND';
           throw new ApiHttpException(
             HttpStatus.UNPROCESSABLE_ENTITY,
             nameConflict
               ? 'EVENT_TICKET_TYPE_NAME_CONFLICT'
-              : currencyConflict
-                ? 'EVENT_TICKET_TYPE_CURRENCY_CONFLICT'
+              : currencyMissing
+                ? 'EVENT_TICKET_CURRENCY_NOT_FOUND'
                 : 'VALIDATION_FAILED',
             nameConflict
               ? 'Use a different ticket type name.'
-              : currencyConflict
-                ? 'Use the event currency for every ticket type.'
+              : currencyMissing
+                ? 'Choose a currency defined for this event.'
                 : 'Check the ticket details and try again.',
           );
         }
@@ -633,6 +711,13 @@ export class AdminEventService implements OnModuleInit {
           'The event changed. Reload it and apply your changes again.',
         );
       case status.FAILED_PRECONDITION:
+        if (operation === 'ticket_currency') {
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'EVENT_TICKET_CURRENCY_MUTATION_NOT_ALLOWED',
+            'Currencies can only be defined while the event is a draft.',
+          );
+        }
         if (operation === 'ticket_type') {
           const limitReached =
             readErrorMessage(error) === 'EVENT_TICKET_TYPE_LIMIT_REACHED';
@@ -690,13 +775,15 @@ export class AdminEventService implements OnModuleInit {
                     ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
                     : operation === 'publish'
                       ? 'EVENT_PUBLISH_RPC_UNAVAILABLE'
-                  : operation === 'retire'
-                    ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
-                    : operation === 'ticket_type'
-                      ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
-                      : operation === 'ticket_type_read'
-                        ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
-                        : 'EVENT_READ_RPC_UNAVAILABLE',
+                      : operation === 'retire'
+                        ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
+                        : operation === 'ticket_type'
+                          ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
+                          : operation === 'ticket_currency'
+                            ? 'EVENT_TICKET_CURRENCY_RPC_UNAVAILABLE'
+                            : operation === 'ticket_type_read'
+                              ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
+                              : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

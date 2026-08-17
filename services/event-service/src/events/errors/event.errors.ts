@@ -89,10 +89,17 @@ export class EventTicketTypeNameConflictError extends Error {
   }
 }
 
-export class EventTicketTypeCurrencyConflictError extends Error {
+export class EventTicketCurrencyConflictError extends Error {
   constructor() {
-    super('EVENT_TICKET_TYPE_CURRENCY_CONFLICT');
-    this.name = EventTicketTypeCurrencyConflictError.name;
+    super('EVENT_TICKET_CURRENCY_CONFLICT');
+    this.name = EventTicketCurrencyConflictError.name;
+  }
+}
+
+export class EventTicketCurrencyNotFoundError extends Error {
+  constructor() {
+    super('EVENT_TICKET_CURRENCY_NOT_FOUND');
+    this.name = EventTicketCurrencyNotFoundError.name;
   }
 }
 

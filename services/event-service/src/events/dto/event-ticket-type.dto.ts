@@ -1,6 +1,7 @@
 import type {
-  CreateEventTicketTypeRequest,
-  ListEventTicketTypesRequest,
+  AddEventTicketTypeRequest,
+  DefineEventTicketCurrencyRequest,
+  GetEventTicketCatalogueRequest,
 } from '@eventa/grpc-contracts';
 import { Transform } from 'class-transformer';
 import {
@@ -17,7 +18,27 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateEventTicketTypeDto implements CreateEventTicketTypeRequest {
+export class DefineEventTicketCurrencyDto implements DefineEventTicketCurrencyRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @Length(3, 3)
+  @Matches(/^[A-Z]{3}$/)
+  currency!: string;
+}
+
+export class AddEventTicketTypeDto implements AddEventTicketTypeRequest {
   @IsUUID()
   adminId!: string;
 
@@ -46,12 +67,8 @@ export class CreateEventTicketTypeDto implements CreateEventTicketTypeRequest {
   @MaxLength(500)
   description?: string;
 
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim().toUpperCase() : value,
-  )
-  @Length(3, 3)
-  @Matches(/^[A-Z]{3}$/)
-  currency!: string;
+  @IsUUID()
+  ticketCurrencyId!: string;
 
   @IsInt()
   @Min(0)
@@ -61,7 +78,7 @@ export class CreateEventTicketTypeDto implements CreateEventTicketTypeRequest {
   @IsInt()
   @Min(1)
   @Max(1_000_000)
-  allocation!: number;
+  capacity!: number;
 
   @IsISO8601({ strict: true, strictSeparator: true })
   salesStartAt!: string;
@@ -70,7 +87,7 @@ export class CreateEventTicketTypeDto implements CreateEventTicketTypeRequest {
   salesEndAt!: string;
 }
 
-export class ListEventTicketTypesDto implements ListEventTicketTypesRequest {
+export class GetEventTicketCatalogueDto implements GetEventTicketCatalogueRequest {
   @IsUUID()
   eventId!: string;
 }

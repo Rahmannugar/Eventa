@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   AdminEventSort,
+  type AddEventTicketTypeResponse,
   EventMediaSlot,
   EventMediaUploadStatus,
   EventServiceControllerMethods,
@@ -9,11 +10,14 @@ import {
   type CreateDraftEventResponse,
   type CreateEventMediaUploadResponse,
   type CreateEventTicketTypeResponse,
+  type DefineEventTicketCurrencyResponse,
   type Event,
+  type EventTicketCurrency,
   type EventTicketType,
   type EventServiceController,
   type GetAdminEventResponse,
   type GetEventMediaUploadResponse,
+  type GetEventTicketCatalogueResponse,
   type ListAdminEventsResponse,
   type ListEventTicketTypesResponse,
   type GetPublishedEventResponse,
@@ -50,8 +54,9 @@ import {
 } from '../dto/event-media.dto';
 import { GetPublishedEventDto } from '../dto/published-event.dto';
 import {
-  CreateEventTicketTypeDto,
-  ListEventTicketTypesDto,
+  AddEventTicketTypeDto,
+  DefineEventTicketCurrencyDto,
+  GetEventTicketCatalogueDto,
 } from '../dto/event-ticket-type.dto';
 import {
   EventCategoriesInvalidError,
@@ -65,7 +70,8 @@ import {
   EventScheduleInvalidError,
   EventVersionConflictError,
   EventVenueInvalidError,
-  EventTicketTypeCurrencyConflictError,
+  EventTicketCurrencyConflictError,
+  EventTicketCurrencyNotFoundError,
   EventTicketTypeInvalidError,
   EventTicketTypeLimitReachedError,
   EventTicketTypeMutationNotAllowedError,
@@ -80,6 +86,7 @@ import type {
   EventRecord,
   EventTicketTypeManagement,
   EventTicketTypeRecord,
+  EventTicketCurrencyRecord,
 } from '../types/event.types';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -128,16 +135,39 @@ export class EventController implements EventServiceController {
     return from(this.updateEvent(request, this.readRequestId(metadata)));
   }
 
-  createEventTicketType(
-    request: CreateEventTicketTypeDto,
+  defineEventTicketCurrency(
+    request: DefineEventTicketCurrencyDto,
     metadata?: Metadata,
-  ): Observable<CreateEventTicketTypeResponse> {
+  ): Observable<DefineEventTicketCurrencyResponse> {
+    return from(
+      this.defineTicketCurrency(request, this.readRequestId(metadata)),
+    );
+  }
+
+  createEventTicketType(): Observable<CreateEventTicketTypeResponse> {
+    throw new RpcException({
+      code: status.FAILED_PRECONDITION,
+      message: 'EVENT_TICKET_CATALOGUE_CONTRACT_REPLACED',
+    });
+  }
+
+  listEventTicketTypes(): Observable<ListEventTicketTypesResponse> {
+    throw new RpcException({
+      code: status.FAILED_PRECONDITION,
+      message: 'EVENT_TICKET_CATALOGUE_CONTRACT_REPLACED',
+    });
+  }
+
+  addEventTicketType(
+    request: AddEventTicketTypeDto,
+    metadata?: Metadata,
+  ): Observable<AddEventTicketTypeResponse> {
     return from(this.createTicketType(request, this.readRequestId(metadata)));
   }
 
-  listEventTicketTypes(
-    request: ListEventTicketTypesDto,
-  ): Observable<ListEventTicketTypesResponse> {
+  getEventTicketCatalogue(
+    request: GetEventTicketCatalogueDto,
+  ): Observable<GetEventTicketCatalogueResponse> {
     return from(this.listTicketTypes(request.eventId));
   }
 
@@ -560,14 +590,13 @@ export class EventController implements EventServiceController {
   }
 
   private async createTicketType(
-    request: CreateEventTicketTypeDto,
+    request: AddEventTicketTypeDto,
     requestId: string,
-  ): Promise<CreateEventTicketTypeResponse> {
+  ): Promise<AddEventTicketTypeResponse> {
     try {
       const result = await this.ticketTypeService.create({
         actorAdminId: request.adminId,
-        allocation: request.allocation,
-        currency: request.currency,
+        capacity: request.capacity,
         ...(request.description === undefined
           ? {}
           : { description: request.description }),
@@ -578,6 +607,7 @@ export class EventController implements EventServiceController {
         requestId,
         salesEndAt: request.salesEndAt,
         salesStartAt: request.salesStartAt,
+        ticketCurrencyId: request.ticketCurrencyId,
       });
       return {
         eventVersion: result.eventVersion,
@@ -598,7 +628,7 @@ export class EventController implements EventServiceController {
       }
       if (
         error instanceof EventTicketTypeInvalidError ||
-        error instanceof EventTicketTypeCurrencyConflictError ||
+        error instanceof EventTicketCurrencyNotFoundError ||
         error instanceof EventTicketTypeNameConflictError
       ) {
         throw new RpcException({
@@ -619,14 +649,64 @@ export class EventController implements EventServiceController {
     }
   }
 
+  private async defineTicketCurrency(
+    request: DefineEventTicketCurrencyDto,
+    requestId: string,
+  ): Promise<DefineEventTicketCurrencyResponse> {
+    try {
+      const result = await this.ticketTypeService.defineCurrency({
+        actorAdminId: request.adminId,
+        currency: request.currency,
+        eventId: request.eventId,
+        expectedVersion: request.expectedVersion,
+        requestId,
+      });
+      return {
+        eventVersion: result.eventVersion,
+        ticketCurrency: this.toTicketCurrencyContract(result.ticketCurrency),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (
+        error instanceof EventTicketTypeInvalidError ||
+        error instanceof EventTicketCurrencyConflictError
+      ) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventTicketTypeMutationNotAllowedError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   private async listTicketTypes(
     eventId: string,
-  ): Promise<ListEventTicketTypesResponse> {
+  ): Promise<GetEventTicketCatalogueResponse> {
     try {
       const result = await this.ticketTypeService.list(eventId);
       return {
-        currency: result.currency ?? undefined,
         eventVersion: result.eventVersion,
+        ticketCurrencies: result.ticketCurrencies.map((ticketCurrency) =>
+          this.toTicketCurrencyContract(ticketCurrency),
+        ),
         ticketTypes: result.ticketTypes.map((ticketType) =>
           this.toTicketTypeContract(ticketType),
         ),
@@ -646,7 +726,8 @@ export class EventController implements EventServiceController {
     ticketType: EventTicketTypeRecord,
   ): EventTicketType {
     return {
-      allocation: ticketType.allocation,
+      allocation: ticketType.capacity,
+      capacity: ticketType.capacity,
       createdAt: ticketType.createdAt.toISOString(),
       description: ticketType.description ?? undefined,
       eventId: ticketType.eventId,
@@ -655,7 +736,20 @@ export class EventController implements EventServiceController {
       salesEndAt: ticketType.salesEndAt.toISOString(),
       salesStartAt: ticketType.salesStartAt.toISOString(),
       ticketTypeId: ticketType.ticketTypeId,
+      ticketCurrencyId: ticketType.ticketCurrencyId,
       updatedAt: ticketType.updatedAt.toISOString(),
+    };
+  }
+
+  private toTicketCurrencyContract(
+    ticketCurrency: EventTicketCurrencyRecord,
+  ): EventTicketCurrency {
+    return {
+      createdAt: ticketCurrency.createdAt.toISOString(),
+      currency: ticketCurrency.currency,
+      eventId: ticketCurrency.eventId,
+      ticketCurrencyId: ticketCurrency.ticketCurrencyId,
+      updatedAt: ticketCurrency.updatedAt.toISOString(),
     };
   }
 

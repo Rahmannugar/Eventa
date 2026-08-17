@@ -137,19 +137,28 @@ export interface RetireDraftEventCommand {
 export interface EventTicketType {
   ticketTypeId: string;
   eventId: string;
+  ticketCurrencyId: string;
   name: string;
   description?: string | undefined;
   priceMinor: number;
-  allocation: number;
+  capacity: number;
   salesStartAt: string;
   salesEndAt: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface EventTicketCurrency {
+  ticketCurrencyId: string;
+  eventId: string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface EventTicketTypeList {
-  currency?: string | undefined;
   eventVersion: number;
+  ticketCurrencies: EventTicketCurrency[];
   ticketTypes: EventTicketType[];
 }
 
@@ -157,11 +166,21 @@ export interface CreateEventTicketTypeInput {
   expectedVersion: number;
   name: string;
   description?: string | undefined;
-  currency: string;
+  ticketCurrencyId: string;
   priceMinor: number;
-  allocation: number;
+  capacity: number;
   salesStartAt: string;
   salesEndAt: string;
+}
+
+export interface DefineEventTicketCurrencyCommand {
+  eventId: string;
+  input: { currency: string; expectedVersion: number };
+}
+
+export interface DefineEventTicketCurrencyResult {
+  eventVersion: number;
+  ticketCurrency: EventTicketCurrency;
 }
 
 export interface CreateEventTicketTypeCommand {

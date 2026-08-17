@@ -10,8 +10,15 @@ service EventService {
   rpc GetAdminEvent(GetAdminEventRequest) returns (GetAdminEventResponse);
   rpc GetPublishedEvent(GetPublishedEventRequest) returns (GetPublishedEventResponse);
   rpc UpdateDraftEvent(UpdateDraftEventRequest) returns (UpdateDraftEventResponse);
-  rpc CreateEventTicketType(CreateEventTicketTypeRequest) returns (CreateEventTicketTypeResponse);
-  rpc ListEventTicketTypes(ListEventTicketTypesRequest) returns (ListEventTicketTypesResponse);
+  rpc DefineEventTicketCurrency(DefineEventTicketCurrencyRequest) returns (DefineEventTicketCurrencyResponse);
+  rpc CreateEventTicketType(CreateEventTicketTypeRequest) returns (CreateEventTicketTypeResponse) {
+    option deprecated = true;
+  }
+  rpc ListEventTicketTypes(ListEventTicketTypesRequest) returns (ListEventTicketTypesResponse) {
+    option deprecated = true;
+  }
+  rpc AddEventTicketType(AddEventTicketTypeRequest) returns (AddEventTicketTypeResponse);
+  rpc GetEventTicketCatalogue(GetEventTicketCatalogueRequest) returns (GetEventTicketCatalogueResponse);
   rpc CreateEventMediaUpload(CreateEventMediaUploadRequest) returns (CreateEventMediaUploadResponse);
   rpc GetEventMediaUpload(GetEventMediaUploadRequest) returns (GetEventMediaUploadResponse);
   rpc RemoveEventMedia(RemoveEventMediaRequest) returns (RemoveEventMediaResponse);

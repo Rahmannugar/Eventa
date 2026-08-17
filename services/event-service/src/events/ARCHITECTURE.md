@@ -31,13 +31,13 @@ Catalogue time and title indexes are partial over active rows. Retired drafts th
 
 Admin identity authorizes the management surface, not ownership of an individual event. We retain `created_by_admin_id` for provenance. We do not filter reads or mutations by creator.
 
-## Ticket-Type Configuration
+## Ticket Catalogue
 
-The first ticket type creates the event's one currency configuration. Every ticket type references that configuration by event ID, so catalogue rows cannot exist without the shared currency. Ticket types store normalized names, optional descriptions, face values in integer minor units, allocations, and sales windows. Event capacity is derived from allocations rather than duplicated as an independently editable event total.
+An event owns one or more unique ticket-currency definitions. Every ticket type references exactly one of those definitions, so NGN, USD, GBP, or other supported offerings remain grouped without repeating currency on each ticket-type row. Ticket types store normalized names, optional descriptions, face values in integer minor units, capacity, and sales windows. Event capacity is derived from ticket-type capacity rather than duplicated as an independently editable event total.
 
-Creation locks the event row, verifies active draft state and expected version, checks currency, name, count, and schedule invariants, inserts the ticket type, increments the event version, and appends `event.ticket_type_created` in one transaction. The event-row lock serializes concurrent ticket-type mutations. The database also enforces price, allocation, window, normalization, foreign-key, and case-insensitive name uniqueness constraints.
+Currency definition and ticket-type creation both lock the event row, verify active draft state and expected version, perform their insert, increment the event version, and append their audit action in one transaction. The event-row lock serializes both mutation paths. A ticket type must reference a currency owned by the same event. PostgreSQL also enforces unique event currencies, price, capacity, window, normalization, foreign-key, and case-insensitive name uniqueness within one currency.
 
-Ticket-type reads use the configuration foreign key and stable `(event_id, created_at, id)` index. At most 20 rows can belong to one event, so the management read remains bounded.
+The management read joins the event to currencies through `(event_id, created_at, id)` and types through `(ticket_currency_id, created_at, id)` in one statement. At most 20 ticket types can belong to one event, so the catalogue read remains bounded and internally consistent.
 
 ## Published Access
 

@@ -21,6 +21,7 @@ import { eventCategories } from '../schema/event-category.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { eventPublicationOutbox } from '../schema/event-publication-outbox.schema';
 import { eventTicketTypes } from '../schema/event-ticket-type.schema';
+import { eventTicketCurrencies } from '../schema/event-ticket-currency.schema';
 import { eventVenues } from '../schema/event-venue.schema';
 import { events } from '../schema/event.schema';
 import type {
@@ -455,7 +456,11 @@ export class EventManagementRepository implements EventRepositoryPort {
             transaction
               .select({ ticketTypeId: eventTicketTypes.id })
               .from(eventTicketTypes)
-              .where(eq(eventTicketTypes.eventId, input.eventId))
+              .innerJoin(
+                eventTicketCurrencies,
+                eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+              )
+              .where(eq(eventTicketCurrencies.eventId, input.eventId))
               .limit(1),
           ]);
           const categories = categoryRows.map(({ category }) => category);

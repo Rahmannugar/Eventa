@@ -171,14 +171,37 @@ message EventTicketType {
   string name = 3;
   optional string description = 4;
   int32 price_minor = 5;
-  int32 allocation = 6;
+  int32 allocation = 6 [deprecated = true];
   string sales_start_at = 7;
   string sales_end_at = 8;
   string created_at = 9;
   string updated_at = 10;
+  string ticket_currency_id = 11;
+  int32 capacity = 12;
+}
+
+message EventTicketCurrency {
+  string ticket_currency_id = 1;
+  string event_id = 2;
+  string currency = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+message DefineEventTicketCurrencyRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string currency = 4;
+}
+
+message DefineEventTicketCurrencyResponse {
+  EventTicketCurrency ticket_currency = 1;
+  int32 event_version = 2;
 }
 
 message CreateEventTicketTypeRequest {
+  option deprecated = true;
   string admin_id = 1;
   string event_id = 2;
   int32 expected_version = 3;
@@ -191,17 +214,48 @@ message CreateEventTicketTypeRequest {
   string sales_end_at = 10;
 }
 
+message AddEventTicketTypeRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+  string name = 4;
+  optional string description = 5;
+  string ticket_currency_id = 6;
+  int32 price_minor = 7;
+  int32 capacity = 8;
+  string sales_start_at = 9;
+  string sales_end_at = 10;
+}
+
+message AddEventTicketTypeResponse {
+  EventTicketType ticket_type = 1;
+  int32 event_version = 2;
+}
+
 message CreateEventTicketTypeResponse {
+  option deprecated = true;
   EventTicketType ticket_type = 1;
   int32 event_version = 2;
 }
 
 message ListEventTicketTypesRequest {
+  option deprecated = true;
   string event_id = 1;
 }
 
 message ListEventTicketTypesResponse {
+  option deprecated = true;
   optional string currency = 1;
+  int32 event_version = 2;
+  repeated EventTicketType ticket_types = 3;
+}
+
+message GetEventTicketCatalogueRequest {
+  string event_id = 1;
+}
+
+message GetEventTicketCatalogueResponse {
+  repeated EventTicketCurrency ticket_currencies = 1;
   int32 event_version = 2;
   repeated EventTicketType ticket_types = 3;
 }

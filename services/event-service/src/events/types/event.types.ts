@@ -423,21 +423,57 @@ export interface EventManagement {
 export interface EventTicketTypeRecord {
   ticketTypeId: string;
   eventId: string;
+  ticketCurrencyId: string;
   name: string;
   description: string | null;
   priceMinor: number;
-  allocation: number;
+  capacity: number;
   salesStartAt: Date;
   salesEndAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export interface EventTicketCurrencyRecord {
+  ticketCurrencyId: string;
+  eventId: string;
+  currency: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface EventTicketTypesRecord {
-  currency: string | null;
   eventVersion: number;
+  ticketCurrencies: EventTicketCurrencyRecord[];
   ticketTypes: EventTicketTypeRecord[];
 }
+
+export interface DefineEventTicketCurrencyCommand {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  currency: string;
+}
+
+export interface DefineEventTicketCurrency {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+  currency: string;
+}
+
+export type DefineEventTicketCurrencyResult =
+  | {
+      outcome: 'defined';
+      eventVersion: number;
+      ticketCurrency: EventTicketCurrencyRecord;
+    }
+  | { outcome: 'not_found' }
+  | { outcome: 'not_draft' }
+  | { outcome: 'version_conflict' }
+  | { outcome: 'currency_conflict' };
 
 export interface CreateEventTicketTypeCommand {
   actorAdminId: string;
@@ -446,9 +482,9 @@ export interface CreateEventTicketTypeCommand {
   requestId: string;
   name: string;
   description?: string;
-  currency: string;
+  ticketCurrencyId: string;
   priceMinor: number;
-  allocation: number;
+  capacity: number;
   salesStartAt: string;
   salesEndAt: string;
 }
@@ -460,9 +496,9 @@ export interface CreateEventTicketType {
   requestId: string;
   name: string;
   description: string | null;
-  currency: string;
+  ticketCurrencyId: string;
   priceMinor: number;
-  allocation: number;
+  capacity: number;
   salesStartAt: Date;
   salesEndAt: Date;
 }
@@ -476,19 +512,24 @@ export type CreateEventTicketTypeResult =
   | { outcome: 'not_found' }
   | { outcome: 'not_draft' }
   | { outcome: 'version_conflict' }
-  | { outcome: 'currency_conflict' }
+  | { outcome: 'currency_not_found' }
   | { outcome: 'name_conflict' }
   | { outcome: 'invalid_window' }
   | { outcome: 'limit_reached' };
 
 export interface EventTicketTypeRepository {
-  create(
-    input: CreateEventTicketType,
-  ): Promise<CreateEventTicketTypeResult>;
+  defineCurrency(
+    input: DefineEventTicketCurrency,
+  ): Promise<DefineEventTicketCurrencyResult>;
+  create(input: CreateEventTicketType): Promise<CreateEventTicketTypeResult>;
   list(eventId: string): Promise<EventTicketTypesRecord | undefined>;
 }
 
 export interface EventTicketTypeManagement {
+  defineCurrency(input: DefineEventTicketCurrencyCommand): Promise<{
+    eventVersion: number;
+    ticketCurrency: EventTicketCurrencyRecord;
+  }>;
   create(input: CreateEventTicketTypeCommand): Promise<{
     eventVersion: number;
     ticketType: EventTicketTypeRecord;

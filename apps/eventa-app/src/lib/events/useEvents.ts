@@ -17,6 +17,7 @@ import {
   createEvent,
   createEventMediaUpload,
   createEventTicketType,
+  defineEventTicketCurrency,
   getAdminEvent,
   getEventMediaUpload,
   listAdminEvents,
@@ -33,6 +34,7 @@ import type {
   AdminEventListPage,
   CreateEventInput,
   CreateEventTicketTypeCommand,
+  DefineEventTicketCurrencyCommand,
   EventTicketTypeList,
   EventMediaContentType,
   EventMediaSlot,
@@ -98,12 +100,39 @@ export function useCreateEventTicketType() {
       queryClient.setQueryData<EventTicketTypeList>(
         adminEventTicketTypesQueryKey(command.eventId),
         (current) => ({
-          currency: current?.currency ?? command.input.currency,
           eventVersion: result.eventVersion,
-          ticketTypes: [
-            ...(current?.ticketTypes ?? []),
-            result.ticketType,
+          ticketCurrencies: current?.ticketCurrencies ?? [],
+          ticketTypes: [...(current?.ticketTypes ?? []), result.ticketType],
+        }),
+      );
+      queryClient.setQueryData<AdminEvent>(
+        adminEventQueryKey(command.eventId),
+        (current) =>
+          current === undefined
+            ? current
+            : { ...current, version: result.eventVersion },
+      );
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
+  });
+}
+
+export function useDefineEventTicketCurrency() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: DefineEventTicketCurrencyCommand) =>
+      defineEventTicketCurrency(command),
+    onSuccess: (result, command) => {
+      queryClient.setQueryData<EventTicketTypeList>(
+        adminEventTicketTypesQueryKey(command.eventId),
+        (current) => ({
+          eventVersion: result.eventVersion,
+          ticketCurrencies: [
+            ...(current?.ticketCurrencies ?? []),
+            result.ticketCurrency,
           ],
+          ticketTypes: current?.ticketTypes ?? [],
         }),
       );
       queryClient.setQueryData<AdminEvent>(

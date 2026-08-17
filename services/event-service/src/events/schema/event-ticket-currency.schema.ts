@@ -1,13 +1,22 @@
 import { sql } from 'drizzle-orm';
-import { check, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  check,
+  index,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 import { events } from './event.schema';
 
-export const eventTicketConfigurations = pgTable(
-  'event_ticket_configurations',
+export const eventTicketCurrencies = pgTable(
+  'event_ticket_currencies',
   {
+    id: uuid('id').defaultRandom().primaryKey(),
     eventId: uuid('event_id')
-      .primaryKey()
+      .notNull()
       .references(() => events.id, { onDelete: 'restrict' }),
     currency: varchar('currency', { length: 3 }).notNull(),
     createdAt: timestamp('created_at', {
@@ -24,8 +33,17 @@ export const eventTicketConfigurations = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex('event_ticket_currencies_event_currency_unique').on(
+      table.eventId,
+      table.currency,
+    ),
+    index('event_ticket_currencies_event_created_index').on(
+      table.eventId,
+      table.createdAt,
+      table.id,
+    ),
     check(
-      'event_ticket_configurations_currency_format',
+      'event_ticket_currencies_currency_format',
       sql`${table.currency} ~ '^[A-Z]{3}$'`,
     ),
   ],

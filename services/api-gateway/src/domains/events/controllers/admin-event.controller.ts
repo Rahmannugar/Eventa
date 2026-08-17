@@ -34,6 +34,8 @@ import {
   CreateEventMediaUploadDto,
   CreateEventTicketTypeDto,
   CreateEventTicketTypeResponseDto,
+  DefineEventTicketCurrencyDto,
+  DefineEventTicketCurrencyResponseDto,
   EventTicketTypeListDto,
   EventMediaUploadIntentDto,
   EventMediaUploadStatusDto,
@@ -147,6 +149,32 @@ export class AdminEventController {
     @RequestId() requestId: string,
   ): Promise<CreateEventTicketTypeResponseDto> {
     return this.events.createTicketType(
+      request.adminSession.adminId,
+      path.eventId,
+      input,
+      requestId,
+    );
+  }
+
+  @Post(':eventId/ticket-currencies')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventTicketTypeRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Define a ticket currency for a draft event' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    type: DefineEventTicketCurrencyResponseDto,
+  })
+  defineTicketCurrency(
+    @Param() path: AdminEventPathDto,
+    @Body() input: DefineEventTicketCurrencyDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<DefineEventTicketCurrencyResponseDto> {
+    return this.events.defineTicketCurrency(
       request.adminSession.adminId,
       path.eventId,
       input,
