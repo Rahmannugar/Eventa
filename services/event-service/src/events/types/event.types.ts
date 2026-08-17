@@ -604,3 +604,89 @@ export interface EventTicketTypeManagement {
   retire(input: RetireEventTicketTypeCommand): Promise<number>;
   list(eventId: string): Promise<EventTicketTypesRecord>;
 }
+
+export type EventCapacityReservationStatus =
+  'active' | 'finalized' | 'released' | 'expired';
+
+export interface EventCapacityReservationRecord {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  quantity: number;
+  status: EventCapacityReservationStatus;
+  expiresAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReserveEventCapacityCommand {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  quantity: number;
+  requestId: string;
+}
+
+export interface TransitionEventCapacityReservationCommand {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  requestId: string;
+}
+
+export type ReserveEventCapacityResult =
+  | { outcome: 'reserved'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'existing'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'sales_unavailable' }
+  | { outcome: 'capacity_unavailable' }
+  | { outcome: 'busy' }
+  | { outcome: 'idempotency_conflict' };
+
+export type FinalizeEventCapacityReservationResult =
+  | { outcome: 'finalized'; reservation: EventCapacityReservationRecord }
+  | {
+      outcome: 'already_finalized';
+      reservation: EventCapacityReservationRecord;
+    }
+  | { outcome: 'expired'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'identity_conflict' }
+  | { outcome: 'busy' }
+  | { outcome: 'terminal_conflict' };
+
+export type ReleaseEventCapacityReservationResult =
+  | { outcome: 'released'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'already_released'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'expired'; reservation: EventCapacityReservationRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'identity_conflict' }
+  | { outcome: 'busy' }
+  | { outcome: 'terminal_conflict' };
+
+export interface EventCapacityReservationRepository {
+  reserve(
+    input: ReserveEventCapacityCommand,
+  ): Promise<ReserveEventCapacityResult>;
+  finalize(
+    input: TransitionEventCapacityReservationCommand,
+  ): Promise<FinalizeEventCapacityReservationResult>;
+  release(
+    input: TransitionEventCapacityReservationCommand,
+  ): Promise<ReleaseEventCapacityReservationResult>;
+  findDue(limit: number): Promise<string[]>;
+  expire(reservationId: string): Promise<'expired' | 'unchanged' | 'not_found'>;
+}
+
+export interface EventCapacityReservationManagement {
+  reserve(
+    input: ReserveEventCapacityCommand,
+  ): Promise<EventCapacityReservationRecord>;
+  finalize(
+    input: TransitionEventCapacityReservationCommand,
+  ): Promise<EventCapacityReservationRecord>;
+  release(
+    input: TransitionEventCapacityReservationCommand,
+  ): Promise<EventCapacityReservationRecord>;
+}

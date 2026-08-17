@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   AdminEventSort,
+  EventCapacityReservationStatus,
   type AddEventTicketTypeResponse,
   EventMediaSlot,
   EventMediaUploadStatus,
@@ -12,10 +13,12 @@ import {
   type CreateEventTicketTypeResponse,
   type DefineEventTicketCurrencyResponse,
   type Event,
+  type EventCapacityReservation,
   type EventTicketCurrency,
   type EventTicketType,
   type EventServiceController,
   type GetAdminEventResponse,
+  type FinalizeEventCapacityReservationResponse,
   type GetEventMediaUploadResponse,
   type GetEventTicketCatalogueResponse,
   type ListAdminEventsResponse,
@@ -23,6 +26,8 @@ import {
   type GetPublishedEventResponse,
   type PublishedEvent,
   type RemoveEventMediaResponse,
+  type ReleaseEventCapacityReservationResponse,
+  type ReserveEventCapacityResponse,
   type PublishEventResponse,
   type RetireDraftEventResponse,
   type RetireEventTicketTypeResponse,
@@ -38,9 +43,15 @@ import type { RuntimeConfig } from '../../config/runtime-config';
 import { RUNTIME_CONFIG } from '../../config/runtime.constants';
 import {
   EVENT_MANAGEMENT,
+  EVENT_CAPACITY_RESERVATION_MANAGEMENT,
   EVENT_MEDIA_MANAGEMENT,
   EVENT_TICKET_TYPE_MANAGEMENT,
 } from '../constants/event.constants';
+import {
+  FinalizeEventCapacityReservationDto,
+  ReleaseEventCapacityReservationDto,
+  ReserveEventCapacityDto,
+} from '../dto/event-capacity-reservation.dto';
 import {
   GetAdminEventDto,
   CreateDraftEventDto,
@@ -84,9 +95,17 @@ import {
   EventTicketTypeCapacityBelowCommittedError,
   EventTicketTypeCommercialTermsLockedError,
   EventTicketTypeRetirementNotAllowedError,
+  EventCapacityReservationConflictError,
+  EventCapacityBusyError,
+  EventCapacityReservationInvalidError,
+  EventCapacityReservationNotFoundError,
+  EventCapacityUnavailableError,
+  EventTicketSalesUnavailableError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
+  EventCapacityReservationManagement,
+  EventCapacityReservationRecord,
   AdminEventSort as DomainAdminEventSort,
   EventMediaManagement,
   EventMediaSlot as DomainEventMediaSlot,
@@ -105,6 +124,8 @@ export class EventController implements EventServiceController {
   constructor(
     @Inject(EVENT_MANAGEMENT)
     private readonly eventService: EventManagement,
+    @Inject(EVENT_CAPACITY_RESERVATION_MANAGEMENT)
+    private readonly capacityReservations: EventCapacityReservationManagement,
     @Inject(EVENT_MEDIA_MANAGEMENT)
     private readonly mediaService: EventMediaManagement,
     @Inject(EVENT_TICKET_TYPE_MANAGEMENT)
@@ -191,6 +212,27 @@ export class EventController implements EventServiceController {
     request: GetEventTicketCatalogueDto,
   ): Observable<GetEventTicketCatalogueResponse> {
     return from(this.listTicketTypes(request.eventId));
+  }
+
+  reserveEventCapacity(
+    request: ReserveEventCapacityDto,
+    metadata?: Metadata,
+  ): Observable<ReserveEventCapacityResponse> {
+    return from(this.reserveCapacity(request, this.readRequestId(metadata)));
+  }
+
+  finalizeEventCapacityReservation(
+    request: FinalizeEventCapacityReservationDto,
+    metadata?: Metadata,
+  ): Observable<FinalizeEventCapacityReservationResponse> {
+    return from(this.finalizeCapacity(request, this.readRequestId(metadata)));
+  }
+
+  releaseEventCapacityReservation(
+    request: ReleaseEventCapacityReservationDto,
+    metadata?: Metadata,
+  ): Observable<ReleaseEventCapacityReservationResponse> {
+    return from(this.releaseCapacity(request, this.readRequestId(metadata)));
   }
 
   createEventMediaUpload(
@@ -844,6 +886,128 @@ export class EventController implements EventServiceController {
       }
       throw error;
     }
+  }
+
+  private async reserveCapacity(
+    request: ReserveEventCapacityDto,
+    requestId: string,
+  ): Promise<ReserveEventCapacityResponse> {
+    try {
+      return {
+        reservation: this.toCapacityReservationContract(
+          await this.capacityReservations.reserve({ ...request, requestId }),
+        ),
+      };
+    } catch (error: unknown) {
+      this.translateCapacityReservationError(error);
+    }
+  }
+
+  private async finalizeCapacity(
+    request: FinalizeEventCapacityReservationDto,
+    requestId: string,
+  ): Promise<FinalizeEventCapacityReservationResponse> {
+    try {
+      return {
+        reservation: this.toCapacityReservationContract(
+          await this.capacityReservations.finalize({ ...request, requestId }),
+        ),
+      };
+    } catch (error: unknown) {
+      this.translateCapacityReservationError(error);
+    }
+  }
+
+  private async releaseCapacity(
+    request: ReleaseEventCapacityReservationDto,
+    requestId: string,
+  ): Promise<ReleaseEventCapacityReservationResponse> {
+    try {
+      return {
+        reservation: this.toCapacityReservationContract(
+          await this.capacityReservations.release({ ...request, requestId }),
+        ),
+      };
+    } catch (error: unknown) {
+      this.translateCapacityReservationError(error);
+    }
+  }
+
+  private translateCapacityReservationError(error: unknown): never {
+    if (error instanceof EventCapacityReservationInvalidError) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: error.message,
+      });
+    }
+    if (error instanceof EventCapacityReservationNotFoundError) {
+      throw new RpcException({
+        code: status.NOT_FOUND,
+        message: error.message,
+      });
+    }
+    if (error instanceof EventTicketTypeNotFoundError) {
+      throw new RpcException({
+        code: status.NOT_FOUND,
+        message: error.message,
+      });
+    }
+    if (error instanceof EventCapacityBusyError) {
+      throw new RpcException({
+        code: status.UNAVAILABLE,
+        message: error.message,
+      });
+    }
+    if (error instanceof EventCapacityUnavailableError) {
+      throw new RpcException({
+        code: status.RESOURCE_EXHAUSTED,
+        message: error.message,
+      });
+    }
+    if (
+      error instanceof EventCapacityReservationConflictError &&
+      error.message === 'EVENT_CAPACITY_RESERVATION_IDEMPOTENCY_CONFLICT'
+    ) {
+      throw new RpcException({
+        code: status.ALREADY_EXISTS,
+        message: error.message,
+      });
+    }
+    if (
+      error instanceof EventTicketSalesUnavailableError ||
+      error instanceof EventCapacityReservationConflictError
+    ) {
+      throw new RpcException({
+        code: status.FAILED_PRECONDITION,
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+
+  private toCapacityReservationContract(
+    reservation: EventCapacityReservationRecord,
+  ): EventCapacityReservation {
+    return {
+      completedAt: reservation.completedAt?.toISOString(),
+      createdAt: reservation.createdAt.toISOString(),
+      eventId: reservation.eventId,
+      expiresAt: reservation.expiresAt.toISOString(),
+      quantity: reservation.quantity,
+      reservationId: reservation.reservationId,
+      status: {
+        active:
+          EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_ACTIVE,
+        expired:
+          EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED,
+        finalized:
+          EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_FINALIZED,
+        released:
+          EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_RELEASED,
+      }[reservation.status],
+      ticketTypeId: reservation.ticketTypeId,
+      updatedAt: reservation.updatedAt.toISOString(),
+    };
   }
 
   private toTicketTypeContract(

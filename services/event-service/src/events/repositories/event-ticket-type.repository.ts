@@ -235,7 +235,8 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
                 isNull(eventTicketTypes.retiredAt),
               ),
             )
-            .limit(1);
+            .limit(1)
+            .for('update', { of: eventTicketTypes });
           if (ticketType === undefined) {
             return { outcome: 'not_found' as const };
           }
@@ -345,7 +346,8 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
                 eq(eventTicketCurrencies.eventId, input.eventId),
               ),
             )
-            .limit(1);
+            .limit(1)
+            .for('update', { of: eventTicketTypes });
           if (ticketType === undefined) {
             return { outcome: 'not_found' as const };
           }

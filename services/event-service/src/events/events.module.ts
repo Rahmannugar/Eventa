@@ -9,6 +9,8 @@ import { RabbitMQEventMediaVerificationJobPublisher } from './adapters/job-queue
 import { RabbitMQEventMediaObjectDeletionJobPublisher } from './adapters/job-queue/rabbitmq-event-media-object-deletion-job.publisher';
 import {
   EVENT_MANAGEMENT,
+  EVENT_CAPACITY_RESERVATION_MANAGEMENT,
+  EVENT_CAPACITY_RESERVATION_REPOSITORY,
   EVENT_MEDIA_MANAGEMENT,
   EVENT_MEDIA_MUTATION_REPOSITORY,
   EVENT_MEDIA_OBJECT_DELETION_JOB_PUBLISHER,
@@ -21,6 +23,7 @@ import {
 } from './constants/event.constants';
 import { EventController } from './controllers/event.controller';
 import { EventMediaVerificationConsumer } from './jobs/event-media-verification.consumer';
+import { EventCapacityReservationExpiry } from './jobs/event-capacity-reservation-expiry';
 import { EventMediaVerificationDispatcher } from './jobs/event-media-verification.dispatcher';
 import { EventMediaObjectDeletionConsumer } from './jobs/event-media-object-deletion.consumer';
 import { EventMediaObjectDeletionDispatcher } from './jobs/event-media-object-deletion.dispatcher';
@@ -30,11 +33,13 @@ import { EventMediaUploadRepository } from './repositories/event-media-upload.re
 import { EventMediaMutationRepository } from './repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from './repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from './repositories/event-management.repository';
+import { EventCapacityReservationRepository } from './repositories/event-capacity-reservation.repository';
 import { EventTicketTypeRepository } from './repositories/event-ticket-type.repository';
 import { EventMediaApplicationService } from './services/event-media.service';
 import { EventMediaObjectDeletionService } from './services/event-media-object-deletion.service';
 import { EventMediaVerificationService } from './services/event-media-verification.service';
 import { EventManagementService } from './services/event-management.service';
+import { EventCapacityReservationService } from './services/event-capacity-reservation.service';
 import { EventTicketTypeService } from './services/event-ticket-type.service';
 import type {
   EventMediaObjectStorage,
@@ -43,6 +48,7 @@ import type {
   EventMediaObjectDeletionRepository as EventMediaObjectDeletionRepositoryPort,
   EventMediaUploadRepository as EventMediaUploadRepositoryPort,
   EventMediaVerificationJobPublisher,
+  EventCapacityReservationRepository as EventCapacityReservationRepositoryPort,
   EventRepository as EventRepositoryPort,
   EventTicketTypeRepository as EventTicketTypeRepositoryPort,
 } from './types/event.types';
@@ -52,10 +58,27 @@ import type {
   controllers: [EventController],
   providers: [
     EventManagementRepository,
+    EventCapacityReservationRepository,
     EventTicketTypeRepository,
     EventMediaUploadRepository,
     EventMediaMutationRepository,
     EventMediaObjectDeletionRepository,
+    {
+      provide: EVENT_CAPACITY_RESERVATION_REPOSITORY,
+      useExisting: EventCapacityReservationRepository,
+    },
+    {
+      provide: EVENT_CAPACITY_RESERVATION_MANAGEMENT,
+      inject: [EVENT_CAPACITY_RESERVATION_REPOSITORY],
+      useFactory: (reservations: EventCapacityReservationRepositoryPort) =>
+        new EventCapacityReservationService(reservations),
+    },
+    {
+      provide: EventCapacityReservationExpiry,
+      inject: [EVENT_CAPACITY_RESERVATION_REPOSITORY],
+      useFactory: (reservations: EventCapacityReservationRepositoryPort) =>
+        new EventCapacityReservationExpiry(reservations),
+    },
     {
       provide: EVENT_TICKET_TYPE_REPOSITORY,
       useExisting: EventTicketTypeRepository,

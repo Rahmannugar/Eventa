@@ -92,6 +92,13 @@
       "when": 1786965637312,
       "tag": "0012_evolve_ticket_types_safely",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786987264019,
+      "tag": "0013_reserve_ticket_capacity",
+      "breakpoints": true
     }
   ]
 }

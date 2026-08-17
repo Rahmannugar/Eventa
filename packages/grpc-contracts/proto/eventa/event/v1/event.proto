@@ -33,6 +33,14 @@ enum EventMediaUploadStatus {
   EVENT_MEDIA_UPLOAD_STATUS_EXPIRED = 5;
 }
 
+enum EventCapacityReservationStatus {
+  EVENT_CAPACITY_RESERVATION_STATUS_UNSPECIFIED = 0;
+  EVENT_CAPACITY_RESERVATION_STATUS_ACTIVE = 1;
+  EVENT_CAPACITY_RESERVATION_STATUS_FINALIZED = 2;
+  EVENT_CAPACITY_RESERVATION_STATUS_RELEASED = 3;
+  EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED = 4;
+}
+
 message Event {
   string event_id = 1;
   string title = 2;
@@ -290,6 +298,49 @@ message GetEventTicketCatalogueResponse {
   repeated EventTicketCurrency ticket_currencies = 1;
   int32 event_version = 2;
   repeated EventTicketType ticket_types = 3;
+}
+
+message EventCapacityReservation {
+  string reservation_id = 1;
+  string event_id = 2;
+  string ticket_type_id = 3;
+  int32 quantity = 4;
+  EventCapacityReservationStatus status = 5;
+  string expires_at = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  optional string completed_at = 9;
+}
+
+message ReserveEventCapacityRequest {
+  string reservation_id = 1;
+  string event_id = 2;
+  string ticket_type_id = 3;
+  int32 quantity = 4;
+}
+
+message ReserveEventCapacityResponse {
+  EventCapacityReservation reservation = 1;
+}
+
+message FinalizeEventCapacityReservationRequest {
+  string reservation_id = 1;
+  string event_id = 2;
+  string ticket_type_id = 3;
+}
+
+message FinalizeEventCapacityReservationResponse {
+  EventCapacityReservation reservation = 1;
+}
+
+message ReleaseEventCapacityReservationRequest {
+  string reservation_id = 1;
+  string event_id = 2;
+  string ticket_type_id = 3;
+}
+
+message ReleaseEventCapacityReservationResponse {
+  EventCapacityReservation reservation = 1;
 }
 
 message CreateEventMediaUploadRequest {

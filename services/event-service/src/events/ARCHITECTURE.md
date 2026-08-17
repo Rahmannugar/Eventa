@@ -41,6 +41,14 @@ Ticket-type updates and retirement use the same event-row serialization on activ
 
 The management read joins the event to currencies through `(event_id, created_at, id)` and active types through the partial `(ticket_currency_id, created_at, id)` index in one statement. At most 20 active ticket types can belong to one event, so the catalogue read remains bounded and internally consistent.
 
+## Capacity Reservations
+
+A caller-generated reservation ID is the durable idempotency key. Reserving locks only the selected ticket type, verifies published state and the sales window, reclaims any due holds for that type, checks available quantity, inserts a reservation, and increments reserved quantity in one transaction. The deadline is the earliest of ten minutes, the sales end, and the event start. Concurrent reservations for different ticket types do not serialize through the event row.
+
+Finalization, release, and expiry lock the ticket type before changing the reservation. Finalization moves quantity from reserved to sold; release and expiry remove it from reserved. The reservation has one terminal state, so duplicate or competing commands cannot change counters twice. Catalogue edits lock the event and then the ticket type, preserving the same type-lock boundary without creating a reverse lock dependency. Capacity transactions bound lock waits and return a retryable result instead of queueing indefinitely behind a hot ticket type.
+
+PostgreSQL is the expiry authority. A partial expiry index supports a bounded in-process sweep, and reserve also reclaims due holds before checking availability. The sweeper can repeat after a crash or run from several service instances because each expiry transition is durable and idempotent. No queue or process timer is treated as reservation truth.
+
 ## Published Access
 
 The published-event repository query combines event ID and `published` status before loading the event-owned venue and verified media. Drafts never cross the internal published-read boundary, and callers cannot distinguish them from missing IDs. The dedicated contract excludes `created_by_admin_id` and draft lifecycle state.

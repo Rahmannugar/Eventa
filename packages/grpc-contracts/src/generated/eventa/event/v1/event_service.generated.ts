@@ -19,6 +19,8 @@ import {
   CreateEventTicketTypeResponse,
   DefineEventTicketCurrencyRequest,
   DefineEventTicketCurrencyResponse,
+  FinalizeEventCapacityReservationRequest,
+  FinalizeEventCapacityReservationResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
   GetEventMediaUploadRequest,
@@ -33,8 +35,12 @@ import {
   ListEventTicketTypesResponse,
   PublishEventRequest,
   PublishEventResponse,
+  ReleaseEventCapacityReservationRequest,
+  ReleaseEventCapacityReservationResponse,
   RemoveEventMediaRequest,
   RemoveEventMediaResponse,
+  ReserveEventCapacityRequest,
+  ReserveEventCapacityResponse,
   RetireDraftEventRequest,
   RetireDraftEventResponse,
   RetireEventTicketTypeRequest,
@@ -96,6 +102,21 @@ export interface EventServiceClient {
     metadata?: Metadata,
   ): Observable<GetEventTicketCatalogueResponse>;
 
+  reserveEventCapacity(
+    request: ReserveEventCapacityRequest,
+    metadata?: Metadata,
+  ): Observable<ReserveEventCapacityResponse>;
+
+  finalizeEventCapacityReservation(
+    request: FinalizeEventCapacityReservationRequest,
+    metadata?: Metadata,
+  ): Observable<FinalizeEventCapacityReservationResponse>;
+
+  releaseEventCapacityReservation(
+    request: ReleaseEventCapacityReservationRequest,
+    metadata?: Metadata,
+  ): Observable<ReleaseEventCapacityReservationResponse>;
+
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata?: Metadata,
@@ -156,6 +177,21 @@ export interface EventServiceController {
     metadata?: Metadata,
   ): Observable<GetEventTicketCatalogueResponse>;
 
+  reserveEventCapacity(
+    request: ReserveEventCapacityRequest,
+    metadata?: Metadata,
+  ): Observable<ReserveEventCapacityResponse>;
+
+  finalizeEventCapacityReservation(
+    request: FinalizeEventCapacityReservationRequest,
+    metadata?: Metadata,
+  ): Observable<FinalizeEventCapacityReservationResponse>;
+
+  releaseEventCapacityReservation(
+    request: ReleaseEventCapacityReservationRequest,
+    metadata?: Metadata,
+  ): Observable<ReleaseEventCapacityReservationResponse>;
+
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata?: Metadata,
@@ -188,6 +224,9 @@ export function EventServiceControllerMethods() {
       "updateEventTicketType",
       "retireEventTicketType",
       "getEventTicketCatalogue",
+      "reserveEventCapacity",
+      "finalizeEventCapacityReservation",
+      "releaseEventCapacityReservation",
       "createEventMediaUpload",
       "getEventMediaUpload",
       "removeEventMedia",

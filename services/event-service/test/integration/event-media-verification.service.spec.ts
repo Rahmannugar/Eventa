@@ -11,15 +11,20 @@ import { EventMediaUploadRepository } from '../../src/events/repositories/event-
 import { EventMediaMutationRepository } from '../../src/events/repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from '../../src/events/repositories/event-media-object-deletion.repository';
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
+import { EventCapacityReservationRepository } from '../../src/events/repositories/event-capacity-reservation.repository';
 import { EventTicketTypeRepository } from '../../src/events/repositories/event-ticket-type.repository';
 import {
   EventPageTokenInvalidError,
   EventScheduleInvalidError,
   EventVenueInvalidError,
   EventVersionConflictError,
+  EventCapacityReservationConflictError,
+  EventCapacityBusyError,
+  EventCapacityUnavailableError,
 } from '../../src/events/errors/event.errors';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventCategories } from '../../src/events/schema/event-category.schema';
+import { eventCapacityReservations } from '../../src/events/schema/event-capacity-reservation.schema';
 import { eventJobOutbox } from '../../src/events/schema/event-job-outbox.schema';
 import { eventMediaObjectDeletions } from '../../src/events/schema/event-media-object-deletion.schema';
 import { eventMediaUploads } from '../../src/events/schema/event-media-upload.schema';
@@ -32,6 +37,7 @@ import { events } from '../../src/events/schema/event.schema';
 import { EventMediaVerificationService } from '../../src/events/services/event-media-verification.service';
 import { EventMediaObjectDeletionService } from '../../src/events/services/event-media-object-deletion.service';
 import { EventManagementService } from '../../src/events/services/event-management.service';
+import { EventCapacityReservationService } from '../../src/events/services/event-capacity-reservation.service';
 import { EventTicketTypeService } from '../../src/events/services/event-ticket-type.service';
 import type { EventMediaObjectStorage } from '../../src/events/types/event.types';
 
@@ -90,6 +96,12 @@ const deletionsRepository = new EventMediaObjectDeletionRepository(database);
 const eventManagement = new EventManagementService(eventsRepository);
 const ticketTypesRepository = new EventTicketTypeRepository(database);
 const ticketTypes = new EventTicketTypeService(ticketTypesRepository);
+const capacityReservationsRepository = new EventCapacityReservationRepository(
+  database,
+);
+const capacityReservations = new EventCapacityReservationService(
+  capacityReservationsRepository,
+);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -124,6 +136,7 @@ describe('Event mutation integration', () => {
     await database.delete(eventJobOutbox);
     await database.delete(eventPublicationOutbox);
     await database.delete(eventAdminAuditLog);
+    await database.delete(eventCapacityReservations);
     await database.delete(eventTicketTypes);
     await database.delete(eventTicketCurrencies);
     await database.delete(eventMediaObjectDeletions);
@@ -444,6 +457,236 @@ describe('Event mutation integration', () => {
         soldQuantity: 3,
       },
     });
+  });
+
+  it('prevents concurrent reservations from overselling capacity', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const firstReservationId = randomUUID();
+    const secondReservationId = randomUUID();
+    const command = {
+      eventId: ticket.eventId,
+      quantity: 4,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    };
+
+    const results = await Promise.allSettled([
+      capacityReservations.reserve({
+        ...command,
+        reservationId: firstReservationId,
+      }),
+      capacityReservations.reserve({
+        ...command,
+        reservationId: secondReservationId,
+      }),
+    ]);
+    const fulfilled = results.find(({ status }) => status === 'fulfilled');
+    const rejected = results.find(({ status }) => status === 'rejected');
+    if (fulfilled?.status !== 'fulfilled' || rejected?.status !== 'rejected') {
+      throw new Error('Expected one reservation and one capacity rejection');
+    }
+    expect(rejected.reason).toBeInstanceOf(EventCapacityUnavailableError);
+
+    const repeated = await capacityReservations.reserve({
+      ...command,
+      reservationId: fulfilled.value.reservationId,
+    });
+    const [persistedType] = await database
+      .select({ reservedQuantity: eventTicketTypes.reservedQuantity })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(repeated).toEqual(fulfilled.value);
+    expect(persistedType?.reservedQuantity).toBe(4);
+    await expect(
+      capacityReservations.reserve({
+        ...command,
+        quantity: 3,
+        reservationId: fulfilled.value.reservationId,
+      }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_CAPACITY_RESERVATION_IDEMPOTENCY_CONFLICT',
+    });
+  });
+
+  it('bounds a reservation by the remaining sales window', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const salesEndAt = new Date(Date.now() + 2 * 60 * 1_000);
+    await database
+      .update(eventTicketTypes)
+      .set({ salesEndAt })
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+
+    const reservation = await capacityReservations.reserve({
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+
+    expect(reservation.expiresAt.getTime()).toBe(salesEndAt.getTime());
+  });
+
+  it('bounds waiting behind a locked ticket type', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const lockHeld = createDeferred();
+    const releaseLock = createDeferred();
+    const blocker = client.begin(async (transaction) => {
+      await transaction`
+        SELECT id
+        FROM event_ticket_types
+        WHERE id = ${ticket.ticketTypeId}
+        FOR UPDATE
+      `;
+      lockHeld.resolve();
+      await releaseLock.promise;
+    });
+    await lockHeld.promise;
+
+    try {
+      await expect(
+        capacityReservations.reserve({
+          eventId: ticket.eventId,
+          quantity: 1,
+          requestId: randomUUID(),
+          reservationId: randomUUID(),
+          ticketTypeId: ticket.ticketTypeId,
+        }),
+      ).rejects.toBeInstanceOf(EventCapacityBusyError);
+    } finally {
+      releaseLock.resolve();
+      await blocker;
+    }
+  });
+
+  it('finalizes and releases each reservation exactly once', async () => {
+    const ticket = await createPublishedTicketType(10);
+    const finalized = await capacityReservations.reserve({
+      eventId: ticket.eventId,
+      quantity: 3,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const finalizeCommand = {
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: finalized.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    };
+    await capacityReservations.finalize(finalizeCommand);
+    await capacityReservations.finalize(finalizeCommand);
+
+    const released = await capacityReservations.reserve({
+      eventId: ticket.eventId,
+      quantity: 2,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const releaseCommand = {
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: released.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    };
+    await capacityReservations.release(releaseCommand);
+    await capacityReservations.release(releaseCommand);
+
+    const [persistedType] = await database
+      .select({
+        reservedQuantity: eventTicketTypes.reservedQuantity,
+        soldQuantity: eventTicketTypes.soldQuantity,
+      })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(persistedType).toEqual({ reservedQuantity: 0, soldQuantity: 3 });
+  });
+
+  it('expires abandoned capacity before it can be finalized', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const reservation = await capacityReservations.reserve({
+      eventId: ticket.eventId,
+      quantity: 5,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await database
+      .update(eventCapacityReservations)
+      .set({
+        createdAt: new Date(Date.now() - 20 * 60 * 1_000),
+        expiresAt: new Date(Date.now() - 1_000),
+      })
+      .where(eq(eventCapacityReservations.id, reservation.reservationId));
+
+    await expect(
+      capacityReservations.finalize({
+        eventId: ticket.eventId,
+        requestId: randomUUID(),
+        reservationId: reservation.reservationId,
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({ message: 'EVENT_CAPACITY_RESERVATION_EXPIRED' });
+    await expect(
+      capacityReservationsRepository.expire(reservation.reservationId),
+    ).resolves.toBe('unchanged');
+
+    const [persistedType] = await database
+      .select({
+        reservedQuantity: eventTicketTypes.reservedQuantity,
+        soldQuantity: eventTicketTypes.soldQuantity,
+      })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    const [persistedReservation] = await database
+      .select({ status: eventCapacityReservations.status })
+      .from(eventCapacityReservations)
+      .where(eq(eventCapacityReservations.id, reservation.reservationId));
+    expect(persistedType).toEqual({ reservedQuantity: 0, soldQuantity: 0 });
+    expect(persistedReservation?.status).toBe('expired');
+  });
+
+  it('serializes competing finalization and release', async () => {
+    const ticket = await createPublishedTicketType(2);
+    const reservation = await capacityReservations.reserve({
+      eventId: ticket.eventId,
+      quantity: 2,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const command = {
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: reservation.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    };
+
+    const results = await Promise.allSettled([
+      capacityReservations.finalize(command),
+      capacityReservations.release(command),
+    ]);
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(
+      1,
+    );
+    const rejected = results.find(({ status }) => status === 'rejected');
+    if (rejected?.status !== 'rejected') {
+      throw new Error('Expected one terminal reservation conflict');
+    }
+    expect(rejected.reason).toBeInstanceOf(
+      EventCapacityReservationConflictError,
+    );
+
+    const [persistedType] = await database
+      .select({
+        reservedQuantity: eventTicketTypes.reservedQuantity,
+        soldQuantity: eventTicketTypes.soldQuantity,
+      })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(persistedType?.reservedQuantity).toBe(0);
+    expect([0, 2]).toContain(persistedType?.soldQuantity);
   });
 
   it('rolls back creation when a category invariant fails', async () => {
@@ -1278,6 +1521,46 @@ async function createAttachedCover(title: string): Promise<{
   const outcome = await verifier.verify(uploadId);
   if (outcome.kind !== 'attached') throw new Error('Media attachment failed');
   return { adminId, eventId: event.eventId, objectKey, uploadId };
+}
+
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
+async function createPublishedTicketType(capacity: number): Promise<{
+  eventId: string;
+  ticketTypeId: string;
+}> {
+  const publishable = await createPublishableEvent(
+    `Capacity event ${randomUUID()}`,
+  );
+  const catalogue = await ticketTypes.list(publishable.eventId);
+  const ticketType = catalogue.ticketTypes[0];
+  if (ticketType === undefined) throw new Error('Ticket setup failed');
+  await database
+    .update(eventTicketTypes)
+    .set({
+      capacity,
+      salesStartAt: new Date(Date.now() - 60 * 60 * 1_000),
+    })
+    .where(eq(eventTicketTypes.id, ticketType.ticketTypeId));
+  const published = await eventsRepository.publish({
+    actorAdminId: publishable.adminId,
+    eventId: publishable.eventId,
+    expectedVersion: publishable.version,
+    requestId: randomUUID(),
+  });
+  if (published.outcome !== 'published') {
+    throw new Error('Event publication setup failed');
+  }
+  return {
+    eventId: publishable.eventId,
+    ticketTypeId: ticketType.ticketTypeId,
+  };
 }
 
 async function createPublishableEvent(

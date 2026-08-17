@@ -144,3 +144,45 @@ export class EventTicketTypeRetirementNotAllowedError extends Error {
     this.name = EventTicketTypeRetirementNotAllowedError.name;
   }
 }
+
+export class EventCapacityReservationInvalidError extends Error {
+  constructor() {
+    super('EVENT_CAPACITY_RESERVATION_INVALID');
+    this.name = EventCapacityReservationInvalidError.name;
+  }
+}
+
+export class EventCapacityReservationNotFoundError extends Error {
+  constructor() {
+    super('EVENT_CAPACITY_RESERVATION_NOT_FOUND');
+    this.name = EventCapacityReservationNotFoundError.name;
+  }
+}
+
+export class EventCapacityReservationConflictError extends Error {
+  constructor(message = 'EVENT_CAPACITY_RESERVATION_CONFLICT') {
+    super(message);
+    this.name = EventCapacityReservationConflictError.name;
+  }
+}
+
+export class EventCapacityUnavailableError extends Error {
+  constructor() {
+    super('EVENT_TICKET_CAPACITY_UNAVAILABLE');
+    this.name = EventCapacityUnavailableError.name;
+  }
+}
+
+export class EventCapacityBusyError extends Error {
+  constructor() {
+    super('EVENT_CAPACITY_BUSY');
+    this.name = EventCapacityBusyError.name;
+  }
+}
+
+export class EventTicketSalesUnavailableError extends Error {
+  constructor() {
+    super('EVENT_TICKET_SALES_UNAVAILABLE');
+    this.name = EventTicketSalesUnavailableError.name;
+  }
+}

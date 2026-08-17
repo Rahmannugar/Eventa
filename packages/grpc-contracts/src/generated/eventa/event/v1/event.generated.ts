@@ -43,6 +43,15 @@ export enum EventMediaUploadStatus {
   UNRECOGNIZED = -1,
 }
 
+export enum EventCapacityReservationStatus {
+  EVENT_CAPACITY_RESERVATION_STATUS_UNSPECIFIED = 0,
+  EVENT_CAPACITY_RESERVATION_STATUS_ACTIVE = 1,
+  EVENT_CAPACITY_RESERVATION_STATUS_FINALIZED = 2,
+  EVENT_CAPACITY_RESERVATION_STATUS_RELEASED = 3,
+  EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED = 4,
+  UNRECOGNIZED = -1,
+}
+
 export interface Event {
   eventId: string;
   title: string;
@@ -306,6 +315,49 @@ export interface GetEventTicketCatalogueResponse {
   ticketCurrencies: EventTicketCurrency[];
   eventVersion: number;
   ticketTypes: EventTicketType[];
+}
+
+export interface EventCapacityReservation {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  quantity: number;
+  status: EventCapacityReservationStatus;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string | undefined;
+}
+
+export interface ReserveEventCapacityRequest {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  quantity: number;
+}
+
+export interface ReserveEventCapacityResponse {
+  reservation: EventCapacityReservation | undefined;
+}
+
+export interface FinalizeEventCapacityReservationRequest {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+}
+
+export interface FinalizeEventCapacityReservationResponse {
+  reservation: EventCapacityReservation | undefined;
+}
+
+export interface ReleaseEventCapacityReservationRequest {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+}
+
+export interface ReleaseEventCapacityReservationResponse {
+  reservation: EventCapacityReservation | undefined;
 }
 
 export interface CreateEventMediaUploadRequest {
