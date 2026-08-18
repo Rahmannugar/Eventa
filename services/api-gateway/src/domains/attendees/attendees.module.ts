@@ -159,6 +159,11 @@ export class AttendeesModule {
         AttendeeEmailVerificationConfirmRateLimitGuard,
         AttendeeEmailVerificationResendRateLimitGuard,
       ],
+      exports: [
+        AttendeeAuthenticationGuard,
+        AttendeeClientOriginGuard,
+        AttendeeSessionCookie,
+      ],
     };
   }
 }

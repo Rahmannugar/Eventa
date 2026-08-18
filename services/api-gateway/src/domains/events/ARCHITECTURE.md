@@ -4,6 +4,8 @@ Public retrieval uses `GET /events/:eventId` without an admin session. Gateway v
 
 The public representation excludes creator provenance and draft lifecycle state. Verified media remains Event-owned data returned by the authoritative query; Gateway only translates the internal contract to HTTP.
 
+Waitlist routes authenticate the attendee through Identity and forward only the resolved attendee ID, event identity, ticket-type identity, quantity, and request correlation under the Event deadline. Gateway owns transport validation, actor-specific origin enforcement, and separate read and mutation abuse controls. Event Service owns sold-out eligibility, uniqueness, ordering, bounded membership, promotion, and durable state.
+
 Gateway authenticates the opaque admin session through Identity before calling Event Service. The resolved admin ID comes only from the server-backed session; the client cannot submit an acting admin ID.
 
 The admin catalogue forwards bounded cursor pagination to Event Service and maps the returned summaries to HTTP. Gateway does not join event data, interpret categories, or own ordering rules.

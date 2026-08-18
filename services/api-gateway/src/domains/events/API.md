@@ -6,6 +6,8 @@
 
 The route uses an IP-only read budget. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`.
 
+Authenticated attendees use `POST`, `GET`, and `DELETE /events/:eventId/ticket-types/:ticketTypeId/waitlist` to join, inspect, or leave one ticket-type waitlist. Join accepts a positive quantity and returns the waiting position or timed purchase eligibility. Exact repeats are idempotent. Join is rejected when the requested tickets are available and no queue exists, when sales are unavailable, or when the bounded waitlist is full. Gateway derives attendee identity from the server-backed session and applies separate read and mutation budgets by client IP and protected session.
+
 ## Admin management
 
 All routes require the opaque `eventa_admin_session` cookie. A present browser `Origin` must match the configured Eventa web origin. Any authenticated admin may manage any event.

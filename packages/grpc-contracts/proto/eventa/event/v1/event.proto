@@ -41,6 +41,12 @@ enum EventCapacityReservationStatus {
   EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED = 4;
 }
 
+enum EventWaitlistEntryStatus {
+  EVENT_WAITLIST_ENTRY_STATUS_UNSPECIFIED = 0;
+  EVENT_WAITLIST_ENTRY_STATUS_WAITING = 1;
+  EVENT_WAITLIST_ENTRY_STATUS_ELIGIBLE = 2;
+}
+
 message Event {
   string event_id = 1;
   string title = 2;
@@ -310,6 +316,7 @@ message EventCapacityReservation {
   string created_at = 7;
   string updated_at = 8;
   optional string completed_at = 9;
+  optional string attendee_id = 10;
 }
 
 message ReserveEventCapacityRequest {
@@ -317,6 +324,7 @@ message ReserveEventCapacityRequest {
   string event_id = 2;
   string ticket_type_id = 3;
   int32 quantity = 4;
+  string attendee_id = 5;
 }
 
 message ReserveEventCapacityResponse {
@@ -341,6 +349,49 @@ message ReleaseEventCapacityReservationRequest {
 
 message ReleaseEventCapacityReservationResponse {
   EventCapacityReservation reservation = 1;
+}
+
+message EventWaitlistEntry {
+  string waitlist_entry_id = 1;
+  string event_id = 2;
+  string ticket_type_id = 3;
+  string attendee_id = 4;
+  int32 quantity = 5;
+  EventWaitlistEntryStatus status = 6;
+  optional int32 position = 7;
+  optional string eligible_at = 8;
+  string created_at = 9;
+  string updated_at = 10;
+  optional string opportunity_expires_at = 11;
+}
+
+message JoinEventWaitlistRequest {
+  string event_id = 1;
+  string ticket_type_id = 2;
+  string attendee_id = 3;
+  int32 quantity = 4;
+}
+
+message JoinEventWaitlistResponse {
+  EventWaitlistEntry entry = 1;
+}
+
+message LeaveEventWaitlistRequest {
+  string event_id = 1;
+  string ticket_type_id = 2;
+  string attendee_id = 3;
+}
+
+message LeaveEventWaitlistResponse {}
+
+message GetEventWaitlistEntryRequest {
+  string event_id = 1;
+  string ticket_type_id = 2;
+  string attendee_id = 3;
+}
+
+message GetEventWaitlistEntryResponse {
+  EventWaitlistEntry entry = 1;
 }
 
 message CreateEventMediaUploadRequest {

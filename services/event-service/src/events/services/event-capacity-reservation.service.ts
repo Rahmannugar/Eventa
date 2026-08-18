@@ -50,6 +50,16 @@ export class EventCapacityReservationService implements EventCapacityReservation
         'EVENT_CAPACITY_RESERVATION_IDEMPOTENCY_CONFLICT',
       );
     }
+    if (result.outcome === 'waitlist_priority') {
+      throw new EventCapacityReservationConflictError(
+        'EVENT_WAITLIST_PRIORITY_REQUIRED',
+      );
+    }
+    if (result.outcome === 'waitlist_quantity_conflict') {
+      throw new EventCapacityReservationConflictError(
+        'EVENT_WAITLIST_QUANTITY_CONFLICT',
+      );
+    }
     return result.reservation;
   }
 
@@ -106,11 +116,13 @@ export class EventCapacityReservationService implements EventCapacityReservation
     reservationId: string;
     eventId: string;
     ticketTypeId: string;
+    attendeeId?: string;
   }): void {
     if (
       !UUID_PATTERN.test(input.reservationId) ||
       !UUID_PATTERN.test(input.eventId) ||
-      !UUID_PATTERN.test(input.ticketTypeId)
+      !UUID_PATTERN.test(input.ticketTypeId) ||
+      (input.attendeeId !== undefined && !UUID_PATTERN.test(input.attendeeId))
     ) {
       throw new EventCapacityReservationInvalidError();
     }

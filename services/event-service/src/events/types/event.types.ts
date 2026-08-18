@@ -612,6 +612,7 @@ export interface EventCapacityReservationRecord {
   reservationId: string;
   eventId: string;
   ticketTypeId: string;
+  attendeeId: string | null;
   quantity: number;
   status: EventCapacityReservationStatus;
   expiresAt: Date;
@@ -625,6 +626,7 @@ export interface ReserveEventCapacityCommand {
   eventId: string;
   ticketTypeId: string;
   quantity: number;
+  attendeeId: string;
   requestId: string;
 }
 
@@ -642,7 +644,9 @@ export type ReserveEventCapacityResult =
   | { outcome: 'sales_unavailable' }
   | { outcome: 'capacity_unavailable' }
   | { outcome: 'busy' }
-  | { outcome: 'idempotency_conflict' };
+  | { outcome: 'idempotency_conflict' }
+  | { outcome: 'waitlist_priority' }
+  | { outcome: 'waitlist_quantity_conflict' };
 
 export type FinalizeEventCapacityReservationResult =
   | { outcome: 'finalized'; reservation: EventCapacityReservationRecord }
@@ -689,4 +693,68 @@ export interface EventCapacityReservationManagement {
   release(
     input: TransitionEventCapacityReservationCommand,
   ): Promise<EventCapacityReservationRecord>;
+}
+
+export type EventWaitlistEntryStatus = 'waiting' | 'eligible';
+
+export interface EventWaitlistEntryRecord {
+  waitlistEntryId: string;
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+  quantity: number;
+  status: EventWaitlistEntryStatus;
+  position: number | null;
+  eligibleAt: Date | null;
+  opportunityExpiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EventWaitlistCommand {
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+  requestId: string;
+}
+
+export interface JoinEventWaitlistCommand extends EventWaitlistCommand {
+  quantity: number;
+}
+
+export type JoinEventWaitlistResult =
+  | { outcome: 'joined' | 'existing'; entry: EventWaitlistEntryRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'sales_unavailable' }
+  | { outcome: 'capacity_available' }
+  | { outcome: 'quantity_conflict' }
+  | { outcome: 'active_reservation' }
+  | { outcome: 'full' }
+  | { outcome: 'busy' };
+
+export type LeaveEventWaitlistResult =
+  | { outcome: 'left' }
+  | { outcome: 'unchanged' }
+  | { outcome: 'not_found' }
+  | { outcome: 'busy' };
+
+export interface EventWaitlistRepository {
+  join(input: JoinEventWaitlistCommand): Promise<JoinEventWaitlistResult>;
+  leave(input: EventWaitlistCommand): Promise<LeaveEventWaitlistResult>;
+  find(
+    input: Omit<EventWaitlistCommand, 'requestId'>,
+  ): Promise<EventWaitlistEntryRecord | undefined>;
+  findPromotionCandidates(
+    afterTicketTypeId: string | null,
+    limit: number,
+  ): Promise<string[]>;
+  promote(ticketTypeId: string, limit: number): Promise<number>;
+}
+
+export interface EventWaitlistManagement {
+  join(input: JoinEventWaitlistCommand): Promise<EventWaitlistEntryRecord>;
+  leave(input: EventWaitlistCommand): Promise<void>;
+  get(
+    input: Omit<EventWaitlistCommand, 'requestId'>,
+  ): Promise<EventWaitlistEntryRecord>;
 }

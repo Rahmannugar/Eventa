@@ -1,0 +1,2100 @@
+{
+  "id": "91c2124e-22b3-4869-a28d-a2978bc78a28",
+  "prevId": "303728ea-19fd-4a8d-8246-3219a6c2d4c0",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.event_admin_audit_log": {
+      "name": "event_admin_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_admin_id": {
+          "name": "actor_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_admin_audit_event_time_index": {
+          "name": "event_admin_audit_event_time_index",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_admin_audit_log_event_id_events_id_fk": {
+          "name": "event_admin_audit_log_event_id_events_id_fk",
+          "tableFrom": "event_admin_audit_log",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_admin_audit_action_allowed": {
+          "name": "event_admin_audit_action_allowed",
+          "value": "\"event_admin_audit_log\".\"action\" IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached', 'event.media_replaced', 'event.media_removed', 'event.published', 'event.retired', 'event.ticket_currency_defined', 'event.ticket_type_created', 'event.ticket_type_updated', 'event.ticket_type_retired')"
+        },
+        "event_admin_audit_version_positive": {
+          "name": "event_admin_audit_version_positive",
+          "value": "\"event_admin_audit_log\".\"event_version\" >= 1"
+        },
+        "event_admin_audit_request_id_length": {
+          "name": "event_admin_audit_request_id_length",
+          "value": "char_length(\"event_admin_audit_log\".\"request_id\") BETWEEN 1 AND 128"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_capacity_reservations": {
+      "name": "event_capacity_reservations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ticket_type_id": {
+          "name": "ticket_type_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attendee_id": {
+          "name": "attendee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_capacity_reservations_active_expiry_index": {
+          "name": "event_capacity_reservations_active_expiry_index",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_capacity_reservations\".\"status\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_capacity_reservations_type_active_expiry_index": {
+          "name": "event_capacity_reservations_type_active_expiry_index",
+          "columns": [
+            {
+              "expression": "ticket_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_capacity_reservations\".\"status\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_capacity_reservations_type_attendee_active_index": {
+          "name": "event_capacity_reservations_type_attendee_active_index",
+          "columns": [
+            {
+              "expression": "ticket_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "attendee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_capacity_reservations\".\"status\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_capacity_reservations_ticket_type_id_event_ticket_types_id_fk": {
+          "name": "event_capacity_reservations_ticket_type_id_event_ticket_types_id_fk",
+          "tableFrom": "event_capacity_reservations",
+          "tableTo": "event_ticket_types",
+          "columnsFrom": [
+            "ticket_type_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_capacity_reservations_quantity_range": {
+          "name": "event_capacity_reservations_quantity_range",
+          "value": "\"event_capacity_reservations\".\"quantity\" BETWEEN 1 AND 1000000"
+        },
+        "event_capacity_reservations_status_allowed": {
+          "name": "event_capacity_reservations_status_allowed",
+          "value": "\"event_capacity_reservations\".\"status\" IN ('active', 'finalized', 'released', 'expired')"
+        },
+        "event_capacity_reservations_expiry_after_creation": {
+          "name": "event_capacity_reservations_expiry_after_creation",
+          "value": "\"event_capacity_reservations\".\"expires_at\" > \"event_capacity_reservations\".\"created_at\""
+        },
+        "event_capacity_reservations_terminal_shape": {
+          "name": "event_capacity_reservations_terminal_shape",
+          "value": "(\"event_capacity_reservations\".\"status\" = 'active' AND \"event_capacity_reservations\".\"completed_at\" IS NULL) OR (\"event_capacity_reservations\".\"status\" IN ('finalized', 'released', 'expired') AND \"event_capacity_reservations\".\"completed_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_categories": {
+      "name": "event_categories",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "event_categories_event_lower_category_unique": {
+          "name": "event_categories_event_lower_category_unique",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"category\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_categories_category_index": {
+          "name": "event_categories_category_index",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_categories_event_id_events_id_fk": {
+          "name": "event_categories_event_id_events_id_fk",
+          "tableFrom": "event_categories",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "event_categories_event_id_category_pk": {
+          "name": "event_categories_event_id_category_pk",
+          "columns": [
+            "event_id",
+            "category"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_categories_normalized": {
+          "name": "event_categories_normalized",
+          "value": "\"event_categories\".\"category\" = btrim(\"event_categories\".\"category\")"
+        },
+        "event_categories_length": {
+          "name": "event_categories_length",
+          "value": "char_length(\"event_categories\".\"category\") BETWEEN 1 AND 80"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_job_outbox": {
+      "name": "event_job_outbox",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "routing_key": {
+          "name": "routing_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_job_outbox_aggregate_type_valid": {
+          "name": "event_job_outbox_aggregate_type_valid",
+          "value": "\"event_job_outbox\".\"aggregate_type\" = 'eventa.event.jobs'"
+        },
+        "event_job_outbox_route_valid": {
+          "name": "event_job_outbox_route_valid",
+          "value": "(\"event_job_outbox\".\"event_type\" = 'event.media-verification.v1' AND \"event_job_outbox\".\"routing_key\" = 'eventa.event.media-verification.v1') OR (\"event_job_outbox\".\"event_type\" = 'event.media-object-deletion.v1' AND \"event_job_outbox\".\"routing_key\" = 'eventa.event.media-object-deletion.v1')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_media_object_deletions": {
+      "name": "event_media_object_deletions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "job_published_at": {
+          "name": "job_published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "claim_token": {
+          "name": "claim_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claim_expires_at": {
+          "name": "claim_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failed_at": {
+          "name": "failed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_media_object_deletions_object_key_unique": {
+          "name": "event_media_object_deletions_object_key_unique",
+          "columns": [
+            {
+              "expression": "object_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_media_object_deletions_dispatch_index": {
+          "name": "event_media_object_deletions_dispatch_index",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "job_published_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_media_object_deletions_reason_allowed": {
+          "name": "event_media_object_deletions_reason_allowed",
+          "value": "\"event_media_object_deletions\".\"reason\" IN ('replaced', 'removed')"
+        },
+        "event_media_object_deletions_status_allowed": {
+          "name": "event_media_object_deletions_status_allowed",
+          "value": "\"event_media_object_deletions\".\"status\" IN ('pending', 'deleted', 'failed')"
+        },
+        "event_media_object_deletions_attempt_count_bounded": {
+          "name": "event_media_object_deletions_attempt_count_bounded",
+          "value": "\"event_media_object_deletions\".\"attempt_count\" BETWEEN 0 AND 10"
+        },
+        "event_media_object_deletions_terminal_shape": {
+          "name": "event_media_object_deletions_terminal_shape",
+          "value": "(\"event_media_object_deletions\".\"status\" = 'pending' AND \"event_media_object_deletions\".\"deleted_at\" IS NULL AND \"event_media_object_deletions\".\"failed_at\" IS NULL) OR (\"event_media_object_deletions\".\"status\" = 'deleted' AND \"event_media_object_deletions\".\"deleted_at\" IS NOT NULL AND \"event_media_object_deletions\".\"failed_at\" IS NULL) OR (\"event_media_object_deletions\".\"status\" = 'failed' AND \"event_media_object_deletions\".\"deleted_at\" IS NULL AND \"event_media_object_deletions\".\"failed_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_media_uploads": {
+      "name": "event_media_uploads",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_admin_id": {
+          "name": "actor_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_event_version": {
+          "name": "expected_event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "declared_content_type": {
+          "name": "declared_content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "declared_size_bytes": {
+          "name": "declared_size_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "failure_code": {
+          "name": "failure_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attached_event_version": {
+          "name": "attached_event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verification_deadline_at": {
+          "name": "verification_deadline_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_published_at": {
+          "name": "job_published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "object_deletion_attempt_count": {
+          "name": "object_deletion_attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "claim_token": {
+          "name": "claim_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claim_expires_at": {
+          "name": "claim_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "object_deleted_at": {
+          "name": "object_deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "object_deletion_failed_at": {
+          "name": "object_deletion_failed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_media_uploads_object_key_unique": {
+          "name": "event_media_uploads_object_key_unique",
+          "columns": [
+            {
+              "expression": "object_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_media_uploads_active_slot_unique": {
+          "name": "event_media_uploads_active_slot_unique",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"event_media_uploads\".\"status\" = 'pending'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_media_uploads_dispatch_index": {
+          "name": "event_media_uploads_dispatch_index",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "job_published_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_media_uploads_event_id_events_id_fk": {
+          "name": "event_media_uploads_event_id_events_id_fk",
+          "tableFrom": "event_media_uploads",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_media_uploads_slot_allowed": {
+          "name": "event_media_uploads_slot_allowed",
+          "value": "\"event_media_uploads\".\"slot\" IN ('cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4')"
+        },
+        "event_media_uploads_status_allowed": {
+          "name": "event_media_uploads_status_allowed",
+          "value": "\"event_media_uploads\".\"status\" IN ('pending', 'attached', 'rejected', 'conflict', 'expired')"
+        },
+        "event_media_uploads_content_type_allowed": {
+          "name": "event_media_uploads_content_type_allowed",
+          "value": "\"event_media_uploads\".\"declared_content_type\" IN ('image/jpeg', 'image/png', 'image/webp')"
+        },
+        "event_media_uploads_size_allowed": {
+          "name": "event_media_uploads_size_allowed",
+          "value": "\"event_media_uploads\".\"declared_size_bytes\" BETWEEN 1 AND 8388608"
+        },
+        "event_media_uploads_expected_version_positive": {
+          "name": "event_media_uploads_expected_version_positive",
+          "value": "\"event_media_uploads\".\"expected_event_version\" >= 1"
+        },
+        "event_media_uploads_verification_deadline_after_upload": {
+          "name": "event_media_uploads_verification_deadline_after_upload",
+          "value": "\"event_media_uploads\".\"verification_deadline_at\" > \"event_media_uploads\".\"expires_at\""
+        },
+        "event_media_uploads_attempt_count_nonnegative": {
+          "name": "event_media_uploads_attempt_count_nonnegative",
+          "value": "\"event_media_uploads\".\"attempt_count\" >= 0"
+        },
+        "event_media_uploads_object_deletion_attempt_count_nonnegative": {
+          "name": "event_media_uploads_object_deletion_attempt_count_nonnegative",
+          "value": "\"event_media_uploads\".\"object_deletion_attempt_count\" >= 0"
+        },
+        "event_media_uploads_request_id_length": {
+          "name": "event_media_uploads_request_id_length",
+          "value": "char_length(\"event_media_uploads\".\"request_id\") BETWEEN 1 AND 128"
+        },
+        "event_media_uploads_terminal_shape": {
+          "name": "event_media_uploads_terminal_shape",
+          "value": "(\"event_media_uploads\".\"status\" = 'attached' AND \"event_media_uploads\".\"attached_event_version\" IS NOT NULL AND \"event_media_uploads\".\"failure_code\" IS NULL) OR (\"event_media_uploads\".\"status\" = 'pending' AND \"event_media_uploads\".\"attached_event_version\" IS NULL AND \"event_media_uploads\".\"failure_code\" IS NULL) OR (\"event_media_uploads\".\"status\" IN ('rejected', 'conflict', 'expired') AND \"event_media_uploads\".\"attached_event_version\" IS NULL AND \"event_media_uploads\".\"failure_code\" IS NOT NULL)"
+        },
+        "event_media_uploads_object_deletion_shape": {
+          "name": "event_media_uploads_object_deletion_shape",
+          "value": "NOT (\"event_media_uploads\".\"object_deleted_at\" IS NOT NULL AND \"event_media_uploads\".\"object_deletion_failed_at\" IS NOT NULL) AND (\"event_media_uploads\".\"status\" IN ('rejected', 'conflict', 'expired') OR (\"event_media_uploads\".\"object_deletion_attempt_count\" = 0 AND \"event_media_uploads\".\"object_deleted_at\" IS NULL AND \"event_media_uploads\".\"object_deletion_failed_at\" IS NULL))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_media": {
+      "name": "event_media",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_bytes": {
+          "name": "size_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etag": {
+          "name": "etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attached_at": {
+          "name": "attached_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_media_event_slot_unique": {
+          "name": "event_media_event_slot_unique",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_media_object_key_unique": {
+          "name": "event_media_object_key_unique",
+          "columns": [
+            {
+              "expression": "object_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_media_id_event_media_uploads_id_fk": {
+          "name": "event_media_id_event_media_uploads_id_fk",
+          "tableFrom": "event_media",
+          "tableTo": "event_media_uploads",
+          "columnsFrom": [
+            "id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "event_media_event_id_events_id_fk": {
+          "name": "event_media_event_id_events_id_fk",
+          "tableFrom": "event_media",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_media_slot_allowed": {
+          "name": "event_media_slot_allowed",
+          "value": "\"event_media\".\"slot\" IN ('cover', 'gallery_1', 'gallery_2', 'gallery_3', 'gallery_4')"
+        },
+        "event_media_content_type_allowed": {
+          "name": "event_media_content_type_allowed",
+          "value": "\"event_media\".\"content_type\" IN ('image/jpeg', 'image/png', 'image/webp')"
+        },
+        "event_media_size_allowed": {
+          "name": "event_media_size_allowed",
+          "value": "\"event_media\".\"size_bytes\" BETWEEN 1 AND 8388608"
+        },
+        "event_media_width_positive": {
+          "name": "event_media_width_positive",
+          "value": "\"event_media\".\"width\" >= 1"
+        },
+        "event_media_height_positive": {
+          "name": "event_media_height_positive",
+          "value": "\"event_media\".\"height\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_publication_outbox": {
+      "name": "event_publication_outbox",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_publication_outbox_aggregate_type_valid": {
+          "name": "event_publication_outbox_aggregate_type_valid",
+          "value": "\"event_publication_outbox\".\"aggregate_type\" = 'eventa.event.lifecycle.v1'"
+        },
+        "event_publication_outbox_event_type_valid": {
+          "name": "event_publication_outbox_event_type_valid",
+          "value": "\"event_publication_outbox\".\"event_type\" = 'event.published.v1'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_ticket_currencies": {
+      "name": "event_ticket_currencies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_ticket_currencies_event_currency_unique": {
+          "name": "event_ticket_currencies_event_currency_unique",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "currency",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_ticket_currencies_event_created_index": {
+          "name": "event_ticket_currencies_event_created_index",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_ticket_currencies_event_id_events_id_fk": {
+          "name": "event_ticket_currencies_event_id_events_id_fk",
+          "tableFrom": "event_ticket_currencies",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_ticket_currencies_currency_format": {
+          "name": "event_ticket_currencies_currency_format",
+          "value": "\"event_ticket_currencies\".\"currency\" ~ '^[A-Z]{3}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_ticket_types": {
+      "name": "event_ticket_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "ticket_currency_id": {
+          "name": "ticket_currency_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_minor": {
+          "name": "price_minor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "capacity": {
+          "name": "capacity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reserved_quantity": {
+          "name": "reserved_quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "sold_quantity": {
+          "name": "sold_quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "sales_start_at": {
+          "name": "sales_start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sales_end_at": {
+          "name": "sales_end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retired_event_version": {
+          "name": "retired_event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "event_ticket_types_currency_name_unique": {
+          "name": "event_ticket_types_currency_name_unique",
+          "columns": [
+            {
+              "expression": "ticket_currency_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"event_ticket_types\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_ticket_types_currency_created_index": {
+          "name": "event_ticket_types_currency_created_index",
+          "columns": [
+            {
+              "expression": "ticket_currency_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_ticket_types\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_ticket_types_ticket_currency_id_event_ticket_currencies_id_fk": {
+          "name": "event_ticket_types_ticket_currency_id_event_ticket_currencies_id_fk",
+          "tableFrom": "event_ticket_types",
+          "tableTo": "event_ticket_currencies",
+          "columnsFrom": [
+            "ticket_currency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_ticket_types_name_normalized": {
+          "name": "event_ticket_types_name_normalized",
+          "value": "\"event_ticket_types\".\"name\" = btrim(\"event_ticket_types\".\"name\") AND \"event_ticket_types\".\"name\" !~ '\\s{2,}'"
+        },
+        "event_ticket_types_name_length": {
+          "name": "event_ticket_types_name_length",
+          "value": "char_length(\"event_ticket_types\".\"name\") BETWEEN 1 AND 80"
+        },
+        "event_ticket_types_description_shape": {
+          "name": "event_ticket_types_description_shape",
+          "value": "\"event_ticket_types\".\"description\" IS NULL OR (\"event_ticket_types\".\"description\" = btrim(\"event_ticket_types\".\"description\") AND char_length(\"event_ticket_types\".\"description\") BETWEEN 1 AND 500)"
+        },
+        "event_ticket_types_price_range": {
+          "name": "event_ticket_types_price_range",
+          "value": "\"event_ticket_types\".\"price_minor\" BETWEEN 0 AND 2147483647"
+        },
+        "event_ticket_types_capacity_range": {
+          "name": "event_ticket_types_capacity_range",
+          "value": "\"event_ticket_types\".\"capacity\" BETWEEN 1 AND 1000000"
+        },
+        "event_ticket_types_reserved_quantity_range": {
+          "name": "event_ticket_types_reserved_quantity_range",
+          "value": "\"event_ticket_types\".\"reserved_quantity\" BETWEEN 0 AND \"event_ticket_types\".\"capacity\""
+        },
+        "event_ticket_types_sold_quantity_range": {
+          "name": "event_ticket_types_sold_quantity_range",
+          "value": "\"event_ticket_types\".\"sold_quantity\" BETWEEN 0 AND \"event_ticket_types\".\"capacity\""
+        },
+        "event_ticket_types_committed_capacity_valid": {
+          "name": "event_ticket_types_committed_capacity_valid",
+          "value": "\"event_ticket_types\".\"reserved_quantity\" + \"event_ticket_types\".\"sold_quantity\" <= \"event_ticket_types\".\"capacity\""
+        },
+        "event_ticket_types_sales_window_valid": {
+          "name": "event_ticket_types_sales_window_valid",
+          "value": "\"event_ticket_types\".\"sales_end_at\" > \"event_ticket_types\".\"sales_start_at\""
+        },
+        "event_ticket_types_retirement_shape": {
+          "name": "event_ticket_types_retirement_shape",
+          "value": "(\"event_ticket_types\".\"retired_at\" IS NULL AND \"event_ticket_types\".\"retired_event_version\" IS NULL) OR (\"event_ticket_types\".\"retired_at\" IS NOT NULL AND \"event_ticket_types\".\"retired_event_version\" >= 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_venues": {
+      "name": "event_venues",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address_line_1": {
+          "name": "address_line_1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address_line_2": {
+          "name": "address_line_2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region_code": {
+          "name": "region_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "event_venues_country_region_event_index": {
+          "name": "event_venues_country_region_event_index",
+          "columns": [
+            {
+              "expression": "country_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "region_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_venues_event_id_events_id_fk": {
+          "name": "event_venues_event_id_events_id_fk",
+          "tableFrom": "event_venues",
+          "tableTo": "events",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_venues_name_normalized": {
+          "name": "event_venues_name_normalized",
+          "value": "\"event_venues\".\"name\" = btrim(\"event_venues\".\"name\")"
+        },
+        "event_venues_name_length": {
+          "name": "event_venues_name_length",
+          "value": "char_length(\"event_venues\".\"name\") BETWEEN 1 AND 160"
+        },
+        "event_venues_address_line_1_normalized": {
+          "name": "event_venues_address_line_1_normalized",
+          "value": "\"event_venues\".\"address_line_1\" = btrim(\"event_venues\".\"address_line_1\")"
+        },
+        "event_venues_address_line_1_length": {
+          "name": "event_venues_address_line_1_length",
+          "value": "char_length(\"event_venues\".\"address_line_1\") BETWEEN 1 AND 200"
+        },
+        "event_venues_address_line_2_length": {
+          "name": "event_venues_address_line_2_length",
+          "value": "\"event_venues\".\"address_line_2\" IS NULL OR char_length(\"event_venues\".\"address_line_2\") BETWEEN 1 AND 200"
+        },
+        "event_venues_address_line_2_normalized": {
+          "name": "event_venues_address_line_2_normalized",
+          "value": "\"event_venues\".\"address_line_2\" IS NULL OR \"event_venues\".\"address_line_2\" = btrim(\"event_venues\".\"address_line_2\")"
+        },
+        "event_venues_city_normalized": {
+          "name": "event_venues_city_normalized",
+          "value": "\"event_venues\".\"city\" = btrim(\"event_venues\".\"city\")"
+        },
+        "event_venues_city_length": {
+          "name": "event_venues_city_length",
+          "value": "char_length(\"event_venues\".\"city\") BETWEEN 1 AND 120"
+        },
+        "event_venues_region_length": {
+          "name": "event_venues_region_length",
+          "value": "\"event_venues\".\"region\" IS NULL OR char_length(\"event_venues\".\"region\") BETWEEN 1 AND 120"
+        },
+        "event_venues_region_normalized": {
+          "name": "event_venues_region_normalized",
+          "value": "\"event_venues\".\"region\" IS NULL OR \"event_venues\".\"region\" = btrim(\"event_venues\".\"region\")"
+        },
+        "event_venues_postal_code_length": {
+          "name": "event_venues_postal_code_length",
+          "value": "\"event_venues\".\"postal_code\" IS NULL OR char_length(\"event_venues\".\"postal_code\") BETWEEN 1 AND 32"
+        },
+        "event_venues_postal_code_normalized": {
+          "name": "event_venues_postal_code_normalized",
+          "value": "\"event_venues\".\"postal_code\" IS NULL OR \"event_venues\".\"postal_code\" = btrim(\"event_venues\".\"postal_code\")"
+        },
+        "event_venues_country_code": {
+          "name": "event_venues_country_code",
+          "value": "\"event_venues\".\"country_code\" ~ '^[A-Z]{2}$'"
+        },
+        "event_venues_region_code": {
+          "name": "event_venues_region_code",
+          "value": "\"event_venues\".\"region_code\" IS NULL OR (\"event_venues\".\"region\" IS NOT NULL AND \"event_venues\".\"region_code\" ~ '^[A-Z0-9][A-Z0-9-]{0,7}$')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_waitlist_entries": {
+      "name": "event_waitlist_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "ticket_type_id": {
+          "name": "ticket_type_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attendee_id": {
+          "name": "attendee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'waiting'"
+        },
+        "eligible_at": {
+          "name": "eligible_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opportunity_expires_at": {
+          "name": "opportunity_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reservation_id": {
+          "name": "reservation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "left_at": {
+          "name": "left_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_waitlist_entries_active_attendee_unique": {
+          "name": "event_waitlist_entries_active_attendee_unique",
+          "columns": [
+            {
+              "expression": "ticket_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "attendee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"event_waitlist_entries\".\"status\" IN ('waiting', 'eligible')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_waitlist_entries_waiting_order_index": {
+          "name": "event_waitlist_entries_waiting_order_index",
+          "columns": [
+            {
+              "expression": "ticket_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_waitlist_entries\".\"status\" = 'waiting'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_waitlist_entries_eligible_expiry_index": {
+          "name": "event_waitlist_entries_eligible_expiry_index",
+          "columns": [
+            {
+              "expression": "ticket_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "opportunity_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"event_waitlist_entries\".\"status\" = 'eligible'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_waitlist_entries_ticket_type_id_event_ticket_types_id_fk": {
+          "name": "event_waitlist_entries_ticket_type_id_event_ticket_types_id_fk",
+          "tableFrom": "event_waitlist_entries",
+          "tableTo": "event_ticket_types",
+          "columnsFrom": [
+            "ticket_type_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "event_waitlist_entries_reservation_id_event_capacity_reservations_id_fk": {
+          "name": "event_waitlist_entries_reservation_id_event_capacity_reservations_id_fk",
+          "tableFrom": "event_waitlist_entries",
+          "tableTo": "event_capacity_reservations",
+          "columnsFrom": [
+            "reservation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_waitlist_entries_quantity_range": {
+          "name": "event_waitlist_entries_quantity_range",
+          "value": "\"event_waitlist_entries\".\"quantity\" BETWEEN 1 AND 1000000"
+        },
+        "event_waitlist_entries_status_allowed": {
+          "name": "event_waitlist_entries_status_allowed",
+          "value": "\"event_waitlist_entries\".\"status\" IN ('waiting', 'eligible', 'left', 'closed', 'expired', 'reserved')"
+        },
+        "event_waitlist_entries_lifecycle_shape": {
+          "name": "event_waitlist_entries_lifecycle_shape",
+          "value": "(\"event_waitlist_entries\".\"status\" = 'waiting' AND \"event_waitlist_entries\".\"eligible_at\" IS NULL AND \"event_waitlist_entries\".\"opportunity_expires_at\" IS NULL AND \"event_waitlist_entries\".\"reservation_id\" IS NULL AND \"event_waitlist_entries\".\"left_at\" IS NULL AND \"event_waitlist_entries\".\"closed_at\" IS NULL) OR (\"event_waitlist_entries\".\"status\" = 'eligible' AND \"event_waitlist_entries\".\"eligible_at\" IS NOT NULL AND \"event_waitlist_entries\".\"opportunity_expires_at\" > \"event_waitlist_entries\".\"eligible_at\" AND \"event_waitlist_entries\".\"reservation_id\" IS NULL AND \"event_waitlist_entries\".\"left_at\" IS NULL AND \"event_waitlist_entries\".\"closed_at\" IS NULL) OR (\"event_waitlist_entries\".\"status\" = 'reserved' AND \"event_waitlist_entries\".\"eligible_at\" IS NOT NULL AND \"event_waitlist_entries\".\"opportunity_expires_at\" IS NOT NULL AND \"event_waitlist_entries\".\"reservation_id\" IS NOT NULL AND \"event_waitlist_entries\".\"left_at\" IS NULL AND \"event_waitlist_entries\".\"closed_at\" IS NULL) OR (\"event_waitlist_entries\".\"status\" = 'expired' AND \"event_waitlist_entries\".\"eligible_at\" IS NOT NULL AND \"event_waitlist_entries\".\"opportunity_expires_at\" IS NOT NULL AND \"event_waitlist_entries\".\"reservation_id\" IS NULL AND \"event_waitlist_entries\".\"left_at\" IS NULL AND \"event_waitlist_entries\".\"closed_at\" IS NOT NULL) OR (\"event_waitlist_entries\".\"status\" = 'left' AND \"event_waitlist_entries\".\"reservation_id\" IS NULL AND \"event_waitlist_entries\".\"left_at\" IS NOT NULL AND \"event_waitlist_entries\".\"closed_at\" IS NULL) OR (\"event_waitlist_entries\".\"status\" = 'closed' AND \"event_waitlist_entries\".\"reservation_id\" IS NULL AND \"event_waitlist_entries\".\"left_at\" IS NULL AND \"event_waitlist_entries\".\"closed_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.event_waitlist_outbox": {
+      "name": "event_waitlist_outbox",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_waitlist_outbox_aggregate_type_valid": {
+          "name": "event_waitlist_outbox_aggregate_type_valid",
+          "value": "\"event_waitlist_outbox\".\"aggregate_type\" = 'eventa.event.waitlist.v1'"
+        },
+        "event_waitlist_outbox_event_type_valid": {
+          "name": "event_waitlist_outbox_event_type_valid",
+          "value": "\"event_waitlist_outbox\".\"event_type\" = 'event.waitlist-entry.eligible.v1'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.events": {
+      "name": "events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_by_admin_id": {
+          "name": "created_by_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retired_at": {
+          "name": "retired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "events_status_created_at_index": {
+          "name": "events_status_created_at_index",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"events\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "events_starts_at_id_index": {
+          "name": "events_starts_at_id_index",
+          "columns": [
+            {
+              "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"events\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "events_updated_at_id_index": {
+          "name": "events_updated_at_id_index",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"events\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "events_title_search_index": {
+          "name": "events_title_search_index",
+          "columns": [
+            {
+              "expression": "lower(\"title\") gin_trgm_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"events\".\"retired_at\" IS NULL",
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "events_title_normalized": {
+          "name": "events_title_normalized",
+          "value": "\"events\".\"title\" = btrim(\"events\".\"title\")"
+        },
+        "events_title_length": {
+          "name": "events_title_length",
+          "value": "char_length(\"events\".\"title\") BETWEEN 1 AND 160"
+        },
+        "events_description_length": {
+          "name": "events_description_length",
+          "value": "\"events\".\"description\" IS NULL OR char_length(\"events\".\"description\") BETWEEN 1 AND 10000"
+        },
+        "events_description_normalized": {
+          "name": "events_description_normalized",
+          "value": "\"events\".\"description\" IS NULL OR \"events\".\"description\" = btrim(\"events\".\"description\")"
+        },
+        "events_schedule_valid": {
+          "name": "events_schedule_valid",
+          "value": "(\"events\".\"starts_at\" IS NULL AND \"events\".\"ends_at\" IS NULL AND \"events\".\"time_zone\" IS NULL) OR (\"events\".\"starts_at\" IS NOT NULL AND \"events\".\"ends_at\" IS NOT NULL AND \"events\".\"time_zone\" IS NOT NULL AND \"events\".\"ends_at\" > \"events\".\"starts_at\")"
+        },
+        "events_details_complete": {
+          "name": "events_details_complete",
+          "value": "(\"events\".\"description\" IS NULL AND \"events\".\"starts_at\" IS NULL AND \"events\".\"ends_at\" IS NULL AND \"events\".\"time_zone\" IS NULL) OR (\"events\".\"description\" IS NOT NULL AND \"events\".\"starts_at\" IS NOT NULL AND \"events\".\"ends_at\" IS NOT NULL AND \"events\".\"time_zone\" IS NOT NULL)"
+        },
+        "events_time_zone_length": {
+          "name": "events_time_zone_length",
+          "value": "\"events\".\"time_zone\" IS NULL OR char_length(\"events\".\"time_zone\") BETWEEN 1 AND 64"
+        },
+        "events_version_positive": {
+          "name": "events_version_positive",
+          "value": "\"events\".\"version\" >= 1"
+        },
+        "events_status_allowed": {
+          "name": "events_status_allowed",
+          "value": "\"events\".\"status\" IN ('draft', 'published')"
+        },
+        "events_published_at_shape": {
+          "name": "events_published_at_shape",
+          "value": "(\"events\".\"status\" = 'published') = (\"events\".\"published_at\" IS NOT NULL)"
+        },
+        "events_retired_draft_only": {
+          "name": "events_retired_draft_only",
+          "value": "\"events\".\"retired_at\" IS NULL OR \"events\".\"status\" = 'draft'"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

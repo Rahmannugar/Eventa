@@ -26,6 +26,13 @@ export class AppModule implements NestModule {
       rateLimitKeySecret: config.rateLimitKeySecret,
       secureCookies: config.publicApiUrl.startsWith('https://'),
     });
+    const attendeesModule = AttendeesModule.register({
+      clientOrigin: config.clientOrigin,
+      identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
+      identityGrpcUrl: config.identityGrpcUrl,
+      rateLimitKeySecret: config.rateLimitKeySecret,
+      secureSessionCookie: config.publicApiUrl.startsWith('https://'),
+    });
 
     return {
       module: AppModule,
@@ -39,17 +46,12 @@ export class AppModule implements NestModule {
         adminsModule,
         EventsModule.register({
           adminsModule,
+          attendeesModule,
           eventGrpcDeadlineMs: config.eventGrpcDeadlineMs,
           eventGrpcUrl: config.eventGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
         }),
-        AttendeesModule.register({
-          clientOrigin: config.clientOrigin,
-          identityGrpcDeadlineMs: config.identityGrpcDeadlineMs,
-          identityGrpcUrl: config.identityGrpcUrl,
-          rateLimitKeySecret: config.rateLimitKeySecret,
-          secureSessionCookie: config.publicApiUrl.startsWith('https://'),
-        }),
+        attendeesModule,
       ],
       providers: [HttpRequestTelemetryMiddleware, TelemetryLifecycleService],
     };

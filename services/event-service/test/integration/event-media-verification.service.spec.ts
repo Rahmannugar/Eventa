@@ -13,6 +13,7 @@ import { EventMediaObjectDeletionRepository } from '../../src/events/repositorie
 import { EventManagementRepository } from '../../src/events/repositories/event-management.repository';
 import { EventCapacityReservationRepository } from '../../src/events/repositories/event-capacity-reservation.repository';
 import { EventTicketTypeRepository } from '../../src/events/repositories/event-ticket-type.repository';
+import { EventWaitlistRepository } from '../../src/events/repositories/event-waitlist.repository';
 import {
   EventPageTokenInvalidError,
   EventScheduleInvalidError,
@@ -21,6 +22,7 @@ import {
   EventCapacityReservationConflictError,
   EventCapacityBusyError,
   EventCapacityUnavailableError,
+  EventWaitlistConflictError,
 } from '../../src/events/errors/event.errors';
 import { eventAdminAuditLog } from '../../src/events/schema/event-admin-audit.schema';
 import { eventCategories } from '../../src/events/schema/event-category.schema';
@@ -32,6 +34,8 @@ import { eventMedia } from '../../src/events/schema/event-media.schema';
 import { eventPublicationOutbox } from '../../src/events/schema/event-publication-outbox.schema';
 import { eventTicketCurrencies } from '../../src/events/schema/event-ticket-currency.schema';
 import { eventTicketTypes } from '../../src/events/schema/event-ticket-type.schema';
+import { eventWaitlistEntries } from '../../src/events/schema/event-waitlist-entry.schema';
+import { eventWaitlistOutbox } from '../../src/events/schema/event-waitlist-outbox.schema';
 import { eventVenues } from '../../src/events/schema/event-venue.schema';
 import { events } from '../../src/events/schema/event.schema';
 import { EventMediaVerificationService } from '../../src/events/services/event-media-verification.service';
@@ -39,6 +43,7 @@ import { EventMediaObjectDeletionService } from '../../src/events/services/event
 import { EventManagementService } from '../../src/events/services/event-management.service';
 import { EventCapacityReservationService } from '../../src/events/services/event-capacity-reservation.service';
 import { EventTicketTypeService } from '../../src/events/services/event-ticket-type.service';
+import { EventWaitlistService } from '../../src/events/services/event-waitlist.service';
 import type { EventMediaObjectStorage } from '../../src/events/types/event.types';
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -102,6 +107,8 @@ const capacityReservationsRepository = new EventCapacityReservationRepository(
 const capacityReservations = new EventCapacityReservationService(
   capacityReservationsRepository,
 );
+const waitlistRepository = new EventWaitlistRepository(database);
+const waitlist = new EventWaitlistService(waitlistRepository);
 
 const verifiedObjectStorage: EventMediaObjectStorage = {
   createUploadUrl: () => Promise.reject(new Error('Not used by verification')),
@@ -135,7 +142,9 @@ describe('Event mutation integration', () => {
   beforeEach(async () => {
     await database.delete(eventJobOutbox);
     await database.delete(eventPublicationOutbox);
+    await database.delete(eventWaitlistOutbox);
     await database.delete(eventAdminAuditLog);
+    await database.delete(eventWaitlistEntries);
     await database.delete(eventCapacityReservations);
     await database.delete(eventTicketTypes);
     await database.delete(eventTicketCurrencies);
@@ -464,6 +473,7 @@ describe('Event mutation integration', () => {
     const firstReservationId = randomUUID();
     const secondReservationId = randomUUID();
     const command = {
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 4,
       requestId: randomUUID(),
@@ -517,6 +527,7 @@ describe('Event mutation integration', () => {
       .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
 
     const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 1,
       requestId: randomUUID(),
@@ -546,6 +557,7 @@ describe('Event mutation integration', () => {
     try {
       await expect(
         capacityReservations.reserve({
+          attendeeId: randomUUID(),
           eventId: ticket.eventId,
           quantity: 1,
           requestId: randomUUID(),
@@ -562,6 +574,7 @@ describe('Event mutation integration', () => {
   it('finalizes and releases each reservation exactly once', async () => {
     const ticket = await createPublishedTicketType(10);
     const finalized = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 3,
       requestId: randomUUID(),
@@ -578,6 +591,7 @@ describe('Event mutation integration', () => {
     await capacityReservations.finalize(finalizeCommand);
 
     const released = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 2,
       requestId: randomUUID(),
@@ -606,6 +620,7 @@ describe('Event mutation integration', () => {
   it('expires abandoned capacity before it can be finalized', async () => {
     const ticket = await createPublishedTicketType(5);
     const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 5,
       requestId: randomUUID(),
@@ -650,6 +665,7 @@ describe('Event mutation integration', () => {
   it('serializes competing finalization and release', async () => {
     const ticket = await createPublishedTicketType(2);
     const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
       eventId: ticket.eventId,
       quantity: 2,
       requestId: randomUUID(),
@@ -687,6 +703,140 @@ describe('Event mutation integration', () => {
       .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
     expect(persistedType?.reservedQuantity).toBe(0);
     expect([0, 2]).toContain(persistedType?.soldQuantity);
+  });
+
+  it('admits one durable waitlist entry only when capacity is unavailable', async () => {
+    const ticket = await createPublishedTicketType(2);
+    const attendeeId = randomUUID();
+    const command = {
+      attendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    };
+
+    await expect(waitlist.join(command)).rejects.toMatchObject({
+      message: 'EVENT_TICKET_CAPACITY_AVAILABLE',
+    });
+    await capacityReservations.reserve({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 2,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+
+    const [first, repeated] = await Promise.all([
+      waitlist.join(command),
+      waitlist.join(command),
+    ]);
+    expect(repeated).toEqual(first);
+    expect(first).toMatchObject({ attendeeId, position: 1, status: 'waiting' });
+    const [entryCount] = await database
+      .select({ value: count() })
+      .from(eventWaitlistEntries);
+    expect(entryCount?.value).toBe(1);
+    await expect(
+      waitlist.join({ ...command, quantity: 2 }),
+    ).rejects.toBeInstanceOf(EventWaitlistConflictError);
+  });
+
+  it('protects capacity for every waitlisted attendee promoted in FIFO order', async () => {
+    const ticket = await createPublishedTicketType(2);
+    const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 2,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const firstAttendeeId = randomUUID();
+    const secondAttendeeId = randomUUID();
+    await waitlist.join({
+      attendeeId: firstAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await waitlist.join({
+      attendeeId: secondAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+
+    await capacityReservations.release({
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: reservation.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await expect(
+      waitlistRepository.promote(ticket.ticketTypeId, 100),
+    ).resolves.toBe(2);
+    const [firstEntry, secondEntry] = await Promise.all([
+      waitlist.get({
+        attendeeId: firstAttendeeId,
+        eventId: ticket.eventId,
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+      waitlist.get({
+        attendeeId: secondAttendeeId,
+        eventId: ticket.eventId,
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ]);
+    expect(firstEntry).toMatchObject({ position: null, status: 'eligible' });
+    expect(secondEntry).toMatchObject({ position: null, status: 'eligible' });
+    expect(firstEntry.opportunityExpiresAt).not.toBeNull();
+    expect(secondEntry.opportunityExpiresAt).not.toBeNull();
+    expect(firstEntry.opportunityExpiresAt?.getTime()).toBeLessThanOrEqual(
+      Date.now() + 15 * 60 * 1_000,
+    );
+    const [eligibilityFactCount] = await database
+      .select({ value: count() })
+      .from(eventWaitlistOutbox);
+    expect(eligibilityFactCount?.value).toBe(2);
+
+    await expect(
+      capacityReservations.reserve({
+        attendeeId: randomUUID(),
+        eventId: ticket.eventId,
+        quantity: 1,
+        requestId: randomUUID(),
+        reservationId: randomUUID(),
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({ message: 'EVENT_WAITLIST_PRIORITY_REQUIRED' });
+    await capacityReservations.reserve({
+      attendeeId: firstAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await capacityReservations.reserve({
+      attendeeId: secondAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const [type] = await database
+      .select({
+        reservedQuantity: eventTicketTypes.reservedQuantity,
+        soldQuantity: eventTicketTypes.soldQuantity,
+      })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(type).toEqual({ reservedQuantity: 2, soldQuantity: 0 });
   });
 
   it('rolls back creation when a category invariant fails', async () => {

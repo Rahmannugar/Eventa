@@ -43,11 +43,19 @@ The management read joins the event to currencies through `(event_id, created_at
 
 ## Capacity Reservations
 
-A caller-generated reservation ID is the durable idempotency key. Reserving locks only the selected ticket type, verifies published state and the sales window, reclaims any due holds for that type, checks available quantity, inserts a reservation, and increments reserved quantity in one transaction. The deadline is the earliest of ten minutes, the sales end, and the event start. Concurrent reservations for different ticket types do not serialize through the event row.
+A caller-generated reservation ID is the durable idempotency key. Reserving locks only the selected ticket type, verifies published state and the sales window, reclaims due holds and waitlist opportunities for that type, and enforces waitlist priority before checking available quantity. An eligible attendee must reserve the queued quantity; other attendees can use only surplus not protected by eligible entries and cannot bypass waiting entries. The transaction inserts the attendee-bound reservation, consumes any matching eligibility, and increments reserved quantity atomically. The deadline is the earliest of ten minutes, the sales end, and the event start. Concurrent reservations for different ticket types do not serialize through the event row.
 
 Finalization, release, and expiry lock the ticket type before changing the reservation. Finalization moves quantity from reserved to sold; release and expiry remove it from reserved. The reservation has one terminal state, so duplicate or competing commands cannot change counters twice. Catalogue edits lock the event and then the ticket type, preserving the same type-lock boundary without creating a reverse lock dependency. Capacity transactions bound lock waits and return a retryable result instead of queueing indefinitely behind a hot ticket type.
 
 PostgreSQL is the expiry authority. A partial expiry index supports a bounded in-process sweep, and reserve also reclaims due holds before checking availability. The sweeper can repeat after a crash or run from several service instances because each expiry transition is durable and idempotent. No queue or process timer is treated as reservation truth.
+
+## Waitlists
+
+Waitlists are FIFO within one ticket type. Join, leave, promotion, and reservation paths serialize on the same ticket-type row, while a partial unique index permits only one waiting or eligible entry per attendee and type. Joining first reclaims due reservations and succeeds only when the requested quantity cannot be fulfilled after existing eligible priority is considered. Active membership is bounded to 10,000 entries per type.
+
+A bounded sweeper visits ticket types with actionable entries in stable ID order. It expires elapsed opportunities, subtracts still-eligible demand from available capacity, then promotes the largest FIFO prefix whose complete quantities fit. Each opportunity lasts at most 15 minutes and ends sooner when ticket sales or the event begins. Promotion changes no capacity counter; only a capacity reservation creates a hold. The same transaction records one immutable eligibility fact per promoted attendee for a later Notification-owned email reaction. Leaving is idempotent, and entries close durably when the sales window or event has ended.
+
+The active-attendee uniqueness index supports retry-safe membership. The waiting-order index supports FIFO selection and position reads, while the eligible-expiry index supports deadline cleanup and per-type priority checks. The sweep is replaceable execution; PostgreSQL entry state remains authoritative. Eligibility facts are routed from the outbox to `eventa.event.waitlist.v1` with at-least-once delivery.
 
 ## Published Access
 

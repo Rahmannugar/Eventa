@@ -27,8 +27,14 @@ import {
   GetEventMediaUploadResponse,
   GetEventTicketCatalogueRequest,
   GetEventTicketCatalogueResponse,
+  GetEventWaitlistEntryRequest,
+  GetEventWaitlistEntryResponse,
   GetPublishedEventRequest,
   GetPublishedEventResponse,
+  JoinEventWaitlistRequest,
+  JoinEventWaitlistResponse,
+  LeaveEventWaitlistRequest,
+  LeaveEventWaitlistResponse,
   ListAdminEventsRequest,
   ListAdminEventsResponse,
   ListEventTicketTypesRequest,
@@ -117,6 +123,15 @@ export interface EventServiceClient {
     metadata?: Metadata,
   ): Observable<ReleaseEventCapacityReservationResponse>;
 
+  joinEventWaitlist(request: JoinEventWaitlistRequest, metadata?: Metadata): Observable<JoinEventWaitlistResponse>;
+
+  leaveEventWaitlist(request: LeaveEventWaitlistRequest, metadata?: Metadata): Observable<LeaveEventWaitlistResponse>;
+
+  getEventWaitlistEntry(
+    request: GetEventWaitlistEntryRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventWaitlistEntryResponse>;
+
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata?: Metadata,
@@ -192,6 +207,15 @@ export interface EventServiceController {
     metadata?: Metadata,
   ): Observable<ReleaseEventCapacityReservationResponse>;
 
+  joinEventWaitlist(request: JoinEventWaitlistRequest, metadata?: Metadata): Observable<JoinEventWaitlistResponse>;
+
+  leaveEventWaitlist(request: LeaveEventWaitlistRequest, metadata?: Metadata): Observable<LeaveEventWaitlistResponse>;
+
+  getEventWaitlistEntry(
+    request: GetEventWaitlistEntryRequest,
+    metadata?: Metadata,
+  ): Observable<GetEventWaitlistEntryResponse>;
+
   createEventMediaUpload(
     request: CreateEventMediaUploadRequest,
     metadata?: Metadata,
@@ -227,6 +251,9 @@ export function EventServiceControllerMethods() {
       "reserveEventCapacity",
       "finalizeEventCapacityReservation",
       "releaseEventCapacityReservation",
+      "joinEventWaitlist",
+      "leaveEventWaitlist",
+      "getEventWaitlistEntry",
       "createEventMediaUpload",
       "getEventMediaUpload",
       "removeEventMedia",

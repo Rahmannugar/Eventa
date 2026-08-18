@@ -21,6 +21,7 @@ export const eventCapacityReservations = pgTable(
     ticketTypeId: uuid('ticket_type_id')
       .notNull()
       .references(() => eventTicketTypes.id, { onDelete: 'restrict' }),
+    attendeeId: uuid('attendee_id'),
     quantity: integer('quantity').notNull(),
     status: text('status')
       .$type<EventCapacityReservationStatus>()
@@ -53,6 +54,9 @@ export const eventCapacityReservations = pgTable(
       .where(sql`${table.status} = 'active'`),
     index('event_capacity_reservations_type_active_expiry_index')
       .on(table.ticketTypeId, table.expiresAt, table.id)
+      .where(sql`${table.status} = 'active'`),
+    index('event_capacity_reservations_type_attendee_active_index')
+      .on(table.ticketTypeId, table.attendeeId)
       .where(sql`${table.status} = 'active'`),
     check(
       'event_capacity_reservations_quantity_range',

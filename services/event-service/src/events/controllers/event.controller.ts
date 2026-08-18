@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   AdminEventSort,
   EventCapacityReservationStatus,
+  EventWaitlistEntryStatus,
   type AddEventTicketTypeResponse,
   EventMediaSlot,
   EventMediaUploadStatus,
@@ -14,12 +15,16 @@ import {
   type DefineEventTicketCurrencyResponse,
   type Event,
   type EventCapacityReservation,
+  type EventWaitlistEntry,
   type EventTicketCurrency,
   type EventTicketType,
   type EventServiceController,
   type GetAdminEventResponse,
   type FinalizeEventCapacityReservationResponse,
   type GetEventMediaUploadResponse,
+  type GetEventWaitlistEntryResponse,
+  type JoinEventWaitlistResponse,
+  type LeaveEventWaitlistResponse,
   type GetEventTicketCatalogueResponse,
   type ListAdminEventsResponse,
   type ListEventTicketTypesResponse,
@@ -46,12 +51,18 @@ import {
   EVENT_CAPACITY_RESERVATION_MANAGEMENT,
   EVENT_MEDIA_MANAGEMENT,
   EVENT_TICKET_TYPE_MANAGEMENT,
+  EVENT_WAITLIST_MANAGEMENT,
 } from '../constants/event.constants';
 import {
   FinalizeEventCapacityReservationDto,
   ReleaseEventCapacityReservationDto,
   ReserveEventCapacityDto,
 } from '../dto/event-capacity-reservation.dto';
+import {
+  GetEventWaitlistEntryDto,
+  JoinEventWaitlistDto,
+  LeaveEventWaitlistDto,
+} from '../dto/event-waitlist.dto';
 import {
   GetAdminEventDto,
   CreateDraftEventDto,
@@ -101,6 +112,9 @@ import {
   EventCapacityReservationNotFoundError,
   EventCapacityUnavailableError,
   EventTicketSalesUnavailableError,
+  EventWaitlistConflictError,
+  EventWaitlistEntryInvalidError,
+  EventWaitlistEntryNotFoundError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
@@ -114,6 +128,8 @@ import type {
   EventTicketTypeManagement,
   EventTicketTypeRecord,
   EventTicketCurrencyRecord,
+  EventWaitlistEntryRecord,
+  EventWaitlistManagement,
 } from '../types/event.types';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -130,6 +146,8 @@ export class EventController implements EventServiceController {
     private readonly mediaService: EventMediaManagement,
     @Inject(EVENT_TICKET_TYPE_MANAGEMENT)
     private readonly ticketTypeService: EventTicketTypeManagement,
+    @Inject(EVENT_WAITLIST_MANAGEMENT)
+    private readonly waitlist: EventWaitlistManagement,
     @Inject(RUNTIME_CONFIG)
     private readonly config: RuntimeConfig,
   ) {}
@@ -233,6 +251,26 @@ export class EventController implements EventServiceController {
     metadata?: Metadata,
   ): Observable<ReleaseEventCapacityReservationResponse> {
     return from(this.releaseCapacity(request, this.readRequestId(metadata)));
+  }
+
+  joinEventWaitlist(
+    request: JoinEventWaitlistDto,
+    metadata?: Metadata,
+  ): Observable<JoinEventWaitlistResponse> {
+    return from(this.joinWaitlist(request, this.readRequestId(metadata)));
+  }
+
+  leaveEventWaitlist(
+    request: LeaveEventWaitlistDto,
+    metadata?: Metadata,
+  ): Observable<LeaveEventWaitlistResponse> {
+    return from(this.leaveWaitlist(request, this.readRequestId(metadata)));
+  }
+
+  getEventWaitlistEntry(
+    request: GetEventWaitlistEntryDto,
+  ): Observable<GetEventWaitlistEntryResponse> {
+    return from(this.getWaitlistEntry(request));
   }
 
   createEventMediaUpload(
@@ -985,10 +1023,105 @@ export class EventController implements EventServiceController {
     throw error;
   }
 
+  private async joinWaitlist(
+    request: JoinEventWaitlistDto,
+    requestId: string,
+  ): Promise<JoinEventWaitlistResponse> {
+    try {
+      return {
+        entry: this.toWaitlistContract(
+          await this.waitlist.join({ ...request, requestId }),
+        ),
+      };
+    } catch (error: unknown) {
+      this.translateWaitlistError(error);
+    }
+  }
+
+  private async leaveWaitlist(
+    request: LeaveEventWaitlistDto,
+    requestId: string,
+  ): Promise<LeaveEventWaitlistResponse> {
+    try {
+      await this.waitlist.leave({ ...request, requestId });
+      return {};
+    } catch (error: unknown) {
+      this.translateWaitlistError(error);
+    }
+  }
+
+  private async getWaitlistEntry(
+    request: GetEventWaitlistEntryDto,
+  ): Promise<GetEventWaitlistEntryResponse> {
+    try {
+      return {
+        entry: this.toWaitlistContract(await this.waitlist.get(request)),
+      };
+    } catch (error: unknown) {
+      this.translateWaitlistError(error);
+    }
+  }
+
+  private translateWaitlistError(error: unknown): never {
+    if (error instanceof EventCapacityBusyError) {
+      throw new RpcException({
+        code: status.UNAVAILABLE,
+        message: error.message,
+      });
+    }
+    if (error instanceof EventWaitlistEntryInvalidError) {
+      throw new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: error.message,
+      });
+    }
+    if (
+      error instanceof EventTicketTypeNotFoundError ||
+      error instanceof EventWaitlistEntryNotFoundError
+    ) {
+      throw new RpcException({
+        code: status.NOT_FOUND,
+        message: error.message,
+      });
+    }
+    if (
+      error instanceof EventTicketSalesUnavailableError ||
+      error instanceof EventWaitlistConflictError
+    ) {
+      throw new RpcException({
+        code: status.FAILED_PRECONDITION,
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+
+  private toWaitlistContract(
+    entry: EventWaitlistEntryRecord,
+  ): EventWaitlistEntry {
+    return {
+      attendeeId: entry.attendeeId,
+      createdAt: entry.createdAt.toISOString(),
+      eligibleAt: entry.eligibleAt?.toISOString(),
+      opportunityExpiresAt: entry.opportunityExpiresAt?.toISOString(),
+      eventId: entry.eventId,
+      position: entry.position ?? undefined,
+      quantity: entry.quantity,
+      status:
+        entry.status === 'eligible'
+          ? EventWaitlistEntryStatus.EVENT_WAITLIST_ENTRY_STATUS_ELIGIBLE
+          : EventWaitlistEntryStatus.EVENT_WAITLIST_ENTRY_STATUS_WAITING,
+      ticketTypeId: entry.ticketTypeId,
+      updatedAt: entry.updatedAt.toISOString(),
+      waitlistEntryId: entry.waitlistEntryId,
+    };
+  }
+
   private toCapacityReservationContract(
     reservation: EventCapacityReservationRecord,
   ): EventCapacityReservation {
     return {
+      attendeeId: reservation.attendeeId ?? undefined,
       completedAt: reservation.completedAt?.toISOString(),
       createdAt: reservation.createdAt.toISOString(),
       eventId: reservation.eventId,

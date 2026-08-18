@@ -186,3 +186,24 @@ export class EventTicketSalesUnavailableError extends Error {
     this.name = EventTicketSalesUnavailableError.name;
   }
 }
+
+export class EventWaitlistEntryInvalidError extends Error {
+  constructor() {
+    super('EVENT_WAITLIST_ENTRY_INVALID');
+    this.name = EventWaitlistEntryInvalidError.name;
+  }
+}
+
+export class EventWaitlistEntryNotFoundError extends Error {
+  constructor() {
+    super('EVENT_WAITLIST_ENTRY_NOT_FOUND');
+    this.name = EventWaitlistEntryNotFoundError.name;
+  }
+}
+
+export class EventWaitlistConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = EventWaitlistConflictError.name;
+  }
+}

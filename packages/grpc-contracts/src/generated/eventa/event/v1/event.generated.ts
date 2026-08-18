@@ -52,6 +52,13 @@ export enum EventCapacityReservationStatus {
   UNRECOGNIZED = -1,
 }
 
+export enum EventWaitlistEntryStatus {
+  EVENT_WAITLIST_ENTRY_STATUS_UNSPECIFIED = 0,
+  EVENT_WAITLIST_ENTRY_STATUS_WAITING = 1,
+  EVENT_WAITLIST_ENTRY_STATUS_ELIGIBLE = 2,
+  UNRECOGNIZED = -1,
+}
+
 export interface Event {
   eventId: string;
   title: string;
@@ -327,6 +334,7 @@ export interface EventCapacityReservation {
   createdAt: string;
   updatedAt: string;
   completedAt?: string | undefined;
+  attendeeId?: string | undefined;
 }
 
 export interface ReserveEventCapacityRequest {
@@ -334,6 +342,7 @@ export interface ReserveEventCapacityRequest {
   eventId: string;
   ticketTypeId: string;
   quantity: number;
+  attendeeId: string;
 }
 
 export interface ReserveEventCapacityResponse {
@@ -358,6 +367,50 @@ export interface ReleaseEventCapacityReservationRequest {
 
 export interface ReleaseEventCapacityReservationResponse {
   reservation: EventCapacityReservation | undefined;
+}
+
+export interface EventWaitlistEntry {
+  waitlistEntryId: string;
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+  quantity: number;
+  status: EventWaitlistEntryStatus;
+  position?: number | undefined;
+  eligibleAt?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+  opportunityExpiresAt?: string | undefined;
+}
+
+export interface JoinEventWaitlistRequest {
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+  quantity: number;
+}
+
+export interface JoinEventWaitlistResponse {
+  entry: EventWaitlistEntry | undefined;
+}
+
+export interface LeaveEventWaitlistRequest {
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+}
+
+export interface LeaveEventWaitlistResponse {
+}
+
+export interface GetEventWaitlistEntryRequest {
+  eventId: string;
+  ticketTypeId: string;
+  attendeeId: string;
+}
+
+export interface GetEventWaitlistEntryResponse {
+  entry: EventWaitlistEntry | undefined;
 }
 
 export interface CreateEventMediaUploadRequest {

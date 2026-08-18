@@ -24,6 +24,9 @@ Event Service implements `eventa.event.v1.EventService`.
 | `ReserveEventCapacity`             | Creates or retrieves an idempotent temporary ticket-capacity reservation.         |
 | `FinalizeEventCapacityReservation` | Converts an active reservation into sold capacity exactly once.                   |
 | `ReleaseEventCapacityReservation`  | Releases an active reservation exactly once.                                      |
+| `JoinEventWaitlist`                | Joins a sold-out ticket type waitlist idempotently.                               |
+| `GetEventWaitlistEntry`            | Returns the attendee's waiting position or eligibility.                           |
+| `LeaveEventWaitlist`               | Leaves an active waitlist entry idempotently.                                     |
 
 The protobuf schemas in `packages/grpc-contracts/proto/eventa/event/v1` are authoritative for exact messages and service declarations.
 

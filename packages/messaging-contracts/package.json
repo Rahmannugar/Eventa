@@ -19,6 +19,10 @@
     "./event/event-lifecycle.events": {
       "types": "./dist/event/event-lifecycle.events.d.ts",
       "default": "./dist/event/event-lifecycle.events.js"
+    },
+    "./event/event-waitlist.events": {
+      "types": "./dist/event/event-waitlist.events.d.ts",
+      "default": "./dist/event/event-waitlist.events.js"
     }
   },
   "typesVersions": {
@@ -34,6 +38,9 @@
       ],
       "event/event-lifecycle.events": [
         "dist/event/event-lifecycle.events.d.ts"
+      ],
+      "event/event-waitlist.events": [
+        "dist/event/event-waitlist.events.d.ts"
       ]
     }
   },

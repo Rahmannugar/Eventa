@@ -14,6 +14,7 @@ import {
 } from './constants/event.constants';
 import { AdminEventController } from './controllers/admin-event.controller';
 import { PublishedEventController } from './controllers/published-event.controller';
+import { EventWaitlistController } from './controllers/event-waitlist.controller';
 import {
   AdminEventCreateRateLimitGuard,
   AdminEventMediaStatusRateLimitGuard,
@@ -31,9 +32,15 @@ import {
 } from './rate-limit/published-event-rate-limit';
 import { AdminEventService } from './services/admin-event.service';
 import { PublishedEventService } from './services/published-event.service';
+import { EventWaitlistService } from './services/event-waitlist.service';
+import {
+  EventWaitlistRateLimitGuard,
+  EventWaitlistRateLimitService,
+} from './rate-limit/event-waitlist-rate-limit';
 
 interface EventsModuleOptions {
   adminsModule: DynamicModule;
+  attendeesModule: DynamicModule;
   eventGrpcDeadlineMs: number;
   eventGrpcUrl: string;
   rateLimitKeySecret: string;
@@ -46,6 +53,7 @@ export class EventsModule {
       module: EventsModule,
       imports: [
         options.adminsModule,
+        options.attendeesModule,
         ClientsModule.register([
           {
             name: EVENT_GRPC_CLIENT,
@@ -62,7 +70,11 @@ export class EventsModule {
           },
         ]),
       ],
-      controllers: [AdminEventController, PublishedEventController],
+      controllers: [
+        AdminEventController,
+        PublishedEventController,
+        EventWaitlistController,
+      ],
       providers: [
         {
           provide: EVENT_GRPC_DEADLINE_MS,
@@ -76,6 +88,7 @@ export class EventsModule {
         },
         AdminEventService,
         PublishedEventService,
+        EventWaitlistService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
         AdminEventMediaStatusRateLimitGuard,
@@ -94,6 +107,16 @@ export class EventsModule {
           inject: [RATE_LIMIT_STATE],
         },
         PublishedEventReadRateLimitGuard,
+        {
+          provide: EventWaitlistRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new EventWaitlistRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
+        },
+        EventWaitlistRateLimitGuard,
       ],
     };
   }

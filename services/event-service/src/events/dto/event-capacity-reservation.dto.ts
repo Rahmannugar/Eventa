@@ -15,6 +15,9 @@ export class ReserveEventCapacityDto implements ReserveEventCapacityRequest {
   @IsUUID()
   ticketTypeId!: string;
 
+  @IsUUID()
+  attendeeId!: string;
+
   @IsInt()
   @Min(1)
   @Max(1_000_000)

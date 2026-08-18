@@ -20,10 +20,13 @@ import {
   EVENT_MEDIA_VERIFICATION_JOB_PUBLISHER,
   EVENT_TICKET_TYPE_MANAGEMENT,
   EVENT_TICKET_TYPE_REPOSITORY,
+  EVENT_WAITLIST_MANAGEMENT,
+  EVENT_WAITLIST_REPOSITORY,
 } from './constants/event.constants';
 import { EventController } from './controllers/event.controller';
 import { EventMediaVerificationConsumer } from './jobs/event-media-verification.consumer';
 import { EventCapacityReservationExpiry } from './jobs/event-capacity-reservation-expiry';
+import { EventWaitlistPromotion } from './jobs/event-waitlist-promotion';
 import { EventMediaVerificationDispatcher } from './jobs/event-media-verification.dispatcher';
 import { EventMediaObjectDeletionConsumer } from './jobs/event-media-object-deletion.consumer';
 import { EventMediaObjectDeletionDispatcher } from './jobs/event-media-object-deletion.dispatcher';
@@ -35,12 +38,14 @@ import { EventMediaObjectDeletionRepository } from './repositories/event-media-o
 import { EventManagementRepository } from './repositories/event-management.repository';
 import { EventCapacityReservationRepository } from './repositories/event-capacity-reservation.repository';
 import { EventTicketTypeRepository } from './repositories/event-ticket-type.repository';
+import { EventWaitlistRepository } from './repositories/event-waitlist.repository';
 import { EventMediaApplicationService } from './services/event-media.service';
 import { EventMediaObjectDeletionService } from './services/event-media-object-deletion.service';
 import { EventMediaVerificationService } from './services/event-media-verification.service';
 import { EventManagementService } from './services/event-management.service';
 import { EventCapacityReservationService } from './services/event-capacity-reservation.service';
 import { EventTicketTypeService } from './services/event-ticket-type.service';
+import { EventWaitlistService } from './services/event-waitlist.service';
 import type {
   EventMediaObjectStorage,
   EventMediaMutationRepository as EventMediaMutationRepositoryPort,
@@ -51,6 +56,7 @@ import type {
   EventCapacityReservationRepository as EventCapacityReservationRepositoryPort,
   EventRepository as EventRepositoryPort,
   EventTicketTypeRepository as EventTicketTypeRepositoryPort,
+  EventWaitlistRepository as EventWaitlistRepositoryPort,
 } from './types/event.types';
 
 @Module({
@@ -60,9 +66,26 @@ import type {
     EventManagementRepository,
     EventCapacityReservationRepository,
     EventTicketTypeRepository,
+    EventWaitlistRepository,
     EventMediaUploadRepository,
     EventMediaMutationRepository,
     EventMediaObjectDeletionRepository,
+    {
+      provide: EVENT_WAITLIST_REPOSITORY,
+      useExisting: EventWaitlistRepository,
+    },
+    {
+      provide: EVENT_WAITLIST_MANAGEMENT,
+      inject: [EVENT_WAITLIST_REPOSITORY],
+      useFactory: (waitlist: EventWaitlistRepositoryPort) =>
+        new EventWaitlistService(waitlist),
+    },
+    {
+      provide: EventWaitlistPromotion,
+      inject: [EVENT_WAITLIST_REPOSITORY],
+      useFactory: (waitlist: EventWaitlistRepositoryPort) =>
+        new EventWaitlistPromotion(waitlist),
+    },
     {
       provide: EVENT_CAPACITY_RESERVATION_REPOSITORY,
       useExisting: EventCapacityReservationRepository,

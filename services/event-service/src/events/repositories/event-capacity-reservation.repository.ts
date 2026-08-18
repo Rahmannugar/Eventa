@@ -1,6 +1,6 @@
 import { runWithOperationSpan } from '@eventa/observability';
 import { Inject } from '@nestjs/common';
-import { and, asc, eq, lte, sql } from 'drizzle-orm';
+import { and, asc, count, eq, lte, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -11,6 +11,7 @@ import {
 import { eventCapacityReservations } from '../schema/event-capacity-reservation.schema';
 import { eventTicketCurrencies } from '../schema/event-ticket-currency.schema';
 import { eventTicketTypes } from '../schema/event-ticket-type.schema';
+import { eventWaitlistEntries } from '../schema/event-waitlist-entry.schema';
 import { events } from '../schema/event.schema';
 import type {
   EventCapacityReservationRecord,
@@ -29,6 +30,7 @@ type EventTransaction = Parameters<
 const RESERVATION_COLUMNS = {
   reservationId: eventCapacityReservations.id,
   ticketTypeId: eventCapacityReservations.ticketTypeId,
+  attendeeId: eventCapacityReservations.attendeeId,
   quantity: eventCapacityReservations.quantity,
   status: eventCapacityReservations.status,
   expiresAt: eventCapacityReservations.expiresAt,
@@ -60,6 +62,7 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
             if (existing !== undefined) {
               return existing.eventId === input.eventId &&
                 existing.ticketTypeId === input.ticketTypeId &&
+                existing.attendeeId === input.attendeeId &&
                 existing.quantity === input.quantity
                 ? { outcome: 'existing' as const, reservation: existing }
                 : { outcome: 'idempotency_conflict' as const };
@@ -86,6 +89,63 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
             );
             const reservedQuantity =
               ticketType.reservedQuantity - expiredQuantity;
+            await this.expireDueWaitlistEligibility(
+              transaction,
+              input.ticketTypeId,
+            );
+            const [eligibleEntry] = await transaction
+              .select({
+                id: eventWaitlistEntries.id,
+                quantity: eventWaitlistEntries.quantity,
+              })
+              .from(eventWaitlistEntries)
+              .where(
+                and(
+                  eq(eventWaitlistEntries.ticketTypeId, input.ticketTypeId),
+                  eq(eventWaitlistEntries.attendeeId, input.attendeeId),
+                  eq(eventWaitlistEntries.status, 'eligible'),
+                ),
+              )
+              .limit(1);
+            if (
+              eligibleEntry !== undefined &&
+              eligibleEntry.quantity !== input.quantity
+            ) {
+              return { outcome: 'waitlist_quantity_conflict' as const };
+            }
+            if (eligibleEntry === undefined) {
+              const [waitingRow] = await transaction
+                .select({ value: count() })
+                .from(eventWaitlistEntries)
+                .where(
+                  and(
+                    eq(eventWaitlistEntries.ticketTypeId, input.ticketTypeId),
+                    eq(eventWaitlistEntries.status, 'waiting'),
+                  ),
+                );
+              if ((waitingRow?.value ?? 0) > 0) {
+                return { outcome: 'waitlist_priority' as const };
+              }
+              const [eligibleQuantityRow] = await transaction
+                .select({
+                  value: sql<number>`coalesce(sum(${eventWaitlistEntries.quantity}), 0)::int`,
+                })
+                .from(eventWaitlistEntries)
+                .where(
+                  and(
+                    eq(eventWaitlistEntries.ticketTypeId, input.ticketTypeId),
+                    eq(eventWaitlistEntries.status, 'eligible'),
+                  ),
+                );
+              const publicCapacity =
+                ticketType.capacity -
+                reservedQuantity -
+                ticketType.soldQuantity -
+                (eligibleQuantityRow?.value ?? 0);
+              if (publicCapacity < input.quantity) {
+                return { outcome: 'waitlist_priority' as const };
+              }
+            }
             if (
               ticketType.capacity - reservedQuantity - ticketType.soldQuantity <
               input.quantity
@@ -98,12 +158,34 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
               .values({
                 expiresAt: sql`least(now() + make_interval(mins => ${EVENT_CAPACITY_RESERVATION_TTL_MINUTES}), ${ticketType.salesEndAt}, ${ticketType.eventStartsAt})`,
                 id: input.reservationId,
+                attendeeId: input.attendeeId,
                 quantity: input.quantity,
                 ticketTypeId: input.ticketTypeId,
               })
               .returning(RESERVATION_COLUMNS);
             if (created === undefined) {
               throw new Error('Capacity reservation insert returned no row');
+            }
+            if (eligibleEntry !== undefined) {
+              const [consumed] = await transaction
+                .update(eventWaitlistEntries)
+                .set({
+                  reservationId: input.reservationId,
+                  status: 'reserved',
+                  updatedAt: sql`now()`,
+                })
+                .where(
+                  and(
+                    eq(eventWaitlistEntries.id, eligibleEntry.id),
+                    eq(eventWaitlistEntries.status, 'eligible'),
+                  ),
+                )
+                .returning({ id: eventWaitlistEntries.id });
+              if (consumed === undefined) {
+                throw new Error(
+                  'Waitlist eligibility changed during reservation',
+                );
+              }
             }
             const [updatedType] = await transaction
               .update(eventTicketTypes)
@@ -411,6 +493,26 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
       await this.decreaseReserved(transaction, ticketTypeId, quantity);
     }
     return quantity;
+  }
+
+  private async expireDueWaitlistEligibility(
+    transaction: EventTransaction,
+    ticketTypeId: string,
+  ): Promise<void> {
+    await transaction
+      .update(eventWaitlistEntries)
+      .set({
+        closedAt: sql`now()`,
+        status: 'expired',
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(eventWaitlistEntries.ticketTypeId, ticketTypeId),
+          eq(eventWaitlistEntries.status, 'eligible'),
+          lte(eventWaitlistEntries.opportunityExpiresAt, sql`now()`),
+        ),
+      );
   }
 
   private async decreaseReserved(

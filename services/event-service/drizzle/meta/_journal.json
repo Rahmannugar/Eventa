@@ -99,6 +99,13 @@
       "when": 1786987264019,
       "tag": "0013_reserve_ticket_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787018895849,
+      "tag": "0014_add_event_waitlists",
+      "breakpoints": true
     }
   ]
 }
