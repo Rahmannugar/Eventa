@@ -35,11 +35,18 @@ import type {
   JoinEventWaitlistResponse,
   LeaveEventWaitlistRequest,
   LeaveEventWaitlistResponse,
+  GetAttendeeEventTicketCatalogueRequest,
+  GetAttendeeEventTicketCatalogueResponse,
 } from '@eventa/grpc-contracts';
 import type { CallOptions, Metadata } from '@grpc/grpc-js';
 import type { Observable } from 'rxjs';
 
 export interface DeadlineAwareEventServiceClient {
+  getAttendeeEventTicketCatalogue(
+    request: GetAttendeeEventTicketCatalogueRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<GetAttendeeEventTicketCatalogueResponse>;
   joinEventWaitlist(
     request: JoinEventWaitlistRequest,
     metadata: Metadata,

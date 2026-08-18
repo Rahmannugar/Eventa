@@ -47,6 +47,15 @@ enum EventWaitlistEntryStatus {
   EVENT_WAITLIST_ENTRY_STATUS_ELIGIBLE = 2;
 }
 
+enum AttendeeTicketAvailabilityStatus {
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_UNSPECIFIED = 0;
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_AVAILABLE = 1;
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_WAITING = 2;
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_ELIGIBLE = 3;
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_RESERVED = 4;
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_UNAVAILABLE = 5;
+}
+
 message Event {
   string event_id = 1;
   string title = 2;
@@ -304,6 +313,35 @@ message GetEventTicketCatalogueResponse {
   repeated EventTicketCurrency ticket_currencies = 1;
   int32 event_version = 2;
   repeated EventTicketType ticket_types = 3;
+}
+
+message AttendeeEventTicketType {
+  string ticket_type_id = 1;
+  string event_id = 2;
+  string ticket_currency_id = 3;
+  string name = 4;
+  optional string description = 5;
+  int32 price_minor = 6;
+  string sales_start_at = 7;
+  string sales_end_at = 8;
+  bool sales_open = 9;
+  AttendeeTicketAvailabilityStatus availability_status = 10;
+  int32 available_quantity = 11;
+  bool can_join_waitlist = 12;
+  optional int32 waitlist_position = 13;
+  optional string opportunity_expires_at = 14;
+  optional string reservation_expires_at = 15;
+}
+
+message GetAttendeeEventTicketCatalogueRequest {
+  string event_id = 1;
+  string attendee_id = 2;
+}
+
+message GetAttendeeEventTicketCatalogueResponse {
+  string event_id = 1;
+  repeated EventTicketCurrency ticket_currencies = 2;
+  repeated AttendeeEventTicketType ticket_types = 3;
 }
 
 message EventCapacityReservation {

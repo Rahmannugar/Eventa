@@ -15,6 +15,7 @@ import {
 import { AdminEventController } from './controllers/admin-event.controller';
 import { PublishedEventController } from './controllers/published-event.controller';
 import { EventWaitlistController } from './controllers/event-waitlist.controller';
+import { AttendeeTicketCatalogueController } from './controllers/attendee-ticket-catalogue.controller';
 import {
   AdminEventCreateRateLimitGuard,
   AdminEventMediaStatusRateLimitGuard,
@@ -33,6 +34,11 @@ import {
 import { AdminEventService } from './services/admin-event.service';
 import { PublishedEventService } from './services/published-event.service';
 import { EventWaitlistService } from './services/event-waitlist.service';
+import { AttendeeTicketCatalogueService } from './services/attendee-ticket-catalogue.service';
+import {
+  AttendeeTicketCatalogueRateLimitGuard,
+  AttendeeTicketCatalogueRateLimitService,
+} from './rate-limit/attendee-ticket-catalogue-rate-limit';
 import {
   EventWaitlistRateLimitGuard,
   EventWaitlistRateLimitService,
@@ -74,6 +80,7 @@ export class EventsModule {
         AdminEventController,
         PublishedEventController,
         EventWaitlistController,
+        AttendeeTicketCatalogueController,
       ],
       providers: [
         {
@@ -89,6 +96,7 @@ export class EventsModule {
         AdminEventService,
         PublishedEventService,
         EventWaitlistService,
+        AttendeeTicketCatalogueService,
         AdminEventCreateRateLimitGuard,
         AdminEventReadRateLimitGuard,
         AdminEventMediaStatusRateLimitGuard,
@@ -117,6 +125,16 @@ export class EventsModule {
           inject: [RATE_LIMIT_STATE],
         },
         EventWaitlistRateLimitGuard,
+        {
+          provide: AttendeeTicketCatalogueRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new AttendeeTicketCatalogueRateLimitService(
+              state,
+              options.rateLimitKeySecret,
+            ),
+          inject: [RATE_LIMIT_STATE],
+        },
+        AttendeeTicketCatalogueRateLimitGuard,
       ],
     };
   }

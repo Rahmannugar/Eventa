@@ -21,6 +21,7 @@ Event Service implements `eventa.event.v1.EventService`.
 | `UpdateEventTicketType`            | Safely changes an active ticket type at the expected event version.               |
 | `RetireEventTicketType`            | Retires an unused ticket type at the expected event version.                      |
 | `GetEventTicketCatalogue`          | Returns bounded ticket currencies and active types for an event.                  |
+| `GetAttendeeEventTicketCatalogue`  | Returns published ticket options with attendee-specific availability.             |
 | `ReserveEventCapacity`             | Creates or retrieves an idempotent temporary ticket-capacity reservation.         |
 | `FinalizeEventCapacityReservation` | Converts an active reservation into sold capacity exactly once.                   |
 | `ReleaseEventCapacityReservation`  | Releases an active reservation exactly once.                                      |

@@ -17,6 +17,7 @@ Clients communicate with Eventa through the API Gateway over HTTP.
 | `POST`   | `/auth/attendees/email-verification/confirm`           | Confirms email ownership with a valid six-digit OTP.                                             |
 | `POST`   | `/auth/attendees/email-verification/resend`            | Accepts an enumeration-resistant request for a replacement OTP email.                            |
 | `GET`    | `/events/:eventId`                                     | Returns authoritative public details only for a published event.                                 |
+| `GET`    | `/events/:eventId/ticket-options`                      | Returns ticket options and personalized availability to an authenticated attendee.               |
 | `POST`   | `/events/:eventId/ticket-types/:ticketTypeId/waitlist` | Joins an authenticated attendee to a sold-out ticket-type waitlist.                              |
 | `GET`    | `/events/:eventId/ticket-types/:ticketTypeId/waitlist` | Returns that attendee's waiting position or eligibility.                                         |
 | `DELETE` | `/events/:eventId/ticket-types/:ticketTypeId/waitlist` | Leaves that attendee's active waitlist entry.                                                    |

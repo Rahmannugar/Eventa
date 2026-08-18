@@ -23,6 +23,8 @@ import {
   FinalizeEventCapacityReservationResponse,
   GetAdminEventRequest,
   GetAdminEventResponse,
+  GetAttendeeEventTicketCatalogueRequest,
+  GetAttendeeEventTicketCatalogueResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
   GetEventTicketCatalogueRequest,
@@ -108,6 +110,11 @@ export interface EventServiceClient {
     metadata?: Metadata,
   ): Observable<GetEventTicketCatalogueResponse>;
 
+  getAttendeeEventTicketCatalogue(
+    request: GetAttendeeEventTicketCatalogueRequest,
+    metadata?: Metadata,
+  ): Observable<GetAttendeeEventTicketCatalogueResponse>;
+
   reserveEventCapacity(
     request: ReserveEventCapacityRequest,
     metadata?: Metadata,
@@ -192,6 +199,11 @@ export interface EventServiceController {
     metadata?: Metadata,
   ): Observable<GetEventTicketCatalogueResponse>;
 
+  getAttendeeEventTicketCatalogue(
+    request: GetAttendeeEventTicketCatalogueRequest,
+    metadata?: Metadata,
+  ): Observable<GetAttendeeEventTicketCatalogueResponse>;
+
   reserveEventCapacity(
     request: ReserveEventCapacityRequest,
     metadata?: Metadata,
@@ -248,6 +260,7 @@ export function EventServiceControllerMethods() {
       "updateEventTicketType",
       "retireEventTicketType",
       "getEventTicketCatalogue",
+      "getAttendeeEventTicketCatalogue",
       "reserveEventCapacity",
       "finalizeEventCapacityReservation",
       "releaseEventCapacityReservation",

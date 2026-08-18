@@ -6,6 +6,8 @@
 
 The route uses an IP-only read budget. Event dependency or deadline failures return `503 EVENT_SERVICE_UNAVAILABLE`.
 
+`GET /events/:eventId/ticket-options` requires an attendee session. It groups active ticket types under their event-defined currencies and returns price, sales bounds, and personalized availability. Availability is `available`, `waiting`, `eligible`, `reserved`, or `unavailable`. Waiting includes the attendee's position. Eligibility includes only that attendee's offered quantity and deadline. A reservation includes only that attendee's held quantity and next expiry. The response never exposes total capacity, reserved totals, or sold totals. Gateway derives attendee identity from the server-backed session and applies dedicated read budgets by client IP and protected session.
+
 Authenticated attendees use `POST`, `GET`, and `DELETE /events/:eventId/ticket-types/:ticketTypeId/waitlist` to join, inspect, or leave one ticket-type waitlist. Join accepts a positive quantity no greater than the ticket type's total capacity and returns the waiting position or timed purchase eligibility. Exact repeats are idempotent. Join is rejected when the requested tickets are available and no queue exists, when sales are unavailable, or when the bounded waitlist is full. Gateway derives attendee identity from the server-backed session and applies separate read and mutation budgets by client IP and protected session.
 
 ## Admin management

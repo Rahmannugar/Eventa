@@ -760,3 +760,44 @@ export interface EventWaitlistManagement {
     input: Omit<EventWaitlistCommand, 'requestId'>,
   ): Promise<EventWaitlistEntryRecord>;
 }
+
+export type AttendeeTicketAvailabilityStatus =
+  'available' | 'waiting' | 'eligible' | 'reserved' | 'unavailable';
+
+export interface AttendeeEventTicketTypeRecord {
+  ticketTypeId: string;
+  eventId: string;
+  ticketCurrencyId: string;
+  name: string;
+  description: string | null;
+  priceMinor: number;
+  salesStartAt: Date;
+  salesEndAt: Date;
+  salesOpen: boolean;
+  availabilityStatus: AttendeeTicketAvailabilityStatus;
+  availableQuantity: number;
+  canJoinWaitlist: boolean;
+  waitlistPosition: number | null;
+  opportunityExpiresAt: Date | null;
+  reservationExpiresAt: Date | null;
+}
+
+export interface AttendeeEventTicketCatalogueRecord {
+  eventId: string;
+  ticketCurrencies: EventTicketCurrencyRecord[];
+  ticketTypes: AttendeeEventTicketTypeRecord[];
+}
+
+export interface EventTicketAvailabilityRepository {
+  getCatalogue(
+    eventId: string,
+    attendeeId: string,
+  ): Promise<AttendeeEventTicketCatalogueRecord | undefined>;
+}
+
+export interface EventTicketAvailabilityManagement {
+  getCatalogue(
+    eventId: string,
+    attendeeId: string,
+  ): Promise<AttendeeEventTicketCatalogueRecord>;
+}

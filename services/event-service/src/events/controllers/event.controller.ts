@@ -4,6 +4,8 @@ import {
   AdminEventSort,
   EventCapacityReservationStatus,
   EventWaitlistEntryStatus,
+  AttendeeTicketAvailabilityStatus,
+  type AttendeeEventTicketType,
   type AddEventTicketTypeResponse,
   EventMediaSlot,
   EventMediaUploadStatus,
@@ -26,6 +28,7 @@ import {
   type JoinEventWaitlistResponse,
   type LeaveEventWaitlistResponse,
   type GetEventTicketCatalogueResponse,
+  type GetAttendeeEventTicketCatalogueResponse,
   type ListAdminEventsResponse,
   type ListEventTicketTypesResponse,
   type GetPublishedEventResponse,
@@ -51,6 +54,7 @@ import {
   EVENT_CAPACITY_RESERVATION_MANAGEMENT,
   EVENT_MEDIA_MANAGEMENT,
   EVENT_TICKET_TYPE_MANAGEMENT,
+  EVENT_TICKET_AVAILABILITY_MANAGEMENT,
   EVENT_WAITLIST_MANAGEMENT,
 } from '../constants/event.constants';
 import {
@@ -77,6 +81,7 @@ import {
   RemoveEventMediaDto,
 } from '../dto/event-media.dto';
 import { GetPublishedEventDto } from '../dto/published-event.dto';
+import { GetAttendeeEventTicketCatalogueDto } from '../dto/event-ticket-availability.dto';
 import {
   AddEventTicketTypeDto,
   DefineEventTicketCurrencyDto,
@@ -116,6 +121,7 @@ import {
   EventWaitlistConflictError,
   EventWaitlistEntryInvalidError,
   EventWaitlistEntryNotFoundError,
+  EventTicketAvailabilityInvalidError,
 } from '../errors/event.errors';
 import type {
   EventManagement,
@@ -131,6 +137,8 @@ import type {
   EventTicketCurrencyRecord,
   EventWaitlistEntryRecord,
   EventWaitlistManagement,
+  EventTicketAvailabilityManagement,
+  AttendeeEventTicketTypeRecord,
 } from '../types/event.types';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -147,6 +155,8 @@ export class EventController implements EventServiceController {
     private readonly mediaService: EventMediaManagement,
     @Inject(EVENT_TICKET_TYPE_MANAGEMENT)
     private readonly ticketTypeService: EventTicketTypeManagement,
+    @Inject(EVENT_TICKET_AVAILABILITY_MANAGEMENT)
+    private readonly ticketAvailability: EventTicketAvailabilityManagement,
     @Inject(EVENT_WAITLIST_MANAGEMENT)
     private readonly waitlist: EventWaitlistManagement,
     @Inject(RUNTIME_CONFIG)
@@ -231,6 +241,12 @@ export class EventController implements EventServiceController {
     request: GetEventTicketCatalogueDto,
   ): Observable<GetEventTicketCatalogueResponse> {
     return from(this.listTicketTypes(request.eventId));
+  }
+
+  getAttendeeEventTicketCatalogue(
+    request: GetAttendeeEventTicketCatalogueDto,
+  ): Observable<GetAttendeeEventTicketCatalogueResponse> {
+    return from(this.getAttendeeTicketCatalogue(request));
   }
 
   reserveEventCapacity(
@@ -928,6 +944,40 @@ export class EventController implements EventServiceController {
     }
   }
 
+  private async getAttendeeTicketCatalogue(
+    request: GetAttendeeEventTicketCatalogueDto,
+  ): Promise<GetAttendeeEventTicketCatalogueResponse> {
+    try {
+      const result = await this.ticketAvailability.getCatalogue(
+        request.eventId,
+        request.attendeeId,
+      );
+      return {
+        eventId: result.eventId,
+        ticketCurrencies: result.ticketCurrencies.map((ticketCurrency) =>
+          this.toTicketCurrencyContract(ticketCurrency),
+        ),
+        ticketTypes: result.ticketTypes.map((ticketType) =>
+          this.toAttendeeTicketTypeContract(ticketType),
+        ),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventTicketAvailabilityInvalidError) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   private async reserveCapacity(
     request: ReserveEventCapacityDto,
     requestId: string,
@@ -1179,6 +1229,40 @@ export class EventController implements EventServiceController {
       eventId: ticketCurrency.eventId,
       ticketCurrencyId: ticketCurrency.ticketCurrencyId,
       updatedAt: ticketCurrency.updatedAt.toISOString(),
+    };
+  }
+
+  private toAttendeeTicketTypeContract(
+    ticketType: AttendeeEventTicketTypeRecord,
+  ): AttendeeEventTicketType {
+    const availabilityStatus = {
+      available:
+        AttendeeTicketAvailabilityStatus.ATTENDEE_TICKET_AVAILABILITY_STATUS_AVAILABLE,
+      eligible:
+        AttendeeTicketAvailabilityStatus.ATTENDEE_TICKET_AVAILABILITY_STATUS_ELIGIBLE,
+      reserved:
+        AttendeeTicketAvailabilityStatus.ATTENDEE_TICKET_AVAILABILITY_STATUS_RESERVED,
+      unavailable:
+        AttendeeTicketAvailabilityStatus.ATTENDEE_TICKET_AVAILABILITY_STATUS_UNAVAILABLE,
+      waiting:
+        AttendeeTicketAvailabilityStatus.ATTENDEE_TICKET_AVAILABILITY_STATUS_WAITING,
+    }[ticketType.availabilityStatus];
+    return {
+      availabilityStatus,
+      availableQuantity: ticketType.availableQuantity,
+      canJoinWaitlist: ticketType.canJoinWaitlist,
+      description: ticketType.description ?? undefined,
+      eventId: ticketType.eventId,
+      name: ticketType.name,
+      opportunityExpiresAt: ticketType.opportunityExpiresAt?.toISOString(),
+      priceMinor: ticketType.priceMinor,
+      reservationExpiresAt: ticketType.reservationExpiresAt?.toISOString(),
+      salesEndAt: ticketType.salesEndAt.toISOString(),
+      salesOpen: ticketType.salesOpen,
+      salesStartAt: ticketType.salesStartAt.toISOString(),
+      ticketCurrencyId: ticketType.ticketCurrencyId,
+      ticketTypeId: ticketType.ticketTypeId,
+      waitlistPosition: ticketType.waitlistPosition ?? undefined,
     };
   }
 

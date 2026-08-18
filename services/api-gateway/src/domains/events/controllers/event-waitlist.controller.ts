@@ -10,7 +10,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCookieAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { AttendeeAuthenticationGuard } from '../../attendees/guards/attendee-authentication.guard';
 import { AttendeeClientOriginGuard } from '../../attendees/guards/attendee-client-origin.guard';
@@ -25,6 +30,7 @@ import { EventWaitlistRateLimitGuard } from '../rate-limit/event-waitlist-rate-l
 import { EventWaitlistService } from '../services/event-waitlist.service';
 
 @ApiTags('Events')
+@ApiCookieAuth('attendeeSession')
 @Controller('events/:eventId/ticket-types/:ticketTypeId/waitlist')
 export class EventWaitlistController {
   constructor(private readonly waitlist: EventWaitlistService) {}

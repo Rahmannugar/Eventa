@@ -208,6 +208,13 @@ export class EventWaitlistEntryNotFoundError extends Error {
   }
 }
 
+export class EventTicketAvailabilityInvalidError extends Error {
+  constructor() {
+    super('EVENT_TICKET_AVAILABILITY_INVALID');
+    this.name = EventTicketAvailabilityInvalidError.name;
+  }
+}
+
 export class EventWaitlistConflictError extends Error {
   constructor(message: string) {
     super(message);

@@ -21,6 +21,7 @@ service EventService {
   rpc UpdateEventTicketType(UpdateEventTicketTypeRequest) returns (UpdateEventTicketTypeResponse);
   rpc RetireEventTicketType(RetireEventTicketTypeRequest) returns (RetireEventTicketTypeResponse);
   rpc GetEventTicketCatalogue(GetEventTicketCatalogueRequest) returns (GetEventTicketCatalogueResponse);
+  rpc GetAttendeeEventTicketCatalogue(GetAttendeeEventTicketCatalogueRequest) returns (GetAttendeeEventTicketCatalogueResponse);
   rpc ReserveEventCapacity(ReserveEventCapacityRequest) returns (ReserveEventCapacityResponse);
   rpc FinalizeEventCapacityReservation(FinalizeEventCapacityReservationRequest) returns (FinalizeEventCapacityReservationResponse);
   rpc ReleaseEventCapacityReservation(ReleaseEventCapacityReservationRequest) returns (ReleaseEventCapacityReservationResponse);

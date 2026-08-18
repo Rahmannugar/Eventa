@@ -59,6 +59,16 @@ export enum EventWaitlistEntryStatus {
   UNRECOGNIZED = -1,
 }
 
+export enum AttendeeTicketAvailabilityStatus {
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_UNSPECIFIED = 0,
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_AVAILABLE = 1,
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_WAITING = 2,
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_ELIGIBLE = 3,
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_RESERVED = 4,
+  ATTENDEE_TICKET_AVAILABILITY_STATUS_UNAVAILABLE = 5,
+  UNRECOGNIZED = -1,
+}
+
 export interface Event {
   eventId: string;
   title: string;
@@ -322,6 +332,35 @@ export interface GetEventTicketCatalogueResponse {
   ticketCurrencies: EventTicketCurrency[];
   eventVersion: number;
   ticketTypes: EventTicketType[];
+}
+
+export interface AttendeeEventTicketType {
+  ticketTypeId: string;
+  eventId: string;
+  ticketCurrencyId: string;
+  name: string;
+  description?: string | undefined;
+  priceMinor: number;
+  salesStartAt: string;
+  salesEndAt: string;
+  salesOpen: boolean;
+  availabilityStatus: AttendeeTicketAvailabilityStatus;
+  availableQuantity: number;
+  canJoinWaitlist: boolean;
+  waitlistPosition?: number | undefined;
+  opportunityExpiresAt?: string | undefined;
+  reservationExpiresAt?: string | undefined;
+}
+
+export interface GetAttendeeEventTicketCatalogueRequest {
+  eventId: string;
+  attendeeId: string;
+}
+
+export interface GetAttendeeEventTicketCatalogueResponse {
+  eventId: string;
+  ticketCurrencies: EventTicketCurrency[];
+  ticketTypes: AttendeeEventTicketType[];
 }
 
 export interface EventCapacityReservation {
