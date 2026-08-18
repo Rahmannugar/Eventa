@@ -662,6 +662,37 @@ describe('Event mutation integration', () => {
     expect(persistedReservation?.status).toBe('expired');
   });
 
+  it('expires one reservation once under competing sweep work', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 5,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await database
+      .update(eventCapacityReservations)
+      .set({
+        createdAt: new Date(Date.now() - 20 * 60 * 1_000),
+        expiresAt: new Date(Date.now() - 1_000),
+      })
+      .where(eq(eventCapacityReservations.id, reservation.reservationId));
+
+    const outcomes = await Promise.all([
+      capacityReservationsRepository.expire(reservation.reservationId),
+      capacityReservationsRepository.expire(reservation.reservationId),
+    ]);
+
+    expect(outcomes.sort()).toEqual(['expired', 'unchanged']);
+    const [persistedType] = await database
+      .select({ reservedQuantity: eventTicketTypes.reservedQuantity })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(persistedType?.reservedQuantity).toBe(0);
+  });
+
   it('serializes competing finalization and release', async () => {
     const ticket = await createPublishedTicketType(2);
     const reservation = await capacityReservations.reserve({
@@ -741,6 +772,93 @@ describe('Event mutation integration', () => {
     await expect(
       waitlist.join({ ...command, quantity: 2 }),
     ).rejects.toBeInstanceOf(EventWaitlistConflictError);
+  });
+
+  it('rejects waitlist demand larger than total capacity', async () => {
+    const ticket = await createPublishedTicketType(2);
+
+    await expect(
+      waitlist.join({
+        attendeeId: randomUUID(),
+        eventId: ticket.eventId,
+        quantity: 3,
+        requestId: randomUUID(),
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_WAITLIST_QUANTITY_EXCEEDS_CAPACITY',
+    });
+
+    const [entryCount] = await database
+      .select({ value: count() })
+      .from(eventWaitlistEntries);
+    expect(entryCount?.value).toBe(0);
+  });
+
+  it('preserves capacity required by active waitlist demand', async () => {
+    const ticket = await createPublishedTicketType(5);
+    const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 5,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await waitlist.join({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 4,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await capacityReservations.release({
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: reservation.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    const [state] = await database
+      .select({
+        adminId: events.createdByAdminId,
+        capacity: eventTicketTypes.capacity,
+        name: eventTicketTypes.name,
+        priceMinor: eventTicketTypes.priceMinor,
+        salesEndAt: eventTicketTypes.salesEndAt,
+        salesStartAt: eventTicketTypes.salesStartAt,
+        version: events.version,
+      })
+      .from(eventTicketTypes)
+      .innerJoin(
+        eventTicketCurrencies,
+        eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+      )
+      .innerJoin(events, eq(events.id, eventTicketCurrencies.eventId))
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    if (state === undefined) throw new Error('Ticket state setup failed');
+
+    await expect(
+      ticketTypes.update({
+        actorAdminId: state.adminId,
+        capacity: 3,
+        eventId: ticket.eventId,
+        expectedVersion: state.version,
+        name: state.name,
+        priceMinor: state.priceMinor,
+        requestId: randomUUID(),
+        salesEndAt: state.salesEndAt.toISOString(),
+        salesStartAt: state.salesStartAt.toISOString(),
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ).rejects.toMatchObject({
+      message: 'EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND',
+    });
+
+    const [persisted] = await database
+      .select({ capacity: eventTicketTypes.capacity })
+      .from(eventTicketTypes)
+      .where(eq(eventTicketTypes.id, ticket.ticketTypeId));
+    expect(persisted?.capacity).toBe(state.capacity);
   });
 
   it('protects capacity for every waitlisted attendee promoted in FIFO order', async () => {

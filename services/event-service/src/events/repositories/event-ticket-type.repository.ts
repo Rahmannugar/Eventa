@@ -1,6 +1,16 @@
 import { runWithOperationSpan } from '@eventa/observability';
 import { Inject } from '@nestjs/common';
-import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNull,
+  max,
+  ne,
+  sql,
+} from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -8,6 +18,7 @@ import { EVENT_TICKET_TYPE_LIMIT } from '../constants/event.constants';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
 import { eventTicketCurrencies } from '../schema/event-ticket-currency.schema';
 import { eventTicketTypes } from '../schema/event-ticket-type.schema';
+import { eventWaitlistEntries } from '../schema/event-waitlist-entry.schema';
 import { events } from '../schema/event.schema';
 import type {
   CreateEventTicketType,
@@ -245,6 +256,22 @@ export class EventTicketTypeRepository implements EventTicketTypeRepositoryPort 
             ticketType.reservedQuantity + ticketType.soldQuantity;
           if (input.capacity < committed) {
             return { outcome: 'capacity_below_committed' as const };
+          }
+          const [activeWaitlistDemand] = await transaction
+            .select({ quantity: max(eventWaitlistEntries.quantity) })
+            .from(eventWaitlistEntries)
+            .where(
+              and(
+                eq(eventWaitlistEntries.ticketTypeId, input.ticketTypeId),
+                inArray(eventWaitlistEntries.status, ['waiting', 'eligible']),
+              ),
+            );
+          if (
+            activeWaitlistDemand?.quantity !== null &&
+            activeWaitlistDemand?.quantity !== undefined &&
+            input.capacity < activeWaitlistDemand.quantity
+          ) {
+            return { outcome: 'capacity_below_waitlist_demand' as const };
           }
           if (
             committed > 0 &&

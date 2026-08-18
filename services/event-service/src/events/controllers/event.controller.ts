@@ -104,6 +104,7 @@ import {
   EventTicketTypeNameConflictError,
   EventTicketTypeNotFoundError,
   EventTicketTypeCapacityBelowCommittedError,
+  EventTicketTypeCapacityBelowWaitlistDemandError,
   EventTicketTypeCommercialTermsLockedError,
   EventTicketTypeRetirementNotAllowedError,
   EventCapacityReservationConflictError,
@@ -799,6 +800,7 @@ export class EventController implements EventServiceController {
       }
       if (
         error instanceof EventTicketTypeCapacityBelowCommittedError ||
+        error instanceof EventTicketTypeCapacityBelowWaitlistDemandError ||
         error instanceof EventTicketTypeCommercialTermsLockedError
       ) {
         throw new RpcException({

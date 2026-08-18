@@ -32,6 +32,8 @@ import { EventMediaObjectDeletionConsumer } from './jobs/event-media-object-dele
 import { EventMediaObjectDeletionDispatcher } from './jobs/event-media-object-deletion.dispatcher';
 import { ObservedEventMediaManagement } from './observability/observed-event-media-management';
 import { ObservedEventManagement } from './observability/observed-event-management';
+import { ObservedEventCapacityReservationManagement } from './observability/observed-event-capacity-reservation-management';
+import { ObservedEventWaitlistManagement } from './observability/observed-event-waitlist-management';
 import { EventMediaUploadRepository } from './repositories/event-media-upload.repository';
 import { EventMediaMutationRepository } from './repositories/event-media-mutation.repository';
 import { EventMediaObjectDeletionRepository } from './repositories/event-media-object-deletion.repository';
@@ -78,7 +80,7 @@ import type {
       provide: EVENT_WAITLIST_MANAGEMENT,
       inject: [EVENT_WAITLIST_REPOSITORY],
       useFactory: (waitlist: EventWaitlistRepositoryPort) =>
-        new EventWaitlistService(waitlist),
+        new ObservedEventWaitlistManagement(new EventWaitlistService(waitlist)),
     },
     {
       provide: EventWaitlistPromotion,
@@ -94,7 +96,9 @@ import type {
       provide: EVENT_CAPACITY_RESERVATION_MANAGEMENT,
       inject: [EVENT_CAPACITY_RESERVATION_REPOSITORY],
       useFactory: (reservations: EventCapacityReservationRepositoryPort) =>
-        new EventCapacityReservationService(reservations),
+        new ObservedEventCapacityReservationManagement(
+          new EventCapacityReservationService(reservations),
+        ),
     },
     {
       provide: EventCapacityReservationExpiry,

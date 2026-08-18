@@ -66,7 +66,7 @@ export class EventWaitlistService implements OnModuleInit {
           this.options(),
         ),
       );
-      return this.toDto(response.entry, attendeeId);
+      return this.toDto(response.entry, path, attendeeId);
     } catch (error: unknown) {
       this.translate(error);
     }
@@ -85,7 +85,7 @@ export class EventWaitlistService implements OnModuleInit {
           this.options(),
         ),
       );
-      return this.toDto(response.entry, attendeeId);
+      return this.toDto(response.entry, path, attendeeId);
     } catch (error: unknown) {
       this.translate(error);
     }
@@ -111,12 +111,19 @@ export class EventWaitlistService implements OnModuleInit {
 
   private toDto(
     entry: EventWaitlistEntry | undefined,
+    path: EventWaitlistPathDto,
     attendeeId: string,
   ): EventWaitlistEntryDto {
     const statusValue = entry?.status;
+    const createdAt = Date.parse(entry?.createdAt ?? '');
+    const updatedAt = Date.parse(entry?.updatedAt ?? '');
+    const eligibleAt = Date.parse(entry?.eligibleAt ?? '');
+    const opportunityExpiresAt = Date.parse(entry?.opportunityExpiresAt ?? '');
     if (
       entry === undefined ||
       entry.attendeeId !== attendeeId ||
+      entry.eventId !== path.eventId ||
+      entry.ticketTypeId !== path.ticketTypeId ||
       entry.waitlistEntryId === '' ||
       entry.eventId === '' ||
       entry.ticketTypeId === '' ||
@@ -124,6 +131,9 @@ export class EventWaitlistService implements OnModuleInit {
       entry.quantity < 1 ||
       entry.createdAt === '' ||
       entry.updatedAt === '' ||
+      !Number.isFinite(createdAt) ||
+      !Number.isFinite(updatedAt) ||
+      updatedAt < createdAt ||
       (statusValue !==
         EventWaitlistEntryStatus.EVENT_WAITLIST_ENTRY_STATUS_WAITING &&
         statusValue !==
@@ -139,8 +149,11 @@ export class EventWaitlistService implements OnModuleInit {
         (entry.position !== undefined ||
           entry.eligibleAt === undefined ||
           entry.eligibleAt === '' ||
+          !Number.isFinite(eligibleAt) ||
           entry.opportunityExpiresAt === undefined ||
-          entry.opportunityExpiresAt === ''))
+          entry.opportunityExpiresAt === '' ||
+          !Number.isFinite(opportunityExpiresAt) ||
+          opportunityExpiresAt <= eligibleAt))
     ) {
       throw this.unavailable('EVENT_WAITLIST_RESPONSE_INVALID');
     }
@@ -198,6 +211,13 @@ export class EventWaitlistService implements OnModuleInit {
           HttpStatus.CONFLICT,
           'WAITLIST_QUANTITY_CONFLICT',
           'Leave the waitlist before changing your quantity.',
+        );
+      }
+      if (details === 'EVENT_WAITLIST_QUANTITY_EXCEEDS_CAPACITY') {
+        throw new ApiHttpException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          'WAITLIST_QUANTITY_EXCEEDS_CAPACITY',
+          'Choose a quantity within this ticket type’s capacity.',
         );
       }
       if (details === 'EVENT_WAITLIST_ACTIVE_RESERVATION_CONFLICT') {

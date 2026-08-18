@@ -264,7 +264,9 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
       () =>
         this.database.transaction(async (transaction) => {
           await this.configureLockTimeout(transaction);
-          await this.lockIdempotencyKey(transaction, reservationId);
+          if (!(await this.tryLockIdempotencyKey(transaction, reservationId))) {
+            return 'unchanged' as const;
+          }
           const reservation = await this.findReservation(
             transaction,
             reservationId,
@@ -301,7 +303,10 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
           return 'expired' as const;
         }),
       this.spanAttributes('UPDATE'),
-    );
+    ).catch((error: unknown) => {
+      if (this.isLockTimeout(error)) return 'unchanged' as const;
+      throw error;
+    });
   }
 
   private transition(
@@ -576,6 +581,16 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
     );
   }
 
+  private async tryLockIdempotencyKey(
+    transaction: EventTransaction,
+    reservationId: string,
+  ): Promise<boolean> {
+    const [lock] = await transaction.execute<{ acquired: boolean }>(
+      sql`select pg_try_advisory_xact_lock(hashtextextended(${reservationId}, 0)) as acquired`,
+    );
+    return lock?.acquired === true;
+  }
+
   private configureLockTimeout(
     transaction: EventTransaction,
   ): Promise<unknown> {
@@ -590,15 +605,19 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
     try {
       return await operation;
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        Reflect.get(error, 'code') === '55P03'
-      ) {
+      if (this.isLockTimeout(error)) {
         return { outcome: 'busy' };
       }
       throw error;
     }
+  }
+
+  private isLockTimeout(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      Reflect.get(error, 'code') === '55P03'
+    );
   }
 
   private spanAttributes(operation: 'INSERT' | 'SELECT' | 'UPDATE') {

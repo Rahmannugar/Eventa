@@ -819,14 +819,20 @@ export class AdminEventService implements OnModuleInit {
           const message = readErrorMessage(error);
           const capacityLocked =
             message === 'EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED';
+          const waitlistLocked =
+            message === 'EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND';
           throw new ApiHttpException(
             HttpStatus.UNPROCESSABLE_ENTITY,
             capacityLocked
               ? 'EVENT_TICKET_TYPE_CAPACITY_BELOW_COMMITTED'
-              : 'EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED',
+              : waitlistLocked
+                ? 'EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND'
+                : 'EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED',
             capacityLocked
               ? 'Capacity cannot be lower than the number already reserved or sold.'
-              : 'Price and sales dates cannot change while tickets are reserved or sold.',
+              : waitlistLocked
+                ? 'Capacity cannot be lower than an active waitlist request.'
+                : 'Price and sales dates cannot change while tickets are reserved or sold.',
           );
         }
         if (operation === 'ticket_type_retire') {

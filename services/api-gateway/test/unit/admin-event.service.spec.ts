@@ -453,6 +453,39 @@ describe('AdminEventService ticket types', () => {
     });
   });
 
+  it('reports capacity protected by active waitlist demand', async () => {
+    const service = createTicketTypeUpdateService(() =>
+      throwError(() => ({
+        code: status.FAILED_PRECONDITION,
+        details: 'EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND',
+      })),
+    );
+
+    await expect(
+      service.updateTicketType(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        '2949fbb4-7b9b-4adb-b1fa-2fc708ac9241',
+        {
+          capacity: 3,
+          expectedVersion: 4,
+          name: 'General admission',
+          priceMinor: 2_500_000,
+          salesEndAt: '2026-08-20T08:00:00.000Z',
+          salesStartAt: '2026-08-17T08:00:00.000Z',
+        },
+        'ticket-update-request',
+      ),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND',
+        message: 'Capacity cannot be lower than an active waitlist request.',
+        statusCode: 422,
+      },
+      status: 422,
+    });
+  });
+
   it('forwards idempotent ticket type retirement', async () => {
     let receivedRequest: RetireEventTicketTypeRequest | undefined;
     const service = createTicketTypeRetireService(

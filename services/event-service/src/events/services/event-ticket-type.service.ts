@@ -3,6 +3,7 @@ import {
   EventTicketCurrencyConflictError,
   EventTicketCurrencyNotFoundError,
   EventTicketTypeCapacityBelowCommittedError,
+  EventTicketTypeCapacityBelowWaitlistDemandError,
   EventTicketTypeCommercialTermsLockedError,
   EventTicketTypeInvalidError,
   EventTicketTypeLimitReachedError,
@@ -126,6 +127,9 @@ export class EventTicketTypeService implements EventTicketTypeManagement {
     }
     if (result.outcome === 'capacity_below_committed') {
       throw new EventTicketTypeCapacityBelowCommittedError();
+    }
+    if (result.outcome === 'capacity_below_waitlist_demand') {
+      throw new EventTicketTypeCapacityBelowWaitlistDemandError();
     }
     if (result.outcome === 'commercial_terms_locked') {
       throw new EventTicketTypeCommercialTermsLockedError();

@@ -3,6 +3,7 @@ import {
   type OnApplicationShutdown,
   type OnModuleInit,
 } from '@nestjs/common';
+import { recordBusinessOutcome } from '@eventa/observability';
 
 import {
   EVENT_CAPACITY_EXPIRY_BATCH_SIZE,
@@ -43,8 +44,18 @@ export class EventCapacityReservationExpiry
       );
       for (const reservationId of reservationIds) {
         try {
-          await this.reservations.expire(reservationId);
+          const outcome = await this.reservations.expire(reservationId);
+          if (outcome === 'expired') {
+            recordBusinessOutcome({
+              operation: 'event.capacity_expiry',
+              outcome,
+            });
+          }
         } catch (error: unknown) {
+          recordBusinessOutcome({
+            operation: 'event.capacity_expiry',
+            outcome: 'failed',
+          });
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
             event: 'event_capacity_reservation_expiry_failed',
@@ -54,6 +65,10 @@ export class EventCapacityReservationExpiry
         }
       }
     } catch (error: unknown) {
+      recordBusinessOutcome({
+        operation: 'event.capacity_expiry',
+        outcome: 'sweep_failed',
+      });
       this.logger.error({
         error_type: error instanceof Error ? error.name : 'UnknownError',
         event: 'event_capacity_reservation_expiry_failed',

@@ -92,6 +92,9 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
             ) {
               return { outcome: 'sales_unavailable' as const };
             }
+            if (input.quantity > ticketType.capacity) {
+              return { outcome: 'quantity_exceeds_capacity' as const };
+            }
 
             await this.expireDueEligibility(transaction, input.ticketTypeId);
             const existing = await this.findActive(

@@ -39,6 +39,11 @@ export class EventWaitlistService implements EventWaitlistManagement {
     if (result.outcome === 'capacity_available') {
       throw new EventWaitlistConflictError('EVENT_TICKET_CAPACITY_AVAILABLE');
     }
+    if (result.outcome === 'quantity_exceeds_capacity') {
+      throw new EventWaitlistConflictError(
+        'EVENT_WAITLIST_QUANTITY_EXCEEDS_CAPACITY',
+      );
+    }
     if (result.outcome === 'quantity_conflict') {
       throw new EventWaitlistConflictError('EVENT_WAITLIST_QUANTITY_CONFLICT');
     }

@@ -3,6 +3,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
+import { recordBusinessOutcome } from '@eventa/observability';
 
 import {
   EVENT_WAITLIST_PROMOTION_BATCH_SIZE,
@@ -46,14 +47,42 @@ export class EventWaitlistPromotion implements OnModuleInit, OnModuleDestroy {
         );
       }
       for (const ticketTypeId of ticketTypeIds) {
-        await this.waitlist.promote(
-          ticketTypeId,
-          EVENT_WAITLIST_PROMOTION_BATCH_SIZE,
-        );
-        this.cursor = ticketTypeId;
+        try {
+          const promoted = await this.waitlist.promote(
+            ticketTypeId,
+            EVENT_WAITLIST_PROMOTION_BATCH_SIZE,
+          );
+          if (promoted > 0) {
+            recordBusinessOutcome({
+              operation: 'event.waitlist_promotion',
+              outcome: 'promoted',
+            });
+          }
+        } catch (error: unknown) {
+          recordBusinessOutcome({
+            operation: 'event.waitlist_promotion',
+            outcome: 'failed',
+          });
+          this.logger.error({
+            error_type: error instanceof Error ? error.name : 'UnknownError',
+            event: 'event_waitlist_promotion_failed',
+            operation: 'event.waitlist.promote',
+            ticket_type_id: ticketTypeId,
+          });
+        } finally {
+          this.cursor = ticketTypeId;
+        }
       }
-    } catch {
-      this.logger.error({ event: 'event_waitlist_promotion_failed' });
+    } catch (error: unknown) {
+      recordBusinessOutcome({
+        operation: 'event.waitlist_promotion',
+        outcome: 'sweep_failed',
+      });
+      this.logger.error({
+        error_type: error instanceof Error ? error.name : 'UnknownError',
+        event: 'event_waitlist_promotion_sweep_failed',
+        operation: 'event.waitlist.find_promotion_candidates',
+      });
     } finally {
       this.running = false;
     }

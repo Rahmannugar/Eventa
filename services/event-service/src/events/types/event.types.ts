@@ -558,6 +558,7 @@ export type UpdateEventTicketTypeResult =
   | { outcome: 'name_conflict' }
   | { outcome: 'invalid_window' }
   | { outcome: 'capacity_below_committed' }
+  | { outcome: 'capacity_below_waitlist_demand' }
   | { outcome: 'commercial_terms_locked' };
 
 export interface RetireEventTicketTypeCommand {
@@ -727,6 +728,7 @@ export type JoinEventWaitlistResult =
   | { outcome: 'not_found' }
   | { outcome: 'sales_unavailable' }
   | { outcome: 'capacity_available' }
+  | { outcome: 'quantity_exceeds_capacity' }
   | { outcome: 'quantity_conflict' }
   | { outcome: 'active_reservation' }
   | { outcome: 'full' }

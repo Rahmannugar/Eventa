@@ -131,6 +131,13 @@ export class EventTicketTypeCapacityBelowCommittedError extends Error {
   }
 }
 
+export class EventTicketTypeCapacityBelowWaitlistDemandError extends Error {
+  constructor() {
+    super('EVENT_TICKET_TYPE_CAPACITY_BELOW_WAITLIST_DEMAND');
+    this.name = EventTicketTypeCapacityBelowWaitlistDemandError.name;
+  }
+}
+
 export class EventTicketTypeCommercialTermsLockedError extends Error {
   constructor() {
     super('EVENT_TICKET_TYPE_COMMERCIAL_TERMS_LOCKED');
