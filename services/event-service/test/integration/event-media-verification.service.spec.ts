@@ -900,6 +900,9 @@ describe('Event mutation integration', () => {
       ticketTypeId: ticket.ticketTypeId,
     });
     await expect(
+      waitlistRepository.findPromotionCandidates(null, 100),
+    ).resolves.toContain(ticket.ticketTypeId);
+    await expect(
       waitlistRepository.promote(ticket.ticketTypeId, 100),
     ).resolves.toBe(2);
     const [firstEntry, secondEntry] = await Promise.all([

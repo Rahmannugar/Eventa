@@ -14,13 +14,48 @@ Create the ignored `.env` deliberately from `.env.example`. The committed exampl
 
 ## Commands
 
-See [commands.md](commands.md) for Notification-owned database and validation commands.
+Run commands from the repository root.
+
+Build the Notification migration image and apply committed migrations to the local Notification database.
+
+```bash
+pnpm db:migrate:notification
+```
+
+Run Notification unit tests.
+
+```bash
+pnpm test:unit:notification
+```
+
+Start Notification PostgreSQL and RabbitMQ, create the isolated test database when missing, and run integrations.
+
+```bash
+pnpm test:integration:notification
+```
+
+Run strict TypeScript checking, including Notification performance tooling, without emitting build output.
+
+```bash
+pnpm --filter @eventa/notification-service typecheck
+```
+
+Compile the deployable Notification Service.
+
+```bash
+pnpm --filter @eventa/notification-service build
+```
 
 The integration suite requires `TEST_DATABASE_URL` and `TEST_RABBITMQ_URL`. It refuses a test database without an `_test` suffix and creates the isolated database when missing.
+
+### Local database
+
+| Host        | Port    | Database              | Username              | Password                       |
+| ----------- | ------- | --------------------- | --------------------- | ------------------------------ |
+| `localhost` | `56432` | `eventa_notification` | `eventa_notification` | `eventa_notification_password` |
 
 ## Further Documentation
 
 - [API.md](API.md): job-queue and health contracts.
 - [ARCHITECTURE.md](ARCHITECTURE.md): service composition, persistence, delivery, and recovery.
-- [commands.md](commands.md): service-owned database and validation commands.
 - [Notifications API](src/notifications/API.md) and [architecture](src/notifications/ARCHITECTURE.md): domain-owned payload, state, retry, expiry, and provider behavior.

@@ -5,6 +5,7 @@ import {
   asc,
   count,
   eq,
+  exists,
   gt,
   inArray,
   isNull,
@@ -283,24 +284,39 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
     return runWithOperationSpan(
       'event.waitlist.find_promotion_candidates',
       async () => {
-        const rows = await this.database
-          .selectDistinct({ ticketTypeId: eventWaitlistEntries.ticketTypeId })
+        const waitingEntry = this.database
+          .select({ value: sql`1` })
           .from(eventWaitlistEntries)
           .where(
             and(
-              or(
-                eq(eventWaitlistEntries.status, 'waiting'),
-                and(
-                  eq(eventWaitlistEntries.status, 'eligible'),
-                  lte(eventWaitlistEntries.opportunityExpiresAt, sql`now()`),
-                ),
-              ),
-              afterTicketTypeId === null
-                ? undefined
-                : gt(eventWaitlistEntries.ticketTypeId, afterTicketTypeId),
+              eq(eventWaitlistEntries.ticketTypeId, eventTicketTypes.id),
+              eq(eventWaitlistEntries.status, 'waiting'),
             ),
           )
-          .orderBy(asc(eventWaitlistEntries.ticketTypeId))
+          .limit(1);
+        const expiredEligibility = this.database
+          .select({ value: sql`1` })
+          .from(eventWaitlistEntries)
+          .where(
+            and(
+              eq(eventWaitlistEntries.ticketTypeId, eventTicketTypes.id),
+              eq(eventWaitlistEntries.status, 'eligible'),
+              lte(eventWaitlistEntries.opportunityExpiresAt, sql`now()`),
+            ),
+          )
+          .limit(1);
+        const rows = await this.database
+          .select({ ticketTypeId: eventTicketTypes.id })
+          .from(eventTicketTypes)
+          .where(
+            and(
+              or(exists(waitingEntry), exists(expiredEligibility)),
+              afterTicketTypeId === null
+                ? undefined
+                : gt(eventTicketTypes.id, afterTicketTypeId),
+            ),
+          )
+          .orderBy(asc(eventTicketTypes.id))
           .limit(limit);
         return rows.map(({ ticketTypeId }) => ticketTypeId);
       },

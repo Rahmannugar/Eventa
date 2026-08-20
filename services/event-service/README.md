@@ -1,6 +1,6 @@
 # Event Service
 
-Event Service owns Eventa's event records, event-owned venue details, lifecycle rules, optimistic draft editing, and admin event-action audit history. It exposes gRPC business operations to the API Gateway and HTTP health endpoints for local operations.
+Event Service owns event details, venue details, lifecycle rules, ticket currencies and types, capacity, reservations, waitlists, media, and admin event-action audit history. It exposes gRPC business operations to the API Gateway and HTTP health endpoints for local operations.
 
 ## Runtime
 
@@ -16,7 +16,57 @@ Create the ignored `.env` deliberately from `.env.example`. Startup fails when p
 
 ## Commands
 
-See [commands.md](commands.md) for Event-owned validation and migration commands.
+Run commands from the repository root.
+
+### Validation
+
+Check Event source, tests, performance scripts, and Drizzle configuration for lint violations.
+
+```bash
+pnpm --filter @eventa/event-service lint
+```
+
+Run strict TypeScript checking without emitting build output.
+
+```bash
+pnpm --filter @eventa/event-service typecheck
+```
+
+Compile the deployable Event Service.
+
+```bash
+pnpm --filter @eventa/event-service build
+```
+
+Start Event PostgreSQL and run the integration suite against the isolated database configured by `TEST_DATABASE_URL`.
+
+```bash
+pnpm test:integration:event
+```
+
+### Database
+
+Build the Event migration image and apply committed migrations to the local Event database.
+
+```bash
+pnpm db:migrate:event
+```
+
+Delete the local Event database and CDC volumes, then restart the stack with fresh Event state.
+
+```bash
+pnpm db:reset:event
+```
+
+### Performance
+
+Measure the attendee-availability, reservation-expiry, waitlist-membership, FIFO-position, promotion, and eligibility-cleanup PostgreSQL query paths.
+
+```bash
+pnpm --filter @eventa/event-service performance:ticket-capacity-plans
+```
+
+The ticket-capacity performance command starts PostgreSQL, applies test migrations, and creates 200 ticket types, 109,500 waitlist entries, and 109,500 reservations inside a rollback-only transaction. It reports execution time, buffer use, plan nodes, and selected indexes without leaving generated records behind.
 
 ## Further Documentation
 
