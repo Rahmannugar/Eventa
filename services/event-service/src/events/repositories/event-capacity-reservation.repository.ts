@@ -75,9 +75,11 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
             );
             if (ticketType === undefined)
               return { outcome: 'not_found' as const };
+            const eventStartsAt = ticketType.eventStartsAt;
             if (
               ticketType.eventStatus !== 'published' ||
               ticketType.retiredAt !== null ||
+              eventStartsAt === null ||
               !ticketType.salesOpen
             ) {
               return { outcome: 'sales_unavailable' as const };
@@ -156,7 +158,7 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
             const [created] = await transaction
               .insert(eventCapacityReservations)
               .values({
-                expiresAt: sql`least(now() + make_interval(mins => ${EVENT_CAPACITY_RESERVATION_TTL_MINUTES}), ${ticketType.salesEndAt}, ${ticketType.eventStartsAt})`,
+                expiresAt: sql`least(now() + make_interval(mins => ${EVENT_CAPACITY_RESERVATION_TTL_MINUTES}), ${ticketType.salesEndAt.toISOString()}::timestamptz, ${eventStartsAt.toISOString()}::timestamptz)`,
                 id: input.reservationId,
                 attendeeId: input.attendeeId,
                 quantity: input.quantity,
@@ -613,11 +615,18 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
   }
 
   private isLockTimeout(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      Reflect.get(error, 'code') === '55P03'
-    );
+    let current = error;
+    const seen = new Set<unknown>();
+    while (
+      typeof current === 'object' &&
+      current !== null &&
+      !seen.has(current)
+    ) {
+      if (Reflect.get(current, 'code') === '55P03') return true;
+      seen.add(current);
+      current = Reflect.get(current, 'cause');
+    }
+    return false;
   }
 
   private spanAttributes(operation: 'INSERT' | 'SELECT' | 'UPDATE') {

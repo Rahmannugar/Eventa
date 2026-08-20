@@ -319,9 +319,11 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
             ticketTypeId,
           );
           if (ticketType === undefined) return 0;
+          const eventStartsAt = ticketType.eventStartsAt;
           if (
             ticketType.status !== 'published' ||
             ticketType.retiredAt !== null ||
+            eventStartsAt === null ||
             !ticketType.salesOpen
           ) {
             await transaction
@@ -390,7 +392,7 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
             .update(eventWaitlistEntries)
             .set({
               eligibleAt: sql`now()`,
-              opportunityExpiresAt: sql`least(now() + make_interval(mins => ${EVENT_WAITLIST_OPPORTUNITY_MINUTES}), ${ticketType.salesEndAt}, ${ticketType.eventStartsAt})`,
+              opportunityExpiresAt: sql`least(now() + make_interval(mins => ${EVENT_WAITLIST_OPPORTUNITY_MINUTES}), ${ticketType.salesEndAt.toISOString()}::timestamptz, ${eventStartsAt.toISOString()}::timestamptz)`,
               status: 'eligible',
               updatedAt: sql`now()`,
             })
@@ -649,10 +651,17 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
   }
 
   private isLockTimeout(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      Reflect.get(error, 'code') === '55P03'
-    );
+    let current = error;
+    const seen = new Set<unknown>();
+    while (
+      typeof current === 'object' &&
+      current !== null &&
+      !seen.has(current)
+    ) {
+      if (Reflect.get(current, 'code') === '55P03') return true;
+      seen.add(current);
+      current = Reflect.get(current, 'cause');
+    }
+    return false;
   }
 }
