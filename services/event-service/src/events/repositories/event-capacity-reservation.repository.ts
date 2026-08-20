@@ -144,7 +144,10 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
                 reservedQuantity -
                 ticketType.soldQuantity -
                 (eligibleQuantityRow?.value ?? 0);
-              if (publicCapacity < input.quantity) {
+              if (
+                (eligibleQuantityRow?.value ?? 0) > 0 &&
+                publicCapacity < input.quantity
+              ) {
                 return { outcome: 'waitlist_priority' as const };
               }
             }

@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { and, eq, inArray, isNull, lt, lte, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
@@ -31,14 +31,13 @@ export class EventMediaObjectDeletionRepository implements EventMediaObjectDelet
     leaseExpiresBefore: Date,
   ): Promise<string[]> {
     return this.database.transaction(async (transaction) => {
-      const now = new Date();
       const rows = await transaction
         .select({ deletionId: eventMediaObjectDeletions.id })
         .from(eventMediaObjectDeletions)
         .where(
           and(
             eq(eventMediaObjectDeletions.status, 'pending'),
-            lte(eventMediaObjectDeletions.nextAttemptAt, now),
+            lte(eventMediaObjectDeletions.nextAttemptAt, sql`now()`),
             or(
               isNull(eventMediaObjectDeletions.jobPublishedAt),
               and(
@@ -48,7 +47,7 @@ export class EventMediaObjectDeletionRepository implements EventMediaObjectDelet
                 ),
                 or(
                   isNull(eventMediaObjectDeletions.claimExpiresAt),
-                  lt(eventMediaObjectDeletions.claimExpiresAt, now),
+                  lt(eventMediaObjectDeletions.claimExpiresAt, sql`now()`),
                 ),
               ),
             ),
@@ -66,8 +65,8 @@ export class EventMediaObjectDeletionRepository implements EventMediaObjectDelet
         .set({
           claimExpiresAt: null,
           claimToken: null,
-          jobPublishedAt: now,
-          updatedAt: now,
+          jobPublishedAt: sql`now()`,
+          updatedAt: sql`now()`,
         })
         .where(inArray(eventMediaObjectDeletions.id, deletionIds));
       return deletionIds;
@@ -86,18 +85,17 @@ export class EventMediaObjectDeletionRepository implements EventMediaObjectDelet
     claimToken: string,
     claimExpiresAt: Date,
   ): Promise<EventMediaObjectDeletionRecord | undefined> {
-    const now = new Date();
     const [deletion] = await this.database
       .update(eventMediaObjectDeletions)
-      .set({ claimExpiresAt, claimToken, updatedAt: now })
+      .set({ claimExpiresAt, claimToken, updatedAt: sql`now()` })
       .where(
         and(
           eq(eventMediaObjectDeletions.id, deletionId),
           eq(eventMediaObjectDeletions.status, 'pending'),
-          lte(eventMediaObjectDeletions.nextAttemptAt, now),
+          lte(eventMediaObjectDeletions.nextAttemptAt, sql`now()`),
           or(
             isNull(eventMediaObjectDeletions.claimExpiresAt),
-            lt(eventMediaObjectDeletions.claimExpiresAt, now),
+            lt(eventMediaObjectDeletions.claimExpiresAt, sql`now()`),
           ),
         ),
       )

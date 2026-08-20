@@ -177,7 +177,6 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
     leaseExpiresBefore: Date,
   ): Promise<string[]> {
     return this.database.transaction(async (transaction) => {
-      const now = new Date();
       const rows = await transaction
         .select({ uploadId: eventMediaUploads.id })
         .from(eventMediaUploads)
@@ -195,14 +194,14 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
                 isNull(eventMediaUploads.objectDeletionFailedAt),
               ),
             ),
-            lte(eventMediaUploads.nextAttemptAt, now),
+            lte(eventMediaUploads.nextAttemptAt, sql`now()`),
             or(
               isNull(eventMediaUploads.jobPublishedAt),
               and(
                 lt(eventMediaUploads.jobPublishedAt, leaseExpiresBefore),
                 or(
                   isNull(eventMediaUploads.claimExpiresAt),
-                  lt(eventMediaUploads.claimExpiresAt, now),
+                  lt(eventMediaUploads.claimExpiresAt, sql`now()`),
                 ),
               ),
             ),
@@ -220,8 +219,8 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         .set({
           claimExpiresAt: null,
           claimToken: null,
-          jobPublishedAt: now,
-          updatedAt: now,
+          jobPublishedAt: sql`now()`,
+          updatedAt: sql`now()`,
         })
         .where(inArray(eventMediaUploads.id, uploadIds));
       return uploadIds;
@@ -240,7 +239,6 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
     claimToken: string,
     claimExpiresAt: Date,
   ): Promise<EventMediaUploadRecord | undefined> {
-    const now = new Date();
     const [upload] = await this.database
       .update(eventMediaUploads)
       .set({
@@ -248,7 +246,7 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
         claimExpiresAt,
         attemptCount: sql`${eventMediaUploads.attemptCount} + CASE WHEN ${eventMediaUploads.status} = 'pending' THEN 1 ELSE 0 END`,
         objectDeletionAttemptCount: sql`${eventMediaUploads.objectDeletionAttemptCount} + CASE WHEN ${eventMediaUploads.status} IN ('rejected', 'conflict', 'expired') THEN 1 ELSE 0 END`,
-        updatedAt: now,
+        updatedAt: sql`now()`,
       })
       .where(
         and(
@@ -267,9 +265,9 @@ export class EventMediaUploadRepository implements EventMediaUploadRepositoryPor
           ),
           or(
             isNull(eventMediaUploads.claimExpiresAt),
-            lt(eventMediaUploads.claimExpiresAt, now),
+            lt(eventMediaUploads.claimExpiresAt, sql`now()`),
           ),
-          lte(eventMediaUploads.nextAttemptAt, now),
+          lte(eventMediaUploads.nextAttemptAt, sql`now()`),
         ),
       )
       .returning(UPLOAD_COLUMNS);

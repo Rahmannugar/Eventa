@@ -11,12 +11,14 @@ import type {
   EventTicketAvailabilityRepository as EventTicketAvailabilityRepositoryPort,
 } from '../types/event.types';
 
+type DatabaseTimestamp = Date | string;
+
 interface CatalogueRow extends Record<string, unknown> {
   eventId: string;
   ticketCurrencyId: string;
   currency: string;
-  currencyCreatedAt: Date;
-  currencyUpdatedAt: Date;
+  currencyCreatedAt: DatabaseTimestamp;
+  currencyUpdatedAt: DatabaseTimestamp;
   ticketTypeId: string;
   name: string;
   description: string | null;
@@ -24,8 +26,8 @@ interface CatalogueRow extends Record<string, unknown> {
   capacity: number;
   reservedQuantity: number;
   soldQuantity: number;
-  salesStartAt: Date;
-  salesEndAt: Date;
+  salesStartAt: DatabaseTimestamp;
+  salesEndAt: DatabaseTimestamp;
   salesOpen: boolean;
   activeWaitlistCount: number;
   waitingCount: number;
@@ -33,9 +35,22 @@ interface CatalogueRow extends Record<string, unknown> {
   attendeeWaitlistStatus: 'waiting' | 'eligible' | null;
   attendeeWaitlistQuantity: number | null;
   waitlistPosition: number | null;
-  opportunityExpiresAt: Date | null;
+  opportunityExpiresAt: DatabaseTimestamp | null;
   reservationQuantity: number;
-  reservationExpiresAt: Date | null;
+  reservationExpiresAt: DatabaseTimestamp | null;
+}
+
+function decodeTimestamp(value: DatabaseTimestamp): Date {
+  if (value instanceof Date) return value;
+  const decoded = new Date(value);
+  if (Number.isNaN(decoded.getTime())) {
+    throw new Error('Event ticket availability returned an invalid timestamp');
+  }
+  return decoded;
+}
+
+function decodeNullableTimestamp(value: DatabaseTimestamp | null): Date | null {
+  return value === null ? null : decodeTimestamp(value);
 }
 
 export class EventTicketAvailabilityRepository implements EventTicketAvailabilityRepositoryPort {
@@ -154,8 +169,8 @@ export class EventTicketAvailabilityRepository implements EventTicketAvailabilit
             ticketCurrencyId: row.ticketCurrencyId,
             eventId: row.eventId,
             currency: row.currency,
-            createdAt: row.currencyCreatedAt,
-            updatedAt: row.currencyUpdatedAt,
+            createdAt: decodeTimestamp(row.currencyCreatedAt),
+            updatedAt: decodeTimestamp(row.currencyUpdatedAt),
           });
           ticketTypes.push(this.toTicketType(row));
         }
@@ -214,8 +229,8 @@ export class EventTicketAvailabilityRepository implements EventTicketAvailabilit
       name: row.name,
       description: row.description,
       priceMinor: row.priceMinor,
-      salesStartAt: row.salesStartAt,
-      salesEndAt: row.salesEndAt,
+      salesStartAt: decodeTimestamp(row.salesStartAt),
+      salesEndAt: decodeTimestamp(row.salesEndAt),
       salesOpen: row.salesOpen,
       availabilityStatus,
       availableQuantity,
@@ -227,8 +242,12 @@ export class EventTicketAvailabilityRepository implements EventTicketAvailabilit
         row.activeWaitlistCount < EVENT_WAITLIST_ACTIVE_LIMIT &&
         publicAvailable === 0,
       waitlistPosition: isWaiting ? row.waitlistPosition : null,
-      opportunityExpiresAt: isEligible ? row.opportunityExpiresAt : null,
-      reservationExpiresAt: hasReservation ? row.reservationExpiresAt : null,
+      opportunityExpiresAt: isEligible
+        ? decodeNullableTimestamp(row.opportunityExpiresAt)
+        : null,
+      reservationExpiresAt: hasReservation
+        ? decodeNullableTimestamp(row.reservationExpiresAt)
+        : null,
     };
   }
 }
