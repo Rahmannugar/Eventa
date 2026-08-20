@@ -225,7 +225,7 @@ export class EventTicketAvailabilityRepository implements EventTicketAvailabilit
         !isEligible &&
         !isWaiting &&
         row.activeWaitlistCount < EVENT_WAITLIST_ACTIVE_LIMIT &&
-        publicAvailable < row.capacity,
+        publicAvailable === 0,
       waitlistPosition: isWaiting ? row.waitlistPosition : null,
       opportunityExpiresAt: isEligible ? row.opportunityExpiresAt : null,
       reservationExpiresAt: hasReservation ? row.reservationExpiresAt : null,

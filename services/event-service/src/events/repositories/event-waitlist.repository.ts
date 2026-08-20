@@ -541,7 +541,10 @@ export class EventWaitlistRepository implements EventWaitlistRepositoryPort {
           and(
             eq(eventWaitlistEntries.ticketTypeId, entry.ticketTypeId),
             or(
-              eq(eventWaitlistEntries.status, 'eligible'),
+              and(
+                eq(eventWaitlistEntries.status, 'eligible'),
+                gt(eventWaitlistEntries.opportunityExpiresAt, sql`now()`),
+              ),
               and(
                 eq(eventWaitlistEntries.status, 'waiting'),
                 or(

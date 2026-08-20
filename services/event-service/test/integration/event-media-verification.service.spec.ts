@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
@@ -1048,7 +1048,65 @@ describe('Event mutation integration', () => {
     expect(outsiderCatalogue.ticketTypes[0]).toMatchObject({
       availabilityStatus: 'available',
       availableQuantity: 1,
+      canJoinWaitlist: false,
     });
+  });
+
+  it('ignores expired opportunities when calculating waitlist position', async () => {
+    const ticket = await createPublishedTicketType(2);
+    const firstAttendeeId = randomUUID();
+    const secondAttendeeId = randomUUID();
+    const reservation = await capacityReservations.reserve({
+      attendeeId: randomUUID(),
+      eventId: ticket.eventId,
+      quantity: 2,
+      requestId: randomUUID(),
+      reservationId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await waitlist.join({
+      attendeeId: firstAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await waitlist.join({
+      attendeeId: secondAttendeeId,
+      eventId: ticket.eventId,
+      quantity: 1,
+      requestId: randomUUID(),
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await capacityReservations.release({
+      eventId: ticket.eventId,
+      requestId: randomUUID(),
+      reservationId: reservation.reservationId,
+      ticketTypeId: ticket.ticketTypeId,
+    });
+    await expect(
+      waitlistRepository.promote(ticket.ticketTypeId, 1),
+    ).resolves.toBe(1);
+    await database
+      .update(eventWaitlistEntries)
+      .set({
+        eligibleAt: new Date(Date.now() - 2 * 60 * 1_000),
+        opportunityExpiresAt: new Date(Date.now() - 60 * 1_000),
+      })
+      .where(
+        and(
+          eq(eventWaitlistEntries.ticketTypeId, ticket.ticketTypeId),
+          eq(eventWaitlistEntries.attendeeId, firstAttendeeId),
+        ),
+      );
+
+    await expect(
+      waitlist.get({
+        attendeeId: secondAttendeeId,
+        eventId: ticket.eventId,
+        ticketTypeId: ticket.ticketTypeId,
+      }),
+    ).resolves.toMatchObject({ position: 1, status: 'waiting' });
   });
 
   it('rolls back creation when a category invariant fails', async () => {
