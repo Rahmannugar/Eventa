@@ -5,8 +5,11 @@ import {
   getCommerceProtoIncludeDirs,
   getCommerceProtoPaths,
 } from '@eventa/grpc-contracts';
+import { status } from '@grpc/grpc-js';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
+  RpcException,
   Transport,
   type MicroserviceOptions,
 } from '@nestjs/microservices';
@@ -17,6 +20,18 @@ import { readRuntimeConfig } from './config/runtime-config';
 async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
   const app = await NestFactory.create(AppModule.register(config));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      exceptionFactory: () =>
+        new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: 'INVALID_COMMERCE_REQUEST',
+        }),
+      forbidNonWhitelisted: true,
+      transform: true,
+      whitelist: true,
+    }),
+  );
   app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.GRPC,

@@ -1,19 +1,27 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   CommerceOrderStatus,
   CommerceServiceControllerMethods,
   type CommerceOrder,
   type CommerceServiceController,
-  type GetCommerceOrderRequest,
   type GetCommerceOrderResponse,
-  type StartTicketPurchaseRequest,
   type StartTicketPurchaseResponse,
 } from '@eventa/grpc-contracts';
+import { Metadata, status } from '@grpc/grpc-js';
 import { Controller } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { from, type Observable } from 'rxjs';
 
 import { OrderRepository } from '../../orders/repositories/order.repository';
 import type { CommerceOrderRecord } from '../../orders/types/order.types';
+import {
+  GetCommerceOrderDto,
+  StartTicketPurchaseDto,
+} from '../dto/ticket-purchase.dto';
 import { TicketPurchaseService } from '../services/ticket-purchase.service';
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
 @Controller()
 @CommerceServiceControllerMethods()
@@ -24,39 +32,65 @@ export class TicketPurchaseController implements CommerceServiceController {
   ) {}
 
   startTicketPurchase(
-    request: StartTicketPurchaseRequest,
+    request: StartTicketPurchaseDto,
+    metadata?: Metadata,
   ): Observable<StartTicketPurchaseResponse> {
-    return from(this.start(request));
+    return from(this.start(request, this.readRequestId(metadata)));
   }
 
   private async start(
-    request: StartTicketPurchaseRequest,
+    request: StartTicketPurchaseDto,
+    requestId: string,
   ): Promise<StartTicketPurchaseResponse> {
-    const order = await this.purchases.start({
-      attendeeId: request.attendeeId,
-      eventId: request.eventId,
-      idempotencyKey: request.idempotencyKey,
-      quantity: request.quantity,
-      requestId: request.idempotencyKey,
-      ticketTypeId: request.ticketTypeId,
-    });
-    return { order: this.toContract(order) };
+    try {
+      const order = await this.purchases.start({
+        attendeeId: request.attendeeId,
+        eventId: request.eventId,
+        idempotencyKey: request.idempotencyKey,
+        quantity: request.quantity,
+        requestId,
+        ticketTypeId: request.ticketTypeId,
+      });
+      return { order: this.toContract(order) };
+    } catch (error: unknown) {
+      this.translateStartError(error);
+    }
   }
 
   getCommerceOrder(
-    request: GetCommerceOrderRequest,
+    request: GetCommerceOrderDto,
   ): Observable<GetCommerceOrderResponse> {
     return from(this.get(request));
   }
 
   private async get(
-    request: GetCommerceOrderRequest,
+    request: GetCommerceOrderDto,
   ): Promise<GetCommerceOrderResponse> {
     const order = await this.orders.findById(request.orderId);
     if (order === undefined || order.attendeeId !== request.attendeeId) {
-      throw new Error('COMMERCE_ORDER_NOT_FOUND');
+      throw new RpcException({
+        code: status.NOT_FOUND,
+        message: 'COMMERCE_ORDER_NOT_FOUND',
+      });
     }
     return { order: this.toContract(order) };
+  }
+
+  private translateStartError(error: unknown): never {
+    if (error instanceof Error && error.message === 'Order idempotency conflict') {
+      throw new RpcException({
+        code: status.ALREADY_EXISTS,
+        message: 'COMMERCE_ORDER_IDEMPOTENCY_CONFLICT',
+      });
+    }
+    throw error;
+  }
+
+  private readRequestId(metadata?: Metadata): string {
+    const value = metadata?.get('x-request-id')[0];
+    return typeof value === 'string' && REQUEST_ID_PATTERN.test(value)
+      ? value
+      : randomUUID();
   }
 
   private toContract(order: CommerceOrderRecord): CommerceOrder {
