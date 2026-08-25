@@ -15,6 +15,7 @@ import { HealthModule } from './health/health.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { AdminsModule } from './domains/admins/admins.module';
 import { EventsModule } from './domains/events/events.module';
+import { CommerceModule } from './domains/commerce/commerce.module';
 
 @Module({})
 export class AppModule implements NestModule {
@@ -44,6 +45,12 @@ export class AppModule implements NestModule {
           redisUrl: config.redisUrl,
         }),
         adminsModule,
+        CommerceModule.register({
+          attendeesModule,
+          commerceGrpcDeadlineMs: config.commerceGrpcDeadlineMs,
+          commerceGrpcUrl: config.commerceGrpcUrl,
+          rateLimitKeySecret: config.rateLimitKeySecret,
+        }),
         EventsModule.register({
           adminsModule,
           attendeesModule,

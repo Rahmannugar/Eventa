@@ -14,6 +14,8 @@ src/domains/
     attendee-owned transport, application, policy, and documentation
   events/
     public published reads, authenticated admin transport, abuse controls, and Event routing
+  commerce/
+    authenticated attendee checkout transport, order reads, abuse controls, and Commerce routing
 
 src/rate-limit/
   atomic hybrid policy state and shared contracts
@@ -24,7 +26,7 @@ src/infrastructure/clients/
 
 Domain code decides which subjects and numeric rules protect an endpoint. The shared `RateLimitState` capability consumes supplied hybrid policies but knows nothing about attendee fields. `RedisClient` owns one Gateway-wide connection lifecycle; the Redis adapter owns the atomic rate-limit Lua operation. Domains depend on `RateLimitState`, not Redis.
 
-Admin, attendee, and Event flows are documented in their domain-owned architecture files.
+Admin, attendee, Event, and Commerce flows are documented in their domain-owned architecture files.
 
 ## Failure Behavior
 
@@ -38,7 +40,7 @@ Gateway configuration is validated before the HTTP listener starts. Trusted-prox
 
 Credentialed CORS allows only the configured web client origin. Attendee and admin browser flows require that same exact `Origin`.
 
-Each Identity and Event gRPC command carries an explicit absolute deadline. Event deadlines must remain shorter than the outer HTTP request budget. Deadline expiry cancels the client call through grpc-js and maps to the route's stable public `503` response with an internal deadline-specific diagnostic. The Redis client connects lazily for protected routes, disables the offline queue and automatic reconnect loop, bounds connection establishment and each command, and closes during application shutdown.
+Each Identity, Event, and Commerce gRPC command carries an explicit absolute deadline. Downstream deadlines remain shorter than the outer HTTP request budget. Deadline expiry cancels the client call through grpc-js and maps to the route's stable public `503` response with an internal deadline-specific diagnostic. The Redis client connects lazily for protected routes, disables the offline queue and automatic reconnect loop, bounds connection establishment and each command, and closes during application shutdown.
 
 The Gateway intentionally exposes only liveness because it has no database or universal local dependency that would make every route unready.
 

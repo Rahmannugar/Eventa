@@ -1,6 +1,8 @@
 export interface RuntimeConfig {
   apiDocsEnabled: boolean;
   clientOrigin: string;
+  commerceGrpcDeadlineMs: number;
+  commerceGrpcUrl: string;
   httpHeadersTimeoutMs: number;
   httpKeepAliveTimeoutMs: number;
   httpRequestTimeoutMs: number;
@@ -91,6 +93,11 @@ export function readRuntimeConfig(
     throw new Error('IDENTITY_GRPC_URL must use the host:port format');
   }
 
+  const commerceGrpcUrl = readRequiredString(environment, 'COMMERCE_GRPC_URL');
+  if (!/^[^\s:/]+:\d+$/.test(commerceGrpcUrl)) {
+    throw new Error('COMMERCE_GRPC_URL must use the host:port format');
+  }
+
   const eventGrpcUrl = readRequiredString(environment, 'EVENT_GRPC_URL');
 
   if (!/^[^\s:/]+:\d+$/.test(eventGrpcUrl)) {
@@ -152,6 +159,10 @@ export function readRuntimeConfig(
     environment,
     'EVENT_GRPC_DEADLINE_MS',
   );
+  const commerceGrpcDeadlineMs = readPositiveInteger(
+    environment,
+    'COMMERCE_GRPC_DEADLINE_MS',
+  );
 
   if (httpHeadersTimeoutMs > httpRequestTimeoutMs) {
     throw new Error(
@@ -164,10 +175,17 @@ export function readRuntimeConfig(
       'EVENT_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
     );
   }
+  if (commerceGrpcDeadlineMs >= httpRequestTimeoutMs) {
+    throw new Error(
+      'COMMERCE_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
 
   return {
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
     clientOrigin: readOrigin(environment, 'CLIENT_ORIGIN'),
+    commerceGrpcDeadlineMs,
+    commerceGrpcUrl,
     eventGrpcDeadlineMs,
     eventGrpcUrl,
     httpHeadersTimeoutMs,
