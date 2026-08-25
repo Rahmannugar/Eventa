@@ -11,9 +11,13 @@
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
+    "@eventa/grpc-contracts": "workspace:*",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
+    "@nestjs/microservices": "^11.1.28",
     "@nestjs/platform-express": "^11.1.28",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.8",
     "reflect-metadata": "^0.2.2",

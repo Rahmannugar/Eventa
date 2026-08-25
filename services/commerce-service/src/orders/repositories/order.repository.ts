@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { COMMERCE_DATABASE } from '../../database/database.constants';
 import type { CommerceDatabase } from '../../database/database.types';
-import { commerceOrders } from '../schema/order.schema';
+import { commerceOrderItems, commerceOrders } from '../schema/order.schema';
 import type {
   CommerceOrderRecord,
   CommerceOrderRepository,
@@ -56,7 +56,12 @@ export class OrderRepository implements CommerceOrderRepository {
     const [existing] = await this.database
       .select(ORDER_COLUMNS)
       .from(commerceOrders)
-      .where(eq(commerceOrders.id, input.orderId))
+      .where(
+        and(
+          eq(commerceOrders.attendeeId, input.attendeeId),
+          eq(commerceOrders.idempotencyKey, input.idempotencyKey),
+        ),
+      )
       .limit(1);
     if (existing === undefined) throw new Error('Order idempotency record missing');
     if (
@@ -81,22 +86,46 @@ export class OrderRepository implements CommerceOrderRepository {
 
   async markReserved(input: {
     orderId: string;
+    ticketName: string;
+    quantity: number;
+    unitPriceMinor: number;
     currency: string;
     totalMinor: number;
     reservationExpiresAt: Date;
   }): Promise<CommerceOrderRecord> {
-    const [updated] = await this.database
-      .update(commerceOrders)
-      .set({
-        currency: input.currency,
-        totalMinor: input.totalMinor,
-        reservationExpiresAt: input.reservationExpiresAt,
-        status: 'pending_payment',
-        updatedAt: new Date(),
-      })
-      .where(eq(commerceOrders.id, input.orderId))
-      .returning(ORDER_COLUMNS);
-    if (updated === undefined) throw new Error('Order disappeared while reserving');
-    return updated;
+    return this.database.transaction(async (transaction) => {
+      const [order] = await transaction
+        .select(ORDER_COLUMNS)
+        .from(commerceOrders)
+        .where(eq(commerceOrders.id, input.orderId))
+        .limit(1)
+        .for('update');
+      if (order === undefined) throw new Error('Order disappeared while reserving');
+      if (order.status === 'pending_payment') return order;
+      if (order.status !== 'pending_reservation') {
+        throw new Error('Order cannot accept a capacity reservation');
+      }
+
+      await transaction.insert(commerceOrderItems).values({
+        orderId: input.orderId,
+        ticketName: input.ticketName,
+        quantity: input.quantity,
+        unitPriceMinor: input.unitPriceMinor,
+        lineTotalMinor: input.totalMinor,
+      });
+      const [updated] = await transaction
+        .update(commerceOrders)
+        .set({
+          currency: input.currency,
+          totalMinor: input.totalMinor,
+          reservationExpiresAt: input.reservationExpiresAt,
+          status: 'pending_payment',
+          updatedAt: new Date(),
+        })
+        .where(eq(commerceOrders.id, input.orderId))
+        .returning(ORDER_COLUMNS);
+      if (updated === undefined) throw new Error('Order disappeared while reserving');
+      return updated;
+    });
   }
 }

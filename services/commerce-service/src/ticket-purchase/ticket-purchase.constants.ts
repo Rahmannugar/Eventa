@@ -1,0 +1,1 @@
+export const EVENT_GRPC_CLIENT = Symbol('COMMERCE_EVENT_GRPC_CLIENT');

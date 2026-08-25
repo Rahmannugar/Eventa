@@ -37,6 +37,9 @@ export interface CommerceOrderRepository {
   findById(orderId: string): Promise<CommerceOrderRecord | undefined>;
   markReserved(input: {
     orderId: string;
+    ticketName: string;
+    quantity: number;
+    unitPriceMinor: number;
     currency: string;
     totalMinor: number;
     reservationExpiresAt: Date;

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package eventa.commerce.v1;
+
+enum CommerceOrderStatus {
+  COMMERCE_ORDER_STATUS_UNSPECIFIED = 0;
+  COMMERCE_ORDER_STATUS_PENDING_RESERVATION = 1;
+  COMMERCE_ORDER_STATUS_PENDING_PAYMENT = 2;
+  COMMERCE_ORDER_STATUS_PAID = 3;
+  COMMERCE_ORDER_STATUS_FAILED = 4;
+  COMMERCE_ORDER_STATUS_EXPIRED = 5;
+  COMMERCE_ORDER_STATUS_REFUNDING = 6;
+  COMMERCE_ORDER_STATUS_REFUNDED = 7;
+}
+
+message StartTicketPurchaseRequest {
+  string attendee_id = 1;
+  string idempotency_key = 2;
+  string event_id = 3;
+  string ticket_type_id = 4;
+  int32 quantity = 5;
+}
+
+message CommerceOrder {
+  string order_id = 1;
+  string attendee_id = 2;
+  string event_id = 3;
+  string ticket_type_id = 4;
+  int32 quantity = 5;
+  CommerceOrderStatus status = 6;
+  optional string currency = 7;
+  optional int32 total_minor = 8;
+  optional string reservation_expires_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message StartTicketPurchaseResponse {
+  CommerceOrder order = 1;
+}
+
+message GetCommerceOrderRequest {
+  string attendee_id = 1;
+  string order_id = 2;
+}
+
+message GetCommerceOrderResponse {
+  CommerceOrder order = 1;
+}

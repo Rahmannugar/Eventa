@@ -5,6 +5,7 @@ import { RuntimeConfigModule } from './config/runtime-config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { OrdersModule } from './orders/orders.module';
+import { registerTicketPurchaseModule } from './ticket-purchase/ticket-purchase.module';
 
 @Module({})
 export class AppModule {
@@ -16,6 +17,7 @@ export class AppModule {
         DatabaseModule,
         HealthModule,
         OrdersModule,
+        registerTicketPurchaseModule(config),
       ],
     };
   }

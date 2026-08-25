@@ -1,0 +1,1 @@
+export const EVENT_CAPACITY_PORT = Symbol('EVENT_CAPACITY_PORT');

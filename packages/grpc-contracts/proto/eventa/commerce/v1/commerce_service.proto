@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package eventa.commerce.v1;
+
+import "eventa/commerce/v1/commerce.proto";
+
+service CommerceService {
+  rpc StartTicketPurchase(StartTicketPurchaseRequest) returns (StartTicketPurchaseResponse);
+  rpc GetCommerceOrder(GetCommerceOrderRequest) returns (GetCommerceOrderResponse);
+}
