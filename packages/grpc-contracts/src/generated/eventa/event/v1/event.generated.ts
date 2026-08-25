@@ -374,6 +374,9 @@ export interface EventCapacityReservation {
   updatedAt: string;
   completedAt?: string | undefined;
   attendeeId?: string | undefined;
+  ticketName: string;
+  currency: string;
+  unitPriceMinor: number;
 }
 
 export interface ReserveEventCapacityRequest {

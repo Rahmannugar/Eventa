@@ -620,6 +620,9 @@ export interface EventCapacityReservationRecord {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  ticketName: string;
+  currency: string;
+  unitPriceMinor: number;
 }
 
 export interface ReserveEventCapacityCommand {

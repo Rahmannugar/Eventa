@@ -355,6 +355,9 @@ message EventCapacityReservation {
   string updated_at = 8;
   optional string completed_at = 9;
   optional string attendee_id = 10;
+  string ticket_name = 11;
+  string currency = 12;
+  int32 unit_price_minor = 13;
 }
 
 message ReserveEventCapacityRequest {

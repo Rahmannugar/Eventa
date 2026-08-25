@@ -1191,6 +1191,9 @@ export class EventController implements EventServiceController {
           EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_RELEASED,
       }[reservation.status],
       ticketTypeId: reservation.ticketTypeId,
+      ticketName: reservation.ticketName,
+      currency: reservation.currency,
+      unitPriceMinor: reservation.unitPriceMinor,
       updatedAt: reservation.updatedAt.toISOString(),
     };
   }

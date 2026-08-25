@@ -39,6 +39,12 @@ const RESERVATION_COLUMNS = {
   updatedAt: eventCapacityReservations.updatedAt,
 };
 
+const RESERVATION_QUOTE_COLUMNS = {
+  ticketName: eventTicketTypes.name,
+  currency: eventTicketCurrencies.currency,
+  unitPriceMinor: eventTicketTypes.priceMinor,
+};
+
 export class EventCapacityReservationRepository implements EventCapacityReservationRepositoryPort {
   constructor(
     @Inject(EVENT_DATABASE)
@@ -205,7 +211,13 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
             }
             return {
               outcome: 'reserved' as const,
-              reservation: { ...created, eventId: input.eventId },
+              reservation: {
+                ...created,
+                eventId: input.eventId,
+                ticketName: ticketType.ticketName,
+                currency: ticketType.currency,
+                unitPriceMinor: ticketType.unitPriceMinor,
+              },
             };
           }),
         this.spanAttributes('INSERT'),
@@ -409,7 +421,13 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
           locked.quantity,
         );
       }
-      const completedRecord = { ...completed, eventId: input.eventId };
+      const completedRecord = await this.findReservation(
+        transaction,
+        input.reservationId,
+      );
+      if (completedRecord === undefined) {
+        throw new Error('Capacity reservation disappeared after transition');
+      }
       return terminalStatus === 'expired'
         ? { outcome: 'expired' as const, reservation: completedRecord }
         : {
@@ -427,6 +445,7 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
     const query = transaction
       .select({
         ...RESERVATION_COLUMNS,
+        ...RESERVATION_QUOTE_COLUMNS,
         eventId: eventTicketCurrencies.eventId,
       })
       .from(eventCapacityReservations)
@@ -454,8 +473,11 @@ export class EventCapacityReservationRepository implements EventCapacityReservat
     const [ticketType] = await transaction
       .select({
         capacity: eventTicketTypes.capacity,
+        currency: eventTicketCurrencies.currency,
         eventStartsAt: events.startsAt,
         eventStatus: events.status,
+        ticketName: eventTicketTypes.name,
+        unitPriceMinor: eventTicketTypes.priceMinor,
         reservedQuantity: eventTicketTypes.reservedQuantity,
         retiredAt: eventTicketTypes.retiredAt,
         salesOpen: sql<boolean>`${eventTicketTypes.salesStartAt} <= now() AND ${eventTicketTypes.salesEndAt} > now()`,
