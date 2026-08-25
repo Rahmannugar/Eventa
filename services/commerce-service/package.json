@@ -1,0 +1,26 @@
+{
+  "name": "@eventa/commerce-service",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:prod": "node dist/database/migrate.js",
+    "lint": "eslint src drizzle.config.ts --max-warnings 0",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.8",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "drizzle-kit": "^0.31.8"
+  }
+}

@@ -1,0 +1,3 @@
+# Commerce Architecture
+
+Commerce is an independently deployable modular monolith with Order and Payment as sibling domains over one Commerce-owned PostgreSQL database. Order owns orders, immutable ticket snapshots, and order lifecycle. Payment owns payment attempts, provider state, webhooks, reconciliation, refunds, and money invariants. A named ticket-purchase workflow coordinates the domains and calls Event Service with a stable reservation ID. Event remains the capacity correctness boundary; Commerce never reads or mutates Event storage directly. Durable order and payment state makes retries and recovery inspectable without treating a distributed call as an atomic transaction.
