@@ -10,6 +10,7 @@
   "scripts": {
     "admin:provision:identity": "sh services/identity-service/scripts/provision-admin.sh",
     "build": "turbo run build",
+    "db:migrate:commerce": "docker compose run --rm --build commerce-migration",
     "db:migrate:event": "docker compose run --rm --build event-migration",
     "db:migrate:identity": "docker compose run --rm --build identity-migration",
     "db:migrate:notification": "docker compose run --rm --build notification-migration",
@@ -30,7 +31,8 @@
     "services:stop": "docker compose down",
     "test": "turbo run test",
     "test:all": "pnpm test && pnpm test:integration",
-    "test:integration": "pnpm test:integration:identity && pnpm test:integration:gateway && pnpm test:integration:notification && pnpm test:integration:event",
+    "test:integration": "pnpm test:integration:identity && pnpm test:integration:gateway && pnpm test:integration:notification && pnpm test:integration:event && pnpm test:integration:commerce",
+    "test:integration:commerce": "docker compose up -d commerce-database && pnpm --filter @eventa/commerce-service test:integration",
     "test:integration:event": "docker compose up -d event-database && pnpm --filter @eventa/event-service test:integration",
     "test:integration:gateway": "docker compose up -d api-gateway-redis && pnpm --filter @eventa/api-gateway test:integration",
     "test:integration:identity": "docker compose up -d identity-database identity-redis job-queue && pnpm --filter @eventa/identity-service test:integration",

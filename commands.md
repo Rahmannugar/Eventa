@@ -136,6 +136,7 @@ pnpm db:reset:all
 | ------------ | ----------- | ------- | --------------------- | --------------------- | ------------------------------ |
 | Identity     | `localhost` | `55432` | `eventa_identity`     | `eventa_identity`     | `eventa_identity_password`     |
 | Event        | `localhost` | `57432` | `eventa_event`        | `eventa_event`        | `eventa_event_password`        |
+| Commerce     | `localhost` | `58432` | `eventa_commerce`     | `eventa_commerce`     | `eventa_commerce_password`     |
 | Notification | `localhost` | `56432` | `eventa_notification` | `eventa_notification` | `eventa_notification_password` |
 
 ## Local operations

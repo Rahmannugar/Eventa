@@ -1,5 +1,30 @@
 # Commerce Service
 
-Commerce Service owns attendee orders, immutable ticket snapshots, payment attempts, provider interaction, refunds, and payment state. It coordinates ticket purchases with Event Service for temporary capacity reservations and completed sales.
+Commerce Service owns attendee orders and immutable ticket snapshots. Its ticket-purchase workflow acquires temporary capacity from Event Service before an order can proceed to payment.
 
-The service owns its PostgreSQL schema and migrations. Run the migration command after building the service.
+## Local setup
+
+Create `.env` from `.env.example`. Commerce requires its PostgreSQL database and a reachable Event Service gRPC endpoint. Docker Compose runs the database migration before starting the service.
+
+The service exposes:
+
+- gRPC on port `50053`;
+- liveness at `http://localhost:3008/health/live`;
+- database-backed readiness at `http://localhost:3008/health/ready`.
+
+## Commands
+
+Run these commands from the repository root.
+
+```bash
+pnpm --filter @eventa/commerce-service lint
+pnpm --filter @eventa/commerce-service typecheck
+pnpm --filter @eventa/commerce-service test:unit
+pnpm test:integration:commerce
+pnpm --filter @eventa/commerce-service build
+pnpm db:migrate:commerce
+```
+
+The integration suite requires `TEST_DATABASE_URL` to name a database ending in `_test`. It creates that database when needed, migrates it, and clears only Commerce-owned test tables between cases.
+
+See [API.md](API.md) for the contract map and [ARCHITECTURE.md](ARCHITECTURE.md) for ownership, state, and recovery behavior.

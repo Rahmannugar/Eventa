@@ -6,8 +6,10 @@
     "build": "nest build",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "node dist/database/migrate.js",
-    "lint": "eslint src drizzle.config.ts --max-warnings 0",
+    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
     "start": "node dist/main.js",
+    "test:integration": "dotenv -e .env -- vitest run test/integration",
+    "test:unit": "vitest run test/unit",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.8"
   }
 }

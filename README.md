@@ -71,7 +71,7 @@ Product interfaces use attendee and organizer language. They translate system st
 
 For the full command reference, see [commands.md](commands.md).
 
-Docker Compose starts the API Gateway, Identity Service, Event Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. The startup command warms Kafka and RabbitMQ before starting the remaining stack with bounded concurrency, protecting local resources without omitting services.
+Docker Compose starts the API Gateway, Identity Service, Event Service, Commerce Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, Commerce, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. The startup command warms Kafka and RabbitMQ before starting the remaining stack with bounded concurrency, protecting local resources without omitting services.
 
 Build and start Eventa with:
 
@@ -104,6 +104,7 @@ Local endpoints:
 - Identity readiness: `http://localhost:3005/health/ready`
 - Notification readiness: `http://localhost:3006/health/ready`
 - Event readiness: `http://localhost:3007/health/ready`
+- Commerce readiness: `http://localhost:3008/health/ready`
 - RabbitMQ management: `http://localhost:15673`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`

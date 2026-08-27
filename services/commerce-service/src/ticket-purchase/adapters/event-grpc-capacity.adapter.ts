@@ -8,7 +8,10 @@ import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 import { EVENT_GRPC_CLIENT } from '../ticket-purchase.constants';
-import type { EventCapacityPort, EventCapacityQuote } from '../types/event-capacity.port';
+import type {
+  EventCapacityPort,
+  EventCapacityQuote,
+} from '../types/event-capacity.port';
 
 @Injectable()
 export class EventGrpcCapacityAdapter
@@ -23,7 +26,8 @@ export class EventGrpcCapacityAdapter
   ) {}
 
   onModuleInit(): void {
-    this.client = this.grpcClient.getService<EventServiceClient>('EventService');
+    this.client =
+      this.grpcClient.getService<EventServiceClient>('EventService');
   }
 
   async reserve(input: {
@@ -44,17 +48,21 @@ export class EventGrpcCapacityAdapter
       options: { deadline: Date },
     ) => ReturnType<EventServiceClient['reserveEventCapacity']>;
     const response = await firstValueFrom(
-      reserve({
-        attendeeId: input.attendeeId,
-        eventId: input.eventId,
-        quantity: input.quantity,
-        reservationId: input.reservationId,
-        ticketTypeId: input.ticketTypeId,
-      }, metadata, {
-        deadline: new Date(Date.now() + this.deadlineMs),
-      }),
+      reserve(
+        {
+          attendeeId: input.attendeeId,
+          eventId: input.eventId,
+          quantity: input.quantity,
+          reservationId: input.reservationId,
+          ticketTypeId: input.ticketTypeId,
+        },
+        metadata,
+        {
+          deadline: new Date(Date.now() + this.deadlineMs),
+        },
+      ),
     );
-    const reservation = response.reservation;
+    const reservation = response?.reservation;
     if (
       response === undefined ||
       reservation === undefined ||
@@ -73,7 +81,10 @@ export class EventGrpcCapacityAdapter
       throw new Error('EVENT_CAPACITY_RESERVATION_INVALID_RESPONSE');
     }
     const expiresAt = new Date(reservation.expiresAt);
-    if (!Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
+    if (
+      !Number.isFinite(expiresAt.getTime()) ||
+      expiresAt.getTime() <= Date.now()
+    ) {
       throw new Error('EVENT_CAPACITY_RESERVATION_INVALID_EXPIRY');
     }
     return {

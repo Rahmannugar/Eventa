@@ -55,6 +55,22 @@ services:
       - event-database-data:/var/lib/postgresql/data
     logging: *local-logging
 
+  commerce-database:
+    image: postgres:17-alpine
+    env_file:
+      - ./services/commerce-service/.env
+    ports:
+      - '58432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - commerce-database-data:/var/lib/postgresql/data
+    logging: *local-logging
+
   notification-database:
     image: postgres:17-alpine
     env_file:
@@ -293,6 +309,52 @@ services:
     restart: unless-stopped
     logging: *local-logging
 
+  commerce-migration:
+    build:
+      context: .
+      dockerfile: services/commerce-service/Dockerfile
+    image: eventa-commerce-service:local
+    command: ['node', 'dist/database/migrate.js']
+    env_file:
+      - ./services/commerce-service/.env
+    depends_on:
+      commerce-database:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+    logging: *local-logging
+
+  commerce-service:
+    build:
+      context: .
+      dockerfile: services/commerce-service/Dockerfile
+    image: eventa-commerce-service:local
+    env_file:
+      - ./services/commerce-service/.env
+    ports:
+      - '3008:3008'
+      - '50053:50053'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/"$${HEALTH_PORT}";
+          printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3;
+          IFS=" " read -r _ status _ <&3;
+          [ "$$status" = 200 ]'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+    depends_on:
+      commerce-migration:
+        condition: service_completed_successfully
+      event-service:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
   notification-migration:
     build:
       context: .
@@ -356,6 +418,8 @@ services:
       retries: 3
       start_period: 5m
     depends_on:
+      commerce-service:
+        condition: service_healthy
       event-service:
         condition: service_healthy
       identity-service:
@@ -451,6 +515,7 @@ services:
     logging: *local-logging
 
 volumes:
+  commerce-database-data:
   event-bus-data:
   event-kafka-cdc-data:
   event-rabbitmq-cdc-data:

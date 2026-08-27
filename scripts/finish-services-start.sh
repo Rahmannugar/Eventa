@@ -2,7 +2,7 @@
 
 set -eu
 
-startup_services='identity-migration event-migration notification-migration event-bus-init'
+startup_services='identity-migration event-migration commerce-migration notification-migration event-bus-init'
 startup_containers=''
 startup_failed=false
 

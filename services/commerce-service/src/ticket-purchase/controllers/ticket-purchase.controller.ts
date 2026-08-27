@@ -77,7 +77,10 @@ export class TicketPurchaseController implements CommerceServiceController {
   }
 
   private translateStartError(error: unknown): never {
-    if (error instanceof Error && error.message === 'Order idempotency conflict') {
+    if (
+      error instanceof Error &&
+      error.message === 'Order idempotency conflict'
+    ) {
       throw new RpcException({
         code: status.ALREADY_EXISTS,
         message: 'COMMERCE_ORDER_IDEMPOTENCY_CONFLICT',
@@ -97,6 +100,7 @@ export class TicketPurchaseController implements CommerceServiceController {
     return {
       attendeeId: order.attendeeId,
       createdAt: order.createdAt.toISOString(),
+      currency: order.currency ?? undefined,
       eventId: order.eventId,
       orderId: order.orderId,
       quantity: order.requestedQuantity,

@@ -262,6 +262,9 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
       drizzle-kit:
         specifier: ^0.31.8
         version: 0.31.10

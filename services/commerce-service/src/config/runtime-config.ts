@@ -19,7 +19,7 @@ export function readDatabaseUrl(environment: NodeJS.ProcessEnv): string {
 
 export function readRuntimeConfig(environment: NodeJS.ProcessEnv): RuntimeConfig {
   const eventGrpcUrl = readRequiredString(environment, 'EVENT_GRPC_URL');
-  if (!/^[^s:/]+:d+$/.test(eventGrpcUrl)) {
+  if (!/^[^\s:/]+:\d+$/.test(eventGrpcUrl)) {
     throw new Error('EVENT_GRPC_URL must use the host:port format');
   }
   const eventGrpcDeadlineMs = Number(
