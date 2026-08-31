@@ -35,8 +35,14 @@ message CommerceOrder {
   string updated_at = 11;
 }
 
+message PaymentConfirmation {
+  string payment_id = 1;
+  string client_secret = 2;
+}
+
 message StartTicketPurchaseResponse {
   CommerceOrder order = 1;
+  PaymentConfirmation payment = 2;
 }
 
 message GetCommerceOrderRequest {

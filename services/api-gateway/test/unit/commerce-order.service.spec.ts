@@ -24,6 +24,10 @@ const order: CommerceOrder = {
   reservationExpiresAt: '2026-08-26T10:10:00.000Z',
   updatedAt: '2026-08-26T10:01:00.000Z',
 };
+const payment = {
+  clientSecret: 'pi_checkout_secret_confirmation',
+  paymentId: '25cb26ef-73fa-4e59-85fc-11d67d0205f3',
+};
 
 function createService(
   client: Partial<DeadlineAwareCommerceClient>,
@@ -46,7 +50,7 @@ describe('CommerceOrderService', () => {
       expect(request).toMatchObject({ attendeeId, quantity: 2 });
       metadata = received;
       expect(options.deadline.getTime()).toBeGreaterThan(Date.now());
-      return of({ order });
+      return of({ order, payment });
     };
     const result = await createService({
       startTicketPurchase: start,
@@ -61,6 +65,7 @@ describe('CommerceOrderService', () => {
       'checkout-request',
     );
     expect(result.status).toBe('pending_payment');
+    expect(result.payment).toEqual(payment);
     expect(metadata?.get('x-request-id')).toEqual(['checkout-request']);
   });
 
@@ -96,6 +101,29 @@ describe('CommerceOrderService', () => {
     ).rejects.toMatchObject({
       status: 503,
       response: { code: 'COMMERCE_ORDER_RESPONSE_INVALID' },
+    });
+  });
+
+  it('rejects a malformed payment confirmation', async () => {
+    const service = createService({
+      startTicketPurchase: () =>
+        of({ order, payment: { ...payment, clientSecret: '' } }),
+    });
+
+    await expect(
+      service.start(
+        {
+          eventId: order.eventId,
+          ticketTypeId: order.ticketTypeId,
+          idempotencyKey: order.orderId,
+          quantity: 2,
+        },
+        attendeeId,
+        'checkout-request',
+      ),
+    ).rejects.toMatchObject({
+      status: 503,
+      response: { code: 'COMMERCE_PAYMENT_RESPONSE_INVALID' },
     });
   });
 });

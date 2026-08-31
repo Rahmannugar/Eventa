@@ -53,7 +53,7 @@ export class TicketPurchaseController implements CommerceServiceController {
     requestId: string,
   ): Promise<StartTicketPurchaseResponse> {
     try {
-      const order = await this.purchases.start({
+      const result = await this.purchases.start({
         attendeeId: request.attendeeId,
         eventId: request.eventId,
         idempotencyKey: request.idempotencyKey,
@@ -61,7 +61,13 @@ export class TicketPurchaseController implements CommerceServiceController {
         requestId,
         ticketTypeId: request.ticketTypeId,
       });
-      return { order: this.toContract(order) };
+      return {
+        order: this.toContract(result.order),
+        payment: {
+          clientSecret: result.payment.clientSecret,
+          paymentId: result.payment.paymentId,
+        },
+      };
     } catch (error: unknown) {
       this.translateStartError(error);
     }
@@ -94,6 +100,27 @@ export class TicketPurchaseController implements CommerceServiceController {
       throw new RpcException({
         code: status.ALREADY_EXISTS,
         message: 'COMMERCE_ORDER_IDEMPOTENCY_CONFLICT',
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      (error.message === 'ORDER_RESERVATION_EXPIRED' ||
+        error.message === 'PAYMENT_AMOUNT_NOT_PAYABLE' ||
+        error.message === 'PAYMENT_PROVIDER_REJECTED')
+    ) {
+      throw new RpcException({
+        code: status.FAILED_PRECONDITION,
+        message: 'COMMERCE_PAYMENT_NOT_AVAILABLE',
+      });
+    }
+    if (
+      error instanceof Error &&
+      error.message === 'PAYMENT_PROVIDER_UNAVAILABLE'
+    ) {
+      throw new RpcException({
+        code: status.UNAVAILABLE,
+        message: 'COMMERCE_PAYMENT_PROVIDER_UNAVAILABLE',
       });
     }
 

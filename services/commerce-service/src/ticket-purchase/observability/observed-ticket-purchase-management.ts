@@ -1,20 +1,22 @@
 import { recordBusinessOutcome } from '@eventa/observability';
 import { status } from '@grpc/grpc-js';
 
-import type { CommerceOrderRecord } from '../../orders/types/order.types';
 import type {
   StartTicketPurchaseCommand,
+  StartTicketPurchaseResult,
   TicketPurchaseManagement,
 } from '../types/ticket-purchase.types';
 
 export class ObservedTicketPurchaseManagement implements TicketPurchaseManagement {
   constructor(private readonly purchases: TicketPurchaseManagement) {}
 
-  async start(input: StartTicketPurchaseCommand): Promise<CommerceOrderRecord> {
+  async start(
+    input: StartTicketPurchaseCommand,
+  ): Promise<StartTicketPurchaseResult> {
     try {
-      const order = await this.purchases.start(input);
-      this.record('ready_for_payment');
-      return order;
+      const result = await this.purchases.start(input);
+      this.record('payment_confirmation_ready');
+      return result;
     } catch (error: unknown) {
       this.record(this.failure(error));
       throw error;
@@ -34,6 +36,18 @@ export class ObservedTicketPurchaseManagement implements TicketPurchaseManagemen
       }
       if (error.message === 'ORDER_TOTAL_OUT_OF_RANGE') {
         return 'total_out_of_range';
+      }
+      if (error.message === 'ORDER_RESERVATION_EXPIRED') {
+        return 'reservation_expired';
+      }
+      if (error.message === 'PAYMENT_PROVIDER_UNAVAILABLE') {
+        return 'payment_provider_unavailable';
+      }
+      if (error.message === 'PAYMENT_PROVIDER_REJECTED') {
+        return 'payment_provider_rejected';
+      }
+      if (error.message === 'PAYMENT_PROVIDER_RESPONSE_INVALID') {
+        return 'payment_provider_response_invalid';
       }
     }
 

@@ -2,7 +2,7 @@
 
 Gateway owns checkout HTTP validation, attendee authentication, origin enforcement, abuse controls, request correlation, gRPC translation, response validation, and stable public errors. Commerce Service owns orders, idempotency, the immutable quote, purchase state, and coordination with Event capacity.
 
-Checkout start derives attendee identity from the authenticated session and forwards only that identity, event ID, ticket-type ID, quantity, idempotency key, and request ID. The Commerce call has an absolute deadline shorter than the Gateway request budget. Gateway does not calculate price, availability, capacity, or order state.
+Checkout start derives attendee identity from the authenticated session and forwards only that identity, event ID, ticket-type ID, quantity, idempotency key, and request ID. The Commerce call has an absolute deadline shorter than the Gateway request budget. Gateway does not calculate price, availability, capacity, payment amount, or order state. It validates Commerce's order and payment-confirmation shapes before returning them.
 
 Order reads forward the authenticated attendee ID with the order ID. Commerce enforces ownership at its boundary. Gateway also verifies that the returned attendee and order shape match the request before exposing the response.
 

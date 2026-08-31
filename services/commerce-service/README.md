@@ -1,10 +1,10 @@
 # Commerce Service
 
-Commerce Service owns attendee orders and immutable ticket snapshots. Its ticket-purchase workflow acquires temporary capacity from Event Service before an order can proceed to payment.
+Commerce Service owns attendee orders, immutable ticket snapshots, and Stripe payment attempts. Its ticket-purchase workflow acquires temporary capacity from Event Service before preparing client payment confirmation.
 
 ## Local setup
 
-Create `.env` from `.env.example`. Commerce requires its PostgreSQL database and a reachable Event Service gRPC endpoint. Docker Compose runs the database migration before starting the service.
+Create `.env` from `.env.example`. Commerce requires its PostgreSQL database, a reachable Event Service gRPC endpoint, and a Stripe secret key. Use a Stripe test-mode key for local development. The configured Stripe request timeout and retry count remain inside the Gateway's outer request budget. Docker Compose runs the database migration before starting the service.
 
 The service exposes:
 

@@ -10,6 +10,7 @@ export {
   type CommerceOrder,
   type GetCommerceOrderRequest,
   type GetCommerceOrderResponse,
+  type PaymentConfirmation,
   type StartTicketPurchaseRequest,
   type StartTicketPurchaseResponse,
 } from '../../generated/eventa/commerce/v1/commerce.generated';

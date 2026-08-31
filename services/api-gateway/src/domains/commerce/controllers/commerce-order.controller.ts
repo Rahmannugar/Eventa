@@ -15,6 +15,7 @@ import type { AttendeeAuthenticatedRequest } from '../../attendees/types/authent
 import {
   CheckoutOrderDto,
   CheckoutOrderPathDto,
+  CheckoutStartDto,
   StartCheckoutDto,
 } from '../dto/commerce-order.dto';
 import { CommerceOrderRateLimitGuard } from '../rate-limit/commerce-order-rate-limit';
@@ -31,12 +32,12 @@ export class CommerceOrderController {
     CommerceOrderRateLimitGuard,
     AttendeeAuthenticationGuard,
   )
-  @ApiOkResponse({ type: CheckoutOrderDto })
+  @ApiOkResponse({ type: CheckoutStartDto })
   start(
     @Body() body: StartCheckoutDto,
     @Req() request: AttendeeAuthenticatedRequest,
     @RequestId() requestId: string,
-  ): Promise<CheckoutOrderDto> {
+  ): Promise<CheckoutStartDto> {
     return this.orders.start(
       body,
       request.attendeeSession.attendeeId,

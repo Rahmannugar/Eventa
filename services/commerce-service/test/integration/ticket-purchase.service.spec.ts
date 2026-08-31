@@ -13,6 +13,11 @@ import {
   commerceOrders,
 } from '../../src/orders/schema/order.schema';
 import { TicketPurchaseService } from '../../src/ticket-purchase/services/ticket-purchase.service';
+import { paymentAttempts } from '../../src/payments/schema/payment-attempt.schema';
+import type {
+  PaymentConfirmation,
+  PaymentManagement,
+} from '../../src/payments/types/payment-attempt.types';
 import type {
   EventCapacityPort,
   EventCapacityQuote,
@@ -104,6 +109,23 @@ class RecordingCapacityPort implements EventCapacityPort {
   }
 }
 
+class RecordingPaymentManagement implements PaymentManagement {
+  private readonly confirmations = new Map<string, PaymentConfirmation>();
+
+  prepare(
+    input: Parameters<PaymentManagement['prepare']>[0],
+  ): Promise<PaymentConfirmation> {
+    const existing = this.confirmations.get(input.orderId);
+    if (existing !== undefined) return Promise.resolve(existing);
+    const confirmation = {
+      clientSecret: `secret-for-${input.orderId}`,
+      paymentId: randomUUID(),
+    };
+    this.confirmations.set(input.orderId, confirmation);
+    return Promise.resolve(confirmation);
+  }
+}
+
 async function persistedCounts(): Promise<{ items: number; orders: number }> {
   const [itemCount] = await database
     .select({ value: count() })
@@ -126,6 +148,7 @@ describe('TicketPurchaseService integration', () => {
   });
 
   beforeEach(async () => {
+    await database.delete(paymentAttempts);
     await database.delete(commerceOrderItems);
     await database.delete(commerceOrders);
   });
@@ -136,19 +159,27 @@ describe('TicketPurchaseService integration', () => {
 
   it('returns the same order for an exact retry', async () => {
     const capacity = new RecordingCapacityPort();
-    const purchases = new TicketPurchaseService(repository, capacity);
+    const purchases = new TicketPurchaseService(
+      repository,
+      capacity,
+      new RecordingPaymentManagement(),
+    );
 
     const first = await purchases.start(purchaseInput);
     const retried = await purchases.start(purchaseInput);
 
     expect(retried).toEqual(first);
-    expect(capacity.reservationIds).toEqual([first.orderId]);
+    expect(capacity.reservationIds).toEqual([first.order.orderId]);
     await expect(persistedCounts()).resolves.toEqual({ items: 1, orders: 1 });
   });
 
   it('rejects conflicting reuse of an attendee idempotency key', async () => {
     const capacity = new RecordingCapacityPort();
-    const purchases = new TicketPurchaseService(repository, capacity);
+    const purchases = new TicketPurchaseService(
+      repository,
+      capacity,
+      new RecordingPaymentManagement(),
+    );
     await purchases.start(purchaseInput);
 
     await expect(
@@ -207,7 +238,11 @@ describe('TicketPurchaseService integration', () => {
 
   it('retries the same order after a capacity timeout', async () => {
     const capacity = new RecordingCapacityPort(1);
-    const purchases = new TicketPurchaseService(repository, capacity);
+    const purchases = new TicketPurchaseService(
+      repository,
+      capacity,
+      new RecordingPaymentManagement(),
+    );
 
     await expect(purchases.start(purchaseInput)).rejects.toThrow(
       'EVENT_CAPACITY_DEADLINE_EXCEEDED',
@@ -217,8 +252,10 @@ describe('TicketPurchaseService integration', () => {
 
     const recovered = await purchases.start(purchaseInput);
     expect(recovered).toMatchObject({
-      orderId: pending?.id,
-      status: 'pending_payment',
+      order: {
+        orderId: pending?.id,
+        status: 'pending_payment',
+      },
     });
     expect(capacity.reservationIds).toEqual([pending?.id, pending?.id]);
     await expect(persistedCounts()).resolves.toEqual({ items: 1, orders: 1 });
@@ -226,19 +263,23 @@ describe('TicketPurchaseService integration', () => {
 
   it('creates one order and item for concurrent exact requests', async () => {
     const capacity = new RecordingCapacityPort();
-    const purchases = new TicketPurchaseService(repository, capacity);
+    const purchases = new TicketPurchaseService(
+      repository,
+      capacity,
+      new RecordingPaymentManagement(),
+    );
 
     const results = await Promise.all([
       purchases.start(purchaseInput),
       purchases.start(purchaseInput),
     ]);
 
-    expect(results[1]?.orderId).toBe(results[0]?.orderId);
-    expect(results.every((result) => result.status === 'pending_payment')).toBe(
-      true,
-    );
+    expect(results[1]?.order.orderId).toBe(results[0]?.order.orderId);
+    expect(
+      results.every((result) => result.order.status === 'pending_payment'),
+    ).toBe(true);
     expect(new Set(capacity.reservationIds)).toEqual(
-      new Set([results[0]?.orderId]),
+      new Set([results[0]?.order.orderId]),
     );
     await expect(persistedCounts()).resolves.toEqual({ items: 1, orders: 1 });
   });

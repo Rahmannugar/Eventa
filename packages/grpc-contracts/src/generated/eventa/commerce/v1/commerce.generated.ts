@@ -42,8 +42,14 @@ export interface CommerceOrder {
   updatedAt: string;
 }
 
+export interface PaymentConfirmation {
+  paymentId: string;
+  clientSecret: string;
+}
+
 export interface StartTicketPurchaseResponse {
   order: CommerceOrder | undefined;
+  payment: PaymentConfirmation | undefined;
 }
 
 export interface GetCommerceOrderRequest {

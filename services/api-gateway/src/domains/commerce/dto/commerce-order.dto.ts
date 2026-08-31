@@ -31,3 +31,13 @@ export class CheckoutOrderDto {
   @ApiProperty() createdAt!: string;
   @ApiProperty() updatedAt!: string;
 }
+
+export class CheckoutPaymentDto {
+  @ApiProperty() paymentId!: string;
+  @ApiProperty() clientSecret!: string;
+}
+
+export class CheckoutStartDto extends CheckoutOrderDto {
+  @ApiProperty({ type: CheckoutPaymentDto })
+  payment!: CheckoutPaymentDto;
+}

@@ -1,6 +1,7 @@
 import {
   CommerceOrderStatus,
   type CommerceOrder,
+  type PaymentConfirmation,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
 import {
@@ -18,6 +19,7 @@ import {
 } from '../constants/commerce.constants';
 import type {
   CheckoutOrderDto,
+  CheckoutStartDto,
   StartCheckoutDto,
 } from '../dto/commerce-order.dto';
 import type { DeadlineAwareCommerceClient } from '../types/commerce-grpc-client.types';
@@ -48,7 +50,7 @@ export class CommerceOrderService implements OnModuleInit {
     input: StartCheckoutDto,
     attendeeId: string,
     requestId: string,
-  ): Promise<CheckoutOrderDto> {
+  ): Promise<CheckoutStartDto> {
     try {
       const response = await firstValueFrom(
         this.require().startTicketPurchase(
@@ -57,7 +59,10 @@ export class CommerceOrderService implements OnModuleInit {
           this.options(),
         ),
       );
-      return this.toDto(response.order, attendeeId);
+      return {
+        ...this.toDto(response.order, attendeeId),
+        payment: this.toPaymentDto(response.payment),
+      };
     } catch (error: unknown) {
       this.translate(error);
     }
@@ -116,6 +121,24 @@ export class CommerceOrderService implements OnModuleInit {
         : { reservationExpiresAt: order.reservationExpiresAt }),
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+    };
+  }
+  private toPaymentDto(
+    payment: PaymentConfirmation | undefined,
+  ): CheckoutStartDto['payment'] {
+    if (
+      payment === undefined ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        payment.paymentId,
+      ) ||
+      payment.clientSecret.trim() === '' ||
+      payment.clientSecret.length > 512
+    ) {
+      throw this.unavailable('COMMERCE_PAYMENT_RESPONSE_INVALID');
+    }
+    return {
+      clientSecret: payment.clientSecret,
+      paymentId: payment.paymentId,
     };
   }
   private translate(error: unknown): never {
