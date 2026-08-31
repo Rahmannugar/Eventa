@@ -12,6 +12,7 @@ COPY packages/grpc-contracts/package.json packages/grpc-contracts/package.json
 COPY packages/messaging-contracts/package.json packages/messaging-contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY services/api-gateway/package.json services/api-gateway/package.json
+COPY services/commerce-service/package.json services/commerce-service/package.json
 COPY services/event-service/package.json services/event-service/package.json
 COPY services/identity-service/package.json services/identity-service/package.json
 COPY services/notification-service/package.json services/notification-service/package.json

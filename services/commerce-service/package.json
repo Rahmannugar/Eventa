@@ -6,7 +6,8 @@
     "build": "nest build",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "node dist/database/migrate.js",
-    "lint": "eslint src test drizzle.config.ts --max-warnings 0",
+    "lint": "eslint src test scripts drizzle.config.ts --max-warnings 0",
+    "performance:order-plans": "docker compose -f ../../compose.yaml up -d --wait commerce-database && dotenv -e .env -- node scripts/order-query-plans.mjs",
     "start": "node dist/main.js",
     "test:integration": "dotenv -e .env -- vitest run test/integration",
     "test:unit": "vitest run test/unit",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@eventa/grpc-contracts": "workspace:*",
+    "@eventa/observability": "workspace:*",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
     "@nestjs/microservices": "^11.1.28",

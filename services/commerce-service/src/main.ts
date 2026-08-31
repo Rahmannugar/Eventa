@@ -5,6 +5,7 @@ import {
   getCommerceProtoIncludeDirs,
   getCommerceProtoPaths,
 } from '@eventa/grpc-contracts';
+import { EventaLogger } from '@eventa/observability';
 import { status } from '@grpc/grpc-js';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -19,7 +20,9 @@ import { readRuntimeConfig } from './config/runtime-config';
 
 async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
-  const app = await NestFactory.create(AppModule.register(config));
+  const app = await NestFactory.create(AppModule.register(config), {
+    logger: new EventaLogger('eventa-commerce-service'),
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       exceptionFactory: () =>

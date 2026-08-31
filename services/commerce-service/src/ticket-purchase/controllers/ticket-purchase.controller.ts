@@ -9,7 +9,7 @@ import {
   type StartTicketPurchaseResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
-import { Controller } from '@nestjs/common';
+import { Controller, Inject } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { from, type Observable } from 'rxjs';
 
@@ -19,16 +19,26 @@ import {
   GetCommerceOrderDto,
   StartTicketPurchaseDto,
 } from '../dto/ticket-purchase.dto';
-import { TicketPurchaseService } from '../services/ticket-purchase.service';
+import { TICKET_PURCHASE_MANAGEMENT } from '../ticket-purchase.tokens';
+import type { TicketPurchaseManagement } from '../types/ticket-purchase.types';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+
+const START_ERROR_MESSAGES = new Map<number, string>([
+  [status.RESOURCE_EXHAUSTED, 'EVENT_TICKET_CAPACITY_UNAVAILABLE'],
+  [status.FAILED_PRECONDITION, 'EVENT_TICKET_CHECKOUT_UNAVAILABLE'],
+  [status.ALREADY_EXISTS, 'EVENT_CAPACITY_RESERVATION_CONFLICT'],
+  [status.DEADLINE_EXCEEDED, 'EVENT_CAPACITY_DEADLINE_EXCEEDED'],
+  [status.UNAVAILABLE, 'EVENT_CAPACITY_UNAVAILABLE'],
+]);
 
 @Controller()
 @CommerceServiceControllerMethods()
 export class TicketPurchaseController implements CommerceServiceController {
   constructor(
     private readonly orders: OrderRepository,
-    private readonly purchases: TicketPurchaseService,
+    @Inject(TICKET_PURCHASE_MANAGEMENT)
+    private readonly purchases: TicketPurchaseManagement,
   ) {}
 
   startTicketPurchase(
@@ -86,7 +96,24 @@ export class TicketPurchaseController implements CommerceServiceController {
         message: 'COMMERCE_ORDER_IDEMPOTENCY_CONFLICT',
       });
     }
-    throw error;
+
+    const code = this.readGrpcCode(error);
+    const message =
+      code === undefined ? undefined : START_ERROR_MESSAGES.get(code);
+    if (code !== undefined && message !== undefined) {
+      throw new RpcException({ code, message });
+    }
+
+    throw new RpcException({
+      code: status.INTERNAL,
+      message: 'COMMERCE_CHECKOUT_FAILED',
+    });
+  }
+
+  private readGrpcCode(error: unknown): number | undefined {
+    if (typeof error !== 'object' || error === null) return undefined;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'number' ? code : undefined;
   }
 
   private readRequestId(metadata?: Metadata): string {

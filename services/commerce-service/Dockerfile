@@ -31,6 +31,7 @@ FROM dependencies AS quality
 COPY . .
 
 RUN pnpm --filter @eventa/grpc-contracts build \
+  && pnpm --filter @eventa/observability build \
   && pnpm --filter @eventa/commerce-service lint \
   && pnpm --filter @eventa/commerce-service typecheck \
   && pnpm --filter @eventa/commerce-service test:unit \
@@ -60,4 +61,4 @@ EXPOSE 3008 50053
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + process.env.HEALTH_PORT + '/health/ready').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "--require", "./dist/instrumentation.js", "dist/main.js"]

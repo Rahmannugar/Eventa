@@ -5,23 +5,20 @@ import { OrderRepository } from '../../orders/repositories/order.repository';
 import type { CommerceOrderRecord } from '../../orders/types/order.types';
 import { EVENT_CAPACITY_PORT } from '../ticket-purchase.tokens';
 import type { EventCapacityPort } from '../types/event-capacity.port';
+import type {
+  StartTicketPurchaseCommand,
+  TicketPurchaseManagement,
+} from '../types/ticket-purchase.types';
 
 @Injectable()
-export class TicketPurchaseService {
+export class TicketPurchaseService implements TicketPurchaseManagement {
   constructor(
     private readonly orders: OrderRepository,
     @Inject(EVENT_CAPACITY_PORT)
     private readonly capacity: EventCapacityPort,
   ) {}
 
-  async start(input: {
-    attendeeId: string;
-    idempotencyKey: string;
-    eventId: string;
-    ticketTypeId: string;
-    quantity: number;
-    requestId: string;
-  }): Promise<CommerceOrderRecord> {
+  async start(input: StartTicketPurchaseCommand): Promise<CommerceOrderRecord> {
     const orderId = randomUUID();
     const order = await this.orders.createPending({
       ...input,

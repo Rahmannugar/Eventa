@@ -12,11 +12,17 @@ import {
 
 import type { RuntimeConfig } from '../config/runtime-config';
 import { OrdersModule } from '../orders/orders.module';
+import { OrderRepository } from '../orders/repositories/order.repository';
 import { EventGrpcCapacityAdapter } from './adapters/event-grpc-capacity.adapter';
+import { ObservedTicketPurchaseManagement } from './observability/observed-ticket-purchase-management';
 import { EVENT_GRPC_CLIENT } from './ticket-purchase.constants';
-import { EVENT_CAPACITY_PORT } from './ticket-purchase.tokens';
+import {
+  EVENT_CAPACITY_PORT,
+  TICKET_PURCHASE_MANAGEMENT,
+} from './ticket-purchase.tokens';
 import { TicketPurchaseService } from './services/ticket-purchase.service';
 import { TicketPurchaseController } from './controllers/ticket-purchase.controller';
+import type { EventCapacityPort } from './types/event-capacity.port';
 
 export function registerTicketPurchaseModule(config: RuntimeConfig) {
   return {
@@ -44,10 +50,17 @@ export function registerTicketPurchaseModule(config: RuntimeConfig) {
           new EventGrpcCapacityAdapter(client, config.eventGrpcDeadlineMs),
       },
       { provide: EVENT_CAPACITY_PORT, useExisting: EventGrpcCapacityAdapter },
-      TicketPurchaseService,
+      {
+        provide: TICKET_PURCHASE_MANAGEMENT,
+        inject: [OrderRepository, EVENT_CAPACITY_PORT],
+        useFactory: (orders: OrderRepository, capacity: EventCapacityPort) =>
+          new ObservedTicketPurchaseManagement(
+            new TicketPurchaseService(orders, capacity),
+          ),
+      },
     ],
     controllers: [TicketPurchaseController],
-    exports: [TicketPurchaseService],
+    exports: [TICKET_PURCHASE_MANAGEMENT],
   };
 }
 
