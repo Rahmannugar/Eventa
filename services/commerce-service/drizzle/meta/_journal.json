@@ -15,6 +15,13 @@
       "when": 1788141859133,
       "tag": "0001_create_payment_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788158220455,
+      "tag": "0002_reconcile_stripe_payments",
+      "breakpoints": true
     }
   ]
 }

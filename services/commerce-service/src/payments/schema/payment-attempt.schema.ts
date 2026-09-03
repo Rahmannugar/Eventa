@@ -5,6 +5,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   timestamp,
   uniqueIndex,
   uuid,
@@ -12,10 +13,14 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { commerceOrders } from '../../orders/schema/order.schema';
+import type {
+  PaymentAttemptStatus,
+} from '../types/payment-attempt.types';
 
-export const paymentAttemptStatus = pgEnum('payment_attempt_status', [
-  'provider_pending',
-  'awaiting_confirmation',
+export const providerEventStatus = pgEnum('provider_event_status', [
+  'received',
+  'processed',
+  'ignored',
 ]);
 
 export const paymentAttempts = pgTable(
@@ -28,7 +33,8 @@ export const paymentAttempts = pgTable(
     attendeeId: uuid('attendee_id').notNull(),
     amountMinor: integer('amount_minor').notNull(),
     currency: varchar('currency', { length: 3 }).notNull(),
-    status: paymentAttemptStatus('status')
+    status: varchar('status', { length: 32 })
+      .$type<PaymentAttemptStatus>()
       .default('provider_pending')
       .notNull(),
     provider: varchar('provider', { length: 20 }).default('stripe').notNull(),
@@ -39,6 +45,26 @@ export const paymentAttempts = pgTable(
       length: 255,
     }),
     providerStatus: varchar('provider_status', { length: 40 }),
+    lastProviderEventId: varchar('last_provider_event_id', { length: 255 }),
+    lastProviderEventCreatedAt: timestamp('last_provider_event_created_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    reconcileAfter: timestamp('reconcile_after', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    reconciliationClaimedUntil: timestamp('reconciliation_claimed_until', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    reconciliationFailures: integer('reconciliation_failures')
+      .default(0)
+      .notNull(),
+    lastReconciledAt: timestamp('last_reconciled_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', {
       mode: 'date',
       withTimezone: true,
@@ -65,6 +91,9 @@ export const paymentAttempts = pgTable(
       table.createdAt,
       table.id,
     ),
+    index('payment_attempts_reconciliation_index')
+      .on(table.reconcileAfter, table.id)
+      .where(sql.raw("status NOT IN ('succeeded', 'canceled')")),
     check('payment_attempts_amount_positive', sql.raw('amount_minor > 0')),
     check(
       'payment_attempts_currency_shape',
@@ -72,9 +101,67 @@ export const paymentAttempts = pgTable(
     ),
     check('payment_attempts_provider_shape', sql.raw("provider = 'stripe'")),
     check(
+      'payment_attempts_status_shape',
+      sql.raw(
+        "status IN ('provider_pending', 'awaiting_confirmation', 'requires_action', 'processing', 'failed', 'succeeded', 'canceled')",
+      ),
+    ),
+    check(
+      'payment_attempts_reconciliation_failures_nonnegative',
+      sql.raw('reconciliation_failures >= 0'),
+    ),
+    check(
       'payment_attempts_resolution_shape',
       sql.raw(
-        "(status = 'provider_pending' AND provider_payment_intent_id IS NULL AND provider_status IS NULL) OR (status = 'awaiting_confirmation' AND provider_payment_intent_id IS NOT NULL AND provider_status IS NOT NULL)",
+        "(status = 'provider_pending' AND provider_payment_intent_id IS NULL AND provider_status IS NULL AND reconcile_after IS NOT NULL) OR (status IN ('succeeded', 'canceled') AND provider_payment_intent_id IS NOT NULL AND provider_status IS NOT NULL AND reconcile_after IS NULL) OR (status NOT IN ('provider_pending', 'succeeded', 'canceled') AND provider_payment_intent_id IS NOT NULL AND provider_status IS NOT NULL AND reconcile_after IS NOT NULL)",
+      ),
+    ),
+  ],
+);
+
+export const paymentProviderEvents = pgTable(
+  'payment_provider_events',
+  {
+    provider: varchar('provider', { length: 20 }).default('stripe').notNull(),
+    providerEventId: varchar('provider_event_id', { length: 255 }).notNull(),
+    eventType: varchar('event_type', { length: 80 }).notNull(),
+    providerObjectId: varchar('provider_object_id', { length: 255 }).notNull(),
+    paymentId: uuid('payment_id').references(() => paymentAttempts.id, {
+      onDelete: 'cascade',
+    }),
+    status: providerEventStatus('status').default('received').notNull(),
+    providerCreatedAt: timestamp('provider_created_at', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    receivedAt: timestamp('received_at', {
+      mode: 'date',
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+    processedAt: timestamp('processed_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.provider, table.providerEventId],
+      name: 'payment_provider_events_primary',
+    }),
+    index('payment_provider_events_payment_index').on(
+      table.paymentId,
+      table.providerCreatedAt,
+    ),
+    check(
+      'payment_provider_events_provider_shape',
+      sql.raw("provider = 'stripe'"),
+    ),
+    check(
+      'payment_provider_events_status_shape',
+      sql.raw(
+        "(status = 'received' AND processed_at IS NULL) OR (status IN ('processed', 'ignored') AND processed_at IS NOT NULL)",
       ),
     ),
   ],

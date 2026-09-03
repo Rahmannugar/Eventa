@@ -1,15 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
-  PaymentAttemptRepository,
   PaymentConfirmation,
   PaymentManagement,
+  PaymentPreparationRepository,
   PreparePaymentCommand,
 } from '../types/payment-attempt.types';
 import type {
   PaymentProviderPort,
   ProviderPaymentIntent,
 } from '../types/payment-provider.port';
+import { PAYMENT_RECONCILIATION_INTERVAL_MS } from '../payment-reconciliation.constants';
 
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 const PAYMENT_INTENT_PATTERN = /^pi_[A-Za-z0-9_]+$/;
@@ -25,7 +26,7 @@ const PROVIDER_STATUSES = new Set([
 
 export class PaymentAttemptService implements PaymentManagement {
   constructor(
-    private readonly attempts: PaymentAttemptRepository,
+    private readonly attempts: PaymentPreparationRepository,
     private readonly provider: PaymentProviderPort,
   ) {}
 
@@ -38,10 +39,14 @@ export class PaymentAttemptService implements PaymentManagement {
     }
 
     const paymentId = randomUUID();
+    const now = new Date();
     const attempt = await this.attempts.createPending({
       ...input,
       paymentId,
       providerIdempotencyKey: `eventa-payment:${paymentId}`,
+      reconcileAfter: new Date(
+        now.getTime() + PAYMENT_RECONCILIATION_INTERVAL_MS,
+      ),
     });
     const intent =
       attempt.providerPaymentIntentId === null
@@ -67,7 +72,7 @@ export class PaymentAttemptService implements PaymentManagement {
   }
 
   private validateIntent(
-    attempt: Awaited<ReturnType<PaymentAttemptRepository['createPending']>>,
+    attempt: Awaited<ReturnType<PaymentPreparationRepository['createPending']>>,
     intent: ProviderPaymentIntent,
   ): string {
     if (

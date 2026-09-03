@@ -8,4 +8,14 @@ One database row exists per order. Provider idempotency and PaymentIntent identi
 
 We do not hold a database transaction across Stripe calls. An ambiguous response leaves a provider-pending record whose stable idempotency key makes the retry safe. A stored PaymentIntent is retrieved and revalidated on later checkout retries.
 
-Provider creation and retrieval do not change the Order to paid. Signed webhook handling and scheduled reconciliation own authoritative provider transitions.
+Provider creation and retrieval during checkout do not change the Order to paid. Signed webhook handling and scheduled reconciliation own authoritative provider transitions.
+
+Commerce preserves raw request bytes only long enough for the Stripe adapter to verify the endpoint signature. Payment then stores one bounded provider-event record keyed by Stripe event ID. It retains no arbitrary webhook payload, client secret, provider error text, or submitted payment details. A received record remains retryable until its Payment update or deliberate unrelated-event result commits.
+
+The webhook path retrieves the PaymentIntent's current state after recording the delivery. It validates the provider identity, immutable money snapshot, and Eventa metadata before binding or updating a Payment. Event timestamps prevent older deliveries from replacing newer observations, terminal states do not regress, and distinct Stripe events for the same object remain harmless because Payment transitions are idempotent.
+
+The local states distinguish `awaiting_confirmation`, `requires_action`, `processing`, `failed`, `succeeded`, and `canceled`. Stripe's `requires_payment_method` maps to `failed` only when the PaymentIntent has a last payment error; otherwise it remains confirmation-ready. This preserves retryable card failure without treating it as irreversible cancellation.
+
+Reconciliation claims a bounded due batch with expiring PostgreSQL leases and `SKIP LOCKED`. Stripe calls happen after the claim transaction closes. A provider-pending row without a PaymentIntent ID safely replays creation with its original Stripe idempotency key; resolved rows retrieve their recorded intent. Successful observations clear retry state and schedule another check only for non-terminal Payments. Provider failures increment durable retry state and use bounded exponential backoff. A second service instance can reclaim an expired lease after process failure.
+
+Webhook and reconciliation state stays inside Payment. Capacity finalization, release, Order transitions, and compensating refunds belong to the ticket-purchase workflow.

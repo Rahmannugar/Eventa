@@ -8,6 +8,7 @@ export interface RuntimeConfig {
   stripeMaxNetworkRetries: number;
   stripeSecretKey: string;
   stripeTimeoutMs: number;
+  stripeWebhookSecret: string;
 }
 
 function readRequiredString(
@@ -85,5 +86,9 @@ export function readRuntimeConfig(
     stripeMaxNetworkRetries,
     stripeSecretKey: readRequiredString(environment, 'STRIPE_SECRET_KEY'),
     stripeTimeoutMs,
+    stripeWebhookSecret: readRequiredString(
+      environment,
+      'STRIPE_WEBHOOK_SECRET',
+    ),
   };
 }

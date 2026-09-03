@@ -22,6 +22,7 @@ async function bootstrap(): Promise<void> {
   const config = readRuntimeConfig(process.env);
   const app = await NestFactory.create(AppModule.register(config), {
     logger: new EventaLogger('eventa-commerce-service'),
+    rawBody: true,
   });
   app.useGlobalPipes(
     new ValidationPipe({

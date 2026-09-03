@@ -4,13 +4,16 @@ Commerce Service owns attendee orders, immutable ticket snapshots, and Stripe pa
 
 ## Local setup
 
-Create `.env` from `.env.example`. Commerce requires its PostgreSQL database, a reachable Event Service gRPC endpoint, and a Stripe secret key. Use a Stripe test-mode key for local development. The configured Stripe request timeout and retry count remain inside the Gateway's outer request budget. Docker Compose runs the database migration before starting the service.
+Create `.env` from `.env.example`. Commerce requires its PostgreSQL database, a reachable Event Service gRPC endpoint, a Stripe secret key, and the signing secret for its Stripe webhook endpoint. Use test-mode Stripe values for local development. A Stripe CLI signing secret and a Dashboard-managed endpoint signing secret are different values; use the secret issued for the endpoint that sends the request. The configured Stripe request timeout and retry count remain inside the Gateway's outer request budget. Docker Compose runs the database migration before starting the service.
 
 The service exposes:
 
 - gRPC on port `50053`;
+- Stripe webhooks at `http://localhost:3008/webhooks/stripe`;
 - liveness at `http://localhost:3008/health/live`;
 - database-backed readiness at `http://localhost:3008/health/ready`.
+
+Configure the Stripe endpoint to send only `payment_intent.created`, `payment_intent.requires_action`, `payment_intent.processing`, `payment_intent.payment_failed`, `payment_intent.succeeded`, and `payment_intent.canceled`. A tunnel forwards its public HTTPS URL to Commerce port `3008`; the webhook does not pass through the API Gateway.
 
 ## Commands
 

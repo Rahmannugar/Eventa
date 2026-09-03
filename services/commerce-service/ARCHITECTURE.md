@@ -16,6 +16,18 @@ Stripe receives the amount in minor units, lowercase currency, and Eventa order 
 
 The synchronous Stripe response is not a payment outcome. The Order remains `pending_payment` until a signed webhook or reconciliation establishes authoritative provider state.
 
+## Provider truth and reconciliation
+
+Stripe calls Commerce directly over HTTP. Nest preserves the raw request bytes, and the Stripe adapter verifies them with the endpoint signing secret before Payment accepts an event. Payment stores the bounded event identity, type, PaymentIntent ID, provider timestamp, processing state, and associated Eventa payment. It never stores the webhook payload. The provider event ID is the delivery deduplication key; repeated or concurrently delivered events converge through the same locked event row.
+
+After durable receipt, Payment retrieves the current PaymentIntent instead of treating an event snapshot as the latest state. It validates the amount, currency, PaymentIntent identity, and Eventa order/payment metadata. The provider-event result and Payment transition commit in one transaction. A `payment_intent.created` event can bind a provider-pending Payment after a lost create response. Older deliveries and concurrent observations cannot move a terminal Payment backward.
+
+Payment distinguishes waiting for confirmation, required attendee action, provider processing, a failed confirmation attempt, success, and cancellation. A failed confirmation is not cancellation: Stripe can return the same PaymentIntent to `requires_payment_method` for another attempt.
+
+A bounded in-process worker claims due non-terminal Payments with expiring PostgreSQL leases and `SKIP LOCKED`. It retrieves current PaymentIntent state outside the database transaction, then applies the same validation and state mapping. A provider-pending Payment without a stored PaymentIntent ID replays creation with its original durable Stripe idempotency key, which recovers an ambiguous create response without creating another intent. Multiple Commerce instances divide work safely. Provider failures release the claim and schedule bounded exponential backoff. Webhooks remain the primary path; reconciliation recovers missed or delayed delivery.
+
+This boundary records provider truth only. The ticket-purchase workflow applies Order and Event-capacity consequences in its later coordination step.
+
 ## Retry and recovery
 
 The local order write and remote capacity reservation are deliberately not treated as one transaction. A timeout or rejection leaves the durable order in `pending_reservation`. Retrying the same attendee idempotency key resolves the same order and therefore sends the same Event reservation ID. Event reservation is idempotent, and Commerce row locking plus the one-item-per-order constraint makes repeated or concurrent local completion converge on one snapshot.
