@@ -14,6 +14,7 @@ import type { RuntimeConfig } from '../config/runtime-config';
 import { OrdersModule } from '../orders/orders.module';
 import { OrderRepository } from '../orders/repositories/order.repository';
 import { registerPaymentsModule } from '../payments/payments.module';
+import { PaymentAttemptRepository } from '../payments/repositories/payment-attempt.repository';
 import { PAYMENT_MANAGEMENT } from '../payments/payments.tokens';
 import type { PaymentManagement } from '../payments/types/payment-attempt.types';
 import { EventGrpcCapacityAdapter } from './adapters/event-grpc-capacity.adapter';
@@ -24,6 +25,7 @@ import {
   TICKET_PURCHASE_MANAGEMENT,
 } from './ticket-purchase.tokens';
 import { TicketPurchaseService } from './services/ticket-purchase.service';
+import { TicketPurchaseCompletionService } from './services/ticket-purchase-completion.service';
 import { TicketPurchaseController } from './controllers/ticket-purchase.controller';
 import type { EventCapacityPort } from './types/event-capacity.port';
 
@@ -54,6 +56,15 @@ export function registerTicketPurchaseModule(config: RuntimeConfig) {
           new EventGrpcCapacityAdapter(client, config.eventGrpcDeadlineMs),
       },
       { provide: EVENT_CAPACITY_PORT, useExisting: EventGrpcCapacityAdapter },
+      {
+        provide: TicketPurchaseCompletionService,
+        inject: [OrderRepository, EVENT_CAPACITY_PORT, PaymentAttemptRepository],
+        useFactory: (
+          orders: OrderRepository,
+          capacity: EventCapacityPort,
+          outcomes: PaymentAttemptRepository,
+        ) => new TicketPurchaseCompletionService(outcomes, orders, capacity),
+      },
       {
         provide: TICKET_PURCHASE_MANAGEMENT,
         inject: [OrderRepository, EVENT_CAPACITY_PORT, PAYMENT_MANAGEMENT],

@@ -11,6 +11,8 @@ import { EVENT_GRPC_CLIENT } from '../ticket-purchase.constants';
 import type {
   EventCapacityPort,
   EventCapacityQuote,
+  EventCapacityTransitionCommand,
+  EventCapacityTransitionResult,
 } from '../types/event-capacity.port';
 
 @Injectable()
@@ -97,6 +99,75 @@ export class EventGrpcCapacityAdapter
       ticketName: reservation.ticketName,
       ticketTypeId: input.ticketTypeId,
       unitPriceMinor: reservation.unitPriceMinor,
+    };
+  }
+
+  finalize(
+    input: EventCapacityTransitionCommand,
+  ): Promise<EventCapacityTransitionResult> {
+    return this.transition(input, 'finalizeEventCapacityReservation', 'finalized');
+  }
+
+  release(
+    input: EventCapacityTransitionCommand,
+  ): Promise<EventCapacityTransitionResult> {
+    return this.transition(input, 'releaseEventCapacityReservation', 'released');
+  }
+
+  private async transition(
+    input: EventCapacityTransitionCommand,
+    method: 'finalizeEventCapacityReservation' | 'releaseEventCapacityReservation',
+    requestedStatus: 'finalized' | 'released',
+  ): Promise<EventCapacityTransitionResult> {
+    const metadata = new Metadata();
+    metadata.set('x-request-id', input.requestId);
+    const transition = this.client[method].bind(this.client) as unknown as (
+      request: { reservationId: string; eventId: string; ticketTypeId: string },
+      metadata: Metadata,
+      options: { deadline: Date },
+    ) => ReturnType<EventServiceClient[typeof method]>;
+    const response = await firstValueFrom(
+      transition(
+        {
+          eventId: input.eventId,
+          reservationId: input.reservationId,
+          ticketTypeId: input.ticketTypeId,
+        },
+        metadata,
+        { deadline: new Date(Date.now() + this.deadlineMs) },
+      ),
+    );
+    const reservation = response?.reservation;
+    if (
+      response === undefined ||
+      reservation === undefined ||
+      reservation.reservationId !== input.reservationId ||
+      reservation.eventId !== input.eventId ||
+      reservation.ticketTypeId !== input.ticketTypeId ||
+      !Number.isSafeInteger(reservation.quantity) ||
+      reservation.quantity < 1
+    ) {
+      throw new Error('EVENT_CAPACITY_TRANSITION_INVALID_RESPONSE');
+    }
+    const status =
+      reservation.status ===
+      EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED
+        ? 'expired'
+        : reservation.status ===
+            (requestedStatus === 'finalized'
+              ? EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_FINALIZED
+              : EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_RELEASED)
+          ? requestedStatus
+          : undefined;
+    if (status === undefined) {
+      throw new Error('EVENT_CAPACITY_TRANSITION_INVALID_RESPONSE');
+    }
+    return {
+      eventId: input.eventId,
+      quantity: reservation.quantity,
+      reservationId: input.reservationId,
+      status,
+      ticketTypeId: input.ticketTypeId,
     };
   }
 }

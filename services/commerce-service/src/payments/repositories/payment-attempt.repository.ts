@@ -15,6 +15,7 @@ import { COMMERCE_DATABASE } from '../../database/database.constants';
 import type { CommerceDatabase } from '../../database/database.types';
 import {
   paymentAttempts,
+  paymentWorkflowOutcomes,
   paymentProviderEvents,
 } from '../schema/payment-attempt.schema';
 import type {
@@ -23,7 +24,9 @@ import type {
   PaymentAttemptRepository as PaymentAttemptRepositoryContract,
   ProviderEventApplication,
   ProviderEventRegistration,
+  PaymentWorkflowOutcomeRecord,
 } from '../types/payment-attempt.types';
+import type { PaymentWorkflowOutcomeKind } from '../types/payment-attempt.types';
 import type { ProviderPaymentIntent } from '../types/payment-provider.port';
 
 const PAYMENT_COLUMNS = {
@@ -253,6 +256,17 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
           })
           .where(eq(paymentAttempts.id, attempt.paymentId));
       }
+      const effectiveStatus = terminal ? attempt.status : input.status;
+      if (!eventIsOlder && (effectiveStatus === 'succeeded' || effectiveStatus === 'canceled')) {
+        await transaction
+          .insert(paymentWorkflowOutcomes)
+          .values({
+            kind: effectiveStatus === 'succeeded' ? 'payment_succeeded' : 'payment_canceled',
+            orderId: attempt.orderId,
+            paymentId: attempt.paymentId,
+          })
+          .onConflictDoNothing();
+      }
       await transaction
         .update(paymentProviderEvents)
         .set({
@@ -340,6 +354,16 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
         .where(eq(paymentAttempts.id, input.paymentId))
         .returning(PAYMENT_COLUMNS);
       if (updated === undefined) throw new Error('Payment attempt disappeared');
+      if (input.status === 'succeeded' || input.status === 'canceled') {
+        await transaction
+          .insert(paymentWorkflowOutcomes)
+          .values({
+            kind: input.status === 'succeeded' ? 'payment_succeeded' : 'payment_canceled',
+            orderId: updated.orderId,
+            paymentId: updated.paymentId,
+          })
+          .onConflictDoNothing();
+      }
       return this.toRecord(updated);
     });
   }
@@ -359,6 +383,82 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
         updatedAt: input.now,
       })
       .where(eq(paymentAttempts.id, input.paymentId));
+  }
+
+  async claimWorkflowOutcomes(input: {
+    now: Date;
+    claimedUntil: Date;
+    limit: number;
+  }): Promise<PaymentWorkflowOutcomeRecord[]> {
+    return this.database.transaction(async (transaction) => {
+      const rows = await transaction
+        .select({
+          paymentId: paymentWorkflowOutcomes.paymentId,
+          orderId: paymentWorkflowOutcomes.orderId,
+          kind: paymentWorkflowOutcomes.kind,
+          failures: paymentWorkflowOutcomes.failures,
+        })
+        .from(paymentWorkflowOutcomes)
+        .where(
+          and(
+            isNull(paymentWorkflowOutcomes.processedAt),
+            lte(paymentWorkflowOutcomes.availableAt, input.now),
+            or(
+              isNull(paymentWorkflowOutcomes.claimedUntil),
+              lt(paymentWorkflowOutcomes.claimedUntil, input.now),
+            ),
+          ),
+        )
+        .orderBy(paymentWorkflowOutcomes.availableAt, paymentWorkflowOutcomes.paymentId)
+        .limit(input.limit)
+        .for('update', { skipLocked: true });
+      if (rows.length === 0) return [];
+      await transaction
+        .update(paymentWorkflowOutcomes)
+        .set({ claimedUntil: input.claimedUntil })
+        .where(
+          inArray(
+            paymentWorkflowOutcomes.paymentId,
+            rows.map((row) => row.paymentId),
+          ),
+        );
+      return rows;
+    });
+  }
+
+  async completeWorkflowOutcome(input: {
+    paymentId: string;
+    kind: PaymentWorkflowOutcomeKind;
+  }): Promise<void> {
+    await this.database
+      .update(paymentWorkflowOutcomes)
+      .set({ claimedUntil: null, processedAt: new Date() })
+      .where(
+        and(
+          eq(paymentWorkflowOutcomes.paymentId, input.paymentId),
+          eq(paymentWorkflowOutcomes.kind, input.kind),
+        ),
+      );
+  }
+
+  async retryWorkflowOutcome(input: {
+    paymentId: string;
+    kind: PaymentWorkflowOutcomeKind;
+    availableAt: Date;
+  }): Promise<void> {
+    await this.database
+      .update(paymentWorkflowOutcomes)
+      .set({
+        availableAt: input.availableAt,
+        claimedUntil: null,
+        failures: sql`${paymentWorkflowOutcomes.failures} + 1`,
+      })
+      .where(
+        and(
+          eq(paymentWorkflowOutcomes.paymentId, input.paymentId),
+          eq(paymentWorkflowOutcomes.kind, input.kind),
+        ),
+      );
   }
 
   private assertIntentMatches(

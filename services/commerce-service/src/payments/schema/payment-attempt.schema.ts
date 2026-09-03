@@ -15,6 +15,7 @@ import {
 import { commerceOrders } from '../../orders/schema/order.schema';
 import type {
   PaymentAttemptStatus,
+  PaymentWorkflowOutcomeKind,
 } from '../types/payment-attempt.types';
 
 export const providerEventStatus = pgEnum('provider_event_status', [
@@ -116,6 +117,39 @@ export const paymentAttempts = pgTable(
         "(status = 'provider_pending' AND provider_payment_intent_id IS NULL AND provider_status IS NULL AND reconcile_after IS NOT NULL) OR (status IN ('succeeded', 'canceled') AND provider_payment_intent_id IS NOT NULL AND provider_status IS NOT NULL AND reconcile_after IS NULL) OR (status NOT IN ('provider_pending', 'succeeded', 'canceled') AND provider_payment_intent_id IS NOT NULL AND provider_status IS NOT NULL AND reconcile_after IS NOT NULL)",
       ),
     ),
+  ],
+);
+
+export const paymentWorkflowOutcomes = pgTable(
+  'payment_workflow_outcomes',
+  {
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => paymentAttempts.id, { onDelete: 'restrict' }),
+    kind: varchar('kind', { length: 32 })
+      .$type<PaymentWorkflowOutcomeKind>()
+      .notNull(),
+    orderId: uuid('order_id').notNull(),
+    availableAt: timestamp('available_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    claimedUntil: timestamp('claimed_until', { mode: 'date', withTimezone: true }),
+    failures: integer('failures').default(0).notNull(),
+    processedAt: timestamp('processed_at', { mode: 'date', withTimezone: true }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.paymentId, table.kind] }),
+    index('payment_workflow_outcomes_claim_index')
+      .on(table.availableAt, table.paymentId, table.kind)
+      .where(sql.raw('processed_at IS NULL')),
+    check(
+      'payment_workflow_outcomes_kind_shape',
+      sql.raw("kind IN ('payment_succeeded', 'payment_canceled')"),
+    ),
+    check('payment_workflow_outcomes_failures_nonnegative', sql.raw('failures >= 0')),
   ],
 );
 

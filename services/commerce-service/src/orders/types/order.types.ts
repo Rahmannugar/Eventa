@@ -44,4 +44,6 @@ export interface CommerceOrderRepository {
     totalMinor: number;
     reservationExpiresAt: Date;
   }): Promise<CommerceOrderRecord>;
+  markPaid(orderId: string): Promise<CommerceOrderRecord>;
+  markFailed(input: { orderId: string; failureCode: string }): Promise<CommerceOrderRecord>;
 }

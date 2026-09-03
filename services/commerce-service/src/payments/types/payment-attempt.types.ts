@@ -9,6 +9,8 @@ export type PaymentAttemptStatus =
   | 'succeeded'
   | 'canceled';
 
+export type PaymentWorkflowOutcomeKind = 'payment_succeeded' | 'payment_canceled';
+
 export interface PaymentAttemptRecord {
   paymentId: string;
   orderId: string;
@@ -72,6 +74,20 @@ export interface PaymentAttemptRepository {
     now: Date;
     reconcileAfter: Date;
   }): Promise<void>;
+  claimWorkflowOutcomes(input: {
+    now: Date;
+    claimedUntil: Date;
+    limit: number;
+  }): Promise<PaymentWorkflowOutcomeRecord[]>;
+  completeWorkflowOutcome(input: {
+    paymentId: string;
+    kind: PaymentWorkflowOutcomeKind;
+  }): Promise<void>;
+  retryWorkflowOutcome(input: {
+    paymentId: string;
+    kind: PaymentWorkflowOutcomeKind;
+    availableAt: Date;
+  }): Promise<void>;
 }
 
 export type PaymentPreparationRepository = Pick<
@@ -90,6 +106,18 @@ export type PaymentReconciliationRepository = Pick<
   | 'applyReconciliation'
   | 'recordReconciliationFailure'
 >;
+
+export type PaymentWorkflowRepository = Pick<
+  PaymentAttemptRepository,
+  'claimWorkflowOutcomes' | 'completeWorkflowOutcome' | 'retryWorkflowOutcome'
+>;
+
+export interface PaymentWorkflowOutcomeRecord {
+  paymentId: string;
+  orderId: string;
+  kind: PaymentWorkflowOutcomeKind;
+  failures: number;
+}
 
 
 export interface ProviderEventRegistration {

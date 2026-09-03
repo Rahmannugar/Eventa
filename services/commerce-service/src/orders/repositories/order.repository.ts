@@ -128,4 +128,46 @@ export class OrderRepository implements CommerceOrderRepository {
       return updated;
     });
   }
+
+  markPaid(orderId: string): Promise<CommerceOrderRecord> {
+    return this.transition(orderId, 'paid');
+  }
+
+  markFailed(input: {
+    orderId: string;
+    failureCode: string;
+  }): Promise<CommerceOrderRecord> {
+    return this.transition(input.orderId, 'failed', input.failureCode);
+  }
+
+  private async transition(
+    orderId: string,
+    status: 'paid' | 'failed',
+    failureCode?: string,
+  ): Promise<CommerceOrderRecord> {
+    return this.database.transaction(async (transaction) => {
+      const [order] = await transaction
+        .select(ORDER_COLUMNS)
+        .from(commerceOrders)
+        .where(eq(commerceOrders.id, orderId))
+        .limit(1)
+        .for('update');
+      if (order === undefined) throw new Error('Order disappeared');
+      if (order.status === status) return order;
+      if (order.status !== 'pending_payment') {
+        throw new Error('ORDER_TRANSITION_CONFLICT');
+      }
+      const [updated] = await transaction
+        .update(commerceOrders)
+        .set({
+          failureCode: status === 'failed' ? failureCode : null,
+          status,
+          updatedAt: new Date(),
+        })
+        .where(eq(commerceOrders.id, orderId))
+        .returning(ORDER_COLUMNS);
+      if (updated === undefined) throw new Error('Order disappeared');
+      return updated;
+    });
+  }
 }

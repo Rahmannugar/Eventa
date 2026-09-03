@@ -19,4 +19,21 @@ export interface EventCapacityPort {
     quantity: number;
     requestId: string;
   }): Promise<EventCapacityQuote>;
+  finalize?(input: EventCapacityTransitionCommand): Promise<EventCapacityTransitionResult>;
+  release?(input: EventCapacityTransitionCommand): Promise<EventCapacityTransitionResult>;
+}
+
+export interface EventCapacityTransitionCommand {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  requestId: string;
+}
+
+export interface EventCapacityTransitionResult {
+  reservationId: string;
+  eventId: string;
+  ticketTypeId: string;
+  status: 'finalized' | 'released' | 'expired';
+  quantity: number;
 }
