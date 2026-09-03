@@ -23,6 +23,10 @@
     "./event/event-waitlist.events": {
       "types": "./dist/event/event-waitlist.events.d.ts",
       "default": "./dist/event/event-waitlist.events.js"
+    },
+    "./commerce/order-lifecycle.events": {
+      "types": "./dist/commerce/order-lifecycle.events.d.ts",
+      "default": "./dist/commerce/order-lifecycle.events.js"
     }
   },
   "typesVersions": {
@@ -41,6 +45,9 @@
       ],
       "event/event-waitlist.events": [
         "dist/event/event-waitlist.events.d.ts"
+      ],
+      "commerce/order-lifecycle.events": [
+        "dist/commerce/order-lifecycle.events.d.ts"
       ]
     }
   },
