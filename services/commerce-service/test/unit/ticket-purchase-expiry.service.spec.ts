@@ -15,6 +15,19 @@ const payment = {
 };
 
 describe('TicketPurchaseExpiryService', () => {
+  it('contains a failed expiry sweep', async () => {
+    const service = new TicketPurchaseExpiryService(
+      {
+        claimExpired: vi.fn().mockRejectedValue(new Error('DATABASE_UNAVAILABLE')),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.process()).resolves.toBe(0);
+  });
+
   it('leaves capacity untouched when the provider is already successful', async () => {
     const release = vi.fn();
     const service = new TicketPurchaseExpiryService(
@@ -28,14 +41,14 @@ describe('TicketPurchaseExpiryService', () => {
     expect(release).not.toHaveBeenCalled();
   });
 
-  it('cancels a non-terminal provider intent before releasing capacity', async () => {
+  it('cancels an incomplete payment before releasing capacity', async () => {
     const cancelIntent = vi.fn().mockResolvedValue({ status: 'canceled' });
     const release = vi.fn().mockResolvedValue({ status: 'released' });
     const markExpired = vi.fn().mockResolvedValue(undefined);
     const service = new TicketPurchaseExpiryService(
       { claimExpired: vi.fn().mockResolvedValue([order]), markExpired, releaseExpiryClaim: vi.fn() } as never,
       { findByOrderId: vi.fn().mockResolvedValue(payment) } as never,
-      { retrieveIntent: vi.fn().mockResolvedValue({ status: 'requires_action' }), cancelIntent } as never,
+      { retrieveIntent: vi.fn().mockResolvedValue({ status: 'requires_payment_method' }), cancelIntent } as never,
       { release } as never,
     );
 

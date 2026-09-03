@@ -502,6 +502,7 @@ services:
       - ./infrastructure/observability/dashboards/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
       - ./infrastructure/observability/dashboards/grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/eventa.yaml:ro
       - ./infrastructure/observability/dashboards/grafana/provisioning/dashboards/dashboards.yaml:/etc/grafana/provisioning/dashboards/eventa.yaml:ro
+      - ./infrastructure/observability/dashboards/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
       - ./infrastructure/observability/dashboards/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - observability-dashboard-data:/var/lib/grafana
     depends_on:

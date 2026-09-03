@@ -24,11 +24,18 @@ type ReserveCall = (
   options: { deadline: Date },
 ) => ReturnType<EventServiceClient['reserveEventCapacity']>;
 
-function createAdapter(
-  reserveEventCapacity: ReserveCall,
-): EventGrpcCapacityAdapter {
+type TransitionCall = (
+  request: unknown,
+  metadata: Metadata,
+  options: { deadline: Date },
+) => ReturnType<EventServiceClient['finalizeEventCapacityReservation']>;
+
+function createAdapter(service: {
+  reserveEventCapacity?: ReserveCall;
+  finalizeEventCapacityReservation?: TransitionCall;
+}): EventGrpcCapacityAdapter {
   const grpc = {
-    getService: () => ({ reserveEventCapacity }),
+    getService: () => service,
   } as unknown as ClientGrpc;
   const adapter = new EventGrpcCapacityAdapter(grpc, 2_000);
   adapter.onModuleInit();
@@ -58,14 +65,16 @@ describe('EventGrpcCapacityAdapter', () => {
     const startedAt = Date.now();
     let metadata: Metadata | undefined;
     let deadline: Date | undefined;
-    const adapter = createAdapter((request, received, options) => {
-      expect(request).toMatchObject({
-        attendeeId: input.attendeeId,
-        reservationId: input.reservationId,
-      });
-      metadata = received;
-      deadline = options.deadline;
-      return of({ reservation: reservation() });
+    const adapter = createAdapter({
+      reserveEventCapacity: (request, received, options) => {
+        expect(request).toMatchObject({
+          attendeeId: input.attendeeId,
+          reservationId: input.reservationId,
+        });
+        metadata = received;
+        deadline = options.deadline;
+        return of({ reservation: reservation() });
+      },
     });
 
     await expect(adapter.reserve(input)).resolves.toMatchObject({
@@ -79,17 +88,62 @@ describe('EventGrpcCapacityAdapter', () => {
   });
 
   it('rejects a reservation response that does not match the requested work', async () => {
-    const adapter = createAdapter(() =>
-      of({
-        reservation: {
-          ...reservation(),
-          attendeeId: 'another-attendee',
-        },
-      }),
-    );
+    const adapter = createAdapter({
+      reserveEventCapacity: () =>
+        of({
+          reservation: {
+            ...reservation(),
+            attendeeId: 'another-attendee',
+          },
+        }),
+    });
 
     await expect(adapter.reserve(input)).rejects.toThrow(
       'EVENT_CAPACITY_RESERVATION_INVALID_RESPONSE',
+    );
+  });
+
+  it('preserves expired finalization for compensation', async () => {
+    let metadata: Metadata | undefined;
+    const adapter = createAdapter({
+      finalizeEventCapacityReservation: (request, received) => {
+        expect(request).toMatchObject({
+          eventId: input.eventId,
+          reservationId: input.reservationId,
+          ticketTypeId: input.ticketTypeId,
+        });
+        metadata = received;
+        return of({
+          reservation: {
+            ...reservation(),
+            status:
+              EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_EXPIRED,
+          },
+        });
+      },
+    });
+
+    await expect(adapter.finalize(input)).resolves.toMatchObject({
+      reservationId: input.reservationId,
+      status: 'expired',
+    });
+    expect(metadata?.get('x-request-id')).toEqual([input.requestId]);
+  });
+
+  it('rejects a contradictory finalization response', async () => {
+    const adapter = createAdapter({
+      finalizeEventCapacityReservation: () =>
+        of({
+          reservation: {
+            ...reservation(),
+            status:
+              EventCapacityReservationStatus.EVENT_CAPACITY_RESERVATION_STATUS_RELEASED,
+          },
+        }),
+    });
+
+    await expect(adapter.finalize(input)).rejects.toThrow(
+      'EVENT_CAPACITY_TRANSITION_INVALID_RESPONSE',
     );
   });
 });

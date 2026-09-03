@@ -1,4 +1,5 @@
 import { Logger, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
+import { recordBusinessOutcome } from '@eventa/observability';
 import { randomUUID } from 'node:crypto';
 
 import type { OrderRepository } from '../../orders/repositories/order.repository';
@@ -14,6 +15,13 @@ const BATCH_SIZE = 25;
 const LEASE_MS = 120_000;
 const SWEEP_MS = 5_000;
 const RETRY_MS = 30_000;
+const ATTENTION_FAILURE_COUNT = 5;
+
+class PaymentRefundTerminalError extends Error {
+  constructor() {
+    super('PAYMENT_REFUND_FAILED');
+  }
+}
 
 export class TicketPurchaseCompletionService
   implements OnModuleInit, OnApplicationShutdown
@@ -51,6 +59,17 @@ export class TicketPurchaseCompletionService
       });
       for (const outcome of claimed) await this.processOutcome(outcome);
       return claimed.length;
+    } catch (error: unknown) {
+      recordBusinessOutcome({
+        operation: 'commerce.ticket_purchase_completion',
+        outcome: 'sweep_failed',
+      });
+      this.logger.error({
+        error_type: error instanceof Error ? error.name : 'UnknownError',
+        event: 'ticket_purchase_completion_sweep_failed',
+        operation: 'commerce.ticket_purchase.complete_due',
+      });
+      return 0;
     } finally {
       this.running = false;
     }
@@ -62,15 +81,18 @@ export class TicketPurchaseCompletionService
       if (order === undefined) throw new Error('ORDER_NOT_FOUND');
       if (outcome.kind === 'payment_succeeded' && order.status === 'refunded') {
         await this.outcomes.completeWorkflowOutcome(outcome);
+        this.recordOutcome('already_refunded');
         return;
       }
       if (outcome.kind === 'payment_canceled' && order.status !== 'pending_payment') {
         await this.outcomes.completeWorkflowOutcome(outcome);
+        this.recordOutcome('already_terminal');
         return;
       }
       if (outcome.kind === 'payment_succeeded' && order.status === 'refunding') {
         await this.refundLateSuccess(outcome);
         await this.outcomes.completeWorkflowOutcome(outcome);
+        this.recordOutcome('refunded');
         return;
       }
       let result: EventCapacityTransitionResult;
@@ -81,14 +103,8 @@ export class TicketPurchaseCompletionService
         ticketTypeId: order.ticketTypeId,
       };
       if (outcome.kind === 'payment_succeeded') {
-        if (this.capacity.finalize === undefined) {
-          throw new Error('EVENT_CAPACITY_TRANSITION_UNAVAILABLE');
-        }
         result = await this.capacity.finalize(command);
       } else {
-        if (this.capacity.release === undefined) {
-          throw new Error('EVENT_CAPACITY_TRANSITION_UNAVAILABLE');
-        }
         result = await this.capacity.release(command);
       }
       if (outcome.kind === 'payment_succeeded') {
@@ -96,6 +112,7 @@ export class TicketPurchaseCompletionService
           await this.orders.markRefunding(order.orderId);
           await this.refundLateSuccess(outcome);
           await this.outcomes.completeWorkflowOutcome(outcome);
+          this.recordOutcome('refunded');
           return;
         }
         await this.orders.markPaid(order.orderId);
@@ -106,20 +123,50 @@ export class TicketPurchaseCompletionService
         });
       }
       await this.outcomes.completeWorkflowOutcome(outcome);
+      this.recordOutcome(
+        outcome.kind === 'payment_succeeded' ? 'paid' : 'failed',
+      );
     } catch (error: unknown) {
+      if (error instanceof PaymentRefundTerminalError) {
+        await this.outcomes.completeWorkflowOutcome(outcome);
+        this.recordOutcome('refund_failed');
+        this.logger.error({
+          error_type: error.name,
+          event: 'ticket_purchase_refund_failed',
+          operation: 'commerce.ticket_purchase.refund',
+          order_id: outcome.orderId,
+          payment_id: outcome.paymentId,
+        });
+        return;
+      }
       await this.outcomes.retryWorkflowOutcome({
         availableAt: new Date(Date.now() + RETRY_MS),
         kind: outcome.kind,
         paymentId: outcome.paymentId,
       });
-      this.logger.warn({
+      const attentionRequired = outcome.failures + 1 >= ATTENTION_FAILURE_COUNT;
+      this.recordOutcome(
+        attentionRequired ? 'attention_required' : 'retry_scheduled',
+      );
+      const details = {
         error_type: error instanceof Error ? error.name : 'UnknownError',
-        event: 'ticket_purchase_completion_retry_scheduled',
+        event: attentionRequired
+          ? 'ticket_purchase_completion_attention_required'
+          : 'ticket_purchase_completion_retry_scheduled',
         operation: 'commerce.ticket_purchase.complete',
         order_id: outcome.orderId,
         payment_id: outcome.paymentId,
-      });
+      };
+      if (attentionRequired) this.logger.error(details);
+      else this.logger.warn(details);
     }
+  }
+
+  private recordOutcome(outcome: string): void {
+    recordBusinessOutcome({
+      operation: 'commerce.ticket_purchase_completion',
+      outcome,
+    });
   }
 
   private async refundLateSuccess(outcome: PaymentWorkflowOutcomeRecord): Promise<void> {
@@ -154,7 +201,16 @@ export class TicketPurchaseCompletionService
         refund = await this.outcomes.markRefundSubmitted(refund.refundId, providerRefund.refundId);
       }
       this.assertRefundMatchesPayment(providerRefund, payment);
-      if (providerRefund.status !== 'succeeded') throw new Error('PAYMENT_REFUND_NOT_SUCCEEDED');
+      if (
+        providerRefund.status === 'failed' ||
+        providerRefund.status === 'canceled'
+      ) {
+        await this.outcomes.markRefundFailed(refund.refundId);
+        throw new PaymentRefundTerminalError();
+      }
+      if (providerRefund.status !== 'succeeded') {
+        throw new Error('PAYMENT_REFUND_NOT_SUCCEEDED');
+      }
       await this.outcomes.markRefundSucceeded(refund.refundId, providerRefund.refundId);
       await this.orders.markRefunded(outcome.orderId);
     } catch (error: unknown) {

@@ -175,7 +175,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "description": "Authoritative checkout-start outcomes. Capacity and dependency rejections remain retryable; no terminal recovery alert exists in this slice.",
+      "description": "Checkout, provider update, reconciliation, completion, expiry, and compensation outcomes.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -202,14 +202,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=\"commerce.checkout_start\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=\"commerce.checkout_start\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=\"commerce.checkout_start\"} offset $__range))",
+          "expr": "sum by (operation, outcome) (increase(eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=~\"commerce\\.(checkout_start|payment_provider_event|payment_reconciliation|ticket_purchase_completion|ticket_purchase_expiry)\"}[$__range]) + (last_over_time(eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=~\"commerce\\.(checkout_start|payment_provider_event|payment_reconciliation|ticket_purchase_completion|ticket_purchase_expiry)\"}[$__range]) unless eventa_business_outcome_count_total{service_name=\"eventa-commerce-service\", operation=~\"commerce\\.(checkout_start|payment_provider_event|payment_reconciliation|ticket_purchase_completion|ticket_purchase_expiry)\"} offset $__range))",
           "instant": true,
-          "legendFormat": "{{outcome}}",
+          "legendFormat": "{{operation}} · {{outcome}}",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "Checkout-start outcomes",
+      "title": "Commerce workflow outcomes",
       "type": "stat"
     },
     {

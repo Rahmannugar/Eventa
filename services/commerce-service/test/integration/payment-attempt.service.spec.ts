@@ -16,6 +16,8 @@ import { PaymentAttemptRepository } from '../../src/payments/repositories/paymen
 import {
   paymentAttempts,
   paymentProviderEvents,
+  paymentRefunds,
+  paymentWorkflowOutcomes,
 } from '../../src/payments/schema/payment-attempt.schema';
 import { PaymentAttemptService } from '../../src/payments/services/payment-attempt.service';
 import { PaymentProviderEventService } from '../../src/payments/services/payment-provider-event.service';
@@ -162,6 +164,8 @@ describe('PaymentAttemptService integration', () => {
 
   beforeEach(async () => {
     await database.delete(paymentProviderEvents);
+    await database.delete(paymentRefunds);
+    await database.delete(paymentWorkflowOutcomes);
     await database.delete(paymentAttempts);
     await database.delete(commerceOrderItems);
     await database.delete(commerceOrders);
@@ -169,6 +173,8 @@ describe('PaymentAttemptService integration', () => {
 
   afterAll(async () => {
     await database.delete(paymentProviderEvents);
+    await database.delete(paymentRefunds);
+    await database.delete(paymentWorkflowOutcomes);
     await database.delete(paymentAttempts);
     await database.delete(commerceOrderItems);
     await database.delete(commerceOrders);

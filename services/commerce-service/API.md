@@ -16,10 +16,10 @@ The client secret is returned only through the authenticated checkout response. 
 
 `POST /webhooks/stripe` is a provider callback exposed directly by Commerce on its HTTP port. It requires the unmodified JSON request bytes and the `Stripe-Signature` header. A valid delivery returns `200` with `{ "received": true }`; a missing or invalid signature returns `400`. A verified event that cannot be durably processed returns a server error so Stripe can retry it.
 
-Commerce handles only `payment_intent.created`, `payment_intent.requires_action`, `payment_intent.processing`, `payment_intent.payment_failed`, `payment_intent.succeeded`, and `payment_intent.canceled`. Other correctly signed event types are acknowledged and ignored. The response never exposes Payment, Order, or provider details.
+Commerce handles only `payment_intent.created`, `payment_intent.requires_action`, `payment_intent.processing`, `payment_intent.payment_failed`, `payment_intent.succeeded`, and `payment_intent.canceled`. Other correctly signed event types are acknowledged and ignored. A terminal Payment outcome starts durable capacity completion or release. The response never exposes Payment, Order, or provider details.
 
 ## Get commerce order
 
 `GetCommerceOrder` accepts the authenticated attendee ID and order ID. It returns only an order owned by that attendee; a missing or differently owned order returns `NOT_FOUND`.
 
-The response contains order, attendee, event, and ticket-type identity; quantity and status; optional currency, total minor units, and reservation expiry; and creation and update times. It does not expose idempotency keys, internal failure details, or provider mechanics.
+The response contains order, attendee, event, and ticket-type identity; quantity and status; optional currency, total minor units, and reservation expiry; and creation and update times. Status can report payment pending, paid, failed, expired, refunding, or refunded outcomes. It does not expose idempotency keys, internal failure details, or provider mechanics.

@@ -1,0 +1,65 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Commerce payment workflow
+    folder: Eventa Operations
+    interval: 1m
+    rules:
+      - uid: commerce-payment-attention
+        title: Commerce payment workflow requires attention
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: sum(increase(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"}[30m]) + (last_over_time(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"}[30m]) unless eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"} offset 30m)) or vector(0)
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: C
+            queryType: expression
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        dashboardUid: eventa-commerce-service
+        panelId: 5
+        noDataState: OK
+        execErrState: Error
+        for: 1m
+        annotations:
+          __dashboardUid__: eventa-commerce-service
+          __panelId__: "5"
+          description: A Commerce payment workflow reached five consecutive failures or Stripe reported a terminal refund failure. Open the Commerce dashboard and correlate the safe order/payment IDs in error logs. Restore the Event, Stripe, or database dependency for retrying work; arrange an alternative customer reimbursement for refund_failed.
+          summary: Commerce payment workflow requires operator attention.
+        labels:
+          alert_scope: commerce_payment
+          service_name: eventa-commerce-service
+          severity: critical
+        isPaused: false

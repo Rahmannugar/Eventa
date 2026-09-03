@@ -32,12 +32,12 @@ The integration suite requires `TEST_DATABASE_URL` to name a database ending in 
 
 ### Performance
 
-Measure the idempotency lookup, order retrieval, pending-reservation recovery scan, and locked quote-transition lookup against representative PostgreSQL data.
+Measure checkout lookups, payment reconciliation, payment-outcome completion, expired-checkout claims, and refund retrieval against representative PostgreSQL data.
 
 ```bash
 pnpm --filter @eventa/commerce-service performance:order-plans
 ```
 
-The command starts Commerce PostgreSQL, applies test migrations, and creates 50,000 orders and 45,000 immutable order items inside a rollback-only transaction. It reports execution time, buffer use, plan nodes, and selected indexes without retaining generated records.
+The command starts Commerce PostgreSQL, applies test migrations, and creates 50,000 orders, 45,000 immutable order items, 45,000 payment attempts, and bounded workflow/refund records inside a rollback-only transaction. It reports execution time, buffer use, plan nodes, and selected indexes without retaining generated records.
 
 See [API.md](API.md) for the contract map and [ARCHITECTURE.md](ARCHITECTURE.md) for ownership, state, and recovery behavior.

@@ -8,4 +8,6 @@ The synchronous preparation capability never reports authoritative payment succe
 
 Payment also accepts signed Stripe PaymentIntent events at Commerce's direct webhook boundary. It acknowledges processed, duplicate, unrelated, and unsupported signed deliveries without exposing internal state. Invalid signatures are rejected. Verified deliveries that cannot reach durable processing fail so Stripe can retry them.
 
-Scheduled reconciliation retrieves due non-terminal PaymentIntents and applies their current provider state. Neither webhook handling nor reconciliation changes Order or Event capacity at this boundary.
+Scheduled reconciliation retrieves due non-terminal PaymentIntents and applies their current provider state. Webhook handling and reconciliation atomically append one internal workflow outcome when Payment becomes succeeded or canceled. The ticket-purchase workflow consumes that outcome to change Order and Event capacity; Payment does not access either repository.
+
+Payment owns one durable compensating refund per Payment. It creates or retrieves the Stripe refund with a stable idempotency key and validates the returned PaymentIntent, amount, and currency before recording success.

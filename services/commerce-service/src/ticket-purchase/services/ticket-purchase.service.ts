@@ -5,7 +5,7 @@ import { OrderRepository } from '../../orders/repositories/order.repository';
 import type { CommerceOrderRecord } from '../../orders/types/order.types';
 import type { PaymentManagement } from '../../payments/types/payment-attempt.types';
 import { EVENT_CAPACITY_PORT } from '../ticket-purchase.tokens';
-import type { EventCapacityPort } from '../types/event-capacity.port';
+import type { EventCapacityReservationPort } from '../types/event-capacity.port';
 import type {
   StartTicketPurchaseCommand,
   StartTicketPurchaseResult,
@@ -17,7 +17,7 @@ export class TicketPurchaseService implements TicketPurchaseManagement {
   constructor(
     private readonly orders: OrderRepository,
     @Inject(EVENT_CAPACITY_PORT)
-    private readonly capacity: EventCapacityPort,
+    private readonly capacity: EventCapacityReservationPort,
     private readonly payments: PaymentManagement,
   ) {}
 
@@ -30,9 +30,7 @@ export class TicketPurchaseService implements TicketPurchaseManagement {
       orderId,
     });
     let payableOrder: CommerceOrderRecord;
-    if (order.status === 'pending_payment') {
-      payableOrder = order;
-    } else {
+    if (order.status === 'pending_reservation') {
       const reservation = await this.capacity.reserve({
         attendeeId: input.attendeeId,
         eventId: input.eventId,
@@ -54,6 +52,8 @@ export class TicketPurchaseService implements TicketPurchaseManagement {
         totalMinor,
         unitPriceMinor: reservation.unitPriceMinor,
       });
+    } else {
+      payableOrder = order;
     }
 
     if (
@@ -63,7 +63,10 @@ export class TicketPurchaseService implements TicketPurchaseManagement {
     ) {
       throw new Error('ORDER_PAYMENT_QUOTE_INVALID');
     }
-    if (payableOrder.reservationExpiresAt.getTime() <= Date.now()) {
+    if (
+      payableOrder.status === 'pending_payment' &&
+      payableOrder.reservationExpiresAt.getTime() <= Date.now()
+    ) {
       throw new Error('ORDER_RESERVATION_EXPIRED');
     }
     const payment = await this.payments.prepare({

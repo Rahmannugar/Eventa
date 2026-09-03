@@ -13,7 +13,12 @@ import {
   commerceOrders,
 } from '../../src/orders/schema/order.schema';
 import { TicketPurchaseService } from '../../src/ticket-purchase/services/ticket-purchase.service';
-import { paymentAttempts } from '../../src/payments/schema/payment-attempt.schema';
+import {
+  paymentAttempts,
+  paymentProviderEvents,
+  paymentRefunds,
+  paymentWorkflowOutcomes,
+} from '../../src/payments/schema/payment-attempt.schema';
 import type {
   PaymentConfirmation,
   PaymentManagement,
@@ -82,7 +87,7 @@ const purchaseInput = {
   ticketTypeId: 'd0caa9fc-6f69-4118-ad7f-110d872da987',
 };
 
-class RecordingCapacityPort implements EventCapacityPort {
+class RecordingCapacityPort implements Pick<EventCapacityPort, 'reserve'> {
   readonly reservationIds: string[] = [];
 
   constructor(private failuresRemaining = 0) {}
@@ -148,12 +153,21 @@ describe('TicketPurchaseService integration', () => {
   });
 
   beforeEach(async () => {
+    await database.delete(paymentProviderEvents);
+    await database.delete(paymentRefunds);
+    await database.delete(paymentWorkflowOutcomes);
     await database.delete(paymentAttempts);
     await database.delete(commerceOrderItems);
     await database.delete(commerceOrders);
   });
 
   afterAll(async () => {
+    await database.delete(paymentProviderEvents);
+    await database.delete(paymentRefunds);
+    await database.delete(paymentWorkflowOutcomes);
+    await database.delete(paymentAttempts);
+    await database.delete(commerceOrderItems);
+    await database.delete(commerceOrders);
     await client.end();
   });
 
@@ -169,6 +183,26 @@ describe('TicketPurchaseService integration', () => {
     const retried = await purchases.start(purchaseInput);
 
     expect(retried).toEqual(first);
+    expect(capacity.reservationIds).toEqual([first.order.orderId]);
+    await expect(persistedCounts()).resolves.toEqual({ items: 1, orders: 1 });
+  });
+
+  it('returns a terminal order without reserving again', async () => {
+    const capacity = new RecordingCapacityPort();
+    const purchases = new TicketPurchaseService(
+      repository,
+      capacity,
+      new RecordingPaymentManagement(),
+    );
+
+    const first = await purchases.start(purchaseInput);
+    await repository.markPaid(first.order.orderId);
+    const retried = await purchases.start(purchaseInput);
+
+    expect(retried).toMatchObject({
+      order: { orderId: first.order.orderId, status: 'paid' },
+      payment: { paymentId: first.payment.paymentId },
+    });
     expect(capacity.reservationIds).toEqual([first.order.orderId]);
     await expect(persistedCounts()).resolves.toEqual({ items: 1, orders: 1 });
   });

@@ -647,7 +647,7 @@ describe('Event mutation integration', () => {
         reservationId: reservation.reservationId,
         ticketTypeId: ticket.ticketTypeId,
       }),
-    ).rejects.toMatchObject({ message: 'EVENT_CAPACITY_RESERVATION_EXPIRED' });
+    ).resolves.toMatchObject({ status: 'expired' });
     await expect(
       capacityReservationsRepository.expire(reservation.reservationId),
     ).resolves.toBe('unchanged');

@@ -77,11 +77,6 @@ export class EventCapacityReservationService implements EventCapacityReservation
         'EVENT_CAPACITY_RESERVATION_IDENTITY_CONFLICT',
       );
     }
-    if (result.outcome === 'expired') {
-      throw new EventCapacityReservationConflictError(
-        'EVENT_CAPACITY_RESERVATION_EXPIRED',
-      );
-    }
     if (result.outcome === 'terminal_conflict') {
       throw new EventCapacityReservationConflictError(
         'EVENT_CAPACITY_RESERVATION_ALREADY_RELEASED',

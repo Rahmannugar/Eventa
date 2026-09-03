@@ -19,9 +19,15 @@ export interface EventCapacityPort {
     quantity: number;
     requestId: string;
   }): Promise<EventCapacityQuote>;
-  finalize?(input: EventCapacityTransitionCommand): Promise<EventCapacityTransitionResult>;
-  release?(input: EventCapacityTransitionCommand): Promise<EventCapacityTransitionResult>;
+  finalize(
+    input: EventCapacityTransitionCommand,
+  ): Promise<EventCapacityTransitionResult<'finalized' | 'expired'>>;
+  release(
+    input: EventCapacityTransitionCommand,
+  ): Promise<EventCapacityTransitionResult<'released' | 'expired'>>;
 }
+
+export type EventCapacityReservationPort = Pick<EventCapacityPort, 'reserve'>;
 
 export interface EventCapacityTransitionCommand {
   reservationId: string;
@@ -30,10 +36,15 @@ export interface EventCapacityTransitionCommand {
   requestId: string;
 }
 
-export interface EventCapacityTransitionResult {
+export interface EventCapacityTransitionResult<
+  Status extends 'finalized' | 'released' | 'expired' =
+    | 'finalized'
+    | 'released'
+    | 'expired',
+> {
   reservationId: string;
   eventId: string;
   ticketTypeId: string;
-  status: 'finalized' | 'released' | 'expired';
+  status: Status;
   quantity: number;
 }

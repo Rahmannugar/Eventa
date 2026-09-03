@@ -104,16 +104,26 @@ export class EventGrpcCapacityAdapter
 
   finalize(
     input: EventCapacityTransitionCommand,
-  ): Promise<EventCapacityTransitionResult> {
+  ): Promise<EventCapacityTransitionResult<'finalized' | 'expired'>> {
     return this.transition(input, 'finalizeEventCapacityReservation', 'finalized');
   }
 
   release(
     input: EventCapacityTransitionCommand,
-  ): Promise<EventCapacityTransitionResult> {
+  ): Promise<EventCapacityTransitionResult<'released' | 'expired'>> {
     return this.transition(input, 'releaseEventCapacityReservation', 'released');
   }
 
+  private transition(
+    input: EventCapacityTransitionCommand,
+    method: 'finalizeEventCapacityReservation',
+    requestedStatus: 'finalized',
+  ): Promise<EventCapacityTransitionResult<'finalized' | 'expired'>>;
+  private transition(
+    input: EventCapacityTransitionCommand,
+    method: 'releaseEventCapacityReservation',
+    requestedStatus: 'released',
+  ): Promise<EventCapacityTransitionResult<'released' | 'expired'>>;
   private async transition(
     input: EventCapacityTransitionCommand,
     method: 'finalizeEventCapacityReservation' | 'releaseEventCapacityReservation',

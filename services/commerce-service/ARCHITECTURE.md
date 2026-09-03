@@ -26,7 +26,15 @@ Payment distinguishes waiting for confirmation, required attendee action, provid
 
 A bounded in-process worker claims due non-terminal Payments with expiring PostgreSQL leases and `SKIP LOCKED`. It retrieves current PaymentIntent state outside the database transaction, then applies the same validation and state mapping. A provider-pending Payment without a stored PaymentIntent ID replays creation with its original durable Stripe idempotency key, which recovers an ambiguous create response without creating another intent. Multiple Commerce instances divide work safely. Provider failures release the claim and schedule bounded exponential backoff. Webhooks remain the primary path; reconciliation recovers missed or delayed delivery.
 
-This boundary records provider truth only. The ticket-purchase workflow applies Order and Event-capacity consequences in its later coordination step.
+Terminal provider transitions append one deduplicated workflow outcome in the same Payment transaction. This durable handoff prevents a committed payment result from being separated from its required Order and capacity work.
+
+## Capacity completion and compensation
+
+A bounded worker leases terminal Payment outcomes with `SKIP LOCKED`. Successful payment finalizes the Event-owned reservation before Order becomes paid. Cancellation releases the reservation before Order becomes failed. Event commands are idempotent, and a failed dependency call clears the lease through a durable retry schedule, so a process crash between remote completion and the local transition is safe to replay.
+
+A separate expiry worker leases pending-payment orders whose reservation deadline has elapsed. It re-reads Stripe before touching capacity. An incomplete PaymentIntent is canceled before the Event reservation is released and Order becomes expired. If Stripe has already succeeded, expiry leaves capacity untouched for the terminal Payment workflow.
+
+If successful payment reaches an expired reservation, Order enters refunding and Payment creates or resumes one refund record. The Stripe refund uses a stable Payment-owned idempotency key. Commerce validates refund identity, amount, and currency before Order becomes refunded. A lost provider response reuses the same refund rather than charging compensation twice. A provider-declared failed or canceled refund remains durably failed with Order still refunding and emits an actionable operator failure; repeating the same terminal provider object cannot repair it.
 
 ## Retry and recovery
 
@@ -34,8 +42,10 @@ The local order write and remote capacity reservation are deliberately not treat
 
 Once an order reaches `pending_payment`, an exact checkout retry skips Event and creates or retrieves its Payment attempt. If the first Stripe response is lost, the attempt remains provider-pending and the retry reuses the same Stripe idempotency key. Concurrent calls may overlap at Stripe, but the shared key prevents duplicate PaymentIntents without holding a database transaction open across the provider call. Conflicting checkout idempotency reuse is rejected before new capacity work begins.
 
+Completion and expiry workers expose bounded outcome metrics for success, ordinary retry, and operator attention. Five consecutive failures promote the retry signal to an error while durable automatic retries continue. A terminal refund failure is an immediate error because Stripe requires an alternative reimbursement path.
+
 ## Persistence and lifecycle
 
 Drizzle migrations are the deployment authority. A one-shot migration container runs after Commerce PostgreSQL becomes healthy. The service starts only after migration succeeds and Event Service is healthy. Readiness queries Commerce PostgreSQL; liveness reports only process availability. The service closes its PostgreSQL client during graceful shutdown.
 
-The [Payment architecture](src/payments/ARCHITECTURE.md) describes the provider and persistence boundary in detail. Its [capability contract](src/payments/API.md) defines the inputs and confirmation result used by the ticket-purchase workflow.
+The [Payment architecture](src/payments/ARCHITECTURE.md) describes provider, workflow-outcome, reconciliation, and refund persistence. Its [capability contract](src/payments/API.md) defines the internal payment behavior used by the ticket-purchase workflow.

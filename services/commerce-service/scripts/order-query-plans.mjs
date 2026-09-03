@@ -113,6 +113,7 @@ try {
           END,
           CASE
             WHEN order_number % 10 = 0 THEN NULL
+            WHEN order_number % 20 = 1 THEN now() - interval '1 minute'
             ELSE now() + interval '10 minutes'
           END,
           now() - order_number * interval '1 second',
@@ -143,9 +144,82 @@ try {
       [seed],
     );
 
+    await transaction.unsafe(
+      `
+        INSERT INTO payment_attempts (
+          id, order_id, attendee_id, amount_minor, currency, status,
+          provider, provider_idempotency_key, provider_payment_intent_id,
+          provider_status, reconcile_after, created_at, updated_at
+        )
+        SELECT
+          md5($1 || ':payment:' || order_number)::uuid,
+          payable_orders.id,
+          payable_orders.attendee_id,
+          payable_orders.total_minor,
+          payable_orders.currency,
+          CASE
+            WHEN order_number % 20 = 1 THEN 'succeeded'
+            ELSE 'processing'
+          END,
+          'stripe',
+          'eventa-payment:' || md5($1 || ':payment:' || order_number),
+          'pi_' || md5($1 || ':payment:' || order_number),
+          CASE
+            WHEN order_number % 20 = 1 THEN 'succeeded'
+            ELSE 'processing'
+          END,
+          CASE
+            WHEN order_number % 20 = 1 THEN NULL
+            WHEN order_number % 4 = 0 THEN now() - interval '1 minute'
+            ELSE now() + interval '5 minutes'
+          END,
+          payable_orders.created_at,
+          payable_orders.updated_at
+        FROM generate_series(1, 50000) AS order_number
+        JOIN commerce_orders AS payable_orders
+          ON payable_orders.id = md5($1 || ':order:' || order_number)::uuid
+        WHERE payable_orders.status = 'pending_payment'
+      `,
+      [seed],
+    );
+
+    await transaction.unsafe(
+      `
+        INSERT INTO payment_workflow_outcomes (
+          payment_id, kind, order_id, available_at
+        )
+        SELECT id, 'payment_succeeded', order_id, now() - interval '1 minute'
+        FROM payment_attempts
+        WHERE status = 'succeeded'
+      `,
+    );
+
+    await transaction.unsafe(
+      `
+        INSERT INTO payment_refunds (
+          id, payment_id, order_id, amount_minor, currency,
+          status, provider_idempotency_key
+        )
+        SELECT
+          md5($1 || ':refund:' || payment_id)::uuid,
+          payment_id,
+          order_id,
+          5000,
+          'NGN',
+          'pending',
+          'stripe-refund:' || payment_id
+        FROM payment_workflow_outcomes
+        WHERE substring(payment_id::text, 1, 1) IN ('0', '1')
+      `,
+      [seed],
+    );
+
     await transaction.unsafe(`
       ANALYZE commerce_orders;
       ANALYZE commerce_order_items;
+      ANALYZE payment_attempts;
+      ANALYZE payment_workflow_outcomes;
+      ANALYZE payment_refunds;
     `);
 
     const selected = await transaction.unsafe(
@@ -213,6 +287,73 @@ try {
       [target.order_id],
     );
 
+    await explain(
+      transaction,
+      'payment reconciliation batch',
+      `
+        SELECT id, order_id, status
+        FROM payment_attempts
+        WHERE status NOT IN ('succeeded', 'canceled')
+          AND reconcile_after <= now()
+          AND (
+            reconciliation_claimed_until IS NULL
+            OR reconciliation_claimed_until < now()
+          )
+        ORDER BY reconcile_after, id
+        LIMIT 25
+        FOR UPDATE SKIP LOCKED
+      `,
+    );
+
+    await explain(
+      transaction,
+      'payment workflow outcome batch',
+      `
+        SELECT payment_id, order_id, kind, failures
+        FROM payment_workflow_outcomes
+        WHERE processed_at IS NULL
+          AND available_at <= now()
+          AND (claimed_until IS NULL OR claimed_until < now())
+        ORDER BY available_at, payment_id
+        LIMIT 25
+        FOR UPDATE SKIP LOCKED
+      `,
+    );
+
+    await explain(
+      transaction,
+      'expired checkout batch',
+      `
+        SELECT id, event_id, ticket_type_id
+        FROM commerce_orders
+        WHERE status = 'pending_payment'
+          AND reservation_expires_at <= now()
+          AND (expiry_claimed_until IS NULL OR expiry_claimed_until < now())
+        ORDER BY reservation_expires_at, id
+        LIMIT 25
+        FOR UPDATE SKIP LOCKED
+      `,
+    );
+
+    const refundTarget = await transaction.unsafe(
+      'SELECT payment_id FROM payment_refunds LIMIT 1',
+    );
+    if (refundTarget[0] === undefined) {
+      throw new Error('Representative refund is missing');
+    }
+    await explain(
+      transaction,
+      'refund by payment',
+      `
+        SELECT id, payment_id, order_id, amount_minor, currency, status,
+          provider_idempotency_key, provider_refund_id
+        FROM payment_refunds
+        WHERE payment_id = $1
+        LIMIT 1
+      `,
+      [refundTarget[0].payment_id],
+    );
+
     throw rollback;
   });
 } catch (error) {
@@ -228,6 +369,8 @@ console.log(
         orders: 50000,
         orderItems: 45000,
         pendingReservations: 5000,
+        paymentAttempts: 45000,
+        paymentWorkflowOutcomes: 2500,
       },
       plans: reports,
     },
