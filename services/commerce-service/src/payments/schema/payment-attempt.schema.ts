@@ -153,6 +153,29 @@ export const paymentWorkflowOutcomes = pgTable(
   ],
 );
 
+export const paymentRefunds = pgTable(
+  'payment_refunds',
+  {
+    id: uuid('id').primaryKey(),
+    paymentId: uuid('payment_id').notNull().references(() => paymentAttempts.id, { onDelete: 'restrict' }),
+    orderId: uuid('order_id').notNull(),
+    amountMinor: integer('amount_minor').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    status: varchar('status', { length: 24 }).notNull().default('pending'),
+    providerIdempotencyKey: varchar('provider_idempotency_key', { length: 255 }).notNull(),
+    providerRefundId: varchar('provider_refund_id', { length: 255 }),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('payment_refunds_payment_unique').on(table.paymentId),
+    uniqueIndex('payment_refunds_order_unique').on(table.orderId),
+    uniqueIndex('payment_refunds_provider_key_unique').on(table.providerIdempotencyKey),
+    check('payment_refunds_amount_positive', sql.raw('amount_minor > 0')),
+    check('payment_refunds_status_shape', sql.raw("status IN ('pending', 'succeeded', 'failed')")),
+  ],
+);
+
 export const paymentProviderEvents = pgTable(
   'payment_provider_events',
   {

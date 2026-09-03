@@ -19,6 +19,8 @@ export interface CommerceOrderRecord {
   totalMinor: number | null;
   reservationExpiresAt: Date | null;
   failureCode: string | null;
+  expiryClaimedUntil?: Date | null;
+  expiryFailures?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,4 +48,9 @@ export interface CommerceOrderRepository {
   }): Promise<CommerceOrderRecord>;
   markPaid(orderId: string): Promise<CommerceOrderRecord>;
   markFailed(input: { orderId: string; failureCode: string }): Promise<CommerceOrderRecord>;
+  markExpired(orderId: string): Promise<CommerceOrderRecord>;
+  markRefunding(orderId: string): Promise<CommerceOrderRecord>;
+  markRefunded(orderId: string): Promise<CommerceOrderRecord>;
+  claimExpired(input: { now: Date; claimedUntil: Date; limit: number }): Promise<CommerceOrderRecord[]>;
+  releaseExpiryClaim(input: { orderId: string; failed: boolean }): Promise<void>;
 }

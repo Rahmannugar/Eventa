@@ -84,7 +84,7 @@ export function registerPaymentsModule(config: RuntimeConfig): DynamicModule {
         ) => new PaymentReconciliationService(attempts, provider),
       },
     ],
-    exports: [PAYMENT_MANAGEMENT, PaymentAttemptRepository],
+    exports: [PAYMENT_MANAGEMENT, PAYMENT_PROVIDER_PORT, PaymentAttemptRepository],
   };
 }
 

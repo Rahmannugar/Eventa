@@ -88,6 +88,19 @@ export interface PaymentAttemptRepository {
     kind: PaymentWorkflowOutcomeKind;
     availableAt: Date;
   }): Promise<void>;
+  findByOrderId(orderId: string): Promise<PaymentAttemptRecord | undefined>;
+  createRefund(input: {
+    refundId: string;
+    paymentId: string;
+    orderId: string;
+    amountMinor: number;
+    currency: string;
+    providerIdempotencyKey: string;
+  }): Promise<PaymentRefundRecord>;
+  findRefundByPaymentId(paymentId: string): Promise<PaymentRefundRecord | undefined>;
+  markRefundFailed(refundId: string): Promise<PaymentRefundRecord>;
+  markRefundSubmitted(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord>;
+  markRefundSucceeded(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord>;
 }
 
 export type PaymentPreparationRepository = Pick<
@@ -117,6 +130,17 @@ export interface PaymentWorkflowOutcomeRecord {
   orderId: string;
   kind: PaymentWorkflowOutcomeKind;
   failures: number;
+}
+
+export interface PaymentRefundRecord {
+  refundId: string;
+  paymentId: string;
+  orderId: string;
+  amountMinor: number;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed';
+  providerIdempotencyKey: string;
+  providerRefundId: string | null;
 }
 
 

@@ -6,6 +6,7 @@ import type {
   PaymentWebhookVerifier,
   ProviderPaymentEvent,
   ProviderPaymentIntent,
+  ProviderRefund,
 } from '../types/payment-provider.port';
 
 const PAYMENT_INTENT_EVENTS = new Set([
@@ -102,6 +103,64 @@ export class StripePaymentProviderAdapter
       }
       throw new Error('PAYMENT_PROVIDER_UNAVAILABLE', { cause: error });
     }
+  }
+
+  async cancelIntent(paymentIntentId: string): Promise<ProviderPaymentIntent> {
+    try {
+      return this.toIntent(
+        await this.stripe.paymentIntents.cancel(paymentIntentId, {
+          cancellation_reason: 'abandoned',
+        }),
+      );
+    } catch (error: unknown) {
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new Error('PAYMENT_PROVIDER_REJECTED', { cause: error });
+      }
+      throw new Error('PAYMENT_PROVIDER_UNAVAILABLE', { cause: error });
+    }
+  }
+
+  async createRefund(input: { paymentIntentId: string; idempotencyKey: string }): Promise<ProviderRefund> {
+    try {
+      return this.toRefund(await this.stripe.refunds.create(
+        { payment_intent: input.paymentIntentId, reason: 'requested_by_customer' },
+        { idempotencyKey: input.idempotencyKey },
+      ));
+    } catch (error: unknown) {
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new Error('PAYMENT_PROVIDER_REJECTED', { cause: error });
+      }
+      if (error instanceof Error && error.message === 'PAYMENT_PROVIDER_RESPONSE_INVALID') throw error;
+      throw new Error('PAYMENT_PROVIDER_UNAVAILABLE', { cause: error });
+    }
+  }
+
+  async retrieveRefund(refundId: string): Promise<ProviderRefund> {
+    try {
+      return this.toRefund(await this.stripe.refunds.retrieve(refundId));
+    } catch (error: unknown) {
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        throw new Error('PAYMENT_PROVIDER_REJECTED', { cause: error });
+      }
+      if (error instanceof Error && error.message === 'PAYMENT_PROVIDER_RESPONSE_INVALID') throw error;
+      throw new Error('PAYMENT_PROVIDER_UNAVAILABLE', { cause: error });
+    }
+  }
+
+  private toRefund(refund: Stripe.Refund): ProviderRefund {
+    const paymentIntentId = typeof refund.payment_intent === 'string'
+      ? refund.payment_intent
+      : refund.payment_intent?.id;
+    if (paymentIntentId === undefined || refund.status === null) {
+      throw new Error('PAYMENT_PROVIDER_RESPONSE_INVALID');
+    }
+    return {
+      amountMinor: refund.amount,
+      currency: refund.currency.toUpperCase(),
+      paymentIntentId,
+      refundId: refund.id,
+      status: refund.status,
+    };
   }
 
   private toIntent(intent: Stripe.PaymentIntent): ProviderPaymentIntent {

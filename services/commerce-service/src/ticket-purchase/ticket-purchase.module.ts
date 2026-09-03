@@ -15,8 +15,9 @@ import { OrdersModule } from '../orders/orders.module';
 import { OrderRepository } from '../orders/repositories/order.repository';
 import { registerPaymentsModule } from '../payments/payments.module';
 import { PaymentAttemptRepository } from '../payments/repositories/payment-attempt.repository';
-import { PAYMENT_MANAGEMENT } from '../payments/payments.tokens';
+import { PAYMENT_MANAGEMENT, PAYMENT_PROVIDER_PORT } from '../payments/payments.tokens';
 import type { PaymentManagement } from '../payments/types/payment-attempt.types';
+import type { PaymentProviderPort } from '../payments/types/payment-provider.port';
 import { EventGrpcCapacityAdapter } from './adapters/event-grpc-capacity.adapter';
 import { ObservedTicketPurchaseManagement } from './observability/observed-ticket-purchase-management';
 import { EVENT_GRPC_CLIENT } from './ticket-purchase.constants';
@@ -26,6 +27,7 @@ import {
 } from './ticket-purchase.tokens';
 import { TicketPurchaseService } from './services/ticket-purchase.service';
 import { TicketPurchaseCompletionService } from './services/ticket-purchase-completion.service';
+import { TicketPurchaseExpiryService } from './services/ticket-purchase-expiry.service';
 import { TicketPurchaseController } from './controllers/ticket-purchase.controller';
 import type { EventCapacityPort } from './types/event-capacity.port';
 
@@ -58,12 +60,23 @@ export function registerTicketPurchaseModule(config: RuntimeConfig) {
       { provide: EVENT_CAPACITY_PORT, useExisting: EventGrpcCapacityAdapter },
       {
         provide: TicketPurchaseCompletionService,
-        inject: [OrderRepository, EVENT_CAPACITY_PORT, PaymentAttemptRepository],
+        inject: [OrderRepository, EVENT_CAPACITY_PORT, PaymentAttemptRepository, PAYMENT_PROVIDER_PORT],
         useFactory: (
           orders: OrderRepository,
           capacity: EventCapacityPort,
           outcomes: PaymentAttemptRepository,
-        ) => new TicketPurchaseCompletionService(outcomes, orders, capacity),
+          provider: PaymentProviderPort,
+        ) => new TicketPurchaseCompletionService(outcomes, orders, capacity, provider),
+      },
+      {
+        provide: TicketPurchaseExpiryService,
+        inject: [OrderRepository, PaymentAttemptRepository, PAYMENT_PROVIDER_PORT, EVENT_CAPACITY_PORT],
+        useFactory: (
+          orders: OrderRepository,
+          payments: PaymentAttemptRepository,
+          provider: PaymentProviderPort,
+          capacity: EventCapacityPort,
+        ) => new TicketPurchaseExpiryService(orders, payments, provider, capacity),
       },
       {
         provide: TICKET_PURCHASE_MANAGEMENT,

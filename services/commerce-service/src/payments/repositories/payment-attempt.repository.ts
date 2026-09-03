@@ -16,6 +16,7 @@ import type { CommerceDatabase } from '../../database/database.types';
 import {
   paymentAttempts,
   paymentWorkflowOutcomes,
+  paymentRefunds,
   paymentProviderEvents,
 } from '../schema/payment-attempt.schema';
 import type {
@@ -25,6 +26,7 @@ import type {
   ProviderEventApplication,
   ProviderEventRegistration,
   PaymentWorkflowOutcomeRecord,
+  PaymentRefundRecord,
 } from '../types/payment-attempt.types';
 import type { PaymentWorkflowOutcomeKind } from '../types/payment-attempt.types';
 import type { ProviderPaymentIntent } from '../types/payment-provider.port';
@@ -98,6 +100,58 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
       throw new Error('Payment order snapshot conflict');
     }
     return this.toRecord(existing);
+  }
+
+  async findByOrderId(orderId: string): Promise<PaymentAttemptRecord | undefined> {
+    const [attempt] = await this.database
+      .select(PAYMENT_COLUMNS)
+      .from(paymentAttempts)
+      .where(eq(paymentAttempts.orderId, orderId))
+      .limit(1);
+    return attempt === undefined ? undefined : this.toRecord(attempt);
+  }
+
+  async createRefund(input: {
+    refundId: string; paymentId: string; orderId: string; amountMinor: number; currency: string; providerIdempotencyKey: string;
+  }): Promise<PaymentRefundRecord> {
+    const [created] = await this.database.insert(paymentRefunds).values({
+      id: input.refundId, paymentId: input.paymentId, orderId: input.orderId,
+      amountMinor: input.amountMinor, currency: input.currency,
+      providerIdempotencyKey: input.providerIdempotencyKey,
+    }).onConflictDoNothing({ target: paymentRefunds.paymentId }).returning();
+    const row = created ?? (await this.database.select().from(paymentRefunds).where(eq(paymentRefunds.paymentId, input.paymentId)).limit(1))[0];
+    if (row === undefined) throw new Error('Payment refund record missing');
+    if (row.orderId !== input.orderId || row.amountMinor !== input.amountMinor || row.currency !== input.currency || row.providerIdempotencyKey !== input.providerIdempotencyKey) {
+      throw new Error('Payment refund identity conflict');
+    }
+    return { refundId: row.id, paymentId: row.paymentId, orderId: row.orderId, amountMinor: row.amountMinor, currency: row.currency, status: row.status as PaymentRefundRecord['status'], providerIdempotencyKey: row.providerIdempotencyKey, providerRefundId: row.providerRefundId };
+  }
+
+  async findRefundByPaymentId(paymentId: string): Promise<PaymentRefundRecord | undefined> {
+    const [row] = await this.database.select().from(paymentRefunds).where(eq(paymentRefunds.paymentId, paymentId)).limit(1);
+    return row === undefined ? undefined : this.toRefundRecord(row);
+  }
+
+  async markRefundFailed(refundId: string): Promise<PaymentRefundRecord> {
+    const [row] = await this.database.update(paymentRefunds).set({ status: 'failed', updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+    if (row === undefined) throw new Error('Payment refund record missing');
+    return this.toRefundRecord(row);
+  }
+
+  async markRefundSubmitted(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord> {
+    const [row] = await this.database.update(paymentRefunds).set({ status: 'pending', providerRefundId, updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+    if (row === undefined) throw new Error('Payment refund record missing');
+    return this.toRefundRecord(row);
+  }
+
+  async markRefundSucceeded(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord> {
+    const [row] = await this.database.update(paymentRefunds).set({ status: 'succeeded', providerRefundId, updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+    if (row === undefined) throw new Error('Payment refund record missing');
+    return this.toRefundRecord(row);
+  }
+
+  private toRefundRecord(row: typeof paymentRefunds.$inferSelect): PaymentRefundRecord {
+    return { refundId: row.id, paymentId: row.paymentId, orderId: row.orderId, amountMinor: row.amountMinor, currency: row.currency, status: row.status as PaymentRefundRecord['status'], providerIdempotencyKey: row.providerIdempotencyKey, providerRefundId: row.providerRefundId };
   }
 
   async markAwaitingConfirmation(input: {

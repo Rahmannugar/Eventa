@@ -29,6 +29,20 @@
       "when": 1788412383637,
       "tag": "0003_process_payment_workflow_outcomes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788414896893,
+      "tag": "0004_expire_pending_payment_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788416566522,
+      "tag": "0005_compensate_late_payment_success",
+      "breakpoints": true
     }
   ]
 }

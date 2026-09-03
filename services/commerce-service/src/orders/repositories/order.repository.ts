@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 
 import { COMMERCE_DATABASE } from '../../database/database.constants';
 import type { CommerceDatabase } from '../../database/database.types';
@@ -22,6 +22,8 @@ const ORDER_COLUMNS = {
   totalMinor: commerceOrders.totalMinor,
   reservationExpiresAt: commerceOrders.reservationExpiresAt,
   failureCode: commerceOrders.failureCode,
+  expiryClaimedUntil: commerceOrders.expiryClaimedUntil,
+  expiryFailures: commerceOrders.expiryFailures,
   createdAt: commerceOrders.createdAt,
   updatedAt: commerceOrders.updatedAt,
 };
@@ -140,9 +142,54 @@ export class OrderRepository implements CommerceOrderRepository {
     return this.transition(input.orderId, 'failed', input.failureCode);
   }
 
+  markExpired(orderId: string): Promise<CommerceOrderRecord> {
+    return this.transition(orderId, 'expired');
+  }
+
+  markRefunding(orderId: string): Promise<CommerceOrderRecord> {
+    return this.transition(orderId, 'refunding');
+  }
+
+  markRefunded(orderId: string): Promise<CommerceOrderRecord> {
+    return this.transition(orderId, 'refunded');
+  }
+
+  async claimExpired(input: {
+    now: Date;
+    claimedUntil: Date;
+    limit: number;
+  }): Promise<CommerceOrderRecord[]> {
+    return this.database.transaction(async (transaction) => {
+      const rows = await transaction
+        .select(ORDER_COLUMNS)
+        .from(commerceOrders)
+        .where(and(
+          eq(commerceOrders.status, 'pending_payment'),
+          lte(commerceOrders.reservationExpiresAt, input.now),
+          or(isNull(commerceOrders.expiryClaimedUntil), lt(commerceOrders.expiryClaimedUntil, input.now)),
+        ))
+        .orderBy(asc(commerceOrders.reservationExpiresAt), asc(commerceOrders.id))
+        .limit(input.limit)
+        .for('update', { skipLocked: true });
+      if (rows.length === 0) return [];
+      await transaction.update(commerceOrders)
+        .set({ expiryClaimedUntil: input.claimedUntil })
+        .where(inArray(commerceOrders.id, rows.map((row) => row.orderId)));
+      return rows;
+    });
+  }
+
+  async releaseExpiryClaim(input: { orderId: string; failed: boolean }): Promise<void> {
+    await this.database.update(commerceOrders).set({
+      expiryClaimedUntil: null,
+      ...(input.failed ? { expiryFailures: sql`${commerceOrders.expiryFailures} + 1` } : {}),
+      updatedAt: new Date(),
+    }).where(eq(commerceOrders.id, input.orderId));
+  }
+
   private async transition(
     orderId: string,
-    status: 'paid' | 'failed',
+    status: 'paid' | 'failed' | 'expired' | 'refunding' | 'refunded',
     failureCode?: string,
   ): Promise<CommerceOrderRecord> {
     return this.database.transaction(async (transaction) => {
@@ -154,12 +201,17 @@ export class OrderRepository implements CommerceOrderRepository {
         .for('update');
       if (order === undefined) throw new Error('Order disappeared');
       if (order.status === status) return order;
-      if (order.status !== 'pending_payment') {
+      if (
+        order.status !== 'pending_payment' &&
+        !(status === 'refunding' && order.status === 'expired') &&
+        !(order.status === 'refunding' && status === 'refunded')
+      ) {
         throw new Error('ORDER_TRANSITION_CONFLICT');
       }
       const [updated] = await transaction
         .update(commerceOrders)
         .set({
+          expiryClaimedUntil: null,
           failureCode: status === 'failed' ? failureCode : null,
           status,
           updatedAt: new Date(),
