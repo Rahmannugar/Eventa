@@ -57,7 +57,7 @@ No service reads or writes another service's database.
 
 Every deployable is a modular monolith with explicit application services for its business use cases. Controllers own transport translation, application services coordinate domain behavior, repositories own persistence, and infrastructure adapters implement capability ports. Separate query services or projections are added only for concrete read requirements; CQRS is not a platform-wide rule.
 
-API Gateway, Identity, Event, Commerce, Analytics, and Notification use NestJS/TypeScript. Ticket and Discovery use Go.
+API Gateway, Identity, Event, and Commerce use NestJS/TypeScript. Ticket, Discovery, Analytics, and Notification use Go. Analytics and Notification are event-driven Go services.
 
 ## Communication
 

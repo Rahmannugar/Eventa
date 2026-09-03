@@ -31,8 +31,8 @@ Services use explicit application services for business use cases, thin transpor
 
 ### Backend
 
-- NestJS and TypeScript: API Gateway, Identity, Event, Commerce, Analytics, and Notification
-- Go: Ticket and Discovery
+- NestJS and TypeScript: API Gateway, Identity, Event, and Commerce
+- Go: Ticket, Discovery, Analytics, and Notification
 - GORM
 - Drizzle
 - PostgreSQL
