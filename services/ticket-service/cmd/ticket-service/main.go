@@ -14,6 +14,7 @@ import (
 	"github.com/eventa/ticket-service/internal/database"
 	"github.com/eventa/ticket-service/internal/health"
 	"github.com/eventa/ticket-service/internal/issuance"
+	"github.com/eventa/ticket-service/internal/messaging"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,7 +40,12 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	checks := health.New(pool)
-	_ = issuance.NewIssuanceService(pool)
+	issuanceService := issuance.NewIssuanceService(pool)
+	consumer := messaging.NewOrderPaidConsumer(cfg.KafkaBrokers, cfg.KafkaTopic, cfg.KafkaGroupID, issuanceService)
+	go consumer.Run(ctx, func(err error) {
+		logger.Error("paid_order_consumption_failed", "error_type", "message_processing_failed")
+	})
+	defer consumer.Close()
 	router.GET("/health/live", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	router.GET("/health/ready", checks.Ready)
 

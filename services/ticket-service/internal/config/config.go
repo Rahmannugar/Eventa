@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/v2"
@@ -12,6 +13,9 @@ type Config struct {
 	DatabaseURL            string
 	HealthAddress          string
 	ShutdownTimeoutSeconds int
+	KafkaBrokers           []string
+	KafkaTopic             string
+	KafkaGroupID           string
 }
 
 func Load() (Config, error) {
@@ -35,5 +39,28 @@ func Load() (Config, error) {
 		}
 		seconds = parsed
 	}
-	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds}, nil
+	brokers := splitRequired(k.String("KAFKA_BROKERS"))
+	if len(brokers) == 0 {
+		return Config{}, fmt.Errorf("KAFKA_BROKERS is required")
+	}
+	topic := k.String("KAFKA_TOPIC")
+	if topic == "" {
+		topic = "eventa.commerce.order.v1"
+	}
+	group := k.String("KAFKA_GROUP_ID")
+	if group == "" {
+		group = "eventa-ticket-service"
+	}
+	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds, KafkaBrokers: brokers, KafkaTopic: topic, KafkaGroupID: group}, nil
+}
+
+func splitRequired(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }

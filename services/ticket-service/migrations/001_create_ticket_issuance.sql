@@ -1,4 +1,3 @@
--- +migrate Up
 CREATE TABLE ticket_issuance_inbox (
     event_id uuid PRIMARY KEY,
     event_type text NOT NULL,
@@ -22,6 +21,6 @@ CREATE TABLE issued_tickets (
 
 CREATE INDEX issued_tickets_attendee_issued_idx ON issued_tickets (attendee_id, issued_at DESC, id DESC);
 
--- +migrate Down
+---- create above / drop below ----
 DROP TABLE issued_tickets;
 DROP TABLE ticket_issuance_inbox;

@@ -43,6 +43,13 @@
       "when": 1788416566522,
       "tag": "0005_compensate_late_payment_success",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788503522919,
+      "tag": "0006_publish_paid_order_outbox",
+      "breakpoints": true
     }
   ]
 }

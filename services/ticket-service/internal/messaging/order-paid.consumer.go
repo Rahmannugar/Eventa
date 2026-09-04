@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/eventa/ticket-service/internal/issuance"
 	"github.com/segmentio/kafka-go"
@@ -23,18 +24,20 @@ type paidOrderMessage struct {
 	Type                                                  string
 }
 
+var errPermanentMessage = errors.New("permanent paid-order message failure")
+
 // ConsumeOne processes one paid-order fact and acknowledges it only after durable issuance commits.
 func (c *OrderPaidConsumer) ConsumeOne(ctx context.Context) error {
 	message, err := c.reader.FetchMessage(ctx)
 	if err != nil {
 		return err
 	}
-	var event paidOrderMessage
-	if err := json.Unmarshal(message.Value, &event); err != nil {
-		return fmt.Errorf("invalid paid-order event: %w", err)
+	event, err := decodePaidOrder(message.Value)
+	if errors.Is(err, errPermanentMessage) {
+		return c.reader.CommitMessages(ctx, message)
 	}
-	if event.Type != "commerce.order-paid.v1" {
-		return fmt.Errorf("unexpected event type")
+	if err != nil {
+		return err
 	}
 	if err := c.issuance.IssuePaidOrder(ctx, issuance.PaidOrder{MessageID: issuance.ID(event.MessageID), OrderID: issuance.ID(event.OrderID), AttendeeID: issuance.ID(event.AttendeeID), EventID: issuance.ID(event.EventID), TicketTypeID: issuance.ID(event.TicketTypeID), Quantity: event.Quantity}); err != nil {
 		return err
@@ -42,4 +45,30 @@ func (c *OrderPaidConsumer) ConsumeOne(ctx context.Context) error {
 	return c.reader.CommitMessages(ctx, message)
 }
 
+// decodePaidOrder rejects records that cannot ever become valid through retry.
+func decodePaidOrder(value []byte) (paidOrderMessage, error) {
+	var event paidOrderMessage
+	if err := json.Unmarshal(value, &event); err != nil {
+		return paidOrderMessage{}, fmt.Errorf("%w: invalid json", errPermanentMessage)
+	}
+	if event.Type != "commerce.order-paid.v1" {
+		return paidOrderMessage{}, fmt.Errorf("%w: unexpected event type", errPermanentMessage)
+	}
+	if event.MessageID == "" || event.OrderID == "" || event.AttendeeID == "" || event.EventID == "" || event.TicketTypeID == "" || event.Quantity < 1 {
+		return paidOrderMessage{}, fmt.Errorf("%w: incomplete event", errPermanentMessage)
+	}
+	return event, nil
+}
+
 func (c *OrderPaidConsumer) Close() error { return c.reader.Close() }
+
+func (c *OrderPaidConsumer) Run(ctx context.Context, onError func(error)) {
+	for ctx.Err() == nil {
+		if err := c.ConsumeOne(ctx); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			onError(err)
+		}
+	}
+}

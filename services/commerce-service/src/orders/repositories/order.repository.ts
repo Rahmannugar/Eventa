@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 
 import { COMMERCE_DATABASE } from '../../database/database.constants';
 import type { CommerceDatabase } from '../../database/database.types';
 import { commerceOrderItems, commerceOrders } from '../schema/order.schema';
+import { commerceOrderOutbox } from '../schema/order-outbox.schema';
 import type {
   CommerceOrderRecord,
   CommerceOrderRepository,
@@ -219,6 +221,35 @@ export class OrderRepository implements CommerceOrderRepository {
         .where(eq(commerceOrders.id, orderId))
         .returning(ORDER_COLUMNS);
       if (updated === undefined) throw new Error('Order disappeared');
+      if (status === 'paid') {
+        const [item] = await transaction
+          .select({ quantity: commerceOrderItems.quantity })
+          .from(commerceOrderItems)
+          .where(eq(commerceOrderItems.orderId, orderId))
+          .limit(1);
+        if (item === undefined || updated.currency === null || updated.totalMinor === null) {
+          throw new Error('PAID_ORDER_SNAPSHOT_INCOMPLETE');
+        }
+        const messageId = randomUUID();
+        await transaction.insert(commerceOrderOutbox).values({
+          aggregateId: updated.orderId,
+          aggregateType: 'eventa.commerce.order.v1',
+          eventId: messageId,
+          eventType: 'commerce.order-paid.v1',
+          payload: {
+            attendeeId: updated.attendeeId,
+            currency: updated.currency,
+            eventId: updated.eventId,
+            messageId,
+            orderId: updated.orderId,
+            paidAt: updated.updatedAt.toISOString(),
+            quantity: item.quantity,
+            ticketTypeId: updated.ticketTypeId,
+            totalMinor: updated.totalMinor,
+            type: 'commerce.order-paid.v1',
+          },
+        });
+      }
       return updated;
     });
   }
