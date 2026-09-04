@@ -1,6 +1,6 @@
 # Ticket Service
 
-Ticket Service owns issued tickets, QR credentials, validation, revocation, and check-in. It is a Go service with Gin, pgx/sqlc, Tern migrations, Koanf configuration, and durable at-least-once issuance processing.
+Ticket Service owns issued tickets, QR credentials, validation, revocation, and check-in. It is a Go service with Gin, pgx/sqlc, Tern migrations under `migrations/`, Koanf configuration, and durable at-least-once issuance processing.
 
 ## Commands
 

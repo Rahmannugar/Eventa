@@ -1,5 +1,6 @@
 version: '3'
 tasks:
+  generate: docker run --rm -v "$PWD:/src" -w /src sqlc/sqlc:1.29.0 generate
   build: go build ./...
   test: go test ./...
   lint: golangci-lint run

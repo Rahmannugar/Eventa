@@ -13,6 +13,7 @@ import (
 	"github.com/eventa/ticket-service/internal/config"
 	"github.com/eventa/ticket-service/internal/database"
 	"github.com/eventa/ticket-service/internal/health"
+	"github.com/eventa/ticket-service/internal/issuance"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,6 +39,7 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	checks := health.New(pool)
+	_ = issuance.NewIssuanceService(pool)
 	router.GET("/health/live", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	router.GET("/health/ready", checks.Ready)
 

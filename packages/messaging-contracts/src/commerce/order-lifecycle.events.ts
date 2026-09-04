@@ -4,6 +4,7 @@ export const COMMERCE_ORDER_LIFECYCLE_TOPIC =
 export const COMMERCE_ORDER_PAID_EVENT_TYPE = 'commerce.order-paid.v1';
 
 export interface CommerceOrderPaidEvent {
+  messageId: string;
   orderId: string;
   attendeeId: string;
   eventId: string;

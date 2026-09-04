@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/v2"
-	"os"
-	"strconv"
 )
 
 type Config struct {
@@ -37,5 +37,3 @@ func Load() (Config, error) {
 	}
 	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds}, nil
 }
-
-var _ = os.Getenv
