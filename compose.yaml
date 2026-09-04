@@ -163,6 +163,7 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.identity.attendee-lifecycle.v1 --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.event.lifecycle.v1 --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.event.waitlist.v1 --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.commerce.order.v1 --partitions 3 --replication-factor 1
     depends_on:
       event-bus:
         condition: service_healthy

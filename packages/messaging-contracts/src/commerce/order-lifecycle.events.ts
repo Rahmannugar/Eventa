@@ -1,5 +1,4 @@
-export const COMMERCE_ORDER_LIFECYCLE_TOPIC =
-  'eventa.commerce.order-lifecycle.v1';
+export const COMMERCE_ORDER_TOPIC = 'eventa.commerce.order.v1';
 
 export const COMMERCE_ORDER_PAID_EVENT_TYPE = 'commerce.order-paid.v1';
 
