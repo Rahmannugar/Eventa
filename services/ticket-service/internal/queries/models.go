@@ -18,6 +18,7 @@ type IssuedTicket struct {
 	QrSecretHash []byte
 	Status       string
 	IssuedAt     pgtype.Timestamptz
+	QrToken      []byte
 }
 
 type TicketIssuanceInbox struct {

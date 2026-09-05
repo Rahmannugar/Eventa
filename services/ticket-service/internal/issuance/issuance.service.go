@@ -53,7 +53,7 @@ func (s *IssuanceService) IssuePaidOrder(ctx context.Context, order PaidOrder) e
 			return err
 		}
 		hash := sha256.Sum256(raw)
-		if err := q.CreateIssuedTicket(ctx, queries.CreateIssuedTicketParams{ID: uuidToPG(uuid.New()), OrderID: ids.order, AttendeeID: ids.attendee, EventID: ids.event, TicketTypeID: ids.ticket, UnitIndex: int32(i), QrSecretHash: hash[:]}); err != nil {
+		if err := q.CreateIssuedTicket(ctx, queries.CreateIssuedTicketParams{ID: uuidToPG(uuid.New()), OrderID: ids.order, AttendeeID: ids.attendee, EventID: ids.event, TicketTypeID: ids.ticket, UnitIndex: int32(i), QrToken: raw, QrSecretHash: hash[:]}); err != nil {
 			return err
 		}
 	}

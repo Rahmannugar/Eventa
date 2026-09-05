@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/eventa/ticket-service/internal/config"
@@ -29,12 +30,29 @@ func main() {
 	if migrationDir == "" {
 		migrationDir = "migrations"
 	}
-	contents, err := os.ReadFile(migrationDir + "/001_create_ticket_issuance.sql")
+	entries, err := os.ReadDir(migrationDir)
 	if err != nil {
 		panic(err)
 	}
-	parts := strings.SplitN(string(contents), "---- create above / drop below ----", 2)
-	migrator.AppendMigration("001_create_ticket_issuance.sql", parts[0], parts[1])
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
+			files = append(files, entry.Name())
+		}
+	}
+	sort.Strings(files)
+	for _, file := range files {
+		contents, err := os.ReadFile(migrationDir + "/" + file)
+		if err != nil {
+			panic(err)
+		}
+		parts := strings.SplitN(string(contents), "---- create above / drop below ----", 2)
+		down := ""
+		if len(parts) == 2 {
+			down = parts[1]
+		}
+		migrator.AppendMigration(file, parts[0], down)
+	}
 	if err := migrator.Migrate(ctx); err != nil {
 		_, _ = os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)

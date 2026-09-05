@@ -425,7 +425,7 @@ services:
       context: ./services/ticket-service
       dockerfile: Dockerfile
     image: eventa-ticket-service:local
-    entrypoint: ['/ticket-migrate']
+    entrypoint: ['/ticket-migration']
     env_file:
       - ./services/ticket-service/.env
     depends_on:
