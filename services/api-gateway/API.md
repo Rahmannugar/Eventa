@@ -8,6 +8,9 @@
 | Attendees | `/auth/attendees/*` HTTP endpoints | [Attendees API](src/domains/attendees/API.md) |
 | Events    | `/events/*` and `/admin/events*`   | [Events API](src/domains/events/API.md)       |
 | Commerce  | `/checkout*` HTTP endpoints        | [Commerce API](src/domains/commerce/API.md)   |
+| Tickets   | `/tickets` HTTP endpoint           | Attendee ticket retrieval                     |
+| Admin tickets | `/admin/events/:eventId/check-ins` HTTP endpoint | Scan and check in an issued ticket |
+| Tickets   | `/tickets` HTTP endpoint           | Attendee ticket retrieval                     |
 
 The generated OpenAPI document is authoritative for exact public HTTP schemas. Domain API files explain behavior, errors, and transport policy without duplicating that contract.
 

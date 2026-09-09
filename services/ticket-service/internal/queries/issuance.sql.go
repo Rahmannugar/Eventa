@@ -25,6 +25,22 @@ func (q *Queries) ClaimIssuanceEvent(ctx context.Context, eventID pgtype.UUID) (
 	return event_id, err
 }
 
+const createCheckInOutbox = `-- name: CreateCheckInOutbox :exec
+INSERT INTO ticket_check_in_outbox (event_id, ticket_id, event_type, occurred_at)
+VALUES ($1, $2, 'ticket.checked-in.v1', $3)
+`
+
+type CreateCheckInOutboxParams struct {
+	EventID    pgtype.UUID
+	TicketID   pgtype.UUID
+	OccurredAt pgtype.Timestamptz
+}
+
+func (q *Queries) CreateCheckInOutbox(ctx context.Context, arg CreateCheckInOutboxParams) error {
+	_, err := q.db.Exec(ctx, createCheckInOutbox, arg.EventID, arg.TicketID, arg.OccurredAt)
+	return err
+}
+
 const createIssuedTicket = `-- name: CreateIssuedTicket :exec
 INSERT INTO issued_tickets (id, order_id, attendee_id, event_id, ticket_type_id, unit_index, qr_token, qr_secret_hash)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -53,6 +69,76 @@ func (q *Queries) CreateIssuedTicket(ctx context.Context, arg CreateIssuedTicket
 		arg.QrSecretHash,
 	)
 	return err
+}
+
+const findTicketForCheckIn = `-- name: FindTicketForCheckIn :one
+SELECT id, order_id, attendee_id, event_id, ticket_type_id, unit_index, status,
+       issued_at, qr_token, checked_in_at, checked_in_by
+FROM issued_tickets
+WHERE qr_secret_hash = $1
+FOR UPDATE
+`
+
+type FindTicketForCheckInRow struct {
+	ID           pgtype.UUID
+	OrderID      pgtype.UUID
+	AttendeeID   pgtype.UUID
+	EventID      pgtype.UUID
+	TicketTypeID pgtype.UUID
+	UnitIndex    int32
+	Status       string
+	IssuedAt     pgtype.Timestamptz
+	QrToken      []byte
+	CheckedInAt  pgtype.Timestamptz
+	CheckedInBy  pgtype.UUID
+}
+
+func (q *Queries) FindTicketForCheckIn(ctx context.Context, qrSecretHash []byte) (FindTicketForCheckInRow, error) {
+	row := q.db.QueryRow(ctx, findTicketForCheckIn, qrSecretHash)
+	var i FindTicketForCheckInRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.AttendeeID,
+		&i.EventID,
+		&i.TicketTypeID,
+		&i.UnitIndex,
+		&i.Status,
+		&i.IssuedAt,
+		&i.QrToken,
+		&i.CheckedInAt,
+		&i.CheckedInBy,
+	)
+	return i, err
+}
+
+const getCheckInEvent = `-- name: GetCheckInEvent :one
+SELECT o.event_id AS outbox_event_id, t.id AS ticket_id, t.event_id AS event_id,
+       t.attendee_id, t.checked_in_at
+FROM ticket_check_in_outbox o
+JOIN issued_tickets t ON t.id = o.ticket_id
+WHERE o.event_id = $1
+`
+
+type GetCheckInEventRow struct {
+	OutboxEventID pgtype.UUID
+	TicketID      pgtype.UUID
+	EventID       pgtype.UUID
+	AttendeeID    pgtype.UUID
+	CheckedInAt   pgtype.Timestamptz
+}
+
+func (q *Queries) GetCheckInEvent(ctx context.Context, eventID pgtype.UUID) (GetCheckInEventRow, error) {
+	row := q.db.QueryRow(ctx, getCheckInEvent, eventID)
+	var i GetCheckInEventRow
+	err := row.Scan(
+		&i.OutboxEventID,
+		&i.TicketID,
+		&i.EventID,
+		&i.AttendeeID,
+		&i.CheckedInAt,
+	)
+	return i, err
 }
 
 const listIssuedTicketsByAttendee = `-- name: ListIssuedTicketsByAttendee :many
@@ -118,6 +204,58 @@ func (q *Queries) ListIssuedTicketsByAttendee(ctx context.Context, arg ListIssue
 	return items, nil
 }
 
+const listPendingCheckInEvents = `-- name: ListPendingCheckInEvents :many
+SELECT o.event_id, o.ticket_id, o.event_type, o.occurred_at
+FROM ticket_check_in_outbox o
+WHERE o.published_at IS NULL
+ORDER BY o.occurred_at, o.event_id
+LIMIT $1
+FOR UPDATE SKIP LOCKED
+`
+
+type ListPendingCheckInEventsRow struct {
+	EventID    pgtype.UUID
+	TicketID   pgtype.UUID
+	EventType  string
+	OccurredAt pgtype.Timestamptz
+}
+
+func (q *Queries) ListPendingCheckInEvents(ctx context.Context, limit int32) ([]ListPendingCheckInEventsRow, error) {
+	rows, err := q.db.Query(ctx, listPendingCheckInEvents, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingCheckInEventsRow
+	for rows.Next() {
+		var i ListPendingCheckInEventsRow
+		if err := rows.Scan(
+			&i.EventID,
+			&i.TicketID,
+			&i.EventType,
+			&i.OccurredAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markCheckInEventPublished = `-- name: MarkCheckInEventPublished :exec
+UPDATE ticket_check_in_outbox
+SET published_at = now()
+WHERE event_id = $1 AND published_at IS NULL
+`
+
+func (q *Queries) MarkCheckInEventPublished(ctx context.Context, eventID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markCheckInEventPublished, eventID)
+	return err
+}
+
 const markIssuanceProcessed = `-- name: MarkIssuanceProcessed :exec
 UPDATE ticket_issuance_inbox
 SET status = 'processed', processed_at = now()
@@ -126,5 +264,22 @@ WHERE event_id = $1
 
 func (q *Queries) MarkIssuanceProcessed(ctx context.Context, eventID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markIssuanceProcessed, eventID)
+	return err
+}
+
+const markTicketCheckedIn = `-- name: MarkTicketCheckedIn :exec
+UPDATE issued_tickets
+SET status = 'checked_in', checked_in_at = $2, checked_in_by = $3
+WHERE id = $1 AND status = 'issued'
+`
+
+type MarkTicketCheckedInParams struct {
+	ID          pgtype.UUID
+	CheckedInAt pgtype.Timestamptz
+	CheckedInBy pgtype.UUID
+}
+
+func (q *Queries) MarkTicketCheckedIn(ctx context.Context, arg MarkTicketCheckedInParams) error {
+	_, err := q.db.Exec(ctx, markTicketCheckedIn, arg.ID, arg.CheckedInAt, arg.CheckedInBy)
 	return err
 }

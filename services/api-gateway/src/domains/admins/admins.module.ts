@@ -46,6 +46,8 @@ import {
   AdminPasswordResetRateLimitService,
   AdminResetPasswordRateLimitGuard,
 } from './rate-limit/admin-password-reset-rate-limit';
+import { AdminTicketCheckInController } from '../tickets/controllers/admin-ticket-check-in.controller';
+import { AdminTicketCheckInService } from '../tickets/services/admin-ticket-check-in.service';
 
 interface AdminsModuleOptions {
   clientOrigin: string;
@@ -53,6 +55,8 @@ interface AdminsModuleOptions {
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
   secureCookies: boolean;
+  ticketServiceUrl: string;
+  ticketServiceDeadlineMs: number;
 }
 
 @Module({})
@@ -79,6 +83,7 @@ export class AdminsModule {
         AdminLoginController,
         AdminPasswordResetController,
         AdminSessionController,
+        AdminTicketCheckInController,
       ],
       providers: [
         {
@@ -93,6 +98,7 @@ export class AdminsModule {
         AdminLoginService,
         AdminPasswordResetService,
         AdminSessionService,
+        { provide: AdminTicketCheckInService, useFactory: () => new AdminTicketCheckInService(options.ticketServiceUrl, options.ticketServiceDeadlineMs) },
         {
           provide: AdminPasswordResetRateLimitService,
           useFactory: (state: RateLimitState) =>

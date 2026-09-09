@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eventa/ticket-service/internal/checkin"
 	"github.com/eventa/ticket-service/internal/config"
 	"github.com/eventa/ticket-service/internal/database"
 	"github.com/eventa/ticket-service/internal/health"
@@ -44,14 +45,21 @@ func main() {
 	issuanceService := issuance.NewIssuanceService(pool)
 	ticketReader := tickets.NewTicketReader(pool)
 	ticketHandler := tickets.NewHandler(ticketReader)
+	checkInHandler := checkin.NewHandler(checkin.NewService(pool))
 	consumer := messaging.NewOrderPaidConsumer(cfg.KafkaBrokers, cfg.KafkaTopic, cfg.KafkaGroupID, issuanceService)
+	checkInPublisher := messaging.NewCheckInPublisher(pool, cfg.KafkaBrokers, cfg.KafkaCheckInTopic)
 	go consumer.Run(ctx, func(err error) {
 		logger.Error("paid_order_consumption_failed", "error_type", "message_processing_failed")
 	})
+	go checkInPublisher.Run(ctx, func(err error) {
+		logger.Error("ticket_check_in_publication_failed", "error_type", "event_publication_failed")
+	})
 	defer consumer.Close()
+	defer checkInPublisher.Close()
 	router.GET("/health/live", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	router.GET("/health/ready", checks.Ready)
 	router.GET("/v1/attendees/:attendeeId/tickets", ticketHandler.List)
+	router.POST("/v1/tickets/check-in", checkInHandler.CheckIn)
 
 	server := &http.Server{Addr: cfg.HealthAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {

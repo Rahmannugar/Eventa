@@ -15,6 +15,7 @@ type Config struct {
 	ShutdownTimeoutSeconds int
 	KafkaBrokers           []string
 	KafkaTopic             string
+	KafkaCheckInTopic      string
 	KafkaGroupID           string
 }
 
@@ -51,7 +52,11 @@ func Load() (Config, error) {
 	if group == "" {
 		group = "eventa-ticket-service"
 	}
-	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds, KafkaBrokers: brokers, KafkaTopic: topic, KafkaGroupID: group}, nil
+	checkInTopic := k.String("KAFKA_CHECK_IN_TOPIC")
+	if checkInTopic == "" {
+		checkInTopic = "eventa.ticket.check-in.v1"
+	}
+	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds, KafkaBrokers: brokers, KafkaTopic: topic, KafkaCheckInTopic: checkInTopic, KafkaGroupID: group}, nil
 }
 
 func splitRequired(value string) []string {

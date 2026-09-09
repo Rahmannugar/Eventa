@@ -19,11 +19,15 @@ type ID string
 var ErrInvalidInput = errors.New("invalid ticket request")
 
 type IssuedTicket struct {
-	ID, OrderID, AttendeeID, EventID, TicketTypeID ID
-	UnitIndex                                      int32
-	Status                                         string
-	IssuedAt                                       time.Time
-	QRToken                                        string
+	ID           ID        `json:"id"`
+	OrderID      ID        `json:"orderId"`
+	AttendeeID   ID        `json:"attendeeId"`
+	EventID      ID        `json:"eventId"`
+	TicketTypeID ID        `json:"ticketTypeId"`
+	UnitIndex    int32     `json:"unitIndex"`
+	Status       string    `json:"status"`
+	IssuedAt     time.Time `json:"issuedAt"`
+	QRToken      string    `json:"qrToken"`
 }
 type TicketReader struct{ pool *pgxpool.Pool }
 

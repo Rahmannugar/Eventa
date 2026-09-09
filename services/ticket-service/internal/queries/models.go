@@ -19,6 +19,16 @@ type IssuedTicket struct {
 	Status       string
 	IssuedAt     pgtype.Timestamptz
 	QrToken      []byte
+	CheckedInAt  pgtype.Timestamptz
+	CheckedInBy  pgtype.UUID
+}
+
+type TicketCheckInOutbox struct {
+	EventID     pgtype.UUID
+	TicketID    pgtype.UUID
+	EventType   string
+	OccurredAt  pgtype.Timestamptz
+	PublishedAt pgtype.Timestamptz
 }
 
 type TicketIssuanceInbox struct {

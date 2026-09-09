@@ -46,6 +46,8 @@ import {
   AttendeeForgotPasswordRateLimitGuard,
   AttendeeResetPasswordRateLimitGuard,
 } from './rate-limit/guards/attendee-password-reset-rate-limit.guards';
+import { AttendeeTicketsController } from '../tickets/controllers/attendee-tickets.controller';
+import { AttendeeTicketsService } from '../tickets/services/attendee-tickets.service';
 
 interface AttendeesModuleOptions {
   clientOrigin: string;
@@ -53,6 +55,8 @@ interface AttendeesModuleOptions {
   identityGrpcUrl: string;
   rateLimitKeySecret: string;
   secureSessionCookie: boolean;
+  ticketServiceUrl: string;
+  ticketServiceDeadlineMs: number;
 }
 
 @Module({})
@@ -82,6 +86,7 @@ export class AttendeesModule {
         AttendeePasswordResetController,
         AttendeeRegistrationController,
         AttendeeSessionController,
+        AttendeeTicketsController,
       ],
       providers: [
         {
@@ -158,11 +163,14 @@ export class AttendeesModule {
         AttendeeResetPasswordRateLimitGuard,
         AttendeeEmailVerificationConfirmRateLimitGuard,
         AttendeeEmailVerificationResendRateLimitGuard,
+        { provide: AttendeeTicketsService, useFactory: () => new AttendeeTicketsService(options.ticketServiceUrl, options.ticketServiceDeadlineMs) },
       ],
       exports: [
         AttendeeAuthenticationGuard,
         AttendeeClientOriginGuard,
         AttendeeSessionCookie,
+        AttendeeSessionService,
+        CLIENT_ORIGIN,
       ],
     };
   }

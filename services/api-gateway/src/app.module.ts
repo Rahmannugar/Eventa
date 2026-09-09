@@ -26,6 +26,8 @@ export class AppModule implements NestModule {
       identityGrpcUrl: config.identityGrpcUrl,
       rateLimitKeySecret: config.rateLimitKeySecret,
       secureCookies: config.publicApiUrl.startsWith('https://'),
+      ticketServiceUrl: config.ticketServiceUrl,
+      ticketServiceDeadlineMs: config.ticketServiceDeadlineMs,
     });
     const attendeesModule = AttendeesModule.register({
       clientOrigin: config.clientOrigin,
@@ -33,6 +35,8 @@ export class AppModule implements NestModule {
       identityGrpcUrl: config.identityGrpcUrl,
       rateLimitKeySecret: config.rateLimitKeySecret,
       secureSessionCookie: config.publicApiUrl.startsWith('https://'),
+      ticketServiceUrl: config.ticketServiceUrl,
+      ticketServiceDeadlineMs: config.ticketServiceDeadlineMs,
     });
 
     return {
