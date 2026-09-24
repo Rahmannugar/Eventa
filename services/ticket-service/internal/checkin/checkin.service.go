@@ -50,7 +50,7 @@ func (s *Service) CheckIn(ctx context.Context, input Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	q := queries.New(tx)
 	ticket, err := q.FindTicketForCheckIn(ctx, qr[:])
 	if errors.Is(err, pgx.ErrNoRows) {

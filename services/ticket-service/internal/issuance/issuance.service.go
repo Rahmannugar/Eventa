@@ -34,18 +34,31 @@ func (s *IssuanceService) IssuePaidOrder(ctx context.Context, order PaidOrder) e
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 	ids, err := parseIDs(order)
 	if err != nil {
 		return err
 	}
 	q := queries.New(tx)
+	if err := q.LockEvent(ctx, uuid.UUID(ids.event.Bytes).String()); err != nil {
+		return err
+	}
 	_, err = q.ClaimIssuanceEvent(ctx, ids.message)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return tx.Commit(ctx)
 	}
 	if err != nil {
 		return err
+	}
+	cancelled, err := q.IsEventCancelled(ctx, ids.event)
+	if err != nil {
+		return err
+	}
+	if cancelled {
+		if err := q.MarkIssuanceProcessed(ctx, ids.message); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
 	}
 	for i := 0; i < order.Quantity; i++ {
 		raw := make([]byte, 32)

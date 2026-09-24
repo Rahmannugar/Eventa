@@ -81,6 +81,14 @@ services:
 
   ticket-database:
     image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=8
+      - -c
+      - max_wal_senders=8
     env_file:
       - ./services/ticket-service/.env
     ports:
@@ -189,6 +197,7 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.event.waitlist.v1 --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.commerce.order.v1 --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.ticket.check-in.v1 --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server event-bus:9092 --create --if-not-exists --topic eventa.ticket.revoked.v1 --partitions 3 --replication-factor 1
     depends_on:
       event-bus:
         condition: service_healthy
@@ -435,6 +444,21 @@ services:
     restart: 'no'
     logging: *local-logging
 
+  ticket-kafka-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/ticket-service/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/ticket-kafka/application.properties:/debezium/config/application.properties:ro
+      - ticket-kafka-cdc-data:/debezium/data
+    depends_on:
+      event-bus-init:
+        condition: service_completed_successfully
+      ticket-migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging: *local-logging
+
   notification-migration:
     build:
       context: .
@@ -602,6 +626,7 @@ volumes:
   ticket-database-data:
   event-bus-data:
   event-kafka-cdc-data:
+  ticket-kafka-cdc-data:
   commerce-kafka-cdc-data:
   event-rabbitmq-cdc-data:
   event-database-data:

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eventa/ticket-service/internal/cancellation"
 	"github.com/eventa/ticket-service/internal/checkin"
 	"github.com/eventa/ticket-service/internal/config"
 	"github.com/eventa/ticket-service/internal/database"
@@ -21,7 +22,8 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	baseLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(baseLogger.Handler()).With("service", "eventa-ticket-service")
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("configuration_invalid", "error_type", "invalid_configuration")
@@ -46,16 +48,19 @@ func main() {
 	ticketReader := tickets.NewTicketReader(pool)
 	ticketHandler := tickets.NewHandler(ticketReader)
 	checkInHandler := checkin.NewHandler(checkin.NewService(pool))
+	cancellationService := cancellation.NewService(pool)
 	consumer := messaging.NewOrderPaidConsumer(cfg.KafkaBrokers, cfg.KafkaTopic, cfg.KafkaGroupID, issuanceService)
-	checkInPublisher := messaging.NewCheckInPublisher(pool, cfg.KafkaBrokers, cfg.KafkaCheckInTopic)
+	cancellationConsumer := messaging.NewEventCancelledConsumer(cfg.KafkaBrokers, cfg.KafkaEventLifecycleTopic, cfg.KafkaGroupID+"-cancellations", cancellationService)
 	go consumer.Run(ctx, func(err error) {
 		logger.Error("paid_order_consumption_failed", "error_type", "message_processing_failed")
 	})
-	go checkInPublisher.Run(ctx, func(err error) {
-		logger.Error("ticket_check_in_publication_failed", "error_type", "event_publication_failed")
+	go cancellationConsumer.Run(ctx, func(err error) {
+		logger.Error("event_cancellation_consumption_failed", "error_type", "message_processing_failed")
 	})
-	defer consumer.Close()
-	defer checkInPublisher.Close()
+	defer func() {
+		_ = consumer.Close()
+		_ = cancellationConsumer.Close()
+	}()
 	router.GET("/health/live", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	router.GET("/health/ready", checks.Ready)
 	router.GET("/v1/attendees/:attendeeId/tickets", ticketHandler.List)

@@ -10,13 +10,13 @@ import (
 )
 
 type Config struct {
-	DatabaseURL            string
-	HealthAddress          string
-	ShutdownTimeoutSeconds int
-	KafkaBrokers           []string
-	KafkaTopic             string
-	KafkaCheckInTopic      string
-	KafkaGroupID           string
+	DatabaseURL              string
+	HealthAddress            string
+	ShutdownTimeoutSeconds   int
+	KafkaBrokers             []string
+	KafkaTopic               string
+	KafkaEventLifecycleTopic string
+	KafkaGroupID             string
 }
 
 func Load() (Config, error) {
@@ -52,11 +52,11 @@ func Load() (Config, error) {
 	if group == "" {
 		group = "eventa-ticket-service"
 	}
-	checkInTopic := k.String("KAFKA_CHECK_IN_TOPIC")
-	if checkInTopic == "" {
-		checkInTopic = "eventa.ticket.check-in.v1"
+	lifecycleTopic := k.String("KAFKA_EVENT_LIFECYCLE_TOPIC")
+	if lifecycleTopic == "" {
+		lifecycleTopic = "eventa.event.lifecycle.v1"
 	}
-	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds, KafkaBrokers: brokers, KafkaTopic: topic, KafkaCheckInTopic: checkInTopic, KafkaGroupID: group}, nil
+	return Config{DatabaseURL: databaseURL, HealthAddress: address, ShutdownTimeoutSeconds: seconds, KafkaBrokers: brokers, KafkaTopic: topic, KafkaEventLifecycleTopic: lifecycleTopic, KafkaGroupID: group}, nil
 }
 
 func splitRequired(value string) []string {

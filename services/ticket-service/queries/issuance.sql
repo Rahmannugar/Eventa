@@ -4,6 +4,12 @@ VALUES ($1, 'commerce.order-paid.v1')
 ON CONFLICT (event_id) DO NOTHING
 RETURNING event_id;
 
+-- name: LockEvent :exec
+SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0));
+
+-- name: IsEventCancelled :one
+SELECT EXISTS (SELECT 1 FROM ticket_cancelled_events WHERE event_id = $1) AS cancelled;
+
 -- name: CreateIssuedTicket :exec
 INSERT INTO issued_tickets (id, order_id, attendee_id, event_id, ticket_type_id, unit_index, qr_token, qr_secret_hash)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
@@ -34,25 +40,42 @@ SET status = 'checked_in', checked_in_at = $2, checked_in_by = $3
 WHERE id = $1 AND status = 'issued';
 
 -- name: CreateCheckInOutbox :exec
-INSERT INTO ticket_check_in_outbox (event_id, ticket_id, event_type, occurred_at)
-VALUES ($1, $2, 'ticket.checked-in.v1', $3);
+INSERT INTO ticket_check_in_outbox (event_id, ticket_id, event_type, occurred_at, aggregate_type, aggregate_id, payload)
+VALUES (sqlc.arg(event_id)::uuid, sqlc.arg(ticket_id)::uuid, 'ticket.checked-in.v1', sqlc.arg(occurred_at),
+    'eventa.ticket.check-in.v1', sqlc.arg(ticket_id)::uuid,
+    (SELECT jsonb_build_object('messageId', sqlc.arg(event_id)::uuid, 'eventId', event_id,
+        'ticketId', id, 'attendeeId', attendee_id, 'checkedInAt', checked_in_at,
+        'type', 'ticket.checked-in.v1')
+     FROM issued_tickets WHERE id = sqlc.arg(ticket_id)::uuid));
 
--- name: ListPendingCheckInEvents :many
-SELECT o.event_id, o.ticket_id, o.event_type, o.occurred_at
-FROM ticket_check_in_outbox o
-WHERE o.published_at IS NULL
-ORDER BY o.occurred_at, o.event_id
-LIMIT $1
-FOR UPDATE SKIP LOCKED;
+-- name: ClaimCancellationEvent :one
+INSERT INTO ticket_cancellation_inbox (message_id, event_id, event_type)
+VALUES ($1, $2, 'event.cancelled.v1')
+ON CONFLICT (message_id) DO NOTHING
+RETURNING message_id;
 
--- name: MarkCheckInEventPublished :exec
-UPDATE ticket_check_in_outbox
-SET published_at = now()
-WHERE event_id = $1 AND published_at IS NULL;
+-- name: MarkEventCancelled :exec
+INSERT INTO ticket_cancelled_events (event_id, cancellation_message_id)
+VALUES ($1, $2)
+ON CONFLICT (event_id) DO NOTHING;
 
--- name: GetCheckInEvent :one
-SELECT o.event_id AS outbox_event_id, t.id AS ticket_id, t.event_id AS event_id,
-       t.attendee_id, t.checked_in_at
-FROM ticket_check_in_outbox o
-JOIN issued_tickets t ON t.id = o.ticket_id
-WHERE o.event_id = $1;
+-- name: ListTicketsForRevocation :many
+SELECT id FROM issued_tickets
+WHERE event_id = $1 AND status <> 'revoked'
+ORDER BY id FOR UPDATE;
+
+-- name: RevokeTicket :exec
+UPDATE issued_tickets SET status = 'revoked'
+WHERE id = $1 AND event_id = $2 AND status <> 'revoked';
+
+-- name: CreateRevocationOutbox :exec
+INSERT INTO ticket_revocation_outbox (event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
+SELECT sqlc.arg(message_id)::uuid, 'eventa.ticket.revoked.v1', t.id, 'ticket.revoked.v1',
+    jsonb_build_object('messageId', sqlc.arg(message_id)::uuid, 'eventId', t.event_id,
+        'ticketId', t.id, 'attendeeId', t.attendee_id, 'revokedAt', now(),
+        'type', 'ticket.revoked.v1'), now()
+FROM issued_tickets t WHERE t.id = sqlc.arg(ticket_id)::uuid;
+
+-- name: MarkCancellationProcessed :exec
+UPDATE ticket_cancellation_inbox SET status = 'processed', processed_at = now()
+WHERE message_id = $1;

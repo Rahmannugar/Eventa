@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 	migrator, err := migrate.NewMigrator(ctx, conn, "ticket_schema_version")
 	if err != nil {
 		panic(err)

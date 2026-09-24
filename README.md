@@ -8,7 +8,7 @@ https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
 Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver semantic and location-aware recommendations using Ahnlich, Gemini, and PostGIS, and provide analytics for organizers.
 
-The system is composed of independently deployable modular-monolith services responsible for identity, events, commerce, ticketing, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows.
+The system is composed of independently deployable modular-monolith services responsible for identity, events, commerce, ticketing, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows. Transactional outbox records and Debezium are the primary relay for durable database-backed inter-service facts and initial job assignments.
 
 The project is designed to explore production engineering practices including distributed transactions, compensating actions, event-driven architecture, observability, background processing, and clear service ownership while remaining fully runnable locally using Docker Compose.
 
@@ -105,6 +105,7 @@ Local endpoints:
 - Notification readiness: `http://localhost:3006/health/ready`
 - Event readiness: `http://localhost:3007/health/ready`
 - Commerce readiness: `http://localhost:3008/health/ready`
+- Ticket readiness: `http://localhost:3010/health/ready`
 - RabbitMQ management: `http://localhost:15673`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`

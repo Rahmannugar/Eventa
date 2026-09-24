@@ -56,7 +56,7 @@ discovery.relabel "eventa_logs" {
 
 	rule {
 		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-		regex         = "(api-gateway|identity-service|event-service|commerce-service)"
+		regex         = "(api-gateway|identity-service|event-service|commerce-service|ticket-service)"
 		replacement   = "application"
 		target_label  = "service_group"
 	}
@@ -77,7 +77,7 @@ discovery.relabel "eventa_logs" {
 
 	rule {
 		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-		regex         = "(identity-database|identity-migration|identity-redis|event-database|event-migration|commerce-database|commerce-migration|notification-database|notification-migration|api-gateway-redis|job-queue)"
+		regex         = "(identity-database|identity-migration|identity-redis|event-database|event-migration|commerce-database|commerce-migration|notification-database|notification-migration|api-gateway-redis|job-queue|ticket-database|ticket-migration|ticket-kafka-cdc)"
 		replacement   = "infrastructure"
 		target_label  = "service_group"
 	}

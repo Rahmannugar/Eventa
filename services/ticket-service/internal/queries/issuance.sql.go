@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimCancellationEvent = `-- name: ClaimCancellationEvent :one
+INSERT INTO ticket_cancellation_inbox (message_id, event_id, event_type)
+VALUES ($1, $2, 'event.cancelled.v1')
+ON CONFLICT (message_id) DO NOTHING
+RETURNING message_id
+`
+
+type ClaimCancellationEventParams struct {
+	MessageID pgtype.UUID
+	EventID   pgtype.UUID
+}
+
+func (q *Queries) ClaimCancellationEvent(ctx context.Context, arg ClaimCancellationEventParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, claimCancellationEvent, arg.MessageID, arg.EventID)
+	var message_id pgtype.UUID
+	err := row.Scan(&message_id)
+	return message_id, err
+}
+
 const claimIssuanceEvent = `-- name: ClaimIssuanceEvent :one
 INSERT INTO ticket_issuance_inbox (event_id, event_type)
 VALUES ($1, 'commerce.order-paid.v1')
@@ -26,8 +45,13 @@ func (q *Queries) ClaimIssuanceEvent(ctx context.Context, eventID pgtype.UUID) (
 }
 
 const createCheckInOutbox = `-- name: CreateCheckInOutbox :exec
-INSERT INTO ticket_check_in_outbox (event_id, ticket_id, event_type, occurred_at)
-VALUES ($1, $2, 'ticket.checked-in.v1', $3)
+INSERT INTO ticket_check_in_outbox (event_id, ticket_id, event_type, occurred_at, aggregate_type, aggregate_id, payload)
+VALUES ($1::uuid, $2::uuid, 'ticket.checked-in.v1', $3,
+    'eventa.ticket.check-in.v1', $2::uuid,
+    (SELECT jsonb_build_object('messageId', $1::uuid, 'eventId', event_id,
+        'ticketId', id, 'attendeeId', attendee_id, 'checkedInAt', checked_in_at,
+        'type', 'ticket.checked-in.v1')
+     FROM issued_tickets WHERE id = $2::uuid))
 `
 
 type CreateCheckInOutboxParams struct {
@@ -68,6 +92,25 @@ func (q *Queries) CreateIssuedTicket(ctx context.Context, arg CreateIssuedTicket
 		arg.QrToken,
 		arg.QrSecretHash,
 	)
+	return err
+}
+
+const createRevocationOutbox = `-- name: CreateRevocationOutbox :exec
+INSERT INTO ticket_revocation_outbox (event_id, aggregate_type, aggregate_id, event_type, payload, occurred_at)
+SELECT $1::uuid, 'eventa.ticket.revoked.v1', t.id, 'ticket.revoked.v1',
+    jsonb_build_object('messageId', $1::uuid, 'eventId', t.event_id,
+        'ticketId', t.id, 'attendeeId', t.attendee_id, 'revokedAt', now(),
+        'type', 'ticket.revoked.v1'), now()
+FROM issued_tickets t WHERE t.id = $2::uuid
+`
+
+type CreateRevocationOutboxParams struct {
+	MessageID pgtype.UUID
+	TicketID  pgtype.UUID
+}
+
+func (q *Queries) CreateRevocationOutbox(ctx context.Context, arg CreateRevocationOutboxParams) error {
+	_, err := q.db.Exec(ctx, createRevocationOutbox, arg.MessageID, arg.TicketID)
 	return err
 }
 
@@ -112,33 +155,15 @@ func (q *Queries) FindTicketForCheckIn(ctx context.Context, qrSecretHash []byte)
 	return i, err
 }
 
-const getCheckInEvent = `-- name: GetCheckInEvent :one
-SELECT o.event_id AS outbox_event_id, t.id AS ticket_id, t.event_id AS event_id,
-       t.attendee_id, t.checked_in_at
-FROM ticket_check_in_outbox o
-JOIN issued_tickets t ON t.id = o.ticket_id
-WHERE o.event_id = $1
+const isEventCancelled = `-- name: IsEventCancelled :one
+SELECT EXISTS (SELECT 1 FROM ticket_cancelled_events WHERE event_id = $1) AS cancelled
 `
 
-type GetCheckInEventRow struct {
-	OutboxEventID pgtype.UUID
-	TicketID      pgtype.UUID
-	EventID       pgtype.UUID
-	AttendeeID    pgtype.UUID
-	CheckedInAt   pgtype.Timestamptz
-}
-
-func (q *Queries) GetCheckInEvent(ctx context.Context, eventID pgtype.UUID) (GetCheckInEventRow, error) {
-	row := q.db.QueryRow(ctx, getCheckInEvent, eventID)
-	var i GetCheckInEventRow
-	err := row.Scan(
-		&i.OutboxEventID,
-		&i.TicketID,
-		&i.EventID,
-		&i.AttendeeID,
-		&i.CheckedInAt,
-	)
-	return i, err
+func (q *Queries) IsEventCancelled(ctx context.Context, eventID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isEventCancelled, eventID)
+	var cancelled bool
+	err := row.Scan(&cancelled)
+	return cancelled, err
 }
 
 const listIssuedTicketsByAttendee = `-- name: ListIssuedTicketsByAttendee :many
@@ -204,40 +229,25 @@ func (q *Queries) ListIssuedTicketsByAttendee(ctx context.Context, arg ListIssue
 	return items, nil
 }
 
-const listPendingCheckInEvents = `-- name: ListPendingCheckInEvents :many
-SELECT o.event_id, o.ticket_id, o.event_type, o.occurred_at
-FROM ticket_check_in_outbox o
-WHERE o.published_at IS NULL
-ORDER BY o.occurred_at, o.event_id
-LIMIT $1
-FOR UPDATE SKIP LOCKED
+const listTicketsForRevocation = `-- name: ListTicketsForRevocation :many
+SELECT id FROM issued_tickets
+WHERE event_id = $1 AND status <> 'revoked'
+ORDER BY id FOR UPDATE
 `
 
-type ListPendingCheckInEventsRow struct {
-	EventID    pgtype.UUID
-	TicketID   pgtype.UUID
-	EventType  string
-	OccurredAt pgtype.Timestamptz
-}
-
-func (q *Queries) ListPendingCheckInEvents(ctx context.Context, limit int32) ([]ListPendingCheckInEventsRow, error) {
-	rows, err := q.db.Query(ctx, listPendingCheckInEvents, limit)
+func (q *Queries) ListTicketsForRevocation(ctx context.Context, eventID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listTicketsForRevocation, eventID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPendingCheckInEventsRow
+	var items []pgtype.UUID
 	for rows.Next() {
-		var i ListPendingCheckInEventsRow
-		if err := rows.Scan(
-			&i.EventID,
-			&i.TicketID,
-			&i.EventType,
-			&i.OccurredAt,
-		); err != nil {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -245,14 +255,38 @@ func (q *Queries) ListPendingCheckInEvents(ctx context.Context, limit int32) ([]
 	return items, nil
 }
 
-const markCheckInEventPublished = `-- name: MarkCheckInEventPublished :exec
-UPDATE ticket_check_in_outbox
-SET published_at = now()
-WHERE event_id = $1 AND published_at IS NULL
+const lockEvent = `-- name: LockEvent :exec
+SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))
 `
 
-func (q *Queries) MarkCheckInEventPublished(ctx context.Context, eventID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, markCheckInEventPublished, eventID)
+func (q *Queries) LockEvent(ctx context.Context, dollar_1 string) error {
+	_, err := q.db.Exec(ctx, lockEvent, dollar_1)
+	return err
+}
+
+const markCancellationProcessed = `-- name: MarkCancellationProcessed :exec
+UPDATE ticket_cancellation_inbox SET status = 'processed', processed_at = now()
+WHERE message_id = $1
+`
+
+func (q *Queries) MarkCancellationProcessed(ctx context.Context, messageID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, markCancellationProcessed, messageID)
+	return err
+}
+
+const markEventCancelled = `-- name: MarkEventCancelled :exec
+INSERT INTO ticket_cancelled_events (event_id, cancellation_message_id)
+VALUES ($1, $2)
+ON CONFLICT (event_id) DO NOTHING
+`
+
+type MarkEventCancelledParams struct {
+	EventID               pgtype.UUID
+	CancellationMessageID pgtype.UUID
+}
+
+func (q *Queries) MarkEventCancelled(ctx context.Context, arg MarkEventCancelledParams) error {
+	_, err := q.db.Exec(ctx, markEventCancelled, arg.EventID, arg.CancellationMessageID)
 	return err
 }
 
@@ -281,5 +315,20 @@ type MarkTicketCheckedInParams struct {
 
 func (q *Queries) MarkTicketCheckedIn(ctx context.Context, arg MarkTicketCheckedInParams) error {
 	_, err := q.db.Exec(ctx, markTicketCheckedIn, arg.ID, arg.CheckedInAt, arg.CheckedInBy)
+	return err
+}
+
+const revokeTicket = `-- name: RevokeTicket :exec
+UPDATE issued_tickets SET status = 'revoked'
+WHERE id = $1 AND event_id = $2 AND status <> 'revoked'
+`
+
+type RevokeTicketParams struct {
+	ID      pgtype.UUID
+	EventID pgtype.UUID
+}
+
+func (q *Queries) RevokeTicket(ctx context.Context, arg RevokeTicketParams) error {
+	_, err := q.db.Exec(ctx, revokeTicket, arg.ID, arg.EventID)
 	return err
 }

@@ -23,12 +23,29 @@ type IssuedTicket struct {
 	CheckedInBy  pgtype.UUID
 }
 
-type TicketCheckInOutbox struct {
+type TicketCancellationInbox struct {
+	MessageID   pgtype.UUID
 	EventID     pgtype.UUID
-	TicketID    pgtype.UUID
 	EventType   string
-	OccurredAt  pgtype.Timestamptz
-	PublishedAt pgtype.Timestamptz
+	ReceivedAt  pgtype.Timestamptz
+	ProcessedAt pgtype.Timestamptz
+	Status      string
+}
+
+type TicketCancelledEvent struct {
+	EventID               pgtype.UUID
+	CancellationMessageID pgtype.UUID
+	CancelledAt           pgtype.Timestamptz
+}
+
+type TicketCheckInOutbox struct {
+	EventID       pgtype.UUID
+	TicketID      pgtype.UUID
+	EventType     string
+	OccurredAt    pgtype.Timestamptz
+	AggregateType string
+	AggregateID   pgtype.UUID
+	Payload       []byte
 }
 
 type TicketIssuanceInbox struct {
@@ -37,4 +54,13 @@ type TicketIssuanceInbox struct {
 	ReceivedAt  pgtype.Timestamptz
 	ProcessedAt pgtype.Timestamptz
 	Status      string
+}
+
+type TicketRevocationOutbox struct {
+	EventID       pgtype.UUID
+	AggregateType string
+	AggregateID   pgtype.UUID
+	EventType     string
+	Payload       []byte
+	OccurredAt    pgtype.Timestamptz
 }

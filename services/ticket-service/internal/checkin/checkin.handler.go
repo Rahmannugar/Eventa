@@ -24,7 +24,7 @@ func (h *Handler) CheckIn(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	result, err := h.service.CheckIn(c.Request.Context(), Request{QRToken: body.QRToken, EventID: body.EventID, CheckedInBy: body.CheckedInBy})
+	result, err := h.service.CheckIn(c.Request.Context(), Request(body))
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidInput), errors.Is(err, ErrTicketNotFound), errors.Is(err, ErrEventMismatch):

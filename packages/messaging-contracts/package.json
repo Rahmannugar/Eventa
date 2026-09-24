@@ -27,6 +27,10 @@
     "./commerce/order-lifecycle.events": {
       "types": "./dist/commerce/order-lifecycle.events.d.ts",
       "default": "./dist/commerce/order-lifecycle.events.js"
+    },
+    "./ticket/ticket-lifecycle.events": {
+      "types": "./dist/ticket/ticket-lifecycle.events.d.ts",
+      "default": "./dist/ticket/ticket-lifecycle.events.js"
     }
   },
   "typesVersions": {
@@ -48,6 +52,9 @@
       ],
       "commerce/order-lifecycle.events": [
         "dist/commerce/order-lifecycle.events.d.ts"
+      ],
+      "ticket/ticket-lifecycle.events": [
+        "dist/ticket/ticket-lifecycle.events.d.ts"
       ]
     }
   },

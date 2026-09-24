@@ -46,7 +46,7 @@ Eventa uses one web application with attendee and admin surfaces. Each backend s
 - Identity Service owns attendee and admin principals, credentials, verification, and sessions. Attendees and admins remain separate security namespaces.
 - Event Service owns events, venues, capacity, ticket types, waitlists, and authoritative geographic data.
 - Commerce Service owns the Order and Payment domains plus explicitly named commerce workflows. Order owns orders, order items, discounts, and order state. Payment owns payment attempts, Stripe interaction, webhooks, reconciliation, refunds, receipts, invoices, and all money invariants. They share one Commerce database and migration stream but do not access each other's repositories directly.
-- Ticket Service owns issued tickets, QR codes, and check-ins.
+- Ticket Service owns issued tickets, QR codes, check-ins, and ticket revocation caused by cancelled events.
 - Discovery Service owns explicit attendee interests, behavior-derived recommendation preferences, semantic indexes, and recommendation ranking.
 - Notification Service owns delivery and notification history.
 - Analytics Service owns reporting projections rather than transactional source data.
@@ -66,9 +66,11 @@ API Gateway, Identity, Event, and Commerce use NestJS/TypeScript. Ticket, Discov
 - Event bus: durable completed business facts and independent consumers. Kafka is the adapter choice.
 - Job queue: retryable background work assigned to workers. RabbitMQ is the adapter choice.
 
-Database-driven messages use a transactional outbox and Debezium over PostgreSQL logical WAL. Debezium routes committed outbox inserts to Kafka for business facts or RabbitMQ for initial job assignments, using destination-specific lanes to isolate backpressure. Polling is limited to job retry and reconciliation, and delivery remains at least once.
+The primary relay for durable inter-service messages caused by database state is a service-owned transactional outbox plus Debezium over PostgreSQL logical WAL. The owning transaction appends an immutable message with the business change. Debezium routes committed inserts to Kafka for business facts or RabbitMQ for initial job assignments through destination-specific lanes. Application polling publishers do not duplicate this path. Direct publishers are reserved for boundaries without a database transaction and for confirmed retry or reconciliation transfers backed by existing durable state. Delivery remains at least once.
 
-Identity publishes `attendee.deleted.v1`, and Event Service publishes `event.published.v1`, through their service-owned outboxes. No deployable subscribes to either Kafka lifecycle topic. Both facts still need purpose-built consumers; each consumer must be introduced by the product story that owns its reaction, durable inbox/idempotency boundary, recovery policy, and operating owner. RabbitMQ consumers are separate workers for assigned jobs and are not Kafka business-fact consumers.
+Every message has a stable message ID for downstream inbox deduplication. Kafka keys follow the aggregate described by the fact so its lifecycle remains ordered: Event facts use Event ID, Ticket facts use Ticket ID, and Order facts use Order ID. Message identity and aggregate identity remain separate even when a workflow emits only one fact.
+
+Identity publishes `attendee.deleted.v1`, and Event Service publishes `event.published.v1`, through their service-owned outboxes. Ticket Service consumes the shared Event lifecycle Kafka topic for `event.cancelled.v1` and acknowledges other lifecycle facts without acting on them. No deployable consumes `attendee.deleted.v1` or reacts to `event.published.v1`; each remaining consumer must be introduced by the product story that owns its reaction, durable inbox/idempotency boundary, recovery policy, and operating owner. RabbitMQ consumers are separate workers for assigned jobs and are not Kafka business-fact consumers.
 
 Defined multi-service business workflows use orchestration. Independent reactions to completed facts use choreography. Delivery is treated as at least once, so durable commands, jobs, events, webhooks, and workflow steps must be idempotent.
 

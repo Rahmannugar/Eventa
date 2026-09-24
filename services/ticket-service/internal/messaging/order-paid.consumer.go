@@ -34,7 +34,7 @@ func (c *OrderPaidConsumer) ConsumeOne(ctx context.Context) error {
 	}
 	event, err := decodePaidOrder(message.Value)
 	if errors.Is(err, errPermanentMessage) {
-		return c.reader.CommitMessages(ctx, message)
+		return err
 	}
 	if err != nil {
 		return err
@@ -69,6 +69,7 @@ func (c *OrderPaidConsumer) Run(ctx context.Context, onError func(error)) {
 				return
 			}
 			onError(err)
+			return
 		}
 	}
 }
