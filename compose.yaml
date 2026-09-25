@@ -105,6 +105,14 @@ services:
 
   notification-database:
     image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=8
+      - -c
+      - max_wal_senders=8
     env_file:
       - ./services/notification-service/.env
     ports:
@@ -265,6 +273,22 @@ services:
     restart: unless-stopped
     logging: *local-logging
 
+  notification-rabbitmq-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/notification-service/.env
+      - ./infrastructure/messaging/job-queue/rabbitmq/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/notification-rabbitmq/application.properties:/debezium/config/application.properties:ro
+      - notification-rabbitmq-cdc-data:/debezium/data
+    depends_on:
+      notification-service:
+        condition: service_healthy
+      job-queue:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -415,7 +439,8 @@ services:
     ports:
       - '3010:3010'
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3010/health/ready']
+      test:
+        ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3010/health/ready']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -629,6 +654,7 @@ volumes:
   ticket-kafka-cdc-data:
   commerce-kafka-cdc-data:
   event-rabbitmq-cdc-data:
+  notification-rabbitmq-cdc-data:
   event-database-data:
   identity-kafka-cdc-data:
   identity-database-data:

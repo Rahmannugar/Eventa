@@ -1,6 +1,9 @@
 export interface RuntimeConfig {
   databaseUrl: string;
   healthPort: number;
+  kafkaBrokers: string[];
+  kafkaConsumerGroup: string;
+  kafkaTicketRevokedTopic: string;
   rabbitMqConnectTimeoutMs: number;
   rabbitMqPublishTimeoutMs: number;
   rabbitMqUrl: string;
@@ -66,6 +69,33 @@ export function readDatabaseUrl(environment: NodeJS.ProcessEnv): string {
   return readRequiredString(environment, 'DATABASE_URL');
 }
 
+function readBrokerList(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+): string[] {
+  const brokers = readRequiredString(environment, name)
+    .split(',')
+    .map((broker) => broker.trim())
+    .filter((broker) => broker !== '');
+  if (brokers.length === 0) throw new Error(`${name} must list a broker`);
+  for (const broker of brokers) {
+    if (!/^[^\s:]+:\d{1,5}$/.test(broker)) {
+      throw new Error(`${name} must use host:port entries`);
+    }
+  }
+  return brokers;
+}
+
+function readKafkaName(environment: NodeJS.ProcessEnv, name: string): string {
+  const value = readRequiredString(environment, name);
+  if (!/^[a-zA-Z0-9._-]{1,249}$/.test(value)) {
+    throw new Error(
+      `${name} may only contain letters, digits, '.', '_' and '-'`,
+    );
+  }
+  return value;
+}
+
 export function readRuntimeConfig(
   environment: NodeJS.ProcessEnv,
 ): RuntimeConfig {
@@ -83,6 +113,12 @@ export function readRuntimeConfig(
   return {
     databaseUrl: readDatabaseUrl(environment),
     healthPort: readPort(environment, 'HEALTH_PORT'),
+    kafkaBrokers: readBrokerList(environment, 'KAFKA_BROKERS'),
+    kafkaConsumerGroup: readKafkaName(environment, 'KAFKA_CONSUMER_GROUP'),
+    kafkaTicketRevokedTopic: readKafkaName(
+      environment,
+      'KAFKA_TICKET_REVOKED_TOPIC',
+    ),
     rabbitMqConnectTimeoutMs: readPositiveInteger(
       environment,
       'RABBITMQ_CONNECT_TIMEOUT_MS',

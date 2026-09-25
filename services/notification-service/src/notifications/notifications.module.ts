@@ -11,6 +11,7 @@ import {
 import type { RuntimeConfig } from '../config/runtime-config';
 import { RUNTIME_CONFIG } from '../config/runtime.constants';
 import { DatabaseModule } from '../database/database.module';
+import { KafkaClient } from '../infrastructure/clients/kafka.client';
 import { RabbitMQClient } from '../infrastructure/clients/rabbitmq.client';
 import { ResendClient } from '../infrastructure/clients/resend.client';
 import {
@@ -22,9 +23,13 @@ import {
 import { AdminActivationJobConsumer } from './job-queue/auth/admin-activation-job.consumer';
 import { EmailVerificationJobConsumer } from './job-queue/auth/email-verification-job.consumer';
 import { PasswordResetJobConsumer } from './job-queue/auth/password-reset-job.consumer';
+import { EventCancellationEmailQueueTopology } from './job-queue/cancellation/event-cancellation-email-queue.topology';
+import { TicketRevocationConsumer } from './job-queue/cancellation/ticket-revocation.consumer';
 import type { EmailDeliveryProvider } from './ports/email-delivery.provider';
 import { AuthEmailDeliveryRepository } from './repositories/auth-email-delivery.repository';
+import { CancellationEmailRepository } from './repositories/cancellation-email.repository';
 import { AdminActivationDeliveryService } from './services/admin-activation-delivery.service';
+import { CancellationEmailIngestService } from './services/cancellation-email-ingest.service';
 import { EmailVerificationDeliveryService } from './services/email-verification-delivery.service';
 import { PasswordResetDeliveryService } from './services/password-reset-delivery.service';
 
@@ -150,6 +155,33 @@ import { PasswordResetDeliveryService } from './services/password-reset-delivery
         deliveryService: EmailVerificationDeliveryService,
         config: RuntimeConfig,
       ) => new EmailVerificationJobConsumer(rabbitMQ, deliveryService, config),
+    },
+    {
+      provide: KafkaClient,
+      inject: [RUNTIME_CONFIG],
+      useFactory: (config: RuntimeConfig) =>
+        new KafkaClient({
+          brokers: config.kafkaBrokers,
+          clientId: 'eventa-notification-service',
+          consumerGroup: config.kafkaConsumerGroup,
+        }),
+    },
+    CancellationEmailRepository,
+    CancellationEmailIngestService,
+    EventCancellationEmailQueueTopology,
+    {
+      provide: TicketRevocationConsumer,
+      inject: [KafkaClient, CancellationEmailIngestService, RUNTIME_CONFIG],
+      useFactory: (
+        kafka: KafkaClient,
+        ingest: CancellationEmailIngestService,
+        config: RuntimeConfig,
+      ) =>
+        new TicketRevocationConsumer(
+          kafka,
+          ingest,
+          config.kafkaTicketRevokedTopic,
+        ),
     },
   ],
   exports: [RabbitMQClient],

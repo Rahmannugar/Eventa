@@ -450,6 +450,9 @@ importers:
       drizzle-orm:
         specifier: ^0.44.7
         version: 0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       postgres:
         specifier: ^3.4.8
         version: 3.4.9

@@ -22,6 +22,13 @@
       "when": 1785235492116,
       "tag": "0002_consolidate_auth_email_deliveries",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790340528361,
+      "tag": "0003_cancelled_event_emails",
+      "breakpoints": true
     }
   ]
 }
