@@ -9,7 +9,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { context, propagation } from '@opentelemetry/api';
-import type { EachMessagePayload } from 'kafkajs';
+import type { Consumer, EachMessagePayload } from 'kafkajs';
 
 import type { KafkaClient } from '../../infrastructure/clients/kafka.client';
 import {
@@ -29,6 +29,8 @@ export class EventCancelledConsumer
 {
   private readonly logger = new Logger(EventCancelledConsumer.name);
   private readonly topic: string;
+  private readonly shutdownSignal: Promise<void>;
+  private readonly signalShutdown: () => void;
   private shuttingDown = false;
   private subscribed = false;
   private loop: Promise<void> | undefined;
@@ -39,6 +41,11 @@ export class EventCancelledConsumer
     topic: string,
   ) {
     this.topic = topic;
+    let signalShutdown: () => void = () => undefined;
+    this.shutdownSignal = new Promise<void>((resolve) => {
+      signalShutdown = resolve;
+    });
+    this.signalShutdown = signalShutdown;
   }
 
   onModuleInit(): void {
@@ -47,6 +54,7 @@ export class EventCancelledConsumer
 
   async onApplicationShutdown(): Promise<void> {
     this.shuttingDown = true;
+    this.signalShutdown();
     await this.kafka.disconnect();
     if (this.loop === undefined) return;
     await Promise.race([
@@ -63,42 +71,57 @@ export class EventCancelledConsumer
     while (!this.shuttingDown) {
       const consumer = this.kafka.consumer();
       let runStartedAt = 0;
+      let connected = false;
       try {
         await consumer.connect();
+        connected = true;
         if (!this.subscribed) {
           await consumer.subscribe({ fromBeginning: true, topic: this.topic });
           this.subscribed = true;
         }
+        const unrecoverable = this.watchForUnrecoverableCrash(consumer);
         runStartedAt = Date.now();
         await consumer.run({
           autoCommit: false,
           eachMessage: (payload) => this.handle(payload),
         });
-        if (Date.now() - runStartedAt >= HEALTHY_RUN_RESET_MS) attempt = 0;
+        // run() resolves once the group is joined and fetching starts, so the
+        // consumer stays subscribed until shutdown or a crash kafkajs cannot
+        // restart on its own.
+        await Promise.race([unrecoverable, this.shutdownSignal]);
+        if (this.shuttingDown) return;
       } catch (error: unknown) {
-        if (Date.now() - runStartedAt >= HEALTHY_RUN_RESET_MS) attempt = 0;
-        attempt += 1;
         if (!this.shuttingDown) {
           this.logger.error({
             error_type: error instanceof Error ? error.name : 'UnknownError',
             event: 'event_cancelled_consumer_failed',
             operation: EVENT_CANCELLED_OPERATION,
-            attempt,
+            attempt: attempt + 1,
           });
         }
       } finally {
-        if (!this.shuttingDown) {
+        if (!this.shuttingDown && connected) {
           await consumer.disconnect().catch(() => undefined);
         }
       }
+      const healthy =
+        runStartedAt !== 0 && Date.now() - runStartedAt >= HEALTHY_RUN_RESET_MS;
+      attempt = healthy ? 0 : attempt + 1;
       if (this.shuttingDown) return;
-      if (runStartedAt === 0) attempt += 1;
       const delayMs = Math.min(
         CONSUMER_RETRY_MAX_MS,
-        CONSUMER_RETRY_MIN_MS * 2 ** Math.min(attempt - 1, 5),
+        CONSUMER_RETRY_MIN_MS * 2 ** Math.min(Math.max(attempt, 1) - 1, 5),
       );
       await this.delay(delayMs);
     }
+  }
+
+  private watchForUnrecoverableCrash(consumer: Consumer): Promise<void> {
+    return new Promise<void>((resolve) => {
+      consumer.on(consumer.events.CRASH, (event) => {
+        if (event.payload.restart !== true) resolve();
+      });
+    });
   }
 
   private async handle(payload: EachMessagePayload): Promise<void> {

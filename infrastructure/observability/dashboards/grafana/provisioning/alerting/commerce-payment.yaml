@@ -17,7 +17,7 @@ groups:
             datasourceUid: prometheus
             model:
               editorMode: code
-              expr: sum(increase(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"}[30m]) + (last_over_time(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"}[30m]) unless eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.ticket_purchase_(completion|expiry)", outcome=~"attention_required|refund_failed"} offset 30m)) or vector(0)
+              expr: sum(increase(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.(ticket_purchase_(completion|expiry)|cancelled_event_refund)", outcome=~"attention_required|refund_failed"}[30m]) + (last_over_time(eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.(ticket_purchase_(completion|expiry)|cancelled_event_refund)", outcome=~"attention_required|refund_failed"}[30m]) unless eventa_business_outcome_count_total{service_name="eventa-commerce-service", operation=~"commerce\\.(ticket_purchase_(completion|expiry)|cancelled_event_refund)", outcome=~"attention_required|refund_failed"} offset 30m)) or vector(0)
               instant: true
               intervalMs: 1000
               legendFormat: __auto
@@ -55,7 +55,7 @@ groups:
         for: 1m
         annotations:
           __dashboardUid__: eventa-commerce-service
-          __panelId__: "5"
+          __panelId__: '5'
           description: A Commerce payment workflow reached five consecutive failures or Stripe reported a terminal refund failure. Open the Commerce dashboard and correlate the safe order/payment IDs in error logs. Restore the Event, Stripe, or database dependency for retrying work; arrange an alternative customer reimbursement for refund_failed.
           summary: Commerce payment workflow requires operator attention.
         labels:
