@@ -6,6 +6,7 @@ enum EventStatus {
   EVENT_STATUS_UNSPECIFIED = 0;
   EVENT_STATUS_DRAFT = 1;
   EVENT_STATUS_PUBLISHED = 2;
+  EVENT_STATUS_CANCELLED = 3;
 }
 
 enum AdminEventSort {
@@ -73,6 +74,7 @@ message Event {
   repeated EventMedia media = 14;
   optional string published_at = 15;
   repeated string categories = 16;
+  optional string cancelled_at = 17;
 }
 
 message PublishedEvent {
@@ -485,6 +487,16 @@ message PublishEventRequest {
 }
 
 message PublishEventResponse {
+  Event event = 1;
+}
+
+message CancelEventRequest {
+  string admin_id = 1;
+  string event_id = 2;
+  int32 expected_version = 3;
+}
+
+message CancelEventResponse {
   Event event = 1;
 }
 

@@ -23,6 +23,7 @@ import {
   listAdminEvents,
   listEventTicketTypes,
   publishEvent,
+  cancelEvent,
   removeEventMedia,
   retireDraftEvent,
   retireEventTicketType,
@@ -42,6 +43,7 @@ import type {
   EventMediaSlot,
   EventMediaUploadStatus,
   PublishEventCommand,
+  CancelEventCommand,
   RetireDraftEventCommand,
   RetireEventTicketTypeCommand,
   UpdateDraftEventCommand,
@@ -240,6 +242,18 @@ export function usePublishEvent() {
 
   return useMutation({
     mutationFn: (command: PublishEventCommand) => publishEvent(command),
+    onSuccess: (event) => {
+      queryClient.setQueryData(adminEventQueryKey(event.eventId), event);
+      void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });
+    },
+  });
+}
+
+export function useCancelEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (command: CancelEventCommand) => cancelEvent(command),
     onSuccess: (event) => {
       queryClient.setQueryData(adminEventQueryKey(event.eventId), event);
       void queryClient.invalidateQueries({ queryKey: adminEventListQueryKey });

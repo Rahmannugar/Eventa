@@ -299,8 +299,11 @@ export class AdminEventDto {
   @ApiProperty({ type: () => [AdminEventMediaDto] })
   media!: AdminEventMediaDto[];
 
-  @ApiProperty({ enum: ['draft', 'published'], example: 'draft' })
-  status!: 'draft' | 'published';
+  @ApiProperty({
+    enum: ['draft', 'published', 'cancelled'],
+    example: 'draft',
+  })
+  status!: 'draft' | 'published' | 'cancelled';
 
   @ApiProperty({ example: 1, minimum: 1 })
   version!: number;
@@ -316,6 +319,9 @@ export class AdminEventDto {
 
   @ApiPropertyOptional({ example: '2026-07-30T10:05:00.000Z' })
   publishedAt!: string | undefined;
+
+  @ApiPropertyOptional({ example: '2026-08-15T12:00:00.000Z' })
+  cancelledAt!: string | undefined;
 }
 
 export class AdminEventSummaryDto {
@@ -328,8 +334,11 @@ export class AdminEventSummaryDto {
   @ApiProperty({ example: ['Outdoors', 'Sports'], maxItems: 5 })
   categories!: string[];
 
-  @ApiProperty({ enum: ['draft', 'published'], example: 'draft' })
-  status!: 'draft' | 'published';
+  @ApiProperty({
+    enum: ['draft', 'published', 'cancelled'],
+    example: 'draft',
+  })
+  status!: 'draft' | 'published' | 'cancelled';
 
   @ApiPropertyOptional({ example: '2026-10-15T08:00:00.000Z' })
   startsAt!: string | undefined;
@@ -356,6 +365,14 @@ export class AdminEventListDto {
 }
 
 export class PublishEventDto {
+  @ApiProperty({ example: 3, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class CancelEventDto {
   @ApiProperty({ example: 3, minimum: 1 })
   @IsInt()
   @Min(1)

@@ -28,6 +28,7 @@ export const eventAdminAuditLog = pgTable(
         | 'event.media_replaced'
         | 'event.media_removed'
         | 'event.published'
+        | 'event.cancelled'
         | 'event.retired'
         | 'event.ticket_currency_defined'
         | 'event.ticket_type_created'
@@ -51,7 +52,7 @@ export const eventAdminAuditLog = pgTable(
     ),
     check(
       'event_admin_audit_action_allowed',
-      sql`${table.action} IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached', 'event.media_replaced', 'event.media_removed', 'event.published', 'event.retired', 'event.ticket_currency_defined', 'event.ticket_type_created', 'event.ticket_type_updated', 'event.ticket_type_retired')`,
+      sql`${table.action} IN ('event.created', 'event.updated', 'event.media_upload_requested', 'event.media_attached', 'event.media_replaced', 'event.media_removed', 'event.published', 'event.cancelled', 'event.retired', 'event.ticket_currency_defined', 'event.ticket_type_created', 'event.ticket_type_updated', 'event.ticket_type_retired')`,
     ),
     check(
       'event_admin_audit_version_positive',

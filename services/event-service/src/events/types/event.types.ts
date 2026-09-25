@@ -19,12 +19,13 @@ export interface EventRecord {
   timeZone: string | null;
   venue: EventVenue | null;
   media: EventMediaRecord[];
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
   version: number;
   createdByAdminId: string;
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
+  cancelledAt: Date | null;
   retiredAt: Date | null;
 }
 
@@ -287,7 +288,7 @@ export interface AdminEventSummaryRecord {
   endsAt: Date | null;
   timeZone: string | null;
   venue: EventVenue | null;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
   updatedAt: Date;
 }
 
@@ -375,7 +376,28 @@ export type RetireDraftEventResult =
 
 export type RetireDraftEventCommand = RetireDraftEvent;
 
+export interface CancelEvent {
+  actorAdminId: string;
+  eventId: string;
+  expectedVersion: number;
+  requestId: string;
+}
+
+export type CancelEventResult =
+  | { outcome: 'cancelled'; event: EventRecord }
+  | { outcome: 'already_cancelled'; event: EventRecord }
+  | { outcome: 'not_found' }
+  | { outcome: 'not_published' }
+  | { outcome: 'version_conflict' };
+
+export type CancelEventCommand = CancelEvent;
+
+export type CancelEventSuccess =
+  | { outcome: 'cancelled'; event: EventRecord }
+  | { outcome: 'already_cancelled'; event: EventRecord };
+
 export type { EventPublishedEvent as EventPublishedFact } from '@eventa/messaging-contracts/event/event-lifecycle.events';
+export type { EventCancelledEvent as EventCancelledFact } from '@eventa/messaging-contracts/event/event-lifecycle.events';
 
 export interface UpdateDraftEventCommand {
   actorAdminId: string;
@@ -407,6 +429,7 @@ export interface EventRepository {
   findPublishedById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
   publish(input: PublishEvent): Promise<PublishEventResult>;
+  cancel(input: CancelEvent): Promise<CancelEventResult>;
   retire(input: RetireDraftEvent): Promise<RetireDraftEventResult>;
 }
 
@@ -417,6 +440,7 @@ export interface EventManagement {
   getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
   publish(input: PublishEventCommand): Promise<EventRecord>;
+  cancel(input: CancelEventCommand): Promise<CancelEventSuccess>;
   retire(input: RetireDraftEventCommand): Promise<number>;
 }
 

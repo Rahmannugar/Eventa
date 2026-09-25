@@ -60,6 +60,8 @@ export {
   type ReserveEventCapacityResponse,
   type PublishEventRequest,
   type PublishEventResponse,
+  type CancelEventRequest,
+  type CancelEventResponse,
   type RetireDraftEventRequest,
   type RetireDraftEventResponse,
   type RetireEventTicketTypeRequest,

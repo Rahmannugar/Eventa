@@ -12,6 +12,7 @@ export enum EventStatus {
   EVENT_STATUS_UNSPECIFIED = 0,
   EVENT_STATUS_DRAFT = 1,
   EVENT_STATUS_PUBLISHED = 2,
+  EVENT_STATUS_CANCELLED = 3,
   UNRECOGNIZED = -1,
 }
 
@@ -89,6 +90,7 @@ export interface Event {
   media: EventMedia[];
   publishedAt?: string | undefined;
   categories: string[];
+  cancelledAt?: string | undefined;
 }
 
 export interface PublishedEvent {
@@ -510,6 +512,16 @@ export interface PublishEventRequest {
 }
 
 export interface PublishEventResponse {
+  event: Event | undefined;
+}
+
+export interface CancelEventRequest {
+  adminId: string;
+  eventId: string;
+  expectedVersion: number;
+}
+
+export interface CancelEventResponse {
   event: Event | undefined;
 }
 

@@ -21,6 +21,8 @@ import type {
   RemoveEventMediaResponse,
   PublishEventRequest,
   PublishEventResponse,
+  CancelEventRequest,
+  CancelEventResponse,
   RetireDraftEventRequest,
   RetireDraftEventResponse,
   RetireEventTicketTypeRequest,
@@ -132,6 +134,11 @@ export interface DeadlineAwareEventServiceClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<PublishEventResponse>;
+  cancelEvent(
+    request: CancelEventRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<CancelEventResponse>;
   retireDraftEvent(
     request: RetireDraftEventRequest,
     metadata: Metadata,

@@ -37,6 +37,7 @@ import {
   type ReleaseEventCapacityReservationResponse,
   type ReserveEventCapacityResponse,
   type PublishEventResponse,
+  type CancelEventResponse,
   type RetireDraftEventResponse,
   type RetireEventTicketTypeResponse,
   type UpdateEventTicketTypeResponse,
@@ -72,6 +73,7 @@ import {
   CreateDraftEventDto,
   ListAdminEventsDto,
   PublishEventDto,
+  CancelEventDto,
   RetireDraftEventDto,
   UpdateDraftEventDto,
 } from '../dto/event-management.dto';
@@ -98,6 +100,7 @@ import {
   EventPageTokenInvalidError,
   EventPublicationIncompleteError,
   EventRetirementNotAllowedError,
+  EventCancellationNotAllowedError,
   EventScheduleInvalidError,
   EventVersionConflictError,
   EventVenueInvalidError,
@@ -317,6 +320,13 @@ export class EventController implements EventServiceController {
     return from(this.publish(request, this.readRequestId(metadata)));
   }
 
+  cancelEvent(
+    request: CancelEventDto,
+    metadata?: Metadata,
+  ): Observable<CancelEventResponse> {
+    return from(this.cancel(request, this.readRequestId(metadata)));
+  }
+
   retireDraftEvent(
     request: RetireDraftEventDto,
     metadata?: Metadata,
@@ -449,7 +459,9 @@ export class EventController implements EventServiceController {
           status:
             event.status === 'published'
               ? EventStatus.EVENT_STATUS_PUBLISHED
-              : EventStatus.EVENT_STATUS_DRAFT,
+              : event.status === 'cancelled'
+                ? EventStatus.EVENT_STATUS_CANCELLED
+                : EventStatus.EVENT_STATUS_DRAFT,
           startsAt: event.startsAt?.toISOString(),
           endsAt: event.endsAt?.toISOString(),
           timeZone: event.timeZone ?? undefined,
@@ -699,6 +711,43 @@ export class EventController implements EventServiceController {
         });
       }
       if (error instanceof EventPublicationIncompleteError) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async cancel(
+    request: CancelEventDto,
+    requestId: string,
+  ): Promise<CancelEventResponse> {
+    try {
+      const result = await this.eventService.cancel({
+        actorAdminId: request.adminId,
+        eventId: request.eventId,
+        expectedVersion: request.expectedVersion,
+        requestId,
+      });
+      return {
+        event: this.toContract(result.event),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventVersionConflictError) {
+        throw new RpcException({
+          code: status.ABORTED,
+          message: error.message,
+        });
+      }
+      if (error instanceof EventCancellationNotAllowedError) {
         throw new RpcException({
           code: status.FAILED_PRECONDITION,
           message: error.message,
@@ -1313,12 +1362,15 @@ export class EventController implements EventServiceController {
       status:
         event.status === 'published'
           ? EventStatus.EVENT_STATUS_PUBLISHED
-          : EventStatus.EVENT_STATUS_DRAFT,
+          : event.status === 'cancelled'
+            ? EventStatus.EVENT_STATUS_CANCELLED
+            : EventStatus.EVENT_STATUS_DRAFT,
       version: event.version,
       createdByAdminId: event.createdByAdminId,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
       publishedAt: event.publishedAt?.toISOString(),
+      cancelledAt: event.cancelledAt?.toISOString(),
     };
   }
 

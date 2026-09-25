@@ -54,6 +54,13 @@ export class EventRetirementNotAllowedError extends Error {
   }
 }
 
+export class EventCancellationNotAllowedError extends Error {
+  constructor() {
+    super('EVENT_CANCELLATION_NOT_ALLOWED');
+    this.name = EventCancellationNotAllowedError.name;
+  }
+}
+
 export class EventMediaNotFoundError extends Error {
   constructor() {
     super('EVENT_MEDIA_NOT_FOUND');

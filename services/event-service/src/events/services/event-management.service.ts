@@ -1,4 +1,5 @@
 import {
+  EventCancellationNotAllowedError,
   EventCategoriesInvalidError,
   EventNotFoundError,
   EventPageTokenInvalidError,
@@ -10,6 +11,8 @@ import {
 } from '../errors/event.errors';
 import type {
   AdminEventListPage,
+  CancelEventCommand,
+  CancelEventSuccess,
   CreateDraftEventCommand,
   EventManagement,
   EventListCursor,
@@ -154,6 +157,22 @@ export class EventManagementService implements EventManagement {
     }
 
     return result.event;
+  }
+
+  async cancel(input: CancelEventCommand): Promise<CancelEventSuccess> {
+    const result = await this.events.cancel(input);
+
+    if (result.outcome === 'not_found') {
+      throw new EventNotFoundError();
+    }
+    if (result.outcome === 'version_conflict') {
+      throw new EventVersionConflictError();
+    }
+    if (result.outcome === 'not_published') {
+      throw new EventCancellationNotAllowedError();
+    }
+
+    return { outcome: result.outcome, event: result.event };
   }
 
   async retire(input: RetireDraftEventCommand): Promise<number> {

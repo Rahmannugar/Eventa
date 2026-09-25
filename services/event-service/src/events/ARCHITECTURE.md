@@ -89,6 +89,18 @@ Explicit removal locks the event, verifies draft state and expected version, rem
 
 Publication never waits for Kafka. PostgreSQL establishes both the published state and the durable fact before the admin response succeeds.
 
+## Cancellation
+
+`CancelEvent` locks the event row and accepts only a published event at the expected version. One transaction:
+
+1. Sets status `cancelled` and records `cancelled_at`, then increments the version.
+2. Releases every active capacity hold for the event and decrements the matching reserved quantities. Sold quantities remain historical for later refunds and revocation.
+3. Closes reserved waitlist entries so promotion cannot continue.
+4. Appends `event.cancelled` audit with the acting admin and request ID.
+5. Inserts one `event.cancelled.v1` outbox fact.
+
+Debezium relays that fact on `eventa.event.lifecycle.v1` keyed by event ID. Ticket Service consumes the fact to revoke issued tickets. An already-cancelled event returns its current state without another audit row or outbox fact. Cancellation waits for neither Kafka nor Ticket Service.
+
 ## Draft Retirement
 
 Retirement locks the event row and accepts only an active draft at the expected version. One transaction sets the retirement time, increments the version, and appends `event.retired` with the acting admin and request ID. A repeated command returns the stored retirement version without another state change or audit entry. Published events remain active because cancellation is a separate lifecycle workflow.
@@ -97,4 +109,4 @@ Kafka lifecycle facts and RabbitMQ job assignments use separate Debezium lanes o
 
 ## Audit
 
-The audit table is append-only through the Event application boundary. It records only mutations, including `event.ticket_type_created`, `event.published`, `event.retired`, and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.
+The audit table is append-only through the Event application boundary. It records only mutations, including `event.ticket_type_created`, `event.published`, `event.cancelled`, `event.retired`, and the resulting event version. Reads use ordinary request telemetry and do not grow durable audit history.

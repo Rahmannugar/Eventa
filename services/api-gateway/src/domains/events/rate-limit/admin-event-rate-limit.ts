@@ -130,6 +130,25 @@ const PUBLISH_RULES = {
   },
 } as const satisfies HybridRateLimitRules;
 
+const CANCEL_RULES = {
+  routeKey: 'admin-event-cancel',
+  tokenBucket: {
+    capacity: 5,
+    name: 'ip-burst',
+    refillIntervalMs: 12_000,
+  },
+  primarySlidingWindow: {
+    limit: 30,
+    name: 'ip-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+  secondarySlidingWindow: {
+    limit: 20,
+    name: 'session-hour',
+    windowMs: 60 * 60 * 1_000,
+  },
+} as const satisfies HybridRateLimitRules;
+
 const RETIRE_RULES = {
   routeKey: 'admin-event-retire',
   tokenBucket: {
@@ -169,6 +188,7 @@ const TICKET_TYPE_RULES = {
 } as const satisfies HybridRateLimitRules;
 
 type AdminEventOperation =
+  | 'cancel'
   | 'create'
   | 'media_status'
   | 'media_upload'
@@ -208,13 +228,15 @@ export class AdminEventRateLimitService {
             ? MEDIA_UPLOAD_RULES
             : operation === 'publish'
               ? PUBLISH_RULES
-            : operation === 'retire'
-              ? RETIRE_RULES
-              : operation === 'ticket_type'
-                ? TICKET_TYPE_RULES
-              : operation === 'update'
-                  ? UPDATE_RULES
-                  : READ_RULES;
+              : operation === 'cancel'
+                ? CANCEL_RULES
+                : operation === 'retire'
+                  ? RETIRE_RULES
+                  : operation === 'ticket_type'
+                    ? TICKET_TYPE_RULES
+                    : operation === 'update'
+                      ? UPDATE_RULES
+                      : READ_RULES;
     const keyPrefix = `eventa:rate-limit:{${rules.routeKey}}`;
     const ipSubject = this.hash(`ip:${clientIp}`);
     const attempt = {
@@ -276,13 +298,15 @@ abstract class AdminEventRateLimitGuard implements CanActivate {
               ? 'EVENT_MEDIA_STATUS_RATE_LIMITED'
               : this.operation === 'publish'
                 ? 'EVENT_PUBLISH_RATE_LIMITED'
-                : this.operation === 'retire'
-                  ? 'EVENT_RETIRE_RATE_LIMITED'
-                  : this.operation === 'ticket_type'
-                    ? 'EVENT_TICKET_TYPE_RATE_LIMITED'
-                  : this.operation === 'update'
-                    ? 'EVENT_UPDATE_RATE_LIMITED'
-                    : 'EVENT_READ_RATE_LIMITED',
+                : this.operation === 'cancel'
+                  ? 'EVENT_CANCEL_RATE_LIMITED'
+                  : this.operation === 'retire'
+                    ? 'EVENT_RETIRE_RATE_LIMITED'
+                    : this.operation === 'ticket_type'
+                      ? 'EVENT_TICKET_TYPE_RATE_LIMITED'
+                      : this.operation === 'update'
+                        ? 'EVENT_UPDATE_RATE_LIMITED'
+                        : 'EVENT_READ_RATE_LIMITED',
         'Wait before trying this event action again.',
       );
     } catch (error: unknown) {
@@ -387,6 +411,18 @@ export class AdminEventMediaStatusRateLimitGuard extends AdminEventRateLimitGuar
 @Injectable()
 export class AdminEventPublishRateLimitGuard extends AdminEventRateLimitGuard {
   protected readonly operation = 'publish' as const;
+
+  constructor(
+    rateLimits: AdminEventRateLimitService,
+    sessionCookie: AdminSessionCookie,
+  ) {
+    super(rateLimits, sessionCookie);
+  }
+}
+
+@Injectable()
+export class AdminEventCancelRateLimitGuard extends AdminEventRateLimitGuard {
+  protected readonly operation = 'cancel' as const;
 
   constructor(
     rateLimits: AdminEventRateLimitService,

@@ -15,6 +15,7 @@ import type {
   EventMediaUploadStatus,
   EventTicketTypeList,
   PublishEventCommand,
+  CancelEventCommand,
   RemoveEventMediaCommand,
   RetireDraftEventCommand,
   RetireEventTicketTypeCommand,
@@ -58,12 +59,13 @@ const adminEventSchema = z.object({
   timeZone: z.string().min(1).optional(),
   venue: eventVenueSchema.optional(),
   media: z.array(eventMediaSchema).max(5),
-  status: z.enum(['draft', 'published']),
+  status: z.enum(['draft', 'published', 'cancelled']),
   version: z.number().int().positive(),
   createdByAdminId: z.uuid(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   publishedAt: z.iso.datetime({ offset: true }).optional(),
+  cancelledAt: z.iso.datetime({ offset: true }).optional(),
 });
 
 const publishedAdminEventSchema: z.ZodType<AdminEvent> =
@@ -325,6 +327,17 @@ export function publishEvent({
     body: { expectedVersion },
     method: 'POST',
     responseSchema: publishedAdminEventSchema,
+  });
+}
+
+export function cancelEvent({
+  eventId,
+  expectedVersion,
+}: CancelEventCommand): Promise<AdminEvent> {
+  return apiRequest(`/admin/events/${encodeURIComponent(eventId)}/cancel`, {
+    body: { expectedVersion },
+    method: 'POST',
+    responseSchema: adminEventSchema,
   });
 }
 

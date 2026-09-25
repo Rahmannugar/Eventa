@@ -19,12 +19,16 @@ export const events = pgTable(
     endsAt: timestamp('ends_at', { mode: 'date', withTimezone: true }),
     timeZone: text('time_zone'),
     status: text('status')
-      .$type<'draft' | 'published'>()
+      .$type<'draft' | 'published' | 'cancelled'>()
       .default('draft')
       .notNull(),
     version: integer('version').default(1).notNull(),
     createdByAdminId: uuid('created_by_admin_id').notNull(),
     publishedAt: timestamp('published_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    cancelledAt: timestamp('cancelled_at', {
       mode: 'date',
       withTimezone: true,
     }),
@@ -89,11 +93,11 @@ export const events = pgTable(
     check('events_version_positive', sql`${table.version} >= 1`),
     check(
       'events_status_allowed',
-      sql`${table.status} IN ('draft', 'published')`,
+      sql`${table.status} IN ('draft', 'published', 'cancelled')`,
     ),
     check(
       'events_published_at_shape',
-      sql`(${table.status} = 'published') = (${table.publishedAt} IS NOT NULL)`,
+      sql`((${table.status} IN ('published', 'cancelled')) = (${table.publishedAt} IS NOT NULL)) AND ((${table.status} = 'cancelled') = (${table.cancelledAt} IS NOT NULL))`,
     ),
     check(
       'events_retired_draft_only',

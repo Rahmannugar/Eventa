@@ -43,6 +43,7 @@ import {
   RemoveEventMediaQueryDto,
   RemoveEventMediaResponseDto,
   PublishEventDto,
+  CancelEventDto,
   RetireDraftEventQueryDto,
   RetireDraftEventResponseDto,
   RetireEventTicketTypeQueryDto,
@@ -57,6 +58,7 @@ import {
   AdminEventMediaUploadRateLimitGuard,
   AdminEventReadRateLimitGuard,
   AdminEventPublishRateLimitGuard,
+  AdminEventCancelRateLimitGuard,
   AdminEventRetireRateLimitGuard,
   AdminEventUpdateRateLimitGuard,
   AdminEventTicketTypeRateLimitGuard,
@@ -276,6 +278,29 @@ export class AdminEventController {
     @RequestId() requestId: string,
   ): Promise<AdminEventDto> {
     return this.events.publish(
+      request.adminSession.adminId,
+      path.eventId,
+      input,
+      requestId,
+    );
+  }
+
+  @Post(':eventId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(
+    AdminClientOriginGuard,
+    AdminEventCancelRateLimitGuard,
+    AdminAuthenticationGuard,
+  )
+  @ApiOperation({ summary: 'Cancel a published event' })
+  @ApiResponse({ status: HttpStatus.OK, type: AdminEventDto })
+  cancel(
+    @Param() path: AdminEventPathDto,
+    @Body() input: CancelEventDto,
+    @Req() request: AdminAuthenticatedRequest,
+    @RequestId() requestId: string,
+  ): Promise<AdminEventDto> {
+    return this.events.cancel(
       request.adminSession.adminId,
       path.eventId,
       input,

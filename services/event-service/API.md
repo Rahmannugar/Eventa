@@ -15,6 +15,7 @@ Event Service implements `eventa.event.v1.EventService`.
 | `GetEventMediaUpload`              | Reports whether an upload is waiting, attached, rejected, conflicted, or expired. |
 | `RemoveEventMedia`                 | Clears a verified image and returns the new event version.                        |
 | `PublishEvent`                     | Publishes a complete draft at the expected version.                               |
+| `CancelEvent`                      | Cancels a published event and appends the cancellation outbox fact.               |
 | `RetireDraftEvent`                 | Recoverably removes a draft at the expected version.                              |
 | `AddEventTicketType`               | Adds a priced ticket type with capacity to a draft at the expected version.       |
 | `DefineEventTicketCurrency`        | Defines a unique event ticket currency at the expected version.                   |

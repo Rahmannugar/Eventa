@@ -1,6 +1,7 @@
 import { recordBusinessOutcome } from '@eventa/observability';
 
 import {
+  EventCancellationNotAllowedError,
   EventNotFoundError,
   EventScheduleInvalidError,
   EventPublicationIncompleteError,
@@ -9,6 +10,8 @@ import {
 } from '../errors/event.errors';
 import type {
   AdminEventListPage,
+  CancelEventCommand,
+  CancelEventSuccess,
   CreateDraftEventCommand,
   EventManagement,
   EventRecord,
@@ -82,6 +85,25 @@ export class ObservedEventManagement implements EventManagement {
     }
   }
 
+  async cancel(input: CancelEventCommand): Promise<CancelEventSuccess> {
+    try {
+      const result = await this.eventManagement.cancel(input);
+      this.recordCancellation(result.outcome);
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof EventVersionConflictError) {
+        this.recordCancellation('conflict');
+      } else if (error instanceof EventNotFoundError) {
+        this.recordCancellation('not_found');
+      } else if (error instanceof EventCancellationNotAllowedError) {
+        this.recordCancellation('not_published');
+      } else {
+        this.recordCancellation('failed');
+      }
+      throw error;
+    }
+  }
+
   async retire(input: RetireDraftEventCommand): Promise<number> {
     try {
       const version = await this.eventManagement.retire(input);
@@ -122,6 +144,18 @@ export class ObservedEventManagement implements EventManagement {
     outcome: 'published' | 'conflict' | 'not_found' | 'incomplete' | 'failed',
   ): void {
     recordBusinessOutcome({ operation: 'event.publication', outcome });
+  }
+
+  private recordCancellation(
+    outcome:
+      | 'cancelled'
+      | 'already_cancelled'
+      | 'conflict'
+      | 'not_found'
+      | 'not_published'
+      | 'failed',
+  ): void {
+    recordBusinessOutcome({ operation: 'event.cancellation', outcome });
   }
 
   private recordRetirement(

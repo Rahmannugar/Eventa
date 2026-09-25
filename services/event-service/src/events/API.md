@@ -40,6 +40,8 @@ Accepted media appears in Event responses with its fixed slot, public URL, verif
 
 `PublishEvent` accepts the acting admin, event ID, and expected version. Publication requires complete details, one venue, a verified cover image, and at least one ticket type. It returns the event as `published` with an incremented version and publication time. A missing event returns `NOT_FOUND`, an incomplete draft returns `FAILED_PRECONDITION`, and a stale version or already-published event returns `ABORTED`.
 
+`CancelEvent` accepts the acting admin, event ID, and expected version. Only a published event at the expected version can be cancelled. One transaction sets status `cancelled` and `cancelled_at`, increments the version, releases active capacity holds and decrements reserved quantities, closes reserved waitlist entries, appends `event.cancelled` audit, and inserts one `event.cancelled.v1` outbox fact. Sold quantities remain historical for later refunds and ticket revocation. A missing event returns `NOT_FOUND`, a non-published event returns `FAILED_PRECONDITION`, and a stale version returns `ABORTED`. An already-cancelled event returns its current state without another audit row or outbox fact.
+
 `RetireDraftEvent` accepts the acting admin, event ID, and expected version. It timestamps the draft as retired, increments its version, and returns that version. Repeating the command returns the stored resulting version without changing state again. Missing events return `NOT_FOUND`, stale active drafts return `ABORTED`, and published events return `FAILED_PRECONDITION`.
 
 Exact message fields remain authoritative in the `eventa.event.v1` protobuf schemas.

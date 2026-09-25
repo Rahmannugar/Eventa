@@ -30,6 +30,7 @@ import type {
   AdminEventListDto,
   AdminEventListQueryDto,
   AdminEventSummaryDto,
+  CancelEventDto,
   CreateDraftEventDto,
   CreateEventMediaUploadDto,
   CreateEventTicketTypeDto,
@@ -516,6 +517,27 @@ export class AdminEventService implements OnModuleInit {
     }
   }
 
+  async cancel(
+    adminId: string,
+    eventId: string,
+    input: CancelEventDto,
+    requestId: string,
+  ): Promise<AdminEventDto> {
+    const events = this.requireClient();
+    try {
+      const response = await firstValueFrom(
+        events.cancelEvent(
+          { adminId, eventId, expectedVersion: input.expectedVersion },
+          this.metadata(requestId),
+          this.deadline(),
+        ),
+      );
+      return this.toAdminEvent(response.event);
+    } catch (error: unknown) {
+      this.translate(error, 'cancel');
+    }
+  }
+
   async retire(
     adminId: string,
     eventId: string,
@@ -562,16 +584,25 @@ export class AdminEventService implements OnModuleInit {
   }
 
   private toAdminEvent(event: Event | undefined): AdminEventDto {
+    const hasPublishedAt =
+      event !== undefined &&
+      event.publishedAt !== undefined &&
+      event.publishedAt !== '';
+    const hasCancelledAt =
+      event !== undefined &&
+      event.cancelledAt !== undefined &&
+      event.cancelledAt !== '';
     if (
       event === undefined ||
       ![
         EventStatus.EVENT_STATUS_DRAFT,
         EventStatus.EVENT_STATUS_PUBLISHED,
+        EventStatus.EVENT_STATUS_CANCELLED,
       ].includes(event.status) ||
       !Number.isInteger(event.version) ||
       event.version < 1 ||
-      (event.status === EventStatus.EVENT_STATUS_PUBLISHED) !==
-        (event.publishedAt !== undefined && event.publishedAt !== '')
+      (event.status !== EventStatus.EVENT_STATUS_DRAFT) !== hasPublishedAt ||
+      (event.status === EventStatus.EVENT_STATUS_CANCELLED) !== hasCancelledAt
     ) {
       throw this.unavailable('EVENT_RESPONSE_INVALID');
     }
@@ -595,16 +626,27 @@ export class AdminEventService implements OnModuleInit {
         width: media.width,
         height: media.height,
       })),
-      status:
-        event.status === EventStatus.EVENT_STATUS_PUBLISHED
-          ? 'published'
-          : 'draft',
+      status: this.toAdminEventStatus(event.status),
       version: event.version,
       createdByAdminId: event.createdByAdminId,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
       publishedAt: event.publishedAt,
+      cancelledAt: event.cancelledAt,
     };
+  }
+
+  private toAdminEventStatus(status: EventStatus): AdminEventDto['status'] {
+    switch (status) {
+      case EventStatus.EVENT_STATUS_PUBLISHED:
+        return 'published';
+      case EventStatus.EVENT_STATUS_CANCELLED:
+        return 'cancelled';
+      case EventStatus.EVENT_STATUS_DRAFT:
+        return 'draft';
+      default:
+        throw this.unavailable('EVENT_RESPONSE_INVALID');
+    }
   }
 
   private toAdminEventSummary(event: AdminEventSummary): AdminEventSummaryDto {
@@ -615,6 +657,7 @@ export class AdminEventService implements OnModuleInit {
       ![
         EventStatus.EVENT_STATUS_DRAFT,
         EventStatus.EVENT_STATUS_PUBLISHED,
+        EventStatus.EVENT_STATUS_CANCELLED,
       ].includes(event.status)
     ) {
       throw this.unavailable('EVENT_LIST_RESPONSE_INVALID');
@@ -624,10 +667,7 @@ export class AdminEventService implements OnModuleInit {
       eventId: event.eventId,
       title: event.title,
       categories: event.categories ?? [],
-      status:
-        event.status === EventStatus.EVENT_STATUS_PUBLISHED
-          ? 'published'
-          : 'draft',
+      status: this.toAdminEventStatus(event.status),
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       timeZone: event.timeZone,
@@ -717,6 +757,7 @@ export class AdminEventService implements OnModuleInit {
   private translate(
     error: unknown,
     operation:
+      | 'cancel'
       | 'create'
       | 'media_remove'
       | 'media_status'
@@ -855,6 +896,13 @@ export class AdminEventService implements OnModuleInit {
             'Complete the event details, venue, cover image, and tickets before publishing.',
           );
         }
+        if (operation === 'cancel') {
+          throw new ApiHttpException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'EVENT_CANCELLATION_NOT_ALLOWED',
+            'Only published events can be cancelled.',
+          );
+        }
         if (operation === 'media_remove') {
           throw new ApiHttpException(
             HttpStatus.NOT_FOUND,
@@ -892,19 +940,21 @@ export class AdminEventService implements OnModuleInit {
                     ? 'EVENT_UPDATE_RPC_UNAVAILABLE'
                     : operation === 'publish'
                       ? 'EVENT_PUBLISH_RPC_UNAVAILABLE'
-                      : operation === 'retire'
-                        ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
-                        : operation === 'ticket_type'
-                          ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
-                          : operation === 'ticket_type_update'
-                            ? 'EVENT_TICKET_TYPE_UPDATE_RPC_UNAVAILABLE'
-                            : operation === 'ticket_type_retire'
-                              ? 'EVENT_TICKET_TYPE_RETIRE_RPC_UNAVAILABLE'
-                              : operation === 'ticket_currency'
-                                ? 'EVENT_TICKET_CURRENCY_RPC_UNAVAILABLE'
-                                : operation === 'ticket_type_read'
-                                  ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
-                                  : 'EVENT_READ_RPC_UNAVAILABLE',
+                      : operation === 'cancel'
+                        ? 'EVENT_CANCEL_RPC_UNAVAILABLE'
+                        : operation === 'retire'
+                          ? 'EVENT_RETIRE_RPC_UNAVAILABLE'
+                          : operation === 'ticket_type'
+                            ? 'EVENT_TICKET_TYPE_RPC_UNAVAILABLE'
+                            : operation === 'ticket_type_update'
+                              ? 'EVENT_TICKET_TYPE_UPDATE_RPC_UNAVAILABLE'
+                              : operation === 'ticket_type_retire'
+                                ? 'EVENT_TICKET_TYPE_RETIRE_RPC_UNAVAILABLE'
+                                : operation === 'ticket_currency'
+                                  ? 'EVENT_TICKET_CURRENCY_RPC_UNAVAILABLE'
+                                  : operation === 'ticket_type_read'
+                                    ? 'EVENT_TICKET_TYPE_READ_RPC_UNAVAILABLE'
+                                    : 'EVENT_READ_RPC_UNAVAILABLE',
         );
     }
   }

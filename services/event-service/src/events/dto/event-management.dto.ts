@@ -1,4 +1,5 @@
 import type {
+  CancelEventRequest,
   CreateDraftEventRequest,
   GetAdminEventRequest,
   ListAdminEventsRequest,
@@ -252,6 +253,19 @@ export class PublishEventDto implements PublishEventRequest {
 }
 
 export class RetireDraftEventDto implements RetireDraftEventRequest {
+  @IsUUID()
+  adminId!: string;
+
+  @IsUUID()
+  eventId!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_646)
+  expectedVersion!: number;
+}
+
+export class CancelEventDto implements CancelEventRequest {
   @IsUUID()
   adminId!: string;
 

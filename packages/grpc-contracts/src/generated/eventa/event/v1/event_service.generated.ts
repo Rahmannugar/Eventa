@@ -11,6 +11,8 @@ import { Observable } from "rxjs";
 import {
   AddEventTicketTypeRequest,
   AddEventTicketTypeResponse,
+  CancelEventRequest,
+  CancelEventResponse,
   CreateDraftEventRequest,
   CreateDraftEventResponse,
   CreateEventMediaUploadRequest,
@@ -153,6 +155,8 @@ export interface EventServiceClient {
 
   publishEvent(request: PublishEventRequest, metadata?: Metadata): Observable<PublishEventResponse>;
 
+  cancelEvent(request: CancelEventRequest, metadata?: Metadata): Observable<CancelEventResponse>;
+
   retireDraftEvent(request: RetireDraftEventRequest, metadata?: Metadata): Observable<RetireDraftEventResponse>;
 }
 
@@ -242,6 +246,8 @@ export interface EventServiceController {
 
   publishEvent(request: PublishEventRequest, metadata?: Metadata): Observable<PublishEventResponse>;
 
+  cancelEvent(request: CancelEventRequest, metadata?: Metadata): Observable<CancelEventResponse>;
+
   retireDraftEvent(request: RetireDraftEventRequest, metadata?: Metadata): Observable<RetireDraftEventResponse>;
 }
 
@@ -271,6 +277,7 @@ export function EventServiceControllerMethods() {
       "getEventMediaUpload",
       "removeEventMedia",
       "publishEvent",
+      "cancelEvent",
       "retireDraftEvent",
     ];
     for (const method of grpcMethods) {

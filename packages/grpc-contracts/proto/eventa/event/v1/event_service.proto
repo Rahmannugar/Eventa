@@ -32,5 +32,6 @@ service EventService {
   rpc GetEventMediaUpload(GetEventMediaUploadRequest) returns (GetEventMediaUploadResponse);
   rpc RemoveEventMedia(RemoveEventMediaRequest) returns (RemoveEventMediaResponse);
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+  rpc CancelEvent(CancelEventRequest) returns (CancelEventResponse);
   rpc RetireDraftEvent(RetireDraftEventRequest) returns (RetireDraftEventResponse);
 }

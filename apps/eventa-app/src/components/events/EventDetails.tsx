@@ -19,6 +19,7 @@ import type {
 } from '../../lib/events/event.types';
 import { useAdminEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
+import { EventCancellation } from './EventCancellation';
 import { EventMediaManager } from './EventMediaManager';
 import { EventPublication } from './EventPublication';
 import { EventRetirement } from './EventRetirement';
@@ -103,7 +104,11 @@ function EventDetailsContent({
           <div>
             <div className="event-details-header__state">
               <span className={`status-badge status-badge--${event.status}`}>
-                {event.status === 'draft' ? 'Draft' : 'Published'}
+                {event.status === 'draft'
+                  ? 'Draft'
+                  : event.status === 'cancelled'
+                    ? 'Cancelled'
+                    : 'Published'}
               </span>
             </div>
             <h1>{event.title}</h1>
@@ -217,12 +222,24 @@ function EventDetailsContent({
               <DetailGroup title="Published">
                 <p>{formatUpdatedAt(event.publishedAt ?? event.updatedAt)}</p>
               </DetailGroup>
+            ) : event.status === 'cancelled' ? (
+              <DetailGroup title="Cancelled">
+                <p>{formatUpdatedAt(event.cancelledAt ?? event.updatedAt)}</p>
+              </DetailGroup>
             ) : (
               <DetailGroup title="Last updated">
                 <p>{formatUpdatedAt(event.updatedAt)}</p>
               </DetailGroup>
             )}
           </aside>
+          {event.status === 'published' ? (
+            <EventCancellation
+              event={event}
+              mediaBusy={mediaBusy || retirementBusy || ticketTypeBusy}
+              onOperationChange={setPublicationBusy}
+              reload={reload}
+            />
+          ) : null}
           {event.status === 'draft' ? (
             <EventPublication
               event={event}

@@ -12,6 +12,8 @@ import {
   type ListAdminEventsResponse,
   type PublishEventRequest,
   type PublishEventResponse,
+  type CancelEventRequest,
+  type CancelEventResponse,
   type RetireDraftEventRequest,
   type RetireDraftEventResponse,
   type RetireEventTicketTypeRequest,
@@ -86,6 +88,18 @@ function createService(
 ): AdminEventService {
   const grpcClient = {
     getService: () => ({ publishEvent }),
+  } as unknown as ClientGrpc;
+  const service = new AdminEventService(grpcClient, deadlineMs);
+  service.onModuleInit();
+  return service;
+}
+
+function createCancelService(
+  cancelEvent: DeadlineAwareEventServiceClient['cancelEvent'],
+  deadlineMs = 3_000,
+): AdminEventService {
+  const grpcClient = {
+    getService: () => ({ cancelEvent }),
   } as unknown as ClientGrpc;
   const service = new AdminEventService(grpcClient, deadlineMs);
   service.onModuleInit();
@@ -579,6 +593,83 @@ describe('AdminEventService publication', () => {
         code: 'EVENT_PUBLICATION_INCOMPLETE',
         message:
           'Complete the event details, venue, cover image, and tickets before publishing.',
+        statusCode: 422,
+      },
+      status: 422,
+    });
+  });
+});
+
+describe('AdminEventService cancellation', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('forwards cancellation identity, correlation, and deadline', async () => {
+    const cancelledEvent: Event = {
+      ...publishedEvent,
+      cancelledAt: '2026-08-12T12:30:00.000Z',
+      status: EventStatus.EVENT_STATUS_CANCELLED,
+      updatedAt: '2026-08-12T12:30:00.000Z',
+      version: 5,
+    };
+    let receivedRequest: CancelEventRequest | undefined;
+    let receivedMetadata: Metadata | undefined;
+    let receivedOptions: CallOptions | undefined;
+    const service = createCancelService(
+      (
+        request: CancelEventRequest,
+        metadata?: Metadata,
+        options?: CallOptions,
+      ): Observable<CancelEventResponse> => {
+        receivedRequest = request;
+        receivedMetadata = metadata;
+        receivedOptions = options;
+        return of({ event: cancelledEvent });
+      },
+    );
+    vi.spyOn(Date, 'now').mockReturnValue(10_000);
+
+    await expect(
+      service.cancel(
+        cancelledEvent.createdByAdminId,
+        cancelledEvent.eventId,
+        { expectedVersion: 4 },
+        'cancellation-request',
+      ),
+    ).resolves.toMatchObject({
+      cancelledAt: cancelledEvent.cancelledAt,
+      eventId: cancelledEvent.eventId,
+      status: 'cancelled',
+      version: 5,
+    });
+    expect(receivedRequest).toEqual({
+      adminId: cancelledEvent.createdByAdminId,
+      eventId: cancelledEvent.eventId,
+      expectedVersion: 4,
+    });
+    expect(receivedMetadata?.get('x-request-id')).toEqual([
+      'cancellation-request',
+    ]);
+    expect(receivedOptions).toEqual({ deadline: new Date(13_000) });
+  });
+
+  it('translates a non-published event into the public 422 contract', async () => {
+    const service = createCancelService(() =>
+      throwError(() => ({ code: status.FAILED_PRECONDITION })),
+    );
+
+    await expect(
+      service.cancel(
+        draftEvent.createdByAdminId,
+        draftEvent.eventId,
+        { expectedVersion: 1 },
+        'cancellation-request',
+      ),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'EVENT_CANCELLATION_NOT_ALLOWED',
+        message: 'Only published events can be cancelled.',
         statusCode: 422,
       },
       status: 422,

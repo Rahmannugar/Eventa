@@ -1748,6 +1748,130 @@ describe('Event mutation integration', () => {
     ).resolves.toEqual({ outcome: 'incomplete' });
   });
 
+  it('cancels a published event once with audit and outbox fact', async () => {
+    const event = await createPublishableEvent('Cancellable event');
+    const publication = await eventsRepository.publish({
+      actorAdminId: event.adminId,
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    if (publication.outcome !== 'published') {
+      throw new Error('Expected publication to succeed');
+    }
+    const firstRequestId = randomUUID();
+    const competingRequestId = randomUUID();
+    const expectedVersion = publication.event.version;
+
+    const outcomes = await Promise.all([
+      eventsRepository.cancel({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion,
+        requestId: firstRequestId,
+      }),
+      eventsRepository.cancel({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion,
+        requestId: competingRequestId,
+      }),
+    ]);
+
+    expect(outcomes.map((outcome) => outcome.outcome).sort()).toEqual([
+      'already_cancelled',
+      'cancelled',
+    ]);
+
+    const [persistedEvent] = await database
+      .select({
+        cancelledAt: events.cancelledAt,
+        status: events.status,
+        version: events.version,
+      })
+      .from(events)
+      .where(eq(events.id, event.eventId));
+    const audits = await database
+      .select({
+        actorAdminId: eventAdminAuditLog.actorAdminId,
+        eventVersion: eventAdminAuditLog.eventVersion,
+        requestId: eventAdminAuditLog.requestId,
+      })
+      .from(eventAdminAuditLog)
+      .where(eq(eventAdminAuditLog.action, 'event.cancelled'));
+    const outboxRows = await database
+      .select({
+        eventId: eventPublicationOutbox.eventId,
+        eventType: eventPublicationOutbox.eventType,
+        payload: eventPublicationOutbox.payload,
+      })
+      .from(eventPublicationOutbox);
+
+    expect(persistedEvent?.status).toBe('cancelled');
+    expect(persistedEvent?.cancelledAt).toBeInstanceOf(Date);
+    expect(persistedEvent?.version).toBe(expectedVersion + 1);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actorAdminId: event.adminId,
+      eventVersion: expectedVersion + 1,
+    });
+    expect([firstRequestId, competingRequestId]).toContain(
+      audits[0]?.requestId,
+    );
+    expect(
+      outboxRows.filter(({ eventType }) => eventType === 'event.cancelled.v1'),
+    ).toHaveLength(1);
+    const cancelledOutbox = outboxRows.find(
+      ({ eventType }) => eventType === 'event.cancelled.v1',
+    );
+    expect(cancelledOutbox).toMatchObject({
+      eventId: event.eventId,
+      eventType: 'event.cancelled.v1',
+    });
+    expect(cancelledOutbox?.payload).toMatchObject({
+      eventId: event.eventId,
+      type: 'event.cancelled.v1',
+    });
+    expect(
+      typeof (cancelledOutbox?.payload as { messageId?: string }).messageId,
+    ).toBe('string');
+  });
+
+  it('rejects cancellation for draft events', async () => {
+    const event = await createEventRecord('Draft cancellation');
+
+    await expect(
+      eventsRepository.cancel({
+        actorAdminId: event.createdByAdminId,
+        eventId: event.eventId,
+        expectedVersion: event.version,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'not_published' });
+  });
+
+  it('rejects cancellation with a stale version', async () => {
+    const event = await createPublishableEvent('Stale cancellation');
+    const publication = await eventsRepository.publish({
+      actorAdminId: event.adminId,
+      eventId: event.eventId,
+      expectedVersion: event.version,
+      requestId: randomUUID(),
+    });
+    if (publication.outcome !== 'published') {
+      throw new Error('Expected publication to succeed');
+    }
+
+    await expect(
+      eventsRepository.cancel({
+        actorAdminId: event.adminId,
+        eventId: event.eventId,
+        expectedVersion: publication.event.version - 1,
+        requestId: randomUUID(),
+      }),
+    ).resolves.toEqual({ outcome: 'version_conflict' });
+  });
+
   it('keeps one active ticket type on a published event', async () => {
     const event = await createPublishableEvent('Published inventory floor');
     const publication = await eventsRepository.publish({

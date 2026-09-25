@@ -34,12 +34,13 @@ export interface AdminEvent {
   timeZone?: string | undefined;
   venue?: EventVenue | undefined;
   media: AdminEventMedia[];
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
   version: number;
   createdByAdminId: string;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | undefined;
+  cancelledAt?: string | undefined;
 }
 
 export interface EventDetailsInput {
@@ -71,7 +72,7 @@ export interface AdminEventSummary {
   endsAt?: string | undefined;
   timeZone?: string | undefined;
   venue?: EventVenue | undefined;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'cancelled';
   updatedAt: string;
 }
 
@@ -125,6 +126,11 @@ export interface RemoveEventMediaCommand {
 }
 
 export interface PublishEventCommand {
+  eventId: string;
+  expectedVersion: number;
+}
+
+export interface CancelEventCommand {
   eventId: string;
   expectedVersion: number;
 }

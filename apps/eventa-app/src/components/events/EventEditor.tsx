@@ -71,7 +71,11 @@ export function EventEditor({ eventId }: { eventId: string }) {
           <span
             className={`status-badge status-badge--${eventQuery.data.status}`}
           >
-            {eventQuery.data.status === 'draft' ? 'Draft' : 'Published'}
+            {eventQuery.data.status === 'draft'
+              ? 'Draft'
+              : eventQuery.data.status === 'cancelled'
+                ? 'Cancelled'
+                : 'Published'}
           </span>
         </div>
       </header>

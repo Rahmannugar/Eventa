@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { runWithOperationSpan } from '@eventa/observability';
+import { randomUUID } from 'node:crypto';
 import {
   and,
   asc,
@@ -17,14 +18,18 @@ import {
 import { EVENT_DATABASE } from '../../database/database.constants';
 import type { EventDatabase } from '../../database/database.types';
 import { eventAdminAuditLog } from '../schema/event-admin-audit.schema';
+import { eventCapacityReservations } from '../schema/event-capacity-reservation.schema';
 import { eventCategories } from '../schema/event-category.schema';
 import { eventMedia } from '../schema/event-media.schema';
 import { eventPublicationOutbox } from '../schema/event-publication-outbox.schema';
-import { eventTicketTypes } from '../schema/event-ticket-type.schema';
 import { eventTicketCurrencies } from '../schema/event-ticket-currency.schema';
+import { eventTicketTypes } from '../schema/event-ticket-type.schema';
 import { eventVenues } from '../schema/event-venue.schema';
+import { eventWaitlistEntries } from '../schema/event-waitlist-entry.schema';
 import { events } from '../schema/event.schema';
 import type {
+  CancelEvent,
+  CancelEventResult,
   CreateDraftEvent,
   AdminEventSummaryRecord,
   EventVenue,
@@ -53,6 +58,7 @@ const EVENT_COLUMNS = {
   createdAt: events.createdAt,
   updatedAt: events.updatedAt,
   publishedAt: events.publishedAt,
+  cancelledAt: events.cancelledAt,
   retiredAt: events.retiredAt,
 };
 
@@ -534,6 +540,216 @@ export class EventManagementRepository implements EventRepositoryPort {
           return {
             outcome: 'published' as const,
             event: this.toEventRecord(event, result.venue, media, categories),
+          };
+        }),
+      this.spanOptions('UPDATE'),
+    );
+  }
+
+  cancel(input: CancelEvent): Promise<CancelEventResult> {
+    return runWithOperationSpan(
+      'event.cancel',
+      () =>
+        this.database.transaction(async (transaction) => {
+          const [result] = await transaction
+            .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
+            .from(events)
+            .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+            .where(eq(events.id, input.eventId))
+            .limit(1)
+            .for('update', { of: events });
+
+          if (result === undefined || result.event.retiredAt !== null) {
+            return { outcome: 'not_found' as const };
+          }
+          if (result.event.status === 'cancelled') {
+            const media = await transaction
+              .select(MEDIA_COLUMNS)
+              .from(eventMedia)
+              .where(eq(eventMedia.eventId, input.eventId))
+              .orderBy(eventMedia.slot);
+            const categoryRows = await transaction
+              .select({ category: eventCategories.category })
+              .from(eventCategories)
+              .where(eq(eventCategories.eventId, input.eventId))
+              .orderBy(eventCategories.category);
+            return {
+              outcome: 'already_cancelled' as const,
+              event: this.toEventRecord(
+                result.event,
+                result.venue,
+                media,
+                categoryRows.map(({ category }) => category),
+              ),
+            };
+          }
+          if (result.event.status !== 'published') {
+            return { outcome: 'not_published' as const };
+          }
+          if (result.event.version !== input.expectedVersion) {
+            return { outcome: 'version_conflict' as const };
+          }
+
+          const activeHolds = await transaction
+            .select({
+              quantity: eventCapacityReservations.quantity,
+              reservationId: eventCapacityReservations.id,
+              ticketTypeId: eventCapacityReservations.ticketTypeId,
+            })
+            .from(eventCapacityReservations)
+            .innerJoin(
+              eventTicketTypes,
+              eq(eventTicketTypes.id, eventCapacityReservations.ticketTypeId),
+            )
+            .innerJoin(
+              eventTicketCurrencies,
+              eq(eventTicketCurrencies.id, eventTicketTypes.ticketCurrencyId),
+            )
+            .where(
+              and(
+                eq(eventTicketCurrencies.eventId, input.eventId),
+                eq(eventCapacityReservations.status, 'active'),
+              ),
+            )
+            .for('update', { of: eventCapacityReservations });
+
+          const ticketTypeIds = [
+            ...new Set(activeHolds.map(({ ticketTypeId }) => ticketTypeId)),
+          ];
+          if (ticketTypeIds.length > 0) {
+            await transaction
+              .select({ id: eventTicketTypes.id })
+              .from(eventTicketTypes)
+              .where(inArray(eventTicketTypes.id, ticketTypeIds))
+              .for('update');
+          }
+
+          const cancelledAt = new Date();
+          const [event] = await transaction
+            .update(events)
+            .set({
+              cancelledAt,
+              status: 'cancelled',
+              updatedAt: cancelledAt,
+              version: sql`${events.version} + 1`,
+            })
+            .where(
+              and(
+                eq(events.id, input.eventId),
+                eq(events.status, 'published'),
+                eq(events.version, input.expectedVersion),
+                isNull(events.retiredAt),
+              ),
+            )
+            .returning(EVENT_COLUMNS);
+
+          if (event === undefined) {
+            return { outcome: 'version_conflict' as const };
+          }
+
+          if (activeHolds.length > 0) {
+            const released = await transaction
+              .update(eventCapacityReservations)
+              .set({
+                completedAt: cancelledAt,
+                status: 'released',
+                updatedAt: cancelledAt,
+              })
+              .where(
+                and(
+                  inArray(
+                    eventCapacityReservations.id,
+                    activeHolds.map(({ reservationId }) => reservationId),
+                  ),
+                  eq(eventCapacityReservations.status, 'active'),
+                ),
+              )
+              .returning({
+                quantity: eventCapacityReservations.quantity,
+                ticketTypeId: eventCapacityReservations.ticketTypeId,
+              });
+
+            const reservedByType = new Map<string, number>();
+            for (const hold of released) {
+              reservedByType.set(
+                hold.ticketTypeId,
+                (reservedByType.get(hold.ticketTypeId) ?? 0) + hold.quantity,
+              );
+            }
+            for (const [ticketTypeId, quantity] of reservedByType) {
+              const [updated] = await transaction
+                .update(eventTicketTypes)
+                .set({
+                  reservedQuantity: sql`${eventTicketTypes.reservedQuantity} - ${quantity}`,
+                  updatedAt: cancelledAt,
+                })
+                .where(eq(eventTicketTypes.id, ticketTypeId))
+                .returning({ id: eventTicketTypes.id });
+              if (updated === undefined) {
+                throw new Error('Cancelled event ticket type is missing');
+              }
+            }
+
+            await transaction
+              .update(eventWaitlistEntries)
+              .set({
+                closedAt: cancelledAt,
+                reservationId: null,
+                status: 'closed',
+                updatedAt: cancelledAt,
+              })
+              .where(
+                and(
+                  inArray(
+                    eventWaitlistEntries.reservationId,
+                    activeHolds.map(({ reservationId }) => reservationId),
+                  ),
+                  eq(eventWaitlistEntries.status, 'reserved'),
+                ),
+              );
+          }
+
+          await transaction.insert(eventAdminAuditLog).values({
+            action: 'event.cancelled',
+            actorAdminId: input.actorAdminId,
+            eventId: event.eventId,
+            eventVersion: event.version,
+            requestId: input.requestId,
+          });
+
+          const messageId = randomUUID();
+          await transaction.insert(eventPublicationOutbox).values({
+            aggregateType: 'eventa.event.lifecycle.v1',
+            eventId: event.eventId,
+            eventType: 'event.cancelled.v1',
+            occurredAt: cancelledAt,
+            payload: {
+              messageId,
+              eventId: event.eventId,
+              cancelledAt: cancelledAt.toISOString(),
+              type: 'event.cancelled.v1',
+            },
+          });
+
+          const media = await transaction
+            .select(MEDIA_COLUMNS)
+            .from(eventMedia)
+            .where(eq(eventMedia.eventId, input.eventId))
+            .orderBy(eventMedia.slot);
+          const categoryRows = await transaction
+            .select({ category: eventCategories.category })
+            .from(eventCategories)
+            .where(eq(eventCategories.eventId, input.eventId))
+            .orderBy(eventCategories.category);
+
+          return {
+            outcome: 'cancelled' as const,
+            event: this.toEventRecord(
+              event,
+              result.venue,
+              media,
+              categoryRows.map(({ category }) => category),
+            ),
           };
         }),
       this.spanOptions('UPDATE'),
