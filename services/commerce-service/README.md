@@ -4,7 +4,9 @@ Commerce Service owns attendee orders, immutable ticket snapshots, and Stripe pa
 
 ## Local setup
 
-Create `.env` from `.env.example`. Commerce requires its PostgreSQL database, a reachable Event Service gRPC endpoint, a Stripe secret key, and the signing secret for its Stripe webhook endpoint. Use test-mode Stripe values for local development. A Stripe CLI signing secret and a Dashboard-managed endpoint signing secret are different values; use the secret issued for the endpoint that sends the request. The configured Stripe request timeout and retry count remain inside the Gateway's outer request budget. Docker Compose runs the database migration before starting the service.
+Create `.env` from `.env.example`. Commerce requires its PostgreSQL database, a reachable Event Service gRPC endpoint, a Kafka broker, a Stripe secret key, and the signing secret for its Stripe webhook endpoint. Use test-mode Stripe values for local development. A Stripe CLI signing secret and a Dashboard-managed endpoint signing secret are different values; use the secret issued for the endpoint that sends the request. The configured Stripe request timeout and retry count remain inside the Gateway's outer request budget. Docker Compose runs the database migration before starting the service.
+
+The service consumes `event.cancelled.v1` from the `eventa.event.lifecycle.v1` topic in the `eventa-commerce-service` consumer group. Readiness still depends only on PostgreSQL, so a broker outage does not stop Commerce from serving HTTP and gRPC traffic; the consumer reconnects and resumes from its committed offsets.
 
 The service exposes:
 

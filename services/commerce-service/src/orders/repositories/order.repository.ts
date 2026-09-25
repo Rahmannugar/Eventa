@@ -67,7 +67,8 @@ export class OrderRepository implements CommerceOrderRepository {
         ),
       )
       .limit(1);
-    if (existing === undefined) throw new Error('Order idempotency record missing');
+    if (existing === undefined)
+      throw new Error('Order idempotency record missing');
     if (
       existing.attendeeId !== input.attendeeId ||
       existing.eventId !== input.eventId ||
@@ -104,7 +105,8 @@ export class OrderRepository implements CommerceOrderRepository {
         .where(eq(commerceOrders.id, input.orderId))
         .limit(1)
         .for('update');
-      if (order === undefined) throw new Error('Order disappeared while reserving');
+      if (order === undefined)
+        throw new Error('Order disappeared while reserving');
       if (order.status === 'pending_payment') return order;
       if (order.status !== 'pending_reservation') {
         throw new Error('Order cannot accept a capacity reservation');
@@ -128,7 +130,8 @@ export class OrderRepository implements CommerceOrderRepository {
         })
         .where(eq(commerceOrders.id, input.orderId))
         .returning(ORDER_COLUMNS);
-      if (updated === undefined) throw new Error('Order disappeared while reserving');
+      if (updated === undefined)
+        throw new Error('Order disappeared while reserving');
       return updated;
     });
   }
@@ -165,28 +168,50 @@ export class OrderRepository implements CommerceOrderRepository {
       const rows = await transaction
         .select(ORDER_COLUMNS)
         .from(commerceOrders)
-        .where(and(
-          eq(commerceOrders.status, 'pending_payment'),
-          lte(commerceOrders.reservationExpiresAt, input.now),
-          or(isNull(commerceOrders.expiryClaimedUntil), lt(commerceOrders.expiryClaimedUntil, input.now)),
-        ))
-        .orderBy(asc(commerceOrders.reservationExpiresAt), asc(commerceOrders.id))
+        .where(
+          and(
+            eq(commerceOrders.status, 'pending_payment'),
+            lte(commerceOrders.reservationExpiresAt, input.now),
+            or(
+              isNull(commerceOrders.expiryClaimedUntil),
+              lt(commerceOrders.expiryClaimedUntil, input.now),
+            ),
+          ),
+        )
+        .orderBy(
+          asc(commerceOrders.reservationExpiresAt),
+          asc(commerceOrders.id),
+        )
         .limit(input.limit)
         .for('update', { skipLocked: true });
       if (rows.length === 0) return [];
-      await transaction.update(commerceOrders)
+      await transaction
+        .update(commerceOrders)
         .set({ expiryClaimedUntil: input.claimedUntil })
-        .where(inArray(commerceOrders.id, rows.map((row) => row.orderId)));
+        .where(
+          inArray(
+            commerceOrders.id,
+            rows.map((row) => row.orderId),
+          ),
+        );
       return rows;
     });
   }
 
-  async releaseExpiryClaim(input: { orderId: string; failed: boolean }): Promise<void> {
-    await this.database.update(commerceOrders).set({
-      expiryClaimedUntil: null,
-      ...(input.failed ? { expiryFailures: sql`${commerceOrders.expiryFailures} + 1` } : {}),
-      updatedAt: new Date(),
-    }).where(eq(commerceOrders.id, input.orderId));
+  async releaseExpiryClaim(input: {
+    orderId: string;
+    failed: boolean;
+  }): Promise<void> {
+    await this.database
+      .update(commerceOrders)
+      .set({
+        expiryClaimedUntil: null,
+        ...(input.failed
+          ? { expiryFailures: sql`${commerceOrders.expiryFailures} + 1` }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(commerceOrders.id, input.orderId));
   }
 
   private async transition(
@@ -222,14 +247,7 @@ export class OrderRepository implements CommerceOrderRepository {
         .returning(ORDER_COLUMNS);
       if (updated === undefined) throw new Error('Order disappeared');
       if (status === 'paid') {
-        const [item] = await transaction
-          .select({ quantity: commerceOrderItems.quantity })
-          .from(commerceOrderItems)
-          .where(eq(commerceOrderItems.orderId, orderId))
-          .limit(1);
-        if (item === undefined || updated.currency === null || updated.totalMinor === null) {
-          throw new Error('PAID_ORDER_SNAPSHOT_INCOMPLETE');
-        }
+        const quantity = await this.readOrderQuantity(transaction, updated);
         const messageId = randomUUID();
         await transaction.insert(commerceOrderOutbox).values({
           aggregateId: updated.orderId,
@@ -243,14 +261,52 @@ export class OrderRepository implements CommerceOrderRepository {
             messageId,
             orderId: updated.orderId,
             paidAt: updated.updatedAt.toISOString(),
-            quantity: item.quantity,
+            quantity,
             ticketTypeId: updated.ticketTypeId,
             totalMinor: updated.totalMinor,
             type: 'commerce.order-paid.v1',
           },
         });
       }
+      if (status === 'refunded') {
+        const quantity = await this.readOrderQuantity(transaction, updated);
+        const messageId = randomUUID();
+        await transaction.insert(commerceOrderOutbox).values({
+          aggregateId: updated.orderId,
+          aggregateType: 'eventa.commerce.order.v1',
+          eventId: messageId,
+          eventType: 'commerce.order-refunded.v1',
+          payload: {
+            attendeeId: updated.attendeeId,
+            currency: updated.currency,
+            eventId: updated.eventId,
+            messageId,
+            orderId: updated.orderId,
+            quantity,
+            refundedAt: updated.updatedAt.toISOString(),
+            ticketTypeId: updated.ticketTypeId,
+            totalMinor: updated.totalMinor,
+            type: 'commerce.order-refunded.v1',
+          },
+        });
+      }
       return updated;
     });
+  }
+
+  private async readOrderQuantity(
+    transaction: Parameters<Parameters<CommerceDatabase['transaction']>[0]>[0],
+    order: CommerceOrderRecord,
+  ): Promise<number> {
+    if (order.currency === null || order.totalMinor === null) {
+      throw new Error('ORDER_SNAPSHOT_INCOMPLETE');
+    }
+    const [item] = await transaction
+      .select({ quantity: commerceOrderItems.quantity })
+      .from(commerceOrderItems)
+      .where(eq(commerceOrderItems.orderId, order.orderId))
+      .limit(1);
+    if (item === undefined) throw new Error('ORDER_SNAPSHOT_INCOMPLETE');
+    return item.quantity;
   }
 }

@@ -5,6 +5,7 @@ import type { OrderRepository } from '../../src/orders/repositories/order.reposi
 import type { PaymentAttemptRepository } from '../../src/payments/repositories/payment-attempt.repository';
 import type { EventCapacityPort } from '../../src/ticket-purchase/types/event-capacity.port';
 import type { PaymentProviderPort } from '../../src/payments/types/payment-provider.port';
+import type { CancelledEventRefundClaim } from '../../src/cancelled-event-refunds/types/cancelled-event-refund.types';
 
 const order = {
   orderId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -22,6 +23,12 @@ function outcome(kind: 'payment_succeeded' | 'payment_canceled') {
   };
 }
 
+function claim(): CancelledEventRefundClaim {
+  return {
+    ensureOrderClaimed: vi.fn().mockResolvedValue('not_cancelled'),
+  };
+}
+
 describe('TicketPurchaseCompletionService', () => {
   it('contains a failed completion sweep', async () => {
     const service = new TicketPurchaseCompletionService(
@@ -33,23 +40,38 @@ describe('TicketPurchaseCompletionService', () => {
       {} as OrderRepository,
       {} as EventCapacityPort,
       {} as PaymentProviderPort,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(0);
   });
 
   it('finalizes capacity before marking a successful order paid', async () => {
-    const claimWorkflowOutcomes = vi.fn().mockResolvedValue([outcome('payment_succeeded')]);
+    const claimWorkflowOutcomes = vi
+      .fn()
+      .mockResolvedValue([outcome('payment_succeeded')]);
     const completeWorkflowOutcome = vi.fn().mockResolvedValue(undefined);
     const retryWorkflowOutcome = vi.fn();
     const findById = vi.fn().mockResolvedValue(order);
-    const finalize = vi.fn().mockResolvedValue({ ...order, quantity: 2, reservationId: order.orderId, status: 'finalized' });
+    const finalize = vi
+      .fn()
+      .mockResolvedValue({
+        ...order,
+        quantity: 2,
+        reservationId: order.orderId,
+        status: 'finalized',
+      });
     const markPaid = vi.fn().mockResolvedValue({ ...order, status: 'paid' });
     const service = new TicketPurchaseCompletionService(
-      { claimWorkflowOutcomes, completeWorkflowOutcome, retryWorkflowOutcome } as unknown as PaymentAttemptRepository,
+      {
+        claimWorkflowOutcomes,
+        completeWorkflowOutcome,
+        retryWorkflowOutcome,
+      } as unknown as PaymentAttemptRepository,
       { findById, markPaid } as unknown as OrderRepository,
       { finalize } as unknown as EventCapacityPort,
       {} as never,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(1);
@@ -60,20 +82,36 @@ describe('TicketPurchaseCompletionService', () => {
   });
 
   it('retries without marking the order when Event capacity fails', async () => {
-    const claimWorkflowOutcomes = vi.fn().mockResolvedValue([outcome('payment_canceled')]);
+    const claimWorkflowOutcomes = vi
+      .fn()
+      .mockResolvedValue([outcome('payment_canceled')]);
     const retryWorkflowOutcome = vi.fn().mockResolvedValue(undefined);
-    const release = vi.fn().mockRejectedValue(new Error('EVENT_CAPACITY_UNAVAILABLE'));
+    const release = vi
+      .fn()
+      .mockRejectedValue(new Error('EVENT_CAPACITY_UNAVAILABLE'));
     const markFailed = vi.fn();
     const service = new TicketPurchaseCompletionService(
-      { claimWorkflowOutcomes, completeWorkflowOutcome: vi.fn(), retryWorkflowOutcome } as unknown as PaymentAttemptRepository,
-      { findById: vi.fn().mockResolvedValue(order), markFailed } as unknown as OrderRepository,
+      {
+        claimWorkflowOutcomes,
+        completeWorkflowOutcome: vi.fn(),
+        retryWorkflowOutcome,
+      } as unknown as PaymentAttemptRepository,
+      {
+        findById: vi.fn().mockResolvedValue(order),
+        markFailed,
+      } as unknown as OrderRepository,
       { release } as unknown as EventCapacityPort,
       {} as never,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(1);
     expect(markFailed).not.toHaveBeenCalled();
-    expect(retryWorkflowOutcome).toHaveBeenCalledWith(expect.objectContaining({ paymentId: outcome('payment_canceled').paymentId }));
+    expect(retryWorkflowOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentId: outcome('payment_canceled').paymentId,
+      }),
+    );
   });
 
   it('refunds a successful payment when capacity has expired', async () => {
@@ -95,23 +133,61 @@ describe('TicketPurchaseCompletionService', () => {
       providerIdempotencyKey: `stripe-refund:${payment.paymentId}`,
       providerRefundId: null,
     };
-    const markRefunding = vi.fn().mockResolvedValue({ ...order, status: 'refunding' });
-    const markRefunded = vi.fn().mockResolvedValue({ ...order, status: 'refunded' });
+    const markRefunding = vi
+      .fn()
+      .mockResolvedValue({ ...order, status: 'refunding' });
+    const markRefunded = vi
+      .fn()
+      .mockResolvedValue({ ...order, status: 'refunded' });
     const service = new TicketPurchaseCompletionService(
       {
-        claimWorkflowOutcomes: vi.fn().mockResolvedValue([outcome('payment_succeeded')]),
+        claimWorkflowOutcomes: vi
+          .fn()
+          .mockResolvedValue([outcome('payment_succeeded')]),
         completeWorkflowOutcome: vi.fn().mockResolvedValue(undefined),
         retryWorkflowOutcome: vi.fn(),
         findByOrderId: vi.fn().mockResolvedValue(payment),
         findRefundByPaymentId: vi.fn().mockResolvedValue(undefined),
         createRefund: vi.fn().mockResolvedValue(refund),
-        markRefundSubmitted: vi.fn().mockResolvedValue({ ...refund, providerRefundId: 're_123' }),
-        markRefundSucceeded: vi.fn().mockResolvedValue({ ...refund, status: 'succeeded', providerRefundId: 're_123' }),
+        markRefundSubmitted: vi
+          .fn()
+          .mockResolvedValue({ ...refund, providerRefundId: 're_123' }),
+        markRefundSucceeded: vi
+          .fn()
+          .mockResolvedValue({
+            ...refund,
+            status: 'succeeded',
+            providerRefundId: 're_123',
+          }),
         markRefundFailed: vi.fn(),
       } as unknown as PaymentAttemptRepository,
-      { findById: vi.fn().mockResolvedValue(order), markRefunding, markRefunded } as unknown as OrderRepository,
-      { finalize: vi.fn().mockResolvedValue({ ...order, quantity: 2, reservationId: order.orderId, status: 'expired' }) } as unknown as EventCapacityPort,
-      { createRefund: vi.fn().mockResolvedValue({ refundId: 're_123', paymentIntentId: 'pi_success', amountMinor: 5000, currency: 'NGN', status: 'succeeded' }) } as unknown as PaymentProviderPort,
+      {
+        findById: vi.fn().mockResolvedValue(order),
+        markRefunding,
+        markRefunded,
+      } as unknown as OrderRepository,
+      {
+        finalize: vi
+          .fn()
+          .mockResolvedValue({
+            ...order,
+            quantity: 2,
+            reservationId: order.orderId,
+            status: 'expired',
+          }),
+      } as unknown as EventCapacityPort,
+      {
+        createRefund: vi
+          .fn()
+          .mockResolvedValue({
+            refundId: 're_123',
+            paymentIntentId: 'pi_success',
+            amountMinor: 5000,
+            currency: 'NGN',
+            status: 'succeeded',
+          }),
+      } as unknown as PaymentProviderPort,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(1);
@@ -140,13 +216,11 @@ describe('TicketPurchaseCompletionService', () => {
     };
     const completeWorkflowOutcome = vi.fn().mockResolvedValue(undefined);
     const retryWorkflowOutcome = vi.fn();
-    const markRefundFailed = vi
-      .fn()
-      .mockResolvedValue({
-        ...refund,
-        providerRefundId: 're_failed',
-        status: 'failed',
-      });
+    const markRefundFailed = vi.fn().mockResolvedValue({
+      ...refund,
+      providerRefundId: 're_failed',
+      status: 'failed',
+    });
     const markRefunded = vi.fn();
     const service = new TicketPurchaseCompletionService(
       {
@@ -187,6 +261,7 @@ describe('TicketPurchaseCompletionService', () => {
           status: 'failed',
         }),
       } as unknown as PaymentProviderPort,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(1);
@@ -197,12 +272,37 @@ describe('TicketPurchaseCompletionService', () => {
   });
 
   it('retries a failed refund with the same provider idempotency key', async () => {
-    const payment = { paymentId: outcome('payment_succeeded').paymentId, orderId: order.orderId, amountMinor: 5000, currency: 'NGN', status: 'succeeded' as const, providerPaymentIntentId: 'pi_success' };
-    const refund = { refundId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', paymentId: payment.paymentId, orderId: order.orderId, amountMinor: 5000, currency: 'NGN', status: 'pending' as const, providerIdempotencyKey: `stripe-refund:${payment.paymentId}`, providerRefundId: null };
-    const claimWorkflowOutcomes = vi.fn().mockResolvedValue([outcome('payment_succeeded')]);
-    const createRefund = vi.fn()
+    const payment = {
+      paymentId: outcome('payment_succeeded').paymentId,
+      orderId: order.orderId,
+      amountMinor: 5000,
+      currency: 'NGN',
+      status: 'succeeded' as const,
+      providerPaymentIntentId: 'pi_success',
+    };
+    const refund = {
+      refundId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      paymentId: payment.paymentId,
+      orderId: order.orderId,
+      amountMinor: 5000,
+      currency: 'NGN',
+      status: 'pending' as const,
+      providerIdempotencyKey: `stripe-refund:${payment.paymentId}`,
+      providerRefundId: null,
+    };
+    const claimWorkflowOutcomes = vi
+      .fn()
+      .mockResolvedValue([outcome('payment_succeeded')]);
+    const createRefund = vi
+      .fn()
       .mockRejectedValueOnce(new Error('PAYMENT_PROVIDER_UNAVAILABLE'))
-      .mockResolvedValueOnce({ refundId: 're_123', paymentIntentId: 'pi_success', amountMinor: 5000, currency: 'NGN', status: 'succeeded' });
+      .mockResolvedValueOnce({
+        refundId: 're_123',
+        paymentIntentId: 'pi_success',
+        amountMinor: 5000,
+        currency: 'NGN',
+        status: 'succeeded',
+      });
     const retryWorkflowOutcome = vi.fn().mockResolvedValue(undefined);
     const service = new TicketPurchaseCompletionService(
       {
@@ -211,29 +311,60 @@ describe('TicketPurchaseCompletionService', () => {
         retryWorkflowOutcome,
         findByOrderId: vi.fn().mockResolvedValue(payment),
         findRefundByPaymentId: vi.fn().mockResolvedValue(refund),
-        markRefundFailed: vi.fn().mockResolvedValue({ ...refund, status: 'failed' }),
-        markRefundSubmitted: vi.fn().mockResolvedValue({ ...refund, providerRefundId: 're_123' }),
-        markRefundSucceeded: vi.fn().mockResolvedValue({ ...refund, status: 'succeeded', providerRefundId: 're_123' }),
+        markRefundFailed: vi
+          .fn()
+          .mockResolvedValue({ ...refund, status: 'failed' }),
+        markRefundSubmitted: vi
+          .fn()
+          .mockResolvedValue({ ...refund, providerRefundId: 're_123' }),
+        markRefundSucceeded: vi
+          .fn()
+          .mockResolvedValue({
+            ...refund,
+            status: 'succeeded',
+            providerRefundId: 're_123',
+          }),
       } as unknown as PaymentAttemptRepository,
-      { findById: vi.fn().mockResolvedValue({ ...order, status: 'refunding' }), markRefunded: vi.fn().mockResolvedValue({ ...order, status: 'refunded' }) } as unknown as OrderRepository,
+      {
+        findById: vi.fn().mockResolvedValue({ ...order, status: 'refunding' }),
+        markRefunded: vi
+          .fn()
+          .mockResolvedValue({ ...order, status: 'refunded' }),
+      } as unknown as OrderRepository,
       {} as unknown as EventCapacityPort,
       { createRefund } as unknown as PaymentProviderPort,
+      claim(),
     );
 
     await service.process();
     await service.process();
-    expect(createRefund).toHaveBeenNthCalledWith(1, { paymentIntentId: 'pi_success', idempotencyKey: refund.providerIdempotencyKey });
-    expect(createRefund).toHaveBeenNthCalledWith(2, { paymentIntentId: 'pi_success', idempotencyKey: refund.providerIdempotencyKey });
+    expect(createRefund).toHaveBeenNthCalledWith(1, {
+      paymentIntentId: 'pi_success',
+      idempotencyKey: refund.providerIdempotencyKey,
+    });
+    expect(createRefund).toHaveBeenNthCalledWith(2, {
+      paymentIntentId: 'pi_success',
+      idempotencyKey: refund.providerIdempotencyKey,
+    });
     expect(retryWorkflowOutcome).toHaveBeenCalledOnce();
   });
 
   it('completes a duplicate delivery after refund is already terminal', async () => {
     const completeWorkflowOutcome = vi.fn().mockResolvedValue(undefined);
     const service = new TicketPurchaseCompletionService(
-      { claimWorkflowOutcomes: vi.fn().mockResolvedValue([outcome('payment_succeeded')]), completeWorkflowOutcome, retryWorkflowOutcome: vi.fn() } as unknown as PaymentAttemptRepository,
-      { findById: vi.fn().mockResolvedValue({ ...order, status: 'refunded' }) } as unknown as OrderRepository,
+      {
+        claimWorkflowOutcomes: vi
+          .fn()
+          .mockResolvedValue([outcome('payment_succeeded')]),
+        completeWorkflowOutcome,
+        retryWorkflowOutcome: vi.fn(),
+      } as unknown as PaymentAttemptRepository,
+      {
+        findById: vi.fn().mockResolvedValue({ ...order, status: 'refunded' }),
+      } as unknown as OrderRepository,
       {} as unknown as EventCapacityPort,
       {} as unknown as PaymentProviderPort,
+      claim(),
     );
 
     await expect(service.process()).resolves.toBe(1);

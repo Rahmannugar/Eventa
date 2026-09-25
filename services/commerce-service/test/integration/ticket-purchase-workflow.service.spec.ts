@@ -33,6 +33,10 @@ import type {
   EventCapacityTransitionResult,
 } from '../../src/ticket-purchase/types/event-capacity.port';
 
+const cancelledEventRefunds = {
+  ensureOrderClaimed: () => Promise.resolve('not_cancelled' as const),
+};
+
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 if (testDatabaseUrl === undefined || testDatabaseUrl.trim() === '') {
   throw new Error('TEST_DATABASE_URL is required for integration tests');
@@ -79,8 +83,7 @@ class RecordingCapacity implements EventCapacityPort {
   constructor(
     private readonly finalizeStatus: EventCapacityTransitionResult<
       'finalized' | 'expired'
-    >['status'] =
-      'finalized',
+    >['status'] = 'finalized',
   ) {}
 
   reserve(): Promise<EventCapacityQuote> {
@@ -265,7 +268,11 @@ describe('Ticket purchase workflow integration', () => {
   it('leases successful completion across workers', async () => {
     const checkout = await createCheckout(new Date(Date.now() + 600_000));
     await payments.applyReconciliation({
-      intent: providerIntent({ ...checkout, orderId: checkout.order.orderId, status: 'succeeded' }),
+      intent: providerIntent({
+        ...checkout,
+        orderId: checkout.order.orderId,
+        status: 'succeeded',
+      }),
       now: new Date(),
       paymentId: checkout.paymentId,
       reconcileAfter: null,
@@ -274,15 +281,31 @@ describe('Ticket purchase workflow integration', () => {
     const capacity = new RecordingCapacity();
     const provider = new RecordingProvider();
     const workers = [
-      new TicketPurchaseCompletionService(payments, orders, capacity, provider),
-      new TicketPurchaseCompletionService(payments, orders, capacity, provider),
+      new TicketPurchaseCompletionService(
+        payments,
+        orders,
+        capacity,
+        provider,
+        cancelledEventRefunds,
+      ),
+      new TicketPurchaseCompletionService(
+        payments,
+        orders,
+        capacity,
+        provider,
+        cancelledEventRefunds,
+      ),
     ];
 
-    const claimed = await Promise.all(workers.map((worker) => worker.process()));
+    const claimed = await Promise.all(
+      workers.map((worker) => worker.process()),
+    );
 
     expect(claimed.reduce((total, value) => total + value, 0)).toBe(1);
     expect(capacity.finalized).toEqual([checkout.order.orderId]);
-    await expect(orders.findById(checkout.order.orderId)).resolves.toMatchObject({
+    await expect(
+      orders.findById(checkout.order.orderId),
+    ).resolves.toMatchObject({
       status: 'paid',
     });
     const [outcome] = await database.select().from(paymentWorkflowOutcomes);
@@ -306,12 +329,16 @@ describe('Ticket purchase workflow integration', () => {
       new TicketPurchaseExpiryService(orders, payments, provider, capacity),
     ];
 
-    const claimed = await Promise.all(workers.map((worker) => worker.process()));
+    const claimed = await Promise.all(
+      workers.map((worker) => worker.process()),
+    );
 
     expect(claimed.reduce((total, value) => total + value, 0)).toBe(1);
     expect(provider.cancellations).toEqual([checkout.paymentIntentId]);
     expect(capacity.released).toEqual([checkout.order.orderId]);
-    await expect(orders.findById(checkout.order.orderId)).resolves.toMatchObject({
+    await expect(
+      orders.findById(checkout.order.orderId),
+    ).resolves.toMatchObject({
       expiryClaimedUntil: null,
       status: 'expired',
     });
@@ -338,6 +365,7 @@ describe('Ticket purchase workflow integration', () => {
       orders,
       capacity,
       provider,
+      cancelledEventRefunds,
     );
 
     await expect(worker.process()).resolves.toBe(1);
@@ -356,7 +384,9 @@ describe('Ticket purchase workflow integration', () => {
       paymentId: checkout.paymentId,
       status: 'succeeded',
     });
-    await expect(orders.findById(checkout.order.orderId)).resolves.toMatchObject({
+    await expect(
+      orders.findById(checkout.order.orderId),
+    ).resolves.toMatchObject({
       status: 'refunded',
     });
     const [outcome] = await database.select().from(paymentWorkflowOutcomes);
@@ -383,6 +413,7 @@ describe('Ticket purchase workflow integration', () => {
       orders,
       new RecordingCapacity('expired'),
       new RecordingProvider(false, 'failed'),
+      cancelledEventRefunds,
     );
 
     await expect(worker.process()).resolves.toBe(1);
@@ -392,7 +423,9 @@ describe('Ticket purchase workflow integration', () => {
       paymentId: checkout.paymentId,
       status: 'failed',
     });
-    await expect(orders.findById(checkout.order.orderId)).resolves.toMatchObject({
+    await expect(
+      orders.findById(checkout.order.orderId),
+    ).resolves.toMatchObject({
       status: 'refunding',
     });
     const [outcome] = await database.select().from(paymentWorkflowOutcomes);

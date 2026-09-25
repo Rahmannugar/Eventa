@@ -243,6 +243,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^11.1.28
         version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -252,6 +255,9 @@ importers:
       drizzle-orm:
         specifier: ^0.44.7
         version: 0.44.7(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       postgres:
         specifier: ^3.4.8
         version: 3.4.9
@@ -8676,8 +8682,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  kafkajs@2.2.4:
-    optional: true
+  kafkajs@2.2.4: {}
 
   keyv@4.5.4:
     dependencies:

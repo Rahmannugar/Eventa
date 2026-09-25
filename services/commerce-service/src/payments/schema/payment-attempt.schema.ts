@@ -133,9 +133,15 @@ export const paymentWorkflowOutcomes = pgTable(
     availableAt: timestamp('available_at', { mode: 'date', withTimezone: true })
       .defaultNow()
       .notNull(),
-    claimedUntil: timestamp('claimed_until', { mode: 'date', withTimezone: true }),
+    claimedUntil: timestamp('claimed_until', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     failures: integer('failures').default(0).notNull(),
-    processedAt: timestamp('processed_at', { mode: 'date', withTimezone: true }),
+    processedAt: timestamp('processed_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -147,9 +153,14 @@ export const paymentWorkflowOutcomes = pgTable(
       .where(sql.raw('processed_at IS NULL')),
     check(
       'payment_workflow_outcomes_kind_shape',
-      sql.raw("kind IN ('payment_succeeded', 'payment_canceled')"),
+      sql.raw(
+        "kind IN ('payment_succeeded', 'payment_canceled', 'event_cancelled')",
+      ),
     ),
-    check('payment_workflow_outcomes_failures_nonnegative', sql.raw('failures >= 0')),
+    check(
+      'payment_workflow_outcomes_failures_nonnegative',
+      sql.raw('failures >= 0'),
+    ),
   ],
 );
 
@@ -157,22 +168,35 @@ export const paymentRefunds = pgTable(
   'payment_refunds',
   {
     id: uuid('id').primaryKey(),
-    paymentId: uuid('payment_id').notNull().references(() => paymentAttempts.id, { onDelete: 'restrict' }),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => paymentAttempts.id, { onDelete: 'restrict' }),
     orderId: uuid('order_id').notNull(),
     amountMinor: integer('amount_minor').notNull(),
     currency: varchar('currency', { length: 3 }).notNull(),
     status: varchar('status', { length: 24 }).notNull().default('pending'),
-    providerIdempotencyKey: varchar('provider_idempotency_key', { length: 255 }).notNull(),
+    providerIdempotencyKey: varchar('provider_idempotency_key', {
+      length: 255,
+    }).notNull(),
     providerRefundId: varchar('provider_refund_id', { length: 255 }),
-    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     uniqueIndex('payment_refunds_payment_unique').on(table.paymentId),
     uniqueIndex('payment_refunds_order_unique').on(table.orderId),
-    uniqueIndex('payment_refunds_provider_key_unique').on(table.providerIdempotencyKey),
+    uniqueIndex('payment_refunds_provider_key_unique').on(
+      table.providerIdempotencyKey,
+    ),
     check('payment_refunds_amount_positive', sql.raw('amount_minor > 0')),
-    check('payment_refunds_status_shape', sql.raw("status IN ('pending', 'succeeded', 'failed')")),
+    check(
+      'payment_refunds_status_shape',
+      sql.raw("status IN ('pending', 'succeeded', 'failed')"),
+    ),
   ],
 );
 

@@ -36,6 +36,18 @@ A separate expiry worker leases pending-payment orders whose reservation deadlin
 
 If successful payment reaches an expired reservation, Order enters refunding and Payment creates or resumes one refund record. The Stripe refund uses a stable Payment-owned idempotency key. Commerce validates refund identity, amount, and currency before Order becomes refunded. A lost provider response reuses the same refund rather than charging compensation twice. A provider-declared failed or canceled refund remains durably failed with Order still refunding and emits an actionable operator failure; repeating the same terminal provider object cannot repair it.
 
+## Cancelled-event refunds
+
+Commerce consumes `event.cancelled.v1` from the shared Event lifecycle topic through one startup-owned Kafka client and one consumer group. It validates the fact before acting: a malformed cancellation fact is logged and not acknowledged, so an unparseable money trigger cannot be skipped; a fact type it does not own is acknowledged without action.
+
+The consumer records the message in the Commerce-owned `commerce_event_cancellation_inbox` before it reads any order. It then selects that Event's orders in `paid` state whose payment succeeded, in bounded batches. Each order takes the `paid → refunding` transition under a row lock and appends one `event_cancelled` workflow outcome for its payment under the outcome's primary key, so one payment accumulates one claim no matter how many times the fact is delivered.
+
+Checkout completion re-reads the inbox for the order's Event immediately after `markPaid` commits and claims the same way. The consumer's inbox check and the completion path's check are mutually exclusive: if the completion path finds no inbox row, that row was committed after the check and the consumer's later scan sees the paid order. The row lock and the unique claim row leave exactly one winner.
+
+A Commerce worker executes the refunds those claims assign. It leases `event_cancelled` workflow outcomes with `SKIP LOCKED`, runs the same refund execution used by late-success compensation, and only then marks the order refunded. Marking refunded appends one `commerce.order-refunded.v1` fact into the order outbox in the same transaction; the Commerce Debezium lane routes it to the shared Commerce order topic keyed by Order ID, and a repeat transition appends nothing. A provider-declared refund failure completes the claim with the order still refunding and emits an actionable operator signal. Any other failure releases the claim on a bounded retry schedule and promotes to an error after five attempts while automatic retries continue.
+
+Readiness still depends only on PostgreSQL. A broker outage delays cancellation work without removing Commerce from traffic, and the consumer resumes from its committed offsets.
+
 ## Retry and recovery
 
 The local order write and remote capacity reservation are deliberately not treated as one transaction. A timeout or rejection leaves the durable order in `pending_reservation`. Retrying the same attendee idempotency key resolves the same order and therefore sends the same Event reservation ID. Event reservation is idempotent, and Commerce row locking plus the one-item-per-order constraint makes repeated or concurrent local completion converge on one snapshot.
@@ -46,6 +58,6 @@ Completion and expiry workers expose bounded outcome metrics for success, ordina
 
 ## Persistence and lifecycle
 
-Drizzle migrations are the deployment authority. A one-shot migration container runs after Commerce PostgreSQL becomes healthy. The service starts only after migration succeeds and Event Service is healthy. Readiness queries Commerce PostgreSQL; liveness reports only process availability. The service closes its PostgreSQL client during graceful shutdown.
+Drizzle migrations are the deployment authority. A one-shot migration container runs after Commerce PostgreSQL becomes healthy. The service starts only after migration succeeds and Event Service is healthy. Readiness queries Commerce PostgreSQL; liveness reports only process availability. The service closes its PostgreSQL client and its Kafka client during graceful shutdown.
 
 The [Payment architecture](src/payments/ARCHITECTURE.md) describes provider, workflow-outcome, reconciliation, and refund persistence. Its [capability contract](src/payments/API.md) defines the internal payment behavior used by the ticket-purchase workflow.

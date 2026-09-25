@@ -102,7 +102,9 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
     return this.toRecord(existing);
   }
 
-  async findByOrderId(orderId: string): Promise<PaymentAttemptRecord | undefined> {
+  async findByOrderId(
+    orderId: string,
+  ): Promise<PaymentAttemptRecord | undefined> {
     const [attempt] = await this.database
       .select(PAYMENT_COLUMNS)
       .from(paymentAttempts)
@@ -112,46 +114,115 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
   }
 
   async createRefund(input: {
-    refundId: string; paymentId: string; orderId: string; amountMinor: number; currency: string; providerIdempotencyKey: string;
+    refundId: string;
+    paymentId: string;
+    orderId: string;
+    amountMinor: number;
+    currency: string;
+    providerIdempotencyKey: string;
   }): Promise<PaymentRefundRecord> {
-    const [created] = await this.database.insert(paymentRefunds).values({
-      id: input.refundId, paymentId: input.paymentId, orderId: input.orderId,
-      amountMinor: input.amountMinor, currency: input.currency,
-      providerIdempotencyKey: input.providerIdempotencyKey,
-    }).onConflictDoNothing({ target: paymentRefunds.paymentId }).returning();
-    const row = created ?? (await this.database.select().from(paymentRefunds).where(eq(paymentRefunds.paymentId, input.paymentId)).limit(1))[0];
+    const [created] = await this.database
+      .insert(paymentRefunds)
+      .values({
+        id: input.refundId,
+        paymentId: input.paymentId,
+        orderId: input.orderId,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        providerIdempotencyKey: input.providerIdempotencyKey,
+      })
+      .onConflictDoNothing({ target: paymentRefunds.paymentId })
+      .returning();
+    const row =
+      created ??
+      (
+        await this.database
+          .select()
+          .from(paymentRefunds)
+          .where(eq(paymentRefunds.paymentId, input.paymentId))
+          .limit(1)
+      )[0];
     if (row === undefined) throw new Error('Payment refund record missing');
-    if (row.orderId !== input.orderId || row.amountMinor !== input.amountMinor || row.currency !== input.currency || row.providerIdempotencyKey !== input.providerIdempotencyKey) {
+    if (
+      row.orderId !== input.orderId ||
+      row.amountMinor !== input.amountMinor ||
+      row.currency !== input.currency ||
+      row.providerIdempotencyKey !== input.providerIdempotencyKey
+    ) {
       throw new Error('Payment refund identity conflict');
     }
-    return { refundId: row.id, paymentId: row.paymentId, orderId: row.orderId, amountMinor: row.amountMinor, currency: row.currency, status: row.status as PaymentRefundRecord['status'], providerIdempotencyKey: row.providerIdempotencyKey, providerRefundId: row.providerRefundId };
+    return {
+      refundId: row.id,
+      paymentId: row.paymentId,
+      orderId: row.orderId,
+      amountMinor: row.amountMinor,
+      currency: row.currency,
+      status: row.status as PaymentRefundRecord['status'],
+      providerIdempotencyKey: row.providerIdempotencyKey,
+      providerRefundId: row.providerRefundId,
+    };
   }
 
-  async findRefundByPaymentId(paymentId: string): Promise<PaymentRefundRecord | undefined> {
-    const [row] = await this.database.select().from(paymentRefunds).where(eq(paymentRefunds.paymentId, paymentId)).limit(1);
+  async findRefundByPaymentId(
+    paymentId: string,
+  ): Promise<PaymentRefundRecord | undefined> {
+    const [row] = await this.database
+      .select()
+      .from(paymentRefunds)
+      .where(eq(paymentRefunds.paymentId, paymentId))
+      .limit(1);
     return row === undefined ? undefined : this.toRefundRecord(row);
   }
 
   async markRefundFailed(refundId: string): Promise<PaymentRefundRecord> {
-    const [row] = await this.database.update(paymentRefunds).set({ status: 'failed', updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+    const [row] = await this.database
+      .update(paymentRefunds)
+      .set({ status: 'failed', updatedAt: new Date() })
+      .where(eq(paymentRefunds.id, refundId))
+      .returning();
     if (row === undefined) throw new Error('Payment refund record missing');
     return this.toRefundRecord(row);
   }
 
-  async markRefundSubmitted(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord> {
-    const [row] = await this.database.update(paymentRefunds).set({ status: 'pending', providerRefundId, updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+  async markRefundSubmitted(
+    refundId: string,
+    providerRefundId: string,
+  ): Promise<PaymentRefundRecord> {
+    const [row] = await this.database
+      .update(paymentRefunds)
+      .set({ status: 'pending', providerRefundId, updatedAt: new Date() })
+      .where(eq(paymentRefunds.id, refundId))
+      .returning();
     if (row === undefined) throw new Error('Payment refund record missing');
     return this.toRefundRecord(row);
   }
 
-  async markRefundSucceeded(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord> {
-    const [row] = await this.database.update(paymentRefunds).set({ status: 'succeeded', providerRefundId, updatedAt: new Date() }).where(eq(paymentRefunds.id, refundId)).returning();
+  async markRefundSucceeded(
+    refundId: string,
+    providerRefundId: string,
+  ): Promise<PaymentRefundRecord> {
+    const [row] = await this.database
+      .update(paymentRefunds)
+      .set({ status: 'succeeded', providerRefundId, updatedAt: new Date() })
+      .where(eq(paymentRefunds.id, refundId))
+      .returning();
     if (row === undefined) throw new Error('Payment refund record missing');
     return this.toRefundRecord(row);
   }
 
-  private toRefundRecord(row: typeof paymentRefunds.$inferSelect): PaymentRefundRecord {
-    return { refundId: row.id, paymentId: row.paymentId, orderId: row.orderId, amountMinor: row.amountMinor, currency: row.currency, status: row.status as PaymentRefundRecord['status'], providerIdempotencyKey: row.providerIdempotencyKey, providerRefundId: row.providerRefundId };
+  private toRefundRecord(
+    row: typeof paymentRefunds.$inferSelect,
+  ): PaymentRefundRecord {
+    return {
+      refundId: row.id,
+      paymentId: row.paymentId,
+      orderId: row.orderId,
+      amountMinor: row.amountMinor,
+      currency: row.currency,
+      status: row.status as PaymentRefundRecord['status'],
+      providerIdempotencyKey: row.providerIdempotencyKey,
+      providerRefundId: row.providerRefundId,
+    };
   }
 
   async markAwaitingConfirmation(input: {
@@ -311,11 +382,17 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
           .where(eq(paymentAttempts.id, attempt.paymentId));
       }
       const effectiveStatus = terminal ? attempt.status : input.status;
-      if (!eventIsOlder && (effectiveStatus === 'succeeded' || effectiveStatus === 'canceled')) {
+      if (
+        !eventIsOlder &&
+        (effectiveStatus === 'succeeded' || effectiveStatus === 'canceled')
+      ) {
         await transaction
           .insert(paymentWorkflowOutcomes)
           .values({
-            kind: effectiveStatus === 'succeeded' ? 'payment_succeeded' : 'payment_canceled',
+            kind:
+              effectiveStatus === 'succeeded'
+                ? 'payment_succeeded'
+                : 'payment_canceled',
             orderId: attempt.orderId,
             paymentId: attempt.paymentId,
           })
@@ -412,7 +489,10 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
         await transaction
           .insert(paymentWorkflowOutcomes)
           .values({
-            kind: input.status === 'succeeded' ? 'payment_succeeded' : 'payment_canceled',
+            kind:
+              input.status === 'succeeded'
+                ? 'payment_succeeded'
+                : 'payment_canceled',
             orderId: updated.orderId,
             paymentId: updated.paymentId,
           })
@@ -443,7 +523,9 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
     now: Date;
     claimedUntil: Date;
     limit: number;
+    kinds: readonly PaymentWorkflowOutcomeKind[];
   }): Promise<PaymentWorkflowOutcomeRecord[]> {
+    if (input.kinds.length === 0) return [];
     return this.database.transaction(async (transaction) => {
       const rows = await transaction
         .select({
@@ -455,6 +537,7 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
         .from(paymentWorkflowOutcomes)
         .where(
           and(
+            inArray(paymentWorkflowOutcomes.kind, input.kinds),
             isNull(paymentWorkflowOutcomes.processedAt),
             lte(paymentWorkflowOutcomes.availableAt, input.now),
             or(
@@ -463,7 +546,10 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
             ),
           ),
         )
-        .orderBy(paymentWorkflowOutcomes.availableAt, paymentWorkflowOutcomes.paymentId)
+        .orderBy(
+          paymentWorkflowOutcomes.availableAt,
+          paymentWorkflowOutcomes.paymentId,
+        )
         .limit(input.limit)
         .for('update', { skipLocked: true });
       if (rows.length === 0) return [];
@@ -471,13 +557,30 @@ export class PaymentAttemptRepository implements PaymentAttemptRepositoryContrac
         .update(paymentWorkflowOutcomes)
         .set({ claimedUntil: input.claimedUntil })
         .where(
-          inArray(
-            paymentWorkflowOutcomes.paymentId,
-            rows.map((row) => row.paymentId),
+          and(
+            inArray(
+              paymentWorkflowOutcomes.paymentId,
+              rows.map((row) => row.paymentId),
+            ),
+            inArray(paymentWorkflowOutcomes.kind, input.kinds),
           ),
         );
       return rows;
     });
+  }
+
+  async createEventCancelledClaim(input: {
+    paymentId: string;
+    orderId: string;
+  }): Promise<void> {
+    await this.database
+      .insert(paymentWorkflowOutcomes)
+      .values({
+        kind: 'event_cancelled',
+        orderId: input.orderId,
+        paymentId: input.paymentId,
+      })
+      .onConflictDoNothing();
   }
 
   async completeWorkflowOutcome(input: {

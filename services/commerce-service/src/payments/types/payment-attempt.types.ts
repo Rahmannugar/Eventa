@@ -9,7 +9,8 @@ export type PaymentAttemptStatus =
   | 'succeeded'
   | 'canceled';
 
-export type PaymentWorkflowOutcomeKind = 'payment_succeeded' | 'payment_canceled';
+export type PaymentWorkflowOutcomeKind =
+  'payment_succeeded' | 'payment_canceled' | 'event_cancelled';
 
 export interface PaymentAttemptRecord {
   paymentId: string;
@@ -78,7 +79,12 @@ export interface PaymentAttemptRepository {
     now: Date;
     claimedUntil: Date;
     limit: number;
+    kinds: readonly PaymentWorkflowOutcomeKind[];
   }): Promise<PaymentWorkflowOutcomeRecord[]>;
+  createEventCancelledClaim(input: {
+    paymentId: string;
+    orderId: string;
+  }): Promise<void>;
   completeWorkflowOutcome(input: {
     paymentId: string;
     kind: PaymentWorkflowOutcomeKind;
@@ -97,10 +103,18 @@ export interface PaymentAttemptRepository {
     currency: string;
     providerIdempotencyKey: string;
   }): Promise<PaymentRefundRecord>;
-  findRefundByPaymentId(paymentId: string): Promise<PaymentRefundRecord | undefined>;
+  findRefundByPaymentId(
+    paymentId: string,
+  ): Promise<PaymentRefundRecord | undefined>;
   markRefundFailed(refundId: string): Promise<PaymentRefundRecord>;
-  markRefundSubmitted(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord>;
-  markRefundSucceeded(refundId: string, providerRefundId: string): Promise<PaymentRefundRecord>;
+  markRefundSubmitted(
+    refundId: string,
+    providerRefundId: string,
+  ): Promise<PaymentRefundRecord>;
+  markRefundSucceeded(
+    refundId: string,
+    providerRefundId: string,
+  ): Promise<PaymentRefundRecord>;
 }
 
 export type PaymentPreparationRepository = Pick<
@@ -142,7 +156,6 @@ export interface PaymentRefundRecord {
   providerIdempotencyKey: string;
   providerRefundId: string | null;
 }
-
 
 export interface ProviderEventRegistration {
   providerEventId: string;

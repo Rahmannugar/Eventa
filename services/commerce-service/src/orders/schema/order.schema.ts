@@ -40,7 +40,10 @@ export const commerceOrders = pgTable(
       withTimezone: true,
     }),
     failureCode: varchar('failure_code', { length: 80 }),
-    expiryClaimedUntil: timestamp('expiry_claimed_until', { mode: 'date', withTimezone: true }),
+    expiryClaimedUntil: timestamp('expiry_claimed_until', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     expiryFailures: integer('expiry_failures').default(0).notNull(),
     createdAt: timestamp('created_at', {
       mode: 'date',
@@ -71,6 +74,7 @@ export const commerceOrders = pgTable(
     index('commerce_orders_expiry_index')
       .on(table.reservationExpiresAt, table.id)
       .where(sql.raw("status = 'pending_payment'")),
+    index('commerce_orders_event_status_index').on(table.eventId, table.status),
     check(
       'commerce_orders_requested_quantity_range',
       sql.raw('requested_quantity BETWEEN 1 AND 1000000'),
@@ -87,7 +91,10 @@ export const commerceOrders = pgTable(
         "(status = 'failed' AND failure_code IS NOT NULL) OR (status <> 'failed' AND failure_code IS NULL)",
       ),
     ),
-    check('commerce_orders_expiry_failures_nonnegative', sql.raw('expiry_failures >= 0')),
+    check(
+      'commerce_orders_expiry_failures_nonnegative',
+      sql.raw('expiry_failures >= 0'),
+    ),
   ],
 );
 

@@ -11,11 +11,17 @@ import {
 } from '@eventa/grpc-contracts';
 
 import type { RuntimeConfig } from '../config/runtime-config';
+import { registerCancelledEventRefundsModule } from '../cancelled-event-refunds/cancelled-event-refunds.module';
+import { CANCELLED_EVENT_REFUND_CLAIM } from '../cancelled-event-refunds/cancelled-event-refunds.tokens';
+import type { CancelledEventRefundClaim } from '../cancelled-event-refunds/types/cancelled-event-refund.types';
 import { OrdersModule } from '../orders/orders.module';
 import { OrderRepository } from '../orders/repositories/order.repository';
 import { registerPaymentsModule } from '../payments/payments.module';
 import { PaymentAttemptRepository } from '../payments/repositories/payment-attempt.repository';
-import { PAYMENT_MANAGEMENT, PAYMENT_PROVIDER_PORT } from '../payments/payments.tokens';
+import {
+  PAYMENT_MANAGEMENT,
+  PAYMENT_PROVIDER_PORT,
+} from '../payments/payments.tokens';
 import type { PaymentManagement } from '../payments/types/payment-attempt.types';
 import type { PaymentProviderPort } from '../payments/types/payment-provider.port';
 import { EventGrpcCapacityAdapter } from './adapters/event-grpc-capacity.adapter';
@@ -36,6 +42,7 @@ export function registerTicketPurchaseModule(config: RuntimeConfig) {
     module: TicketPurchaseModule,
     imports: [
       OrdersModule,
+      registerCancelledEventRefundsModule(config),
       registerPaymentsModule(config),
       ClientsModule.register([
         {
@@ -60,23 +67,43 @@ export function registerTicketPurchaseModule(config: RuntimeConfig) {
       { provide: EVENT_CAPACITY_PORT, useExisting: EventGrpcCapacityAdapter },
       {
         provide: TicketPurchaseCompletionService,
-        inject: [OrderRepository, EVENT_CAPACITY_PORT, PaymentAttemptRepository, PAYMENT_PROVIDER_PORT],
+        inject: [
+          OrderRepository,
+          EVENT_CAPACITY_PORT,
+          PaymentAttemptRepository,
+          PAYMENT_PROVIDER_PORT,
+          CANCELLED_EVENT_REFUND_CLAIM,
+        ],
         useFactory: (
           orders: OrderRepository,
           capacity: EventCapacityPort,
           outcomes: PaymentAttemptRepository,
           provider: PaymentProviderPort,
-        ) => new TicketPurchaseCompletionService(outcomes, orders, capacity, provider),
+          cancelledEventRefunds: CancelledEventRefundClaim,
+        ) =>
+          new TicketPurchaseCompletionService(
+            outcomes,
+            orders,
+            capacity,
+            provider,
+            cancelledEventRefunds,
+          ),
       },
       {
         provide: TicketPurchaseExpiryService,
-        inject: [OrderRepository, PaymentAttemptRepository, PAYMENT_PROVIDER_PORT, EVENT_CAPACITY_PORT],
+        inject: [
+          OrderRepository,
+          PaymentAttemptRepository,
+          PAYMENT_PROVIDER_PORT,
+          EVENT_CAPACITY_PORT,
+        ],
         useFactory: (
           orders: OrderRepository,
           payments: PaymentAttemptRepository,
           provider: PaymentProviderPort,
           capacity: EventCapacityPort,
-        ) => new TicketPurchaseExpiryService(orders, payments, provider, capacity),
+        ) =>
+          new TicketPurchaseExpiryService(orders, payments, provider, capacity),
       },
       {
         provide: TICKET_PURCHASE_MANAGEMENT,
