@@ -138,6 +138,18 @@ message GetAdminEventResponse {
   Event event = 1;
 }
 
+message GetEventSummaryRequest {
+  string event_id = 1;
+}
+
+message GetEventSummaryResponse {
+  string event_id = 1;
+  string title = 2;
+  optional string starts_at = 3;
+  optional string time_zone = 4;
+  Venue venue = 5;
+}
+
 message AdminEventSummary {
   string event_id = 1;
   string title = 2;

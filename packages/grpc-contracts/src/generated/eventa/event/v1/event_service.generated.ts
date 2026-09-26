@@ -29,6 +29,8 @@ import {
   GetAttendeeEventTicketCatalogueResponse,
   GetEventMediaUploadRequest,
   GetEventMediaUploadResponse,
+  GetEventSummaryRequest,
+  GetEventSummaryResponse,
   GetEventTicketCatalogueRequest,
   GetEventTicketCatalogueResponse,
   GetEventWaitlistEntryRequest,
@@ -73,6 +75,8 @@ export interface EventServiceClient {
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
 
   getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
+
+  getEventSummary(request: GetEventSummaryRequest, metadata?: Metadata): Observable<GetEventSummaryResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
@@ -169,6 +173,8 @@ export interface EventServiceController {
 
   getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
 
+  getEventSummary(request: GetEventSummaryRequest, metadata?: Metadata): Observable<GetEventSummaryResponse>;
+
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
 
   defineEventTicketCurrency(
@@ -258,6 +264,7 @@ export function EventServiceControllerMethods() {
       "listAdminEvents",
       "getAdminEvent",
       "getPublishedEvent",
+      "getEventSummary",
       "updateDraftEvent",
       "defineEventTicketCurrency",
       "createEventTicketType",

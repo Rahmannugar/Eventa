@@ -364,4 +364,24 @@ export class AttendeeAccountRepository
           status: 'active',
         };
   }
+
+  async findContactEmail(
+    attendeeId: string,
+  ): Promise<{ attendeeId: string; email: string } | undefined> {
+    const [contact] = await this.database
+      .select({
+        attendeeId: attendeeAccounts.id,
+        email: attendeeAccounts.email,
+      })
+      .from(attendeeAccounts)
+      .where(
+        and(
+          eq(attendeeAccounts.id, attendeeId),
+          isNull(attendeeAccounts.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return contact;
+  }
 }

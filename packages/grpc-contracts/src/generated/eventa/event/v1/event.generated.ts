@@ -155,6 +155,18 @@ export interface GetAdminEventResponse {
   event: Event | undefined;
 }
 
+export interface GetEventSummaryRequest {
+  eventId: string;
+}
+
+export interface GetEventSummaryResponse {
+  eventId: string;
+  title: string;
+  startsAt?: string | undefined;
+  timeZone?: string | undefined;
+  venue: Venue | undefined;
+}
+
 export interface AdminEventSummary {
   eventId: string;
   title: string;

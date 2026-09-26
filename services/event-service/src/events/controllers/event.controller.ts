@@ -22,6 +22,7 @@ import {
   type EventTicketType,
   type EventServiceController,
   type GetAdminEventResponse,
+  type GetEventSummaryResponse,
   type FinalizeEventCapacityReservationResponse,
   type GetEventMediaUploadResponse,
   type GetEventWaitlistEntryResponse,
@@ -70,6 +71,7 @@ import {
 } from '../dto/event-waitlist.dto';
 import {
   GetAdminEventDto,
+  GetEventSummaryDto,
   CreateDraftEventDto,
   ListAdminEventsDto,
   PublishEventDto,
@@ -181,6 +183,12 @@ export class EventController implements EventServiceController {
 
   getAdminEvent(request: GetAdminEventDto): Observable<GetAdminEventResponse> {
     return from(this.getEvent(request.eventId));
+  }
+
+  getEventSummary(
+    request: GetEventSummaryDto,
+  ): Observable<GetEventSummaryResponse> {
+    return from(this.getSummary(request.eventId));
   }
 
   getPublishedEvent(
@@ -338,6 +346,42 @@ export class EventController implements EventServiceController {
     try {
       return {
         event: this.toContract(await this.eventService.getById(eventId)),
+      };
+    } catch (error: unknown) {
+      if (error instanceof EventNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async getSummary(eventId: string): Promise<GetEventSummaryResponse> {
+    try {
+      const event = await this.eventService.getSummary(eventId);
+
+      return {
+        eventId: event.eventId,
+        title: event.title,
+        startsAt: event.startsAt?.toISOString(),
+        timeZone: event.timeZone ?? undefined,
+        venue:
+          event.venue === null
+            ? undefined
+            : {
+                name: event.venue.name,
+                addressLine1: event.venue.addressLine1,
+                addressLine2: event.venue.addressLine2 ?? undefined,
+                addressLineOne: event.venue.addressLine1,
+                addressLineTwo: event.venue.addressLine2 ?? undefined,
+                city: event.venue.city,
+                region: event.venue.region ?? undefined,
+                regionCode: event.venue.regionCode ?? undefined,
+                postalCode: event.venue.postalCode ?? undefined,
+                countryCode: event.venue.countryCode,
+              },
       };
     } catch (error: unknown) {
       if (error instanceof EventNotFoundError) {

@@ -15,6 +15,7 @@ import type {
   CreateDraftEventCommand,
   EventManagement,
   EventRecord,
+  EventSummaryRecord,
   ListAdminEventsQuery,
   UpdateDraftEventCommand,
   PublishEventCommand,
@@ -41,6 +42,10 @@ export class ObservedEventManagement implements EventManagement {
 
   getById(eventId: string): Promise<EventRecord> {
     return this.eventManagement.getById(eventId);
+  }
+
+  getSummary(eventId: string): Promise<EventSummaryRecord> {
+    return this.eventManagement.getSummary(eventId);
   }
 
   getPublishedById(eventId: string): Promise<EventRecord> {

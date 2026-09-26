@@ -18,10 +18,13 @@
     "typecheck": "tsc --noEmit --project tsconfig.json && tsc --noEmit --project performance/tsconfig.json"
   },
   "dependencies": {
+    "@eventa/grpc-contracts": "workspace:*",
     "@eventa/messaging-contracts": "workspace:*",
     "@eventa/observability": "workspace:*",
+    "@grpc/grpc-js": "^1.14.4",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
+    "@nestjs/microservices": "^11.1.28",
     "@nestjs/platform-express": "^11.1.28",
     "@opentelemetry/api": "^1.9.0",
     "amqplib": "^2.0.1",

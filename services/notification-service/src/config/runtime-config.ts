@@ -1,6 +1,10 @@
 export interface RuntimeConfig {
   databaseUrl: string;
+  eventGrpcDeadlineMs: number;
+  eventGrpcUrl: string;
   healthPort: number;
+  identityGrpcDeadlineMs: number;
+  identityGrpcUrl: string;
   kafkaBrokers: string[];
   kafkaConsumerGroup: string;
   kafkaTicketRevokedTopic: string;
@@ -96,9 +100,42 @@ function readKafkaName(environment: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
+function readGrpcUrl(environment: NodeJS.ProcessEnv, name: string): string {
+  const value = readRequiredString(environment, name);
+
+  if (!/^[^\s:/]+:\d+$/.test(value)) {
+    throw new Error(`${name} must use the host:port format`);
+  }
+
+  return value;
+}
+
+function readGrpcDeadlineMs(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+): number {
+  const value = Number(readRequiredString(environment, name));
+
+  if (!Number.isSafeInteger(value) || value < 100 || value > 10_000) {
+    throw new Error(`${name} must be an integer between 100 and 10000`);
+  }
+
+  return value;
+}
+
 export function readRuntimeConfig(
   environment: NodeJS.ProcessEnv,
 ): RuntimeConfig {
+  const eventGrpcUrl = readGrpcUrl(environment, 'EVENT_GRPC_URL');
+  const identityGrpcUrl = readGrpcUrl(environment, 'IDENTITY_GRPC_URL');
+  const eventGrpcDeadlineMs = readGrpcDeadlineMs(
+    environment,
+    'EVENT_GRPC_DEADLINE_MS',
+  );
+  const identityGrpcDeadlineMs = readGrpcDeadlineMs(
+    environment,
+    'IDENTITY_GRPC_DEADLINE_MS',
+  );
   const resendRequestTimeoutMs = readPositiveInteger(
     environment,
     'RESEND_REQUEST_TIMEOUT_MS',
@@ -112,7 +149,11 @@ export function readRuntimeConfig(
 
   return {
     databaseUrl: readDatabaseUrl(environment),
+    eventGrpcDeadlineMs,
+    eventGrpcUrl,
     healthPort: readPort(environment, 'HEALTH_PORT'),
+    identityGrpcDeadlineMs,
+    identityGrpcUrl,
     kafkaBrokers: readBrokerList(environment, 'KAFKA_BROKERS'),
     kafkaConsumerGroup: readKafkaName(environment, 'KAFKA_CONSUMER_GROUP'),
     kafkaTicketRevokedTopic: readKafkaName(

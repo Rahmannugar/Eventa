@@ -8,6 +8,7 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
+import { GetAttendeeContactRequest, GetAttendeeContactResponse } from "./attendee_contact.generated";
 import { DeleteAttendeeAccountRequest, DeleteAttendeeAccountResponse } from "./attendee_deletion.generated";
 import {
   ConfirmAttendeeEmailVerificationRequest,
@@ -68,6 +69,8 @@ export interface AttendeeIdentityServiceClient {
 
   logoutAttendee(request: LogoutAttendeeRequest, metadata?: Metadata): Observable<LogoutAttendeeResponse>;
 
+  getAttendeeContact(request: GetAttendeeContactRequest, metadata?: Metadata): Observable<GetAttendeeContactResponse>;
+
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
     metadata?: Metadata,
@@ -111,6 +114,8 @@ export interface AttendeeIdentityServiceController {
 
   logoutAttendee(request: LogoutAttendeeRequest, metadata?: Metadata): Observable<LogoutAttendeeResponse>;
 
+  getAttendeeContact(request: GetAttendeeContactRequest, metadata?: Metadata): Observable<GetAttendeeContactResponse>;
+
   confirmAttendeeEmailVerification(
     request: ConfirmAttendeeEmailVerificationRequest,
     metadata?: Metadata,
@@ -133,6 +138,7 @@ export function AttendeeIdentityServiceControllerMethods() {
       "authenticateAttendeeSession",
       "getCurrentAttendeeAccount",
       "logoutAttendee",
+      "getAttendeeContact",
       "confirmAttendeeEmailVerification",
       "resendAttendeeEmailVerification",
     ];

@@ -5,6 +5,7 @@ import {
   type ConfirmAttendeeEmailVerificationResponse,
   type ForgotAttendeePasswordResponse,
   type AuthenticateAttendeeSessionResponse,
+  type GetAttendeeContactResponse,
   type GetCurrentAttendeeAccountResponse,
   type LoginAttendeeResponse,
   type LogoutAttendeeResponse,
@@ -64,6 +65,8 @@ import { AttendeePasswordResetService } from '../services/attendee-password-rese
 import { DeleteAttendeeAccountDto } from '../dto/attendee-deletion.dto';
 import { AttendeeDeletionService } from '../services/attendee-deletion.service';
 import { AttendeeDeletionPasswordInvalidError } from '../errors/attendee-deletion.errors';
+import { AttendeeContactNotFoundError } from '../errors/attendee-contact.errors';
+import { GetAttendeeContactDto } from '../dto/attendee-contact.dto';
 
 @Controller()
 @AttendeeIdentityServiceControllerMethods()
@@ -123,6 +126,12 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
     request: GetCurrentAttendeeAccountDto,
   ): Observable<GetCurrentAttendeeAccountResponse> {
     return from(this.handleCurrentAccount(request.attendeeId));
+  }
+
+  getAttendeeContact(
+    request: GetAttendeeContactDto,
+  ): Observable<GetAttendeeContactResponse> {
+    return from(this.handleContact(request.attendeeId));
   }
 
   logoutAttendee(
@@ -301,6 +310,23 @@ export class AttendeeIdentityController implements AttendeeIdentityServiceContro
       return await this.attendeeAccounts.getCurrentAccount(attendeeId);
     } catch (error: unknown) {
       this.translateSessionError(error);
+    }
+  }
+
+  private async handleContact(
+    attendeeId: string,
+  ): Promise<GetAttendeeContactResponse> {
+    try {
+      return await this.attendeeAccounts.getContact(attendeeId);
+    } catch (error: unknown) {
+      if (error instanceof AttendeeContactNotFoundError) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message,
+        });
+      }
+
+      throw error;
     }
   }
 

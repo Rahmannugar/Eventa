@@ -62,6 +62,10 @@ export type {
   ResetAttendeePasswordResponse,
 } from '../../generated/eventa/identity/v1/attendee_password_reset.generated';
 export type {
+  GetAttendeeContactRequest,
+  GetAttendeeContactResponse,
+} from '../../generated/eventa/identity/v1/attendee_contact.generated';
+export type {
   AuthenticateAttendeeSessionRequest,
   AuthenticateAttendeeSessionResponse,
   GetCurrentAttendeeAccountRequest,

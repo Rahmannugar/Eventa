@@ -29,6 +29,13 @@
       "when": 1790340528361,
       "tag": "0003_cancelled_event_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790360286839,
+      "tag": "0004_cancellation_email_delivery_state",
+      "breakpoints": true
     }
   ]
 }

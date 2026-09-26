@@ -2,6 +2,7 @@ import type {
   CancelEventRequest,
   CreateDraftEventRequest,
   GetAdminEventRequest,
+  GetEventSummaryRequest,
   ListAdminEventsRequest,
   PublishEventRequest,
   RetireDraftEventRequest,
@@ -32,6 +33,11 @@ import {
 } from 'class-validator';
 
 export class GetAdminEventDto implements GetAdminEventRequest {
+  @IsUUID()
+  eventId!: string;
+}
+
+export class GetEventSummaryDto implements GetEventSummaryRequest {
   @IsUUID()
   eventId!: string;
 }

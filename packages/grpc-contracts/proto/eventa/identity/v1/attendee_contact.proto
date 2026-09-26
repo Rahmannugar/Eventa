@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package eventa.identity.v1;
+
+message GetAttendeeContactRequest {
+  string attendee_id = 1;
+}
+
+message GetAttendeeContactResponse {
+  string attendee_id = 1;
+  string email = 2;
+}

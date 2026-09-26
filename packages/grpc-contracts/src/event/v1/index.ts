@@ -35,6 +35,8 @@ export {
   type GetAdminEventResponse,
   type GetEventMediaUploadRequest,
   type GetEventMediaUploadResponse,
+  type GetEventSummaryRequest,
+  type GetEventSummaryResponse,
   type GetPublishedEventRequest,
   type GetPublishedEventResponse,
   type GetEventTicketCatalogueRequest,

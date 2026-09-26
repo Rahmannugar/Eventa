@@ -29,6 +29,14 @@ export interface EventRecord {
   retiredAt: Date | null;
 }
 
+export interface EventSummaryRecord {
+  eventId: string;
+  title: string;
+  startsAt: Date | null;
+  timeZone: string | null;
+  venue: EventVenue | null;
+}
+
 export type EventMediaSlot =
   'cover' | 'gallery_1' | 'gallery_2' | 'gallery_3' | 'gallery_4';
 
@@ -426,6 +434,7 @@ export interface EventRepository {
   createDraft(input: CreateDraftEvent): Promise<EventRecord>;
   list(input: ListAdminEvents): Promise<AdminEventSummaryRecord[]>;
   findById(eventId: string): Promise<EventRecord | undefined>;
+  findSummary(eventId: string): Promise<EventSummaryRecord | undefined>;
   findPublishedById(eventId: string): Promise<EventRecord | undefined>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
   publish(input: PublishEvent): Promise<PublishEventResult>;
@@ -437,6 +446,7 @@ export interface EventManagement {
   createDraft(input: CreateDraftEventCommand): Promise<EventRecord>;
   list(input: ListAdminEventsQuery): Promise<AdminEventListPage>;
   getById(eventId: string): Promise<EventRecord>;
+  getSummary(eventId: string): Promise<EventSummaryRecord>;
   getPublishedById(eventId: string): Promise<EventRecord>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
   publish(input: PublishEventCommand): Promise<EventRecord>;

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package eventa.identity.v1;
 
+import "eventa/identity/v1/attendee_contact.proto";
 import "eventa/identity/v1/attendee_email_verification.proto";
 import "eventa/identity/v1/attendee_deletion.proto";
 import "eventa/identity/v1/attendee_login.proto";
@@ -18,6 +19,7 @@ service AttendeeIdentityService {
   rpc AuthenticateAttendeeSession(AuthenticateAttendeeSessionRequest) returns (AuthenticateAttendeeSessionResponse);
   rpc GetCurrentAttendeeAccount(GetCurrentAttendeeAccountRequest) returns (GetCurrentAttendeeAccountResponse);
   rpc LogoutAttendee(LogoutAttendeeRequest) returns (LogoutAttendeeResponse);
+  rpc GetAttendeeContact(GetAttendeeContactRequest) returns (GetAttendeeContactResponse);
   rpc ConfirmAttendeeEmailVerification(ConfirmAttendeeEmailVerificationRequest) returns (ConfirmAttendeeEmailVerificationResponse);
   rpc ResendAttendeeEmailVerification(ResendAttendeeEmailVerificationRequest) returns (ResendAttendeeEmailVerificationResponse);
 }

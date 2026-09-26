@@ -21,3 +21,52 @@ export type RevocationRecord =
   | { deliveryId: string; kind: 'created'; messageId: string }
   | { kind: 'duplicate'; messageId: string }
   | { kind: 'grouped'; messageId: string };
+
+export interface CancellationEmailJob {
+  deliveryId: string;
+  type: string;
+}
+
+export type CancellationEmailDeliveryStatus =
+  | 'delivered'
+  | 'failed'
+  | 'pending'
+  | 'processing'
+  | 'rejected'
+  | 'retry_scheduled';
+
+export type CancellationEmailClaim =
+  | {
+      attendeeId: string;
+      attempt: number;
+      claimToken: string;
+      eventId: string;
+      kind: 'claimed';
+    }
+  | { kind: 'busy'; retryAt: Date }
+  | { kind: 'terminal'; status: 'delivered' | 'failed' | 'rejected' };
+
+export type CancellationEmailDeliveryOutcome =
+  | { kind: 'delivered' | 'duplicate' | 'failed' | 'rejected' }
+  | { kind: 'retry'; retryAt: Date };
+
+export interface CancellationEmailDeliveryRepository {
+  claim(deliveryId: string): Promise<CancellationEmailClaim>;
+  markDelivered(
+    deliveryId: string,
+    claimToken: string,
+    providerMessageId: string,
+  ): Promise<boolean>;
+  markFailed(
+    deliveryId: string,
+    claimToken: string,
+    failureCode: string,
+  ): Promise<boolean>;
+  markRetryScheduled(
+    deliveryId: string,
+    claimToken: string,
+    failureCode: string,
+    retryAt: Date,
+  ): Promise<boolean>;
+  recordRejected(deliveryId: string, failureCode: string): Promise<void>;
+}

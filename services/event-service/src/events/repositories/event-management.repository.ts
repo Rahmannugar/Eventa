@@ -35,6 +35,7 @@ import type {
   EventVenue,
   EventMediaRecord,
   EventRecord,
+  EventSummaryRecord,
   ListAdminEvents,
   EventRepository as EventRepositoryPort,
   PublishEvent,
@@ -281,6 +282,39 @@ export class EventManagementRepository implements EventRepositoryPort {
           media,
           categories.map(({ category }) => category),
         );
+      },
+      this.spanOptions('SELECT'),
+    );
+  }
+
+  findSummary(eventId: string): Promise<EventSummaryRecord | undefined> {
+    return runWithOperationSpan(
+      'event.find_summary_by_id',
+      async () => {
+        const [result] = await this.database
+          .select({
+            eventId: events.id,
+            title: events.title,
+            startsAt: events.startsAt,
+            timeZone: events.timeZone,
+            venue: VENUE_COLUMNS,
+          })
+          .from(events)
+          .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+          .where(and(eq(events.id, eventId), isNull(events.retiredAt)))
+          .limit(1);
+
+        if (result === undefined) {
+          return undefined;
+        }
+
+        return {
+          eventId: result.eventId,
+          title: result.title,
+          startsAt: result.startsAt,
+          timeZone: result.timeZone,
+          venue: result.venue === null ? null : result.venue,
+        };
       },
       this.spanOptions('SELECT'),
     );

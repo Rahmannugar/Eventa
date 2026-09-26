@@ -19,6 +19,7 @@ import type {
   ListAdminEventsQuery,
   EventRecord,
   EventRepository,
+  EventSummaryRecord,
   PublishEventCommand,
   RetireDraftEventCommand,
   UpdateDraftEventCommand,
@@ -97,6 +98,16 @@ export class EventManagementService implements EventManagement {
 
   async getById(eventId: string): Promise<EventRecord> {
     const event = await this.events.findById(eventId);
+
+    if (event === undefined) {
+      throw new EventNotFoundError();
+    }
+
+    return event;
+  }
+
+  async getSummary(eventId: string): Promise<EventSummaryRecord> {
+    const event = await this.events.findSummary(eventId);
 
     if (event === undefined) {
       throw new EventNotFoundError();
