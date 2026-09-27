@@ -8,7 +8,9 @@ This is the authoritative Notification Service implementation. Its behavior is s
 
 - Go 1.26
 - PostgreSQL 17 (Compose provides `notification-database`)
-- For later domains: RabbitMQ, Kafka, an OTLP collector
+- RabbitMQ (Compose provides `job-queue`)
+- An OTLP collector reachable at `OTEL_EXPORTER_OTLP_ENDPOINT`
+- Kafka, for the cancellation path
 
 ## Local setup
 
@@ -16,9 +18,16 @@ This is the authoritative Notification Service implementation. Its behavior is s
 cp .env.example .env       # then fill RESEND_API_KEY
 task migrate                # starts the database and applies migrations
 task build
-task test
 task lint
+task test:unit
+
+# Integration tests need a disposable database and the migrated schema:
+docker compose -f ../../compose.yaml up -d --wait notification-database
+TEST_DATABASE_URL=<test database url> task test:integration
 ```
+
+`TEST_DATABASE_URL` must name a database ending in `_test`; the harness creates
+and migrates it if it does not exist yet.
 
 Run the service:
 
@@ -39,8 +48,8 @@ curl -s localhost:3006/health/ready
 | --- | --- |
 | `task build` | Compiles every package |
 | `task test:unit` | Runs short unit tests |
-| `task test:integration` | Runs tests against real PostgreSQL |
-| `task test` | Both suites |
+| `task test:integration` | Runs tests against real PostgreSQL. Needs `TEST_DATABASE_URL` |
+| `task test` | Both suites. The integration half is skipped without `TEST_DATABASE_URL` |
 | `task lint` | `golangci-lint` with the service configuration |
 | `task fmt` | Formats `cmd`, `internal`, `test` |
 | `task migrate` | Starts the database and applies reviewed SQL migrations |

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,14 +10,20 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eventa/notification-service/internal/auth"
 	"github.com/eventa/notification-service/internal/config"
 	"github.com/eventa/notification-service/internal/database"
+	"github.com/eventa/notification-service/internal/email/resend"
+	"github.com/eventa/notification-service/internal/errtype"
 	"github.com/eventa/notification-service/internal/health"
+	"github.com/eventa/notification-service/internal/logging"
+	"github.com/eventa/notification-service/internal/messaging/rabbitmq"
+	"github.com/eventa/notification-service/internal/metrics"
 	"github.com/eventa/notification-service/internal/telemetry"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "eventa-notification-service")
+	logger := logging.New("")
 
 	cfg, telemetryCfg, err := config.Load()
 	if err != nil {
@@ -34,6 +39,9 @@ func main() {
 		logger.Error("telemetry_start_failed", "error_type", "telemetry_unavailable")
 		os.Exit(1)
 	}
+	if err := metrics.Init(); err != nil {
+		logger.Error("job_metrics_init_failed", "error_type", errtype.Of(err))
+	}
 
 	pool, err := database.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -41,7 +49,42 @@ func main() {
 		os.Exit(1)
 	}
 
-	checks := health.New(database.Readiness{Pool: pool})
+	clients := rabbitmq.New(
+		cfg.RabbitMQURL,
+		time.Duration(cfg.RabbitMQConnectTimeoutMS)*time.Millisecond,
+		logging.New("RabbitMQClient"),
+	)
+	if err := clients.Connect(); err != nil {
+		logger.Error("rabbitmq_connection_failed", "error_type", errtype.Of(err))
+		pool.Close()
+		os.Exit(1)
+	}
+
+	emails := resend.New(
+		cfg.ResendAPIKey,
+		time.Duration(cfg.ResendRequestTimeoutMS)*time.Millisecond,
+		nil,
+		"",
+	)
+	deliveries := auth.NewRepository(pool)
+
+	publishTimeout := time.Duration(cfg.RabbitMQPublishTimeoutMS) * time.Millisecond
+	consumers := make([]*auth.Consumer, 0, 4)
+	for _, definition := range auth.Definitions() {
+		delivery := auth.NewDelivery(definition, deliveries, emails, cfg.ResendFrom)
+		consumers = append(consumers, auth.NewConsumer(definition, clients, delivery, publishTimeout))
+	}
+	for _, consumer := range consumers {
+		if err := consumer.Start(); err != nil {
+			logger.Error("auth_consumer_start_failed", "error_type", errtype.Of(err))
+			stopConsumers(consumers)
+			clients.Close()
+			pool.Close()
+			os.Exit(1)
+		}
+	}
+
+	checks := health.New(database.Readiness{Pool: pool}, rabbitmq.Readiness{Client: clients})
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", checks.Live)
 	mux.HandleFunc("GET /health/ready", checks.Ready)
@@ -69,9 +112,17 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("health_server_shutdown_failed", "error_type", "server_failure")
 	}
+	stopConsumers(consumers)
+	clients.Close()
 	pool.Close()
 	if err := shutdownTelemetry(shutdownCtx); err != nil {
 		logger.Error("telemetry_shutdown_failed", "error_type", "telemetry_unavailable")
 	}
 	logger.Info("service_stopped")
+}
+
+func stopConsumers(consumers []*auth.Consumer) {
+	for _, consumer := range consumers {
+		consumer.Stop()
+	}
 }

@@ -504,6 +504,8 @@ services:
         condition: service_completed_successfully
       notification-database:
         condition: service_healthy
+      job-queue:
+        condition: service_healthy
     restart: unless-stopped
     logging: *local-logging
 

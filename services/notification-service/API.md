@@ -16,7 +16,7 @@ Instance readiness. Returns `200 {"status":"ready"}` when every readiness depend
 { "statusCode": 503, "message": "dependency unavailable", "error": "Service Unavailable" }
 ```
 
-Readiness aggregates only dependencies the process actually holds. It never reports a state that nothing observes, and it does not probe Resend, Identity, Event, Kafka, or the OTLP collector.
+Readiness aggregates only dependencies the process actually holds: a ping on its own database pool and the state of its own broker connection. It never reports a state that nothing observes, and it never probes the broker, Resend, Identity, Event, Kafka, or the OTLP collector.
 
 Any other method on either path returns `405`.
 
