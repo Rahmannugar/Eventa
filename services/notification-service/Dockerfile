@@ -2,9 +2,9 @@ FROM golang:1.26-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
 COPY . .
 RUN gofmt -d cmd internal test && test -z "$(gofmt -d cmd internal test)"
-RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
 RUN /go/bin/golangci-lint run --timeout=10m ./...
 RUN go vet ./...
 RUN go test -short ./...

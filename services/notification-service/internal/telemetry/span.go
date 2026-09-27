@@ -29,8 +29,10 @@ func StartSpan(ctx context.Context, name string, kind trace.SpanKind, attributes
 	)
 }
 
-// EndSpan records the outcome: OK on success, ERROR plus error.type on failure.
+// EndSpan records the outcome: OK on success, ERROR plus error.type on failure,
+// then ends the span so the batch processor can export it.
 func EndSpan(span trace.Span, err error) {
+	defer span.End()
 	if err != nil {
 		span.SetStatus(codes.Error, "")
 		span.SetAttributes(attribute.String("error.type", errtype.Of(err)))

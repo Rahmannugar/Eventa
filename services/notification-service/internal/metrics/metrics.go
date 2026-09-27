@@ -1,10 +1,11 @@
-// Package metrics publishes the job instruments the TypeScript service records
-// through @eventa/observability, under the same meter name so the Prometheus
-// series line up.
+// Package metrics publishes the job and HTTP request instruments the
+// TypeScript service records through @eventa/observability, under the same
+// meter name so the Prometheus series line up.
 package metrics
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -19,6 +20,8 @@ var (
 	jobDuration     metric.Float64Histogram
 	jobInFlight     metric.Int64UpDownCounter
 	businessOutcome metric.Int64Counter
+	requestCount    metric.Int64Counter
+	requestDuration metric.Float64Histogram
 )
 
 // Init creates the job instruments. It is best effort: a failure leaves the
@@ -26,6 +29,23 @@ var (
 // optional instrumentation the TypeScript service records.
 func Init() error {
 	meter := otel.Meter(meterName)
+
+	instance, err := meter.Int64ObservableGauge(
+		"eventa.service.instance",
+		metric.WithDescription("Reports one while a service instance is exporting telemetry"),
+	)
+	if err != nil {
+		return err
+	}
+	if _, err := meter.RegisterCallback(
+		func(_ context.Context, observer metric.Observer) error {
+			observer.ObserveInt64(instance, 1)
+			return nil
+		},
+		instance,
+	); err != nil {
+		return err
+	}
 
 	counter, err := meter.Int64Counter(
 		"eventa.job.count",
@@ -61,7 +81,26 @@ func Init() error {
 		return err
 	}
 
+	httpCount, err := meter.Int64Counter(
+		"eventa.request.count",
+		metric.WithDescription("HTTP requests grouped by route, outcome, status code, and transport"),
+	)
+	if err != nil {
+		return err
+	}
+
+	httpDuration, err := meter.Float64Histogram(
+		"eventa.request.duration",
+		metric.WithDescription("HTTP request duration"),
+		metric.WithUnit("ms"),
+		metric.WithExplicitBucketBoundaries(5, 10, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1250, 1500, 2000, 2500, 5000, 7500, 10000),
+	)
+	if err != nil {
+		return err
+	}
+
 	jobCount, jobDuration, jobInFlight, businessOutcome = counter, histogram, inFlight, outcomeCounter
+	requestCount, requestDuration = httpCount, httpDuration
 	return nil
 }
 
@@ -100,4 +139,34 @@ func AddJobInFlight(delta int64, operation string) {
 	}
 	jobInFlight.Add(context.Background(), delta,
 		metric.WithAttributes(attribute.String("operation", operation)))
+}
+
+// RequestOutcome classes a status code exactly as @eventa/observability does:
+// 5xx and above are a server failure, 4xx is the caller's fault, and anything
+// lower is a success.
+func RequestOutcome(statusCode int) string {
+	switch {
+	case statusCode >= 500:
+		return "server_error"
+	case statusCode >= 400:
+		return "client_error"
+	default:
+		return "success"
+	}
+}
+
+// RecordRequest counts one HTTP request and records how long it took. transport
+// is always http because the health server is this service's only listener.
+func RecordRequest(elapsed time.Duration, operation, outcome string, statusCode int) {
+	if requestCount == nil || requestDuration == nil {
+		return
+	}
+	attributes := metric.WithAttributes(
+		attribute.String("operation", operation),
+		attribute.String("outcome", outcome),
+		attribute.String("statusCode", strconv.Itoa(statusCode)),
+		attribute.String("transport", "http"),
+	)
+	requestCount.Add(context.Background(), 1, attributes)
+	requestDuration.Record(context.Background(), float64(elapsed)/float64(time.Millisecond), attributes)
 }

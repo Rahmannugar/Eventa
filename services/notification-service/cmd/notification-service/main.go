@@ -138,7 +138,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.HealthPort),
-		Handler:           mux,
+		Handler:           health.Instrument(mux, logger),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
