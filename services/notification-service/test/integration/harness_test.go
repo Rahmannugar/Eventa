@@ -94,3 +94,11 @@ func resetDeliveries(t *testing.T, pool *pgxpool.Pool) {
 		t.Fatalf("truncate auth_email_deliveries: %v", err)
 	}
 }
+
+func resetCancellation(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	const tables = "TRUNCATE notification_job_outbox, cancellation_email_deliveries, ticket_revocation_inbox"
+	if _, err := pool.Exec(context.Background(), tables); err != nil {
+		t.Fatalf("truncate cancellation tables: %v", err)
+	}
+}

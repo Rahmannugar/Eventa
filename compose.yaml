@@ -249,6 +249,22 @@ services:
     restart: unless-stopped
     logging: *local-logging
 
+  notification-rabbitmq-cdc:
+    image: quay.io/debezium/server:3.6.0.Final
+    env_file:
+      - ./services/notification-service/.env
+      - ./infrastructure/messaging/job-queue/rabbitmq/.env
+    volumes:
+      - ./infrastructure/messaging/change-data-capture/debezium/notification-rabbitmq/application.properties:/debezium/config/application.properties:ro
+      - notification-rabbitmq-cdc-data:/debezium/data
+    depends_on:
+      notification-service:
+        condition: service_healthy
+      job-queue:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
   identity-migration:
     build:
       context: .
@@ -634,6 +650,7 @@ volumes:
   ticket-kafka-cdc-data:
   commerce-kafka-cdc-data:
   event-rabbitmq-cdc-data:
+  notification-rabbitmq-cdc-data:
   event-database-data:
   identity-kafka-cdc-data:
   identity-database-data:

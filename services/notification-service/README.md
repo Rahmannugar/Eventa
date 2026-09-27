@@ -52,6 +52,8 @@ curl -s localhost:3006/health/ready
 | `task test` | Both suites. The integration half is skipped without `TEST_DATABASE_URL` |
 | `task lint` | `golangci-lint` with the service configuration |
 | `task fmt` | Formats `cmd`, `internal`, `test` |
+| `task proto` | Regenerates the gRPC stubs in `internal/gen` from `packages/grpc-contracts` |
+| `task proto:check` | Regenerates and fails when `internal/gen` differs from the committed stubs |
 | `task migrate` | Starts the database and applies reviewed SQL migrations |
 
 ## Environment

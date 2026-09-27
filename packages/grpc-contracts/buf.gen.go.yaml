@@ -1,0 +1,16 @@
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/eventa/notification-service/internal/gen
+plugins:
+  - local: protoc-gen-go
+    out: ../../services/notification-service/internal/gen
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: ../../services/notification-service/internal/gen
+    opt:
+      - paths=source_relative

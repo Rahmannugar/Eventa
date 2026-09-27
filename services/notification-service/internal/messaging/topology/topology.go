@@ -38,6 +38,23 @@ func Declare(channel *amqp.Channel, queue string, retryDelaysMS []int) error {
 	return nil
 }
 
+// DeclareRouted asserts a direct exchange, the quorum work queue bound onto it
+// by routing key, and the delay queues. The exchange is how the outbox relay
+// reaches the queue; the default exchange still releases the delays, because
+// every queue is implicitly bound to it by its own name.
+func DeclareRouted(channel *amqp.Channel, exchange, queue, routingKey string, retryDelaysMS []int) error {
+	if err := channel.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare exchange %s: %w", exchange, err)
+	}
+	if err := Declare(channel, queue, retryDelaysMS); err != nil {
+		return err
+	}
+	if err := channel.QueueBind(queue, routingKey, exchange, false, nil); err != nil {
+		return fmt.Errorf("bind queue %s to %s: %w", queue, exchange, err)
+	}
+	return nil
+}
+
 // RetryQueueName returns the delay queue that releases a retry no later than
 // delayMS, falling back to the longest delay when the wait is longer than the
 // ladder.

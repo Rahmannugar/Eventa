@@ -11,12 +11,15 @@ import (
 	"time"
 
 	"github.com/eventa/notification-service/internal/auth"
+	"github.com/eventa/notification-service/internal/cancellation"
 	"github.com/eventa/notification-service/internal/config"
 	"github.com/eventa/notification-service/internal/database"
 	"github.com/eventa/notification-service/internal/email/resend"
 	"github.com/eventa/notification-service/internal/errtype"
 	"github.com/eventa/notification-service/internal/health"
 	"github.com/eventa/notification-service/internal/logging"
+	"github.com/eventa/notification-service/internal/lookup"
+	"github.com/eventa/notification-service/internal/messaging/kafka"
 	"github.com/eventa/notification-service/internal/messaging/rabbitmq"
 	"github.com/eventa/notification-service/internal/metrics"
 	"github.com/eventa/notification-service/internal/telemetry"
@@ -84,6 +87,50 @@ func main() {
 		}
 	}
 
+	if err := cancellation.StartQueueTopology(clients); err != nil {
+		logger.Error("cancellation_topology_start_failed", "error_type", errtype.Of(err))
+		stopConsumers(consumers)
+		clients.Close()
+		pool.Close()
+		os.Exit(1)
+	}
+
+	lookups, err := lookup.Dial(
+		cfg.IdentityGRPCURL, cfg.IdentityGRPCDeadlineMS,
+		cfg.EventGRPCURL, cfg.EventGRPCDeadlineMS,
+	)
+	if err != nil {
+		logger.Error("grpc_client_start_failed", "error_type", errtype.Of(err))
+		stopConsumers(consumers)
+		clients.Close()
+		pool.Close()
+		os.Exit(1)
+	}
+
+	cancelRepository := cancellation.NewRepository(pool)
+	cancelDelivery := cancellation.NewDelivery(cancelRepository, lookups, lookups, emails, cfg.ResendFrom)
+	jobConsumer := cancellation.NewJobConsumer(clients, cancelDelivery, publishTimeout)
+	if err := jobConsumer.Start(); err != nil {
+		logger.Error("cancellation_consumer_start_failed", "error_type", errtype.Of(err))
+		stopConsumers(consumers)
+		_ = lookups.Close()
+		clients.Close()
+		pool.Close()
+		os.Exit(1)
+	}
+
+	factConsumer := kafka.NewConsumer(
+		cancellation.FactConsumerContext,
+		cfg.KafkaBrokers,
+		cfg.KafkaTicketRevokedTopic,
+		cfg.KafkaConsumerGroup,
+		cancellation.KafkaClientID,
+		"ticket_revocation_consumer_failed",
+		cancellation.Operation,
+		cancellation.NewFactHandler(cancellation.NewIngest(cancelRepository), cfg.KafkaTicketRevokedTopic).Handle,
+	)
+	factConsumer.Start()
+
 	checks := health.New(database.Readiness{Pool: pool}, rabbitmq.Readiness{Client: clients})
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", checks.Live)
@@ -112,7 +159,10 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("health_server_shutdown_failed", "error_type", "server_failure")
 	}
+	factConsumer.Stop()
+	jobConsumer.Stop()
 	stopConsumers(consumers)
+	_ = lookups.Close()
 	clients.Close()
 	pool.Close()
 	if err := shutdownTelemetry(shutdownCtx); err != nil {

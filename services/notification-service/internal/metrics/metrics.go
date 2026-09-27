@@ -15,9 +15,10 @@ import (
 const meterName = "@eventa/observability"
 
 var (
-	jobCount    metric.Int64Counter
-	jobDuration metric.Float64Histogram
-	jobInFlight metric.Int64UpDownCounter
+	jobCount        metric.Int64Counter
+	jobDuration     metric.Float64Histogram
+	jobInFlight     metric.Int64UpDownCounter
+	businessOutcome metric.Int64Counter
 )
 
 // Init creates the job instruments. It is best effort: a failure leaves the
@@ -52,8 +53,30 @@ func Init() error {
 		return err
 	}
 
-	jobCount, jobDuration, jobInFlight = counter, histogram, inFlight
+	outcomeCounter, err := meter.Int64Counter(
+		"eventa.business.outcome.count",
+		metric.WithDescription("Business outcomes grouped by bounded operation and outcome"),
+	)
+	if err != nil {
+		return err
+	}
+
+	jobCount, jobDuration, jobInFlight, businessOutcome = counter, histogram, inFlight, outcomeCounter
 	return nil
+}
+
+// RecordBusinessOutcome counts one business result, which is distinct from the
+// broker job that carried it: the same job can succeed while its business
+// result is a duplicate.
+func RecordBusinessOutcome(operation, outcome string) {
+	if businessOutcome == nil {
+		return
+	}
+	businessOutcome.Add(context.Background(), 1,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("outcome", outcome),
+		))
 }
 
 // RecordJob counts one completed job and records how long it took from
