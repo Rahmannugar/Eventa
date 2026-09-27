@@ -1,16 +1,29 @@
-# Notification Service API
+# API
 
-## Business Domains
+Notification Service exposes only its operational HTTP surface. Business work arrives as messages, not as requests.
 
-| Domain        | Internal surface                                      | Documentation                                 |
-| ------------- | ----------------------------------------------------- | --------------------------------------------- |
-| Notifications | Versioned attendee and admin auth-email job consumers | [Notifications API](src/notifications/API.md) |
+## Endpoints
 
-We expose no client-facing business HTTP routes and no gRPC service.
+### `GET /health/live`
 
-## Operational HTTP
+Process liveness. Always `200 {"status":"ok"}`; it checks no dependency.
 
-| Method | Path            | Purpose                                                                                         |
-| ------ | --------------- | ----------------------------------------------------------------------------------------------- |
-| `GET`  | `/health/live`  | Confirms the Notification process is alive.                                                     |
-| `GET`  | `/health/ready` | Confirms Notification PostgreSQL is queryable and the process-owned RabbitMQ connection exists. |
+### `GET /health/ready`
+
+Instance readiness. Returns `200 {"status":"ready"}` when every readiness dependency responds, otherwise:
+
+```json
+{ "statusCode": 503, "message": "dependency unavailable", "error": "Service Unavailable" }
+```
+
+Readiness aggregates only dependencies the process actually holds. It never reports a state that nothing observes, and it does not probe Resend, Identity, Event, Kafka, or the OTLP collector.
+
+Any other method on either path returns `405`.
+
+## Ports
+
+`HEALTH_PORT` (local default `3006`).
+
+## Not exposed
+
+There is no public business endpoint. Attendees reach notification outcomes through email; operators reach state through the database, logs, metrics, and traces.

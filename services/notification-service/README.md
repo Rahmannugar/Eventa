@@ -1,61 +1,56 @@
-# Eventa Notification Service
+# Notification Service (Go)
 
-Notification owns application-email delivery and durable delivery history. It consumes attendee email-verification and password-reset jobs from RabbitMQ and sends them through the configured email provider.
+Eventa's notification deployable. It sends attendee and admin email — one-time verification and password codes, plus event-cancellation notices — from durable job state rather than from request handling.
 
-## Runtime
+This is the authoritative Notification Service implementation. Its behavior is specified in `local/notification-parity-contract.md`, which was written from the TypeScript implementation it replaces.
 
-- HTTP health port: configured by `HEALTH_PORT`; local Compose publishes `3006`.
-- PostgreSQL: configured by `DATABASE_URL`; local Compose publishes the Notification-owned database on host port `56432`.
-- RabbitMQ: configured by `RABBITMQ_URL`; local Compose publishes AMQP on host port `5673`.
-- Product-email provider: Resend credentials and sender identity are configured by `RESEND_API_KEY` and `RESEND_FROM`.
-- OTLP telemetry destination: configured by `OTEL_EXPORTER_OTLP_ENDPOINT`.
+## Requirements
 
-Create the ignored `.env` deliberately from `.env.example`. The committed example uses Resend's `onboarding@resend.dev` learning sender; production uses the verified Eventa sender identity.
+- Go 1.26
+- PostgreSQL 17 (Compose provides `notification-database`)
+- For later domains: RabbitMQ, Kafka, an OTLP collector
+
+## Local setup
+
+```bash
+cp .env.example .env       # then fill RESEND_API_KEY
+task migrate                # starts the database and applies migrations
+task build
+task test
+task lint
+```
+
+Run the service:
+
+```bash
+go run ./cmd/notification-service
+```
+
+Through Compose:
+
+```bash
+docker compose -f ../../compose.yaml up -d --wait notification-database notification-migration notification-service
+curl -s localhost:3006/health/ready
+```
 
 ## Commands
 
-Run commands from the repository root.
+| Command | What it does |
+| --- | --- |
+| `task build` | Compiles every package |
+| `task test:unit` | Runs short unit tests |
+| `task test:integration` | Runs tests against real PostgreSQL |
+| `task test` | Both suites |
+| `task lint` | `golangci-lint` with the service configuration |
+| `task fmt` | Formats `cmd`, `internal`, `test` |
+| `task migrate` | Starts the database and applies reviewed SQL migrations |
 
-Build the Notification migration image and apply committed migrations to the local Notification database.
+## Environment
 
-```bash
-pnpm db:migrate:notification
-```
+Configuration is read from the service-owned `.env` file. `.env.example` lists every variable and its local value. Startup fails deliberately when a variable is missing or out of range; the validation order and error strings are specified in the parity contract.
 
-Run Notification unit tests.
+## Ownership
 
-```bash
-pnpm test:unit:notification
-```
+Notification Service owns its PostgreSQL schema and migrations, its RabbitMQ job topology, its email delivery state, and its Resend adapter. It resolves attendee addresses and event details from Identity and Event over internal gRPC and never reads another service's database.
 
-Start Notification PostgreSQL and RabbitMQ, create the isolated test database when missing, and run integrations.
-
-```bash
-pnpm test:integration:notification
-```
-
-Run strict TypeScript checking, including Notification performance tooling, without emitting build output.
-
-```bash
-pnpm --filter @eventa/notification-service typecheck
-```
-
-Compile the deployable Notification Service.
-
-```bash
-pnpm --filter @eventa/notification-service build
-```
-
-The integration suite requires `TEST_DATABASE_URL` and `TEST_RABBITMQ_URL`. It refuses a test database without an `_test` suffix and creates the isolated database when missing.
-
-### Local database
-
-| Host        | Port    | Database              | Username              | Password                       |
-| ----------- | ------- | --------------------- | --------------------- | ------------------------------ |
-| `localhost` | `56432` | `eventa_notification` | `eventa_notification` | `eventa_notification_password` |
-
-## Further Documentation
-
-- [API.md](API.md): job-queue and health contracts.
-- [ARCHITECTURE.md](ARCHITECTURE.md): service composition, persistence, delivery, and recovery.
-- [Notifications API](src/notifications/API.md) and [architecture](src/notifications/ARCHITECTURE.md): domain-owned payload, state, retry, expiry, and provider behavior.
+See `API.md` for the HTTP contract and `ARCHITECTURE.md` for structure and invariants.

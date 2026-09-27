@@ -82,7 +82,7 @@ We document concrete behavior in the owning service: [API Gateway architecture](
 
 ## Persistence and Correctness
 
-Each service owns its PostgreSQL schema, migrations, constraints, and database principal. We use Drizzle in TypeScript services. Go services use GORM for persistence and reviewed SQL migrations as the deployment authority.
+Each service owns its PostgreSQL schema, migrations, constraints, and database principal. We use Drizzle in TypeScript services. Go services use pgx for persistence and reviewed SQL migrations as the deployment authority.
 
 Event Service records each admin event mutation in its own append-only audit history in the same transaction as the state change. A later projection may aggregate service-owned audit facts without becoming their source of truth.
 
