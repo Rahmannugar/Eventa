@@ -11,6 +11,7 @@ This is the authoritative Notification Service implementation. Its behavior is s
 - RabbitMQ (Compose provides `job-queue`)
 - An OTLP collector reachable at `OTEL_EXPORTER_OTLP_ENDPOINT`
 - Kafka, for the cancellation path
+- The `notification-rabbitmq-cdc` Debezium lane, which relays `notification_job_outbox` onto the RabbitMQ exchange. Without it no cancellation job reaches this process.
 
 ## Local setup
 
@@ -38,7 +39,7 @@ go run ./cmd/notification-service
 Through Compose:
 
 ```bash
-docker compose -f ../../compose.yaml up -d --wait notification-database notification-migration notification-service
+docker compose -f ../../compose.yaml up -d --wait notification-database notification-migration notification-service notification-rabbitmq-cdc
 curl -s localhost:3006/health/ready
 ```
 

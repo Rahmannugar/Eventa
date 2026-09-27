@@ -13,12 +13,18 @@ Process liveness. Always `200 {"status":"ok"}`; it checks no dependency.
 Instance readiness. Returns `200 {"status":"ready"}` when every readiness dependency responds, otherwise:
 
 ```json
-{ "statusCode": 503, "message": "dependency unavailable", "error": "Service Unavailable" }
+{
+  "statusCode": 503,
+  "message": "dependency unavailable",
+  "error": "Service Unavailable"
+}
 ```
 
 Readiness aggregates only dependencies the process actually holds: a ping on its own database pool and the state of its own broker connection. It never reports a state that nothing observes, and it never probes the broker, Resend, Identity, Event, Kafka, or the OTLP collector.
 
 Any other method on either path returns `405`.
+
+Every response carries `x-request-id`. An inbound `x-request-id` is echoed when it matches `[A-Za-z0-9._:-]{1,128}`; anything else is replaced with a generated UUID.
 
 ## Ports
 

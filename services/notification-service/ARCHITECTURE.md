@@ -16,7 +16,7 @@ Notification Service is a frameworkless Go deployable. It composes explicit pack
 - `internal/messaging/rabbitmq` — one process-long connection, channels memoised by purpose, publisher confirms, and the readiness adapter.
 - `internal/messaging/kafka` — one group member over one topic: manual commits, restart backoff, and trace-header extraction.
 - `internal/messaging/topology` — the quorum work queues, their single-message-TTL delay queues, and the direct exchange the outbox relay publishes onto.
-- `internal/health` — liveness and readiness over a list of real dependency checkers.
+- `internal/health` — liveness and readiness over a list of real dependency checkers, plus the request metrics and `http_request_completed` line that record a failed probe while a successful probe stays silent.
 - `internal/logging` — the Eventa log envelope.
 - `internal/metrics` — the job counter, duration histogram, in-flight gauge, and business outcome counter.
 - `internal/telemetry` — OTLP trace and metric exporters, 10-second metric interval, the resource attributes naming the service, and W3C propagation over broker and gRPC headers.
