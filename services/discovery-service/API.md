@@ -1,6 +1,6 @@
 # API
 
-Discovery Service exposes only its operational HTTP surface. Business work arrives as messages, not as requests.
+Discovery Service exposes operational HTTP health checks and one internal gRPC query. Business work enters as messages; only the search query arrives as a request, and it is reached through the API Gateway.
 
 ## Endpoints
 
@@ -28,8 +28,29 @@ Every response carries `x-request-id`. An inbound `x-request-id` is echoed when 
 
 ## Ports
 
-`HEALTH_PORT` (local default `3011`).
+- `HEALTH_PORT` (local default `3011`) — HTTP health.
+- `GRPC_PORT` (local default `50054`) — the internal query API below.
+
+## `DiscoveryService.SearchEvents`
+
+One structured query over the Discovery-owned event projection. It is an internal service: the API Gateway holds the authenticated public route, and Discovery does not authenticate callers itself.
+
+Request:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `query` | string | Free-text words matched case-insensitively against title and description. `%` and `_` are literal. |
+| `categories` | repeated string | Exact categories. A row matches when it carries any listed value, compared case-insensitively. |
+| `starts_from`, `starts_to` | RFC 3339 string | Inclusive bounds on the event start time. |
+| `limit` | int32 | Page size. `0` means 20; values above 50 are clamped. |
+| `offset` | int32 | Page offset, at most 10000. |
+
+Response: the matching `events`, plus `total`, `limit`, and `offset`. Results are ordered by start time, then event id, so pagination is stable.
+
+Only rows the projection holds as `published` with content are returned. A cancelled event never appears, and neither does a published row whose content Event Service no longer serves.
+
+Status codes: `INVALID_ARGUMENT` for a malformed request — a bad timestamp, a negative offset, or an unbalanced time range — and `INTERNAL` for a database failure. Neither log line nor error message contains the caller's query text.
 
 ## Not exposed
 
-There is no public business endpoint. Search and recommendation are reached through the API Gateway routes introduced with those slices; until then, state is read through the database, logs, metrics, and traces.
+There is no public business endpoint on this service. Attendees reach search through `GET /search/events` on the API Gateway; recommendations arrive with a later slice.

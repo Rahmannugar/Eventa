@@ -22,6 +22,7 @@ func valid() map[string]any {
 		"EVENT_GRPC_DEADLINE_MS":      "3000",
 		"DATABASE_URL":                "postgres://eventa_discovery@discovery-database:5432/eventa_discovery",
 		"HEALTH_PORT":                 "3011",
+		"GRPC_PORT":                   "50054",
 		"KAFKA_BROKERS":               "event-bus:9092",
 		"KAFKA_CONSUMER_GROUP":        "eventa-discovery-service",
 		"KAFKA_EVENT_LIFECYCLE_TOPIC": "eventa.event.lifecycle.v1",
@@ -43,6 +44,9 @@ func TestLoadAcceptsTheCanonicalLocalConfiguration(t *testing.T) {
 	}
 	if cfg.HealthPort != 3011 {
 		t.Errorf("HealthPort = %d, want 3011", cfg.HealthPort)
+	}
+	if cfg.GRPCPort != 50054 {
+		t.Errorf("GRPCPort = %d, want 50054", cfg.GRPCPort)
 	}
 	if cfg.KafkaEventLifecycleTopic != "eventa.event.lifecycle.v1" {
 		t.Errorf("topic = %q, want eventa.event.lifecycle.v1", cfg.KafkaEventLifecycleTopic)
@@ -67,6 +71,8 @@ func TestLoadReportsTheFirstFailingRule(t *testing.T) {
 		{"out of range deadline", func(v map[string]any) { v["EVENT_GRPC_DEADLINE_MS"] = "99" }, "EVENT_GRPC_DEADLINE_MS must be an integer between 100 and 10000"},
 		{"missing database", func(v map[string]any) { delete(v, "DATABASE_URL") }, "DATABASE_URL is required"},
 		{"missing health port", func(v map[string]any) { delete(v, "HEALTH_PORT") }, "HEALTH_PORT is required"},
+		{"missing grpc port", func(v map[string]any) { delete(v, "GRPC_PORT") }, "GRPC_PORT is required"},
+		{"out of range grpc port", func(v map[string]any) { v["GRPC_PORT"] = "0" }, "GRPC_PORT must be an integer between 1 and 65535"},
 		{"malformed broker", func(v map[string]any) { v["KAFKA_BROKERS"] = "event-bus" }, "KAFKA_BROKERS must use host:port entries"},
 		{"missing consumer group", func(v map[string]any) { delete(v, "KAFKA_CONSUMER_GROUP") }, "KAFKA_CONSUMER_GROUP is required"},
 		{"missing lifecycle topic", func(v map[string]any) { delete(v, "KAFKA_EVENT_LIFECYCLE_TOPIC") }, "KAFKA_EVENT_LIFECYCLE_TOPIC is required"},

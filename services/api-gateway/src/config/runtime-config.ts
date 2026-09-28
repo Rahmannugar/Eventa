@@ -6,6 +6,8 @@ export interface RuntimeConfig {
   httpHeadersTimeoutMs: number;
   httpKeepAliveTimeoutMs: number;
   httpRequestTimeoutMs: number;
+  discoveryGrpcDeadlineMs: number;
+  discoveryGrpcUrl: string;
   eventGrpcDeadlineMs: number;
   eventGrpcUrl: string;
   ticketServiceUrl: string;
@@ -106,6 +108,12 @@ export function readRuntimeConfig(
     throw new Error('EVENT_GRPC_URL must use the host:port format');
   }
 
+  const discoveryGrpcUrl = readRequiredString(environment, 'DISCOVERY_GRPC_URL');
+
+  if (!/^[^\s:/]+:\d+$/.test(discoveryGrpcUrl)) {
+    throw new Error('DISCOVERY_GRPC_URL must use the host:port format');
+  }
+
   const ticketServiceUrl = readRequiredString(environment, 'TICKET_SERVICE_URL');
   let parsedTicketServiceUrl: URL;
   try { parsedTicketServiceUrl = new URL(ticketServiceUrl); } catch { throw new Error('TICKET_SERVICE_URL must be a valid HTTP or HTTPS URL'); }
@@ -166,6 +174,10 @@ export function readRuntimeConfig(
     environment,
     'EVENT_GRPC_DEADLINE_MS',
   );
+  const discoveryGrpcDeadlineMs = readPositiveInteger(
+    environment,
+    'DISCOVERY_GRPC_DEADLINE_MS',
+  );
   const commerceGrpcDeadlineMs = readPositiveInteger(
     environment,
     'COMMERCE_GRPC_DEADLINE_MS',
@@ -183,6 +195,11 @@ export function readRuntimeConfig(
       'EVENT_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
     );
   }
+  if (discoveryGrpcDeadlineMs >= httpRequestTimeoutMs) {
+    throw new Error(
+      'DISCOVERY_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
   if (commerceGrpcDeadlineMs >= httpRequestTimeoutMs) {
     throw new Error(
       'COMMERCE_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
@@ -195,6 +212,8 @@ export function readRuntimeConfig(
     clientOrigin: readOrigin(environment, 'CLIENT_ORIGIN'),
     commerceGrpcDeadlineMs,
     commerceGrpcUrl,
+    discoveryGrpcDeadlineMs,
+    discoveryGrpcUrl,
     eventGrpcDeadlineMs,
     eventGrpcUrl,
     ticketServiceUrl: parsedTicketServiceUrl.toString().replace(/\/$/, ''),

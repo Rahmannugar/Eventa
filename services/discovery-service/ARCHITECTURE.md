@@ -4,12 +4,14 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 
 ## Structure
 
-- `cmd/discovery-service` — composition root. Loads and validates configuration, starts telemetry, opens the pool, dials Event, starts the lifecycle consumer, serves health, and shuts them down in the reverse order.
+- `cmd/discovery-service` — composition root. Loads and validates configuration, starts telemetry, opens the pool, dials Event, starts the lifecycle consumer, serves health and the query API, and shuts them down in the reverse order.
 - `cmd/discovery-migration` — applies the reviewed SQL migrations in `migrations/` through tern, tracked in `discovery_schema_version`.
 - `internal/config` — one fixed validation order, so the first failing rule is the reported error.
 - `internal/database` — pool construction, the migration runner, and the readiness adapter.
 - `internal/index` — the lifecycle fact contract, the ingest transaction, the inbox claim, the index write, and the Kafka handler.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
+- `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
+- `internal/server` — the gRPC listener and its interceptors: trace continuation, request metrics and log line, and panic containment.
 - `internal/gen` — generated protobuf and gRPC stubs, committed so the image build needs no protoc. `task proto` regenerates them from `packages/grpc-contracts`.
 - `internal/messaging/kafka` — one group member over one topic: manual commits, restart backoff, and trace-header extraction.
 - `internal/health` — liveness and readiness over a list of real dependency checkers, plus the request metrics and `http_request_completed` line that record a failed probe while a successful probe stays silent.
@@ -35,6 +37,14 @@ When Event Service no longer serves a published event — it was cancelled betwe
 
 Outcomes are `processed`, `content_unavailable`, `duplicate`, `ignored`, and `rejected`, carried on `discovery.event_index` for every metric and log line on this path.
 
+## Search API
+
+`DiscoveryService.SearchEvents` answers from `discovery_event_index` alone: ordinary SQL over exact filters, no vector store, and no call to Event Service. Every request is validated before it reaches the database — page size and offset are bounded, timestamps must be RFC 3339, and a start bound after an end bound is rejected rather than silently widened. The page query and its count share one predicate, so `total` cannot disagree with the page.
+
+Only `published` rows with content are eligible, so a cancellation removes an event from results the moment the fact lands, and a row whose content Event Service no longer served is never offered as an empty result.
+
+Every RPC is traced, counted under `eventa.request.*` with `transport="grpc"`, and logged as `grpc_request_completed` with its request id and trace id. Readiness still covers only the database: an unavailable query API fails its calls without failing the instance.
+
 ## Data ownership
 
 The service owns `discovery_event_inbox` and `discovery_event_index` in its own PostgreSQL database. Migration `0001_create_discovery_event_index.sql` creates them.
@@ -52,10 +62,11 @@ Durable invariants:
 - PostgreSQL — own schema only
 - Kafka — the shared event lifecycle topic, group-scoped, manual commits
 - Event Service over internal gRPC, with an explicit deadline
+- The API Gateway calls this service over internal gRPC, with its own deadline
 - OTLP collector — traces and metrics
 
 Readiness covers only the database. Kafka group membership recovers through the consumer's own restart backoff, and Event Service is dialled per call, so neither is a reason to report an instance unready; telemetry availability never gates startup or readiness.
 
 ## Shutdown
 
-SIGTERM or SIGINT stops the HTTP server, leaves the Kafka group, closes the gRPC connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.
+SIGTERM or SIGINT stops the HTTP health server, gracefully stops the query API, leaves the Kafka group, closes the Event gRPC connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.

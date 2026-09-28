@@ -1,0 +1,13 @@
+export {
+  DISCOVERY_SERVICE_NAME,
+  EVENTA_DISCOVERY_V1_PACKAGE_NAME,
+  DiscoveryServiceControllerMethods,
+  type DiscoveryServiceClient,
+  type DiscoveryServiceController,
+} from '../../generated/eventa/discovery/v1/discovery_service.generated';
+export {
+  type EventSearchResult,
+  type SearchEventsRequest,
+  type SearchEventsResponse,
+} from '../../generated/eventa/discovery/v1/discovery.generated';
+export * from './proto-paths';

@@ -61,6 +61,6 @@ Configuration is read from the service-owned `.env` file. `.env.example` lists e
 
 Discovery Service owns its PostgreSQL schema and migrations and the Discovery event projection. It reads the shared lifecycle Kafka topic with a durable inbox, resolves published content from Event Service over internal gRPC, and never reads another service's database.
 
-The service holds no HTTP business surface. Attendees reach discovery through the API Gateway routes added by the search and recommendation slices.
+The service holds no public business surface of its own. Attendees reach search through `GET /search/events` on the API Gateway, which calls this service over internal gRPC on `GRPC_PORT`.
 
-See `API.md` for the HTTP contract and `ARCHITECTURE.md` for structure and invariants.
+See `API.md` for the HTTP and gRPC contracts and `ARCHITECTURE.md` for structure and invariants.

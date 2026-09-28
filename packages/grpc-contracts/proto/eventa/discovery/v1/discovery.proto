@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package eventa.discovery.v1;
+
+message SearchEventsRequest {
+  // Free-text words matched against the event title and description.
+  string query = 1;
+  // Exact category filter. A row matches when it carries any listed category.
+  repeated string categories = 2;
+  // Inclusive RFC 3339 lower bound on the event start time.
+  optional string starts_from = 3;
+  // Inclusive RFC 3339 upper bound on the event start time.
+  optional string starts_to = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message EventSearchResult {
+  string event_id = 1;
+  string title = 2;
+  optional string description = 3;
+  optional string starts_at = 4;
+  optional string ends_at = 5;
+  optional string time_zone = 6;
+  repeated string categories = 7;
+  optional string venue_name = 8;
+  optional string venue_city = 9;
+  optional string venue_country_code = 10;
+}
+
+message SearchEventsResponse {
+  repeated EventSearchResult events = 1;
+  int32 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}

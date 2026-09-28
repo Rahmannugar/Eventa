@@ -19,7 +19,10 @@ import (
 	"github.com/eventa/discovery-service/internal/lookup"
 	"github.com/eventa/discovery-service/internal/messaging/kafka"
 	"github.com/eventa/discovery-service/internal/metrics"
+	"github.com/eventa/discovery-service/internal/search"
+	"github.com/eventa/discovery-service/internal/server"
 	"github.com/eventa/discovery-service/internal/telemetry"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -78,7 +81,7 @@ func main() {
 	mux.HandleFunc("GET /health/live", checks.Live)
 	mux.HandleFunc("GET /health/ready", checks.Ready)
 
-	server := &http.Server{
+	healthServer := &http.Server{
 		Addr:              ":" + strconv.Itoa(cfg.HealthPort),
 		Handler:           health.Instrument(mux, logger),
 		ReadHeaderTimeout: 5 * time.Second,
@@ -87,19 +90,45 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 	go func() {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if serveErr := healthServer.ListenAndServe(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 			logger.Error("health_server_failed", "error_type", "server_failure")
 			stop()
 		}
 	}()
 	logger.InfoContext(ctx, "service_started", "health_port", cfg.HealthPort)
 
+	queryAPI, grpcListener, err := server.New(
+		search.NewHandler(search.NewRepository(pool), logger), logger, cfg.GRPCPort,
+	)
+	if err != nil {
+		logger.Error("grpc_server_start_failed", "error_type", errtype.Of(err))
+		pool.Close()
+		os.Exit(1)
+	}
+	go func() {
+		if serveErr := queryAPI.Serve(grpcListener); serveErr != nil && !errors.Is(serveErr, grpc.ErrServerStopped) {
+			logger.Error("grpc_server_failed", "error_type", "server_failure")
+			stop()
+		}
+	}()
+	logger.InfoContext(ctx, "grpc_server_started", "grpc_port", cfg.GRPCPort)
+
 	<-ctx.Done()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := healthServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("health_server_shutdown_failed", "error_type", "server_failure")
+	}
+	grpcStopped := make(chan struct{})
+	go func() {
+		queryAPI.GracefulStop()
+		close(grpcStopped)
+	}()
+	select {
+	case <-grpcStopped:
+	case <-shutdownCtx.Done():
+		queryAPI.Stop()
 	}
 	consumer.Stop()
 	if err := events.Close(); err != nil {

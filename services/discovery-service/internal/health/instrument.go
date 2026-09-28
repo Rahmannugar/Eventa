@@ -78,7 +78,7 @@ func Instrument(next http.Handler, logger *slog.Logger) http.Handler {
 		if !plan.record {
 			return
 		}
-		metrics.RecordRequest(elapsed, plan.operation, plan.outcome, plan.status)
+		metrics.RecordRequest(elapsed, plan.operation, plan.outcome, plan.status, "http")
 		logger.InfoContext(r.Context(), "http_request_completed",
 			"duration_ms", milliseconds(elapsed),
 			"method", r.Method,

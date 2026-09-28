@@ -1,6 +1,6 @@
-// Package metrics publishes the job and HTTP request instruments the
-// TypeScript service records through @eventa/observability, under the same
-// meter name so the Prometheus series line up.
+// Package metrics publishes the job and request instruments the TypeScript
+// service records through @eventa/observability, under the same meter name so
+// the Prometheus series line up.
 package metrics
 
 import (
@@ -155,9 +155,10 @@ func RequestOutcome(statusCode int) string {
 	}
 }
 
-// RecordRequest counts one HTTP request and records how long it took. transport
-// is always http because the health server is this service's only listener.
-func RecordRequest(elapsed time.Duration, operation, outcome string, statusCode int) {
+// RecordRequest counts one request and records how long it took. transport
+// names the listener that carried it: the health server reports `http` and
+// the query API reports `grpc`.
+func RecordRequest(elapsed time.Duration, operation, outcome string, statusCode int, transport string) {
 	if requestCount == nil || requestDuration == nil {
 		return
 	}
@@ -165,7 +166,7 @@ func RecordRequest(elapsed time.Duration, operation, outcome string, statusCode 
 		attribute.String("operation", operation),
 		attribute.String("outcome", outcome),
 		attribute.String("statusCode", strconv.Itoa(statusCode)),
-		attribute.String("transport", "http"),
+		attribute.String("transport", transport),
 	)
 	requestCount.Add(context.Background(), 1, attributes)
 	requestDuration.Record(context.Background(), float64(elapsed)/float64(time.Millisecond), attributes)

@@ -22,6 +22,7 @@ var (
 
 type Config struct {
 	HealthPort               int
+	GRPCPort                 int
 	DatabaseURL              string
 	KafkaBrokers             []string
 	KafkaConsumerGroup       string
@@ -157,6 +158,11 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 		return Config{}, Telemetry{}, err
 	}
 
+	grpcPort, err := boundedInt(k, "GRPC_PORT", 1, 65535)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+
 	kafkaBrokers, err := brokers(k)
 	if err != nil {
 		return Config{}, Telemetry{}, err
@@ -172,6 +178,7 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 
 	return Config{
 		HealthPort:               healthPort,
+		GRPCPort:                 grpcPort,
 		DatabaseURL:              databaseURL,
 		KafkaBrokers:             kafkaBrokers,
 		KafkaConsumerGroup:       consumerGroup,

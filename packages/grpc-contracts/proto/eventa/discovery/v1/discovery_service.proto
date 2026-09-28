@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package eventa.discovery.v1;
+
+import "eventa/discovery/v1/discovery.proto";
+
+service DiscoveryService {
+  rpc SearchEvents(SearchEventsRequest) returns (SearchEventsResponse);
+}
