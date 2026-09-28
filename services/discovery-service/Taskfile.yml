@@ -1,0 +1,24 @@
+version: '3'
+tasks:
+  build: go build ./...
+  test:
+    cmds:
+      - go test -short ./...
+      - go test ./test/integration/...
+  test:unit: go test -short ./...
+  test:integration: go test ./test/integration/...
+  lint: golangci-lint run
+  fmt: gofmt -w cmd internal test
+  proto:
+    desc: Regenerate the gRPC stubs from packages/grpc-contracts
+    dir: ../../packages/grpc-contracts
+    cmds:
+      - PATH="$(go env GOPATH)/bin:$PATH" ./node_modules/.bin/buf generate --template buf.gen.discovery.go.yaml
+  proto:check:
+    cmds:
+      - task: proto
+      - test -z "$(git status --porcelain -- internal/gen)" || { git status --porcelain -- internal/gen; exit 1; }
+  migrate:
+    cmds:
+      - docker compose -f ../../compose.yaml up -d --wait discovery-database
+      - go run ./cmd/discovery-migration

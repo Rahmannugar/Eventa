@@ -43,12 +43,14 @@ This root file remains a compact map as Eventa grows; it does not duplicate ever
 
 Synchronous service commands and queries use the attendee and admin gRPC services in `eventa.identity.v1` and the Event service in `eventa.event.v1`.
 
-The protobuf schemas are authoritative. Buf validates and generates the TypeScript message, client, controller, package, and service declarations exported by `@eventa/grpc-contracts`, and a second service-owned template generates the Go stubs Notification compiles against; consumers do not hand-maintain protobuf-derived shapes.
+The protobuf schemas are authoritative. Buf validates and generates the TypeScript message, client, controller, package, and service declarations exported by `@eventa/grpc-contracts`, and service-owned templates generate the Go stubs that Notification and Discovery compile against; consumers do not hand-maintain protobuf-derived shapes.
 
 Identity also exposes operational HTTP health endpoints; it does not expose business HTTP routes directly to clients. See [services/identity-service/API.md](services/identity-service/API.md).
 
 Event Service exposes event management, ticket catalogues, capacity reservations, waitlists, and published-only retrieval over gRPC plus operational HTTP health endpoints. See [services/event-service/API.md](services/event-service/API.md).
 
 Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Ticket Service publishes one `eventa.ticket.revoked.v1` fact per revoked ticket and Notification consumes that topic to send event-cancellation emails. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
+
+Event Service publishes `event.published.v1` and `event.cancelled.v1` through its publication outbox, and Discovery Service consumes that topic to maintain the event projection search and recommendation read. Discovery exposes only operational HTTP health endpoints. See [services/discovery-service/API.md](services/discovery-service/API.md).
 
 Each service documents its owned internal surface in its own `API.md`.

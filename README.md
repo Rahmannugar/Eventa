@@ -6,7 +6,7 @@ https://excalidraw.com/#json=SFbQZx5HysD4qID-yI_WI,BiqyfjSj0iGFfR4oRcvJ_A
 
 ## Overview
 
-Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver semantic and location-aware recommendations using Ahnlich, Gemini, and PostGIS, and provide analytics for organizers.
+Eventa is a distributed event ticketing platform that enables organizers to create and manage events, publish tickets, process attendee purchases through Stripe, validate QR code check-ins, issue refunds for cancelled events, deliver semantic and location-aware recommendations using Ahnlich and PostGIS, and provide analytics for organizers.
 
 The system is composed of independently deployable modular-monolith services responsible for identity, events, commerce, ticketing, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows. Transactional outbox records and Debezium are the primary relay for durable database-backed inter-service facts and initial job assignments.
 
@@ -46,7 +46,6 @@ Services use explicit application services for business use cases, thin transpor
 - Ahnlich (vector DB, AI proxy)
 ### AI
 
-- Google Gemini
 
 ### Observability
 
@@ -71,7 +70,7 @@ Product interfaces use attendee and organizer language. They translate system st
 
 For the full command reference, see [commands.md](commands.md).
 
-Docker Compose starts the API Gateway, Identity Service, Event Service, Commerce Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, Commerce, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. The startup command warms Kafka and RabbitMQ before starting the remaining stack with bounded concurrency, protecting local resources without omitting services.
+Docker Compose starts the API Gateway, Identity Service, Event Service, Commerce Service, Ticket Service, Discovery Service, Notification Service, their owned PostgreSQL databases, Redis-backed rate-limit and authentication state, RabbitMQ, Kafka, CDC, and the local observability pipeline. Identity, Event, Commerce, Ticket, Discovery, and Notification migrations and event-bus initialization run in one-shot containers before their dependants start. The startup command warms Kafka and RabbitMQ before starting the remaining stack with bounded concurrency, protecting local resources without omitting services.
 
 Build and start Eventa with:
 
@@ -106,6 +105,7 @@ Local endpoints:
 - Event readiness: `http://localhost:3007/health/ready`
 - Commerce readiness: `http://localhost:3008/health/ready`
 - Ticket readiness: `http://localhost:3010/health/ready`
+- Discovery readiness: `http://localhost:3011/health/ready`
 - RabbitMQ management: `http://localhost:15673`
 - Grafana: `http://localhost:3300`
 - Grafana Alloy diagnostics: `http://localhost:51234`
