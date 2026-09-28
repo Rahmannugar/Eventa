@@ -15,7 +15,6 @@ COPY services/api-gateway/package.json services/api-gateway/package.json
 COPY services/commerce-service/package.json services/commerce-service/package.json
 COPY services/event-service/package.json services/event-service/package.json
 COPY services/identity-service/package.json services/identity-service/package.json
-COPY services/notification-service/package.json services/notification-service/package.json
 
 RUN --mount=type=cache,id=eventa-pnpm-store,target=/pnpm/store,sharing=locked \
   --mount=type=cache,id=eventa-pnpm-cache,target=/pnpm/cache,sharing=locked \
