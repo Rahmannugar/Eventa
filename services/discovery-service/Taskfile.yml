@@ -18,6 +18,10 @@ tasks:
     cmds:
       - task: proto
       - test -z "$(git status --porcelain -- internal/gen)" || { git status --porcelain -- internal/gen; exit 1; }
+  reindex:
+    desc: Rebuild the derived semantic store from the projection
+    cmds:
+      - go run ./cmd/discovery-reindex
   migrate:
     cmds:
       - docker compose -f ../../compose.yaml up -d --wait discovery-database

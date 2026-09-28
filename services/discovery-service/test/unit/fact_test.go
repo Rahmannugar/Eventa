@@ -194,7 +194,7 @@ func TestUnparseableAndNullRecordsAreRejected(t *testing.T) {
 // consumer deliberately leaves its offset uncommitted: a corrected producer
 // redelivers the record. The nil pool proves no transaction was opened.
 func TestContractViolationFailsWithoutTouchingTheDatabase(t *testing.T) {
-	ingest := index.NewIngest(nil, nil)
+	ingest := index.NewIngest(nil, nil, nil)
 
 	_, err := ingest.Ingest(t.Context(), []byte(`{"type":"event.published.v1"}`))
 	if !errors.Is(err, index.ErrFactRejected) {

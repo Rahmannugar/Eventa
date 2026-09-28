@@ -11,6 +11,7 @@ import (
 
 	"github.com/eventa/discovery-service/internal/logging"
 	"github.com/eventa/discovery-service/internal/metrics"
+	"github.com/eventa/discovery-service/internal/semantic"
 )
 
 // ErrContentUnavailable means Event Service no longer serves a published
@@ -39,17 +40,26 @@ type Resolver interface {
 	GetPublishedContent(ctx context.Context, eventID string) (*Content, error)
 }
 
+// Syncer converges one event's semantic state with this index after the
+// transaction commits. It is best effort here: a failure is recovered by the
+// reconciler rather than by redelivering a fact that already committed.
+type Syncer interface {
+	Sync(ctx context.Context, eventID string) error
+}
+
 // Ingest applies one lifecycle fact to the Discovery-owned index.
 type Ingest struct {
 	repository *Repository
 	resolver   Resolver
+	syncer     Syncer
 	logger     *slog.Logger
 }
 
-func NewIngest(pool *pgxpool.Pool, resolver Resolver) *Ingest {
+func NewIngest(pool *pgxpool.Pool, resolver Resolver, syncer Syncer) *Ingest {
 	return &Ingest{
 		repository: NewRepository(pool),
 		resolver:   resolver,
+		syncer:     syncer,
 		logger:     logging.New("EventLifecycleConsumer"),
 	}
 }
@@ -124,6 +134,22 @@ func (s *Ingest) apply(ctx context.Context, fact Fact, kind ParseKind, startedAt
 	if err != nil {
 		return "", err
 	}
+
+	// The obligation to embed or remove the event commits with the index row,
+	// so a crash between the two leaves recoverable work instead of silence.
+	var text string
+	if kind == ParsePublished && content != nil {
+		text = semantic.Truncate(semantic.BuildText(
+			content.Title, content.Description, content.Categories,
+			content.VenueName, content.VenueCity))
+		err = semantic.RecordPendingIndex(ctx, tx, fact.EventID, semantic.Hash(text))
+	} else if kind == ParseCancelled {
+		err = semantic.RecordPendingRemoval(ctx, tx, fact.EventID)
+	}
+	if err != nil {
+		return "", err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return "", fmt.Errorf("commit lifecycle fact: %w", err)
 	}
@@ -139,6 +165,14 @@ func (s *Ingest) apply(ctx context.Context, fact Fact, kind ParseKind, startedAt
 			"event_id", fact.EventID, "event_type", fact.Type, "status", statusFor(kind))
 	}
 	s.record(outcome, startedAt, true)
+
+	if s.syncer != nil && (text != "" || kind == ParseCancelled) {
+		if err := s.syncer.Sync(ctx, fact.EventID); err != nil {
+			s.logger.WarnContext(ctx, "semantic_sync_deferred",
+				"operation", Operation, "event_id", fact.EventID,
+				"error_type", semantic.ErrorClass(err))
+		}
+	}
 	return outcome, nil
 }
 

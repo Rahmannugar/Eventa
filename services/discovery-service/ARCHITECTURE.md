@@ -6,11 +6,14 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 
 - `cmd/discovery-service` — composition root. Loads and validates configuration, starts telemetry, opens the pool, dials Event, starts the lifecycle consumer, serves health and the query API, and shuts them down in the reverse order.
 - `cmd/discovery-migration` — applies the reviewed SQL migrations in `migrations/` through tern, tracked in `discovery_schema_version`.
+- `cmd/discovery-reindex` — rebuilds the semantic store from the projection. It is safe to run repeatedly and exits non-zero while anything remains unconverged.
 - `internal/config` — one fixed validation order, so the first failing rule is the reported error.
 - `internal/database` — pool construction, the migration runner, and the readiness adapter.
 - `internal/index` — the lifecycle fact contract, the ingest transaction, the inbox claim, the index write, and the Kafka handler.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
 - `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
+- `internal/semantic` — the derived semantic index: the capability port, the durable state rows, the one convergence path, and the reconciliation pass.
+- `internal/semantic/ahnlich` — the Ahnlich AI adapter: connection, deadlines, model registry, and every vendor type.
 - `internal/server` — the gRPC listener and its interceptors: trace continuation, request metrics and log line, and panic containment.
 - `internal/gen` — generated protobuf and gRPC stubs, committed so the image build needs no protoc. `task proto` regenerates them from `packages/grpc-contracts`.
 - `internal/messaging/kafka` — one group member over one topic: manual commits, restart backoff, and trace-header extraction.
@@ -45,9 +48,25 @@ Only `published` rows with content are eligible, so a cancellation removes an ev
 
 Every RPC is traced, counted under `eventa.request.*` with `transport="grpc"`, and logged as `grpc_request_completed` with its request id and trace id. Readiness still covers only the database: an unavailable query API fails its calls without failing the instance.
 
+## Semantic index
+
+The semantic index is derived state. Event Service owns the event, Discovery owns the projection, and the vector store owns nothing: it can be dropped and rebuilt from `discovery_event_index`.
+
+An accepted lifecycle fact records its semantic obligation in the same transaction that writes the projection row — `pending_index` with the content hash for a publication, `pending_removal` for a cancellation — so a committed fact and the obligation to embed it cannot separate. The push itself happens after the commit; a failure there leaves the row pending for the next pass instead of failing the fact.
+
+`internal/semantic` holds the one convergence path. `Indexer.Sync` reads the projection and the recorded state together, pushes the rendered text when they disagree, and records `indexed` or `removed` only after the store accepts the change. An event that already matches costs one read and no store call, so the consumer, the reconciler, and the reindex command cannot embed an event differently from one another.
+
+`Reconciler.Pass` runs on an interval and first repeats the idempotent store and predicate creation, because the service can start before the proxy finishes loading its model. It then does three bounded things: finishes anything still pending, probes what we claim to hold, and sends one synthetic query. The probe exists because Ahnlich persists an interval snapshot without a write-ahead log — a restart can drop entries while every call keeps succeeding, and only a read of the store catches it. The canary query makes a store that answers but returns nothing visible as `semantic_canary.*` instead of a quiet dashboard.
+
+Every store query asks for cosine similarity, so a candidate score is a bounded 0-to-1 match rather than a distance. The proxy's default algorithm returns no score at all, so the adapter always names the algorithm instead of relying on it.
+
+Metrics stay bounded: `eventa.semantic.operation.count` counts attempts by outcome (`indexed`, `removed`, `failed_<class>`), `eventa.semantic.canary.count` counts synthetic queries by result, and the `eventa.semantic.pending` gauge publishes how many events still disagree with the store. Every failure is stored as an `ErrorClass` label — never a message, a query, or an event payload.
+
+Readiness does not cover Ahnlich. An unreachable store makes indexing fail loudly and the gauge rise while the instance stays ready, because the structured query it also serves reads only PostgreSQL.
+
 ## Data ownership
 
-The service owns `discovery_event_inbox` and `discovery_event_index` in its own PostgreSQL database. Migration `0001_create_discovery_event_index.sql` creates them.
+The service owns `discovery_event_inbox`, `discovery_event_index`, and `discovery_semantic_index` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql` and `0002_create_discovery_semantic_index.sql` create them.
 
 Durable invariants:
 
@@ -55,6 +74,8 @@ Durable invariants:
 - `discovery_event_index` is primary-keyed on `event_id`, so one event has exactly one projection row.
 - `discovery_event_index.status` is constrained to `published` or `cancelled`.
 - `version` and the content columns are nullable: a tombstone for an event never indexed carries no version, and a publication Event no longer serves carries no content.
+- `discovery_semantic_index` is primary-keyed on `event_id`, so one event records exactly one store state.
+- `discovery_semantic_index.status` is constrained to `pending_index`, `indexed`, `pending_removal`, or `removed`, and an indexed row must carry the content hash it was pushed with.
 - The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale, available, or near the attendee; those come from Event Service.
 
 ## Dependencies
@@ -63,10 +84,11 @@ Durable invariants:
 - Kafka — the shared event lifecycle topic, group-scoped, manual commits
 - Event Service over internal gRPC, with an explicit deadline
 - The API Gateway calls this service over internal gRPC, with its own deadline
+- Ahnlich AI proxy over internal gRPC, with its own deadline, for the derived semantic index
 - OTLP collector — traces and metrics
 
-Readiness covers only the database. Kafka group membership recovers through the consumer's own restart backoff, and Event Service is dialled per call, so neither is a reason to report an instance unready; telemetry availability never gates startup or readiness.
+Readiness covers only the database. Kafka group membership recovers through the consumer's own restart backoff, Event Service is dialled per call, and Ahnlich is a derived-state dependency that reports through the pending gauge and the canary, so none is a reason to report an instance unready; telemetry availability never gates startup or readiness.
 
 ## Shutdown
 
-SIGTERM or SIGINT stops the HTTP health server, gracefully stops the query API, leaves the Kafka group, closes the Event gRPC connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.
+SIGTERM or SIGINT stops the HTTP health server, gracefully stops the query API, cancels the reconciler, leaves the Kafka group, closes the Event gRPC connection and the semantic store connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.

@@ -29,6 +29,13 @@ type Config struct {
 	KafkaEventLifecycleTopic string
 	EventGRPCURL             string
 	EventGRPCDeadlineMS      int
+	AhnlichAIURL             string
+	AhnlichDeadlineMS        int
+	SemanticStore            string
+	SemanticModel            string
+	SemanticReconcileMS      int
+	SemanticReconcileBatch   int
+	SemanticCanaryFloor      float64
 }
 
 type Telemetry struct {
@@ -85,6 +92,21 @@ func boundedInt(k *koanf.Koanf, name string, min, max int) (int, error) {
 	}
 	if parsed < min || parsed > max {
 		return 0, fmt.Errorf("%s must be an integer between %d and %d", name, min, max)
+	}
+	return parsed, nil
+}
+
+func boundedFloat(k *koanf.Koanf, name string, min, max float64) (float64, error) {
+	raw, err := required(k, name)
+	if err != nil {
+		return 0, err
+	}
+	parsed, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a number between %v and %v", name, min, max)
+	}
+	if parsed < min || parsed > max {
+		return 0, fmt.Errorf("%s must be a number between %v and %v", name, min, max)
 	}
 	return parsed, nil
 }
@@ -176,6 +198,35 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 		return Config{}, Telemetry{}, err
 	}
 
+	ahnlichURL, err := hostPort(k, "AHNLICH_AI_URL")
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	ahnlichDeadline, err := boundedInt(k, "AHNLICH_DEADLINE_MS", 100, 10000)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	semanticStore, err := name(k, "SEMANTIC_STORE")
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	semanticModel, err := name(k, "SEMANTIC_MODEL")
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	reconcileMS, err := boundedInt(k, "SEMANTIC_RECONCILE_INTERVAL_MS", 1000, 3600000)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	reconcileBatch, err := boundedInt(k, "SEMANTIC_RECONCILE_BATCH", 1, 500)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	canaryFloor, err := boundedFloat(k, "SEMANTIC_CANARY_MIN_SIMILARITY", -1, 1)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+
 	return Config{
 		HealthPort:               healthPort,
 		GRPCPort:                 grpcPort,
@@ -185,5 +236,12 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 		KafkaEventLifecycleTopic: lifecycleTopic,
 		EventGRPCURL:             eventURL,
 		EventGRPCDeadlineMS:      eventDeadline,
+		AhnlichAIURL:             ahnlichURL,
+		AhnlichDeadlineMS:        ahnlichDeadline,
+		SemanticStore:            semanticStore,
+		SemanticModel:            semanticModel,
+		SemanticReconcileMS:      reconcileMS,
+		SemanticReconcileBatch:   reconcileBatch,
+		SemanticCanaryFloor:      canaryFloor,
 	}, telemetry, nil
 }

@@ -16,16 +16,23 @@ func (p mapProvider) Keys() []string                { return nil }
 
 func valid() map[string]any {
 	return map[string]any{
-		"OTEL_EXPORTER_OTLP_ENDPOINT": "http://observability-collector:4318",
-		"DEPLOYMENT_ENVIRONMENT":      "local",
-		"EVENT_GRPC_URL":              "event-service:50052",
-		"EVENT_GRPC_DEADLINE_MS":      "3000",
-		"DATABASE_URL":                "postgres://eventa_discovery@discovery-database:5432/eventa_discovery",
-		"HEALTH_PORT":                 "3011",
-		"GRPC_PORT":                   "50054",
-		"KAFKA_BROKERS":               "event-bus:9092",
-		"KAFKA_CONSUMER_GROUP":        "eventa-discovery-service",
-		"KAFKA_EVENT_LIFECYCLE_TOPIC": "eventa.event.lifecycle.v1",
+		"OTEL_EXPORTER_OTLP_ENDPOINT":    "http://observability-collector:4318",
+		"DEPLOYMENT_ENVIRONMENT":         "local",
+		"EVENT_GRPC_URL":                 "event-service:50052",
+		"EVENT_GRPC_DEADLINE_MS":         "3000",
+		"DATABASE_URL":                   "postgres://eventa_discovery@discovery-database:5432/eventa_discovery",
+		"HEALTH_PORT":                    "3011",
+		"GRPC_PORT":                      "50054",
+		"KAFKA_BROKERS":                  "event-bus:9092",
+		"KAFKA_CONSUMER_GROUP":           "eventa-discovery-service",
+		"KAFKA_EVENT_LIFECYCLE_TOPIC":    "eventa.event.lifecycle.v1",
+		"AHNLICH_AI_URL":                 "ahnlich-ai:1370",
+		"AHNLICH_DEADLINE_MS":            "2000",
+		"SEMANTIC_STORE":                 "eventa_events",
+		"SEMANTIC_MODEL":                 "all-minilm-l6-v2",
+		"SEMANTIC_RECONCILE_INTERVAL_MS": "30000",
+		"SEMANTIC_RECONCILE_BATCH":       "100",
+		"SEMANTIC_CANARY_MIN_SIMILARITY": "0.1",
 	}
 }
 
@@ -54,6 +61,12 @@ func TestLoadAcceptsTheCanonicalLocalConfiguration(t *testing.T) {
 	if cfg.EventGRPCDeadlineMS != 3000 {
 		t.Errorf("EventGRPCDeadlineMS = %d, want 3000", cfg.EventGRPCDeadlineMS)
 	}
+	if cfg.AhnlichAIURL != "ahnlich-ai:1370" || cfg.SemanticStore != "eventa_events" {
+		t.Errorf("semantic config = %q/%q, want the canonical local values", cfg.AhnlichAIURL, cfg.SemanticStore)
+	}
+	if cfg.SemanticCanaryFloor != 0.1 {
+		t.Errorf("SemanticCanaryFloor = %v, want 0.1", cfg.SemanticCanaryFloor)
+	}
 	if tel.Endpoint != "http://observability-collector:4318" || tel.DeploymentEnvironment != "local" {
 		t.Errorf("telemetry = %+v, want the canonical local values", tel)
 	}
@@ -76,6 +89,13 @@ func TestLoadReportsTheFirstFailingRule(t *testing.T) {
 		{"malformed broker", func(v map[string]any) { v["KAFKA_BROKERS"] = "event-bus" }, "KAFKA_BROKERS must use host:port entries"},
 		{"missing consumer group", func(v map[string]any) { delete(v, "KAFKA_CONSUMER_GROUP") }, "KAFKA_CONSUMER_GROUP is required"},
 		{"missing lifecycle topic", func(v map[string]any) { delete(v, "KAFKA_EVENT_LIFECYCLE_TOPIC") }, "KAFKA_EVENT_LIFECYCLE_TOPIC is required"},
+		{"missing ahnlich address", func(v map[string]any) { delete(v, "AHNLICH_AI_URL") }, "AHNLICH_AI_URL is required"},
+		{"malformed ahnlich address", func(v map[string]any) { v["AHNLICH_AI_URL"] = "ahnlich-ai" }, "AHNLICH_AI_URL must use the host:port format"},
+		{"out of range ahnlich deadline", func(v map[string]any) { v["AHNLICH_DEADLINE_MS"] = "99" }, "AHNLICH_DEADLINE_MS must be an integer between 100 and 10000"},
+		{"missing semantic store", func(v map[string]any) { delete(v, "SEMANTIC_STORE") }, "SEMANTIC_STORE is required"},
+		{"missing semantic model", func(v map[string]any) { delete(v, "SEMANTIC_MODEL") }, "SEMANTIC_MODEL is required"},
+		{"reconcile batch too large", func(v map[string]any) { v["SEMANTIC_RECONCILE_BATCH"] = "501" }, "SEMANTIC_RECONCILE_BATCH must be an integer between 1 and 500"},
+		{"canary floor out of range", func(v map[string]any) { v["SEMANTIC_CANARY_MIN_SIMILARITY"] = "2" }, "SEMANTIC_CANARY_MIN_SIMILARITY must be a number between -1 and 1"},
 	}
 
 	for _, testCase := range cases {

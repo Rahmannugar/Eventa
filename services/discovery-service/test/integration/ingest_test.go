@@ -116,7 +116,7 @@ func TestPublishedFactIndexesResolvedContentAndItsClaim(t *testing.T) {
 	resetIndex(t, pool)
 	resolver := &resolverStub{content: sampleContent()}
 
-	outcome, err := index.NewIngest(pool, resolver).Ingest(context.Background(), publishedRecord(t))
+	outcome, err := index.NewIngest(pool, resolver, nil).Ingest(context.Background(), publishedRecord(t))
 	if err != nil {
 		t.Fatalf("Ingest error = %v", err)
 	}
@@ -154,7 +154,7 @@ func TestReplayedPublishedFactIsADuplicateAndKeepsFirstContent(t *testing.T) {
 	pool := startMigratedDatabase(t)
 	resetIndex(t, pool)
 	resolver := &resolverStub{content: sampleContent()}
-	ingest := index.NewIngest(pool, resolver)
+	ingest := index.NewIngest(pool, resolver, nil)
 
 	if _, err := ingest.Ingest(context.Background(), publishedRecord(t)); err != nil {
 		t.Fatalf("first Ingest error = %v", err)
@@ -185,7 +185,7 @@ func TestCancellationTombstonesAnEventNeverPublished(t *testing.T) {
 	pool := startMigratedDatabase(t)
 	resetIndex(t, pool)
 
-	outcome, err := index.NewIngest(pool, &resolverStub{}).Ingest(context.Background(), cancelledRecord(t, firstCancelID))
+	outcome, err := index.NewIngest(pool, &resolverStub{}, nil).Ingest(context.Background(), cancelledRecord(t, firstCancelID))
 	if err != nil {
 		t.Fatalf("Ingest error = %v", err)
 	}
@@ -211,7 +211,7 @@ func TestCancellationTombstonesAnEventNeverPublished(t *testing.T) {
 func TestCancellationAfterPublicationKeepsResolvedContent(t *testing.T) {
 	pool := startMigratedDatabase(t)
 	resetIndex(t, pool)
-	ingest := index.NewIngest(pool, &resolverStub{content: sampleContent()})
+	ingest := index.NewIngest(pool, &resolverStub{content: sampleContent()}, nil)
 
 	if _, err := ingest.Ingest(context.Background(), publishedRecord(t)); err != nil {
 		t.Fatalf("publish error = %v", err)
@@ -238,7 +238,7 @@ func TestCancellationAfterPublicationKeepsResolvedContent(t *testing.T) {
 func TestEachCancellationIsClaimedSeparately(t *testing.T) {
 	pool := startMigratedDatabase(t)
 	resetIndex(t, pool)
-	ingest := index.NewIngest(pool, &resolverStub{})
+	ingest := index.NewIngest(pool, &resolverStub{}, nil)
 
 	for _, messageID := range []string{firstCancelID, secondCancelID} {
 		outcome, err := ingest.Ingest(context.Background(), cancelledRecord(t, messageID))
@@ -265,7 +265,7 @@ func TestPublishedEventEventNoLongerServesIsRecordedWithoutContent(t *testing.T)
 	resetIndex(t, pool)
 	resolver := &resolverStub{err: index.ErrContentUnavailable}
 
-	outcome, err := index.NewIngest(pool, resolver).Ingest(context.Background(), publishedRecord(t))
+	outcome, err := index.NewIngest(pool, resolver, nil).Ingest(context.Background(), publishedRecord(t))
 	if err != nil {
 		t.Fatalf("Ingest error = %v", err)
 	}
@@ -292,7 +292,7 @@ func TestResolveFailureRollsBackTheClaim(t *testing.T) {
 	resetIndex(t, pool)
 	resolver := &resolverStub{err: errors.New("event service unavailable")}
 
-	if _, err := index.NewIngest(pool, resolver).Ingest(context.Background(), publishedRecord(t)); err == nil {
+	if _, err := index.NewIngest(pool, resolver, nil).Ingest(context.Background(), publishedRecord(t)); err == nil {
 		t.Fatal("Ingest error = nil, want a resolve failure")
 	}
 	if count := inboxCount(t, pool, index.PublishedType, indexedEventID); count != 0 {

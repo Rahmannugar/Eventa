@@ -580,6 +580,56 @@ services:
         condition: service_healthy
       event-bus:
         condition: service_healthy
+      ahnlich-ai:
+        condition: service_started
+    restart: unless-stopped
+    logging: *local-logging
+
+  ahnlich-db:
+    image: ghcr.io/deven96/ahnlich-db:latest
+    # The image entrypoint is `sh -c`, so the whole server invocation has to
+    # arrive as one script argument; a word list would drop every flag.
+    command:
+      - >-
+        ahnlich-db run --host 0.0.0.0
+        --enable-persistence --persist-location /root/.ahnlich/data/db.dat
+        --persistence-interval 60
+    ports:
+      - '1369:1369'
+    volumes:
+      - ahnlich-db-data:/root/.ahnlich/data
+    healthcheck:
+      test: ['CMD-SHELL', "echo 'PING' | ahnlich-cli ahnlich --agent db --host 127.0.0.1 --port 1369 --no-interactive"]
+      interval: 10s
+      timeout: 15s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+    logging: *local-logging
+
+  ahnlich-ai:
+    image: ghcr.io/deven96/ahnlich-ai:latest
+    # One script argument for the same `sh -c` entrypoint reason as above.
+    command:
+      - >-
+        ahnlich-ai run --host 0.0.0.0 --db-host ahnlich-db
+        --supported-models all-minilm-l6-v2
+        --enable-persistence --persist-location /root/.ahnlich/data/ai.dat
+        --persistence-interval 60
+    ports:
+      - '1370:1370'
+    volumes:
+      - ahnlich-ai-data:/root/.ahnlich/data
+      - ahnlich-ai-models:/root/.ahnlich/models
+    depends_on:
+      ahnlich-db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', "echo 'PING' | ahnlich-cli ahnlich --agent ai --host 127.0.0.1 --port 1370 --no-interactive"]
+      interval: 10s
+      timeout: 15s
+      retries: 6
+      start_period: 40s
     restart: unless-stopped
     logging: *local-logging
 
@@ -716,6 +766,9 @@ volumes:
   identity-database-data:
   notification-service-database-data:
   discovery-service-database-data:
+  ahnlich-db-data:
+  ahnlich-ai-data:
+  ahnlich-ai-models:
   job-queue-data:
   observability-dashboard-data:
   observability-logs-data:

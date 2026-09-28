@@ -6,6 +6,7 @@ package metrics
 import (
 	"context"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -22,6 +23,9 @@ var (
 	businessOutcome metric.Int64Counter
 	requestCount    metric.Int64Counter
 	requestDuration metric.Float64Histogram
+	semanticOp      metric.Int64Counter
+	semanticCanary  metric.Int64Counter
+	semanticPending atomic.Int64
 )
 
 // Init creates the job instruments. It is best effort: a failure leaves the
@@ -99,10 +103,71 @@ func Init() error {
 		return err
 	}
 
+	semanticCount, err := meter.Int64Counter(
+		"eventa.semantic.operation.count",
+		metric.WithDescription("Semantic index operations grouped by outcome"),
+	)
+	if err != nil {
+		return err
+	}
+
+	canaryCount, err := meter.Int64Counter(
+		"eventa.semantic.canary.count",
+		metric.WithDescription("Synthetic similarity probes grouped by outcome"),
+	)
+	if err != nil {
+		return err
+	}
+
+	pendingGauge, err := meter.Int64ObservableGauge(
+		"eventa.semantic.pending",
+		metric.WithDescription("Events whose projection and semantic store state disagree"),
+	)
+	if err != nil {
+		return err
+	}
+	if _, err := meter.RegisterCallback(
+		func(_ context.Context, observer metric.Observer) error {
+			observer.ObserveInt64(pendingGauge, semanticPending.Load())
+			return nil
+		},
+		pendingGauge,
+	); err != nil {
+		return err
+	}
+
 	jobCount, jobDuration, jobInFlight, businessOutcome = counter, histogram, inFlight, outcomeCounter
 	requestCount, requestDuration = httpCount, httpDuration
+	semanticOp, semanticCanary = semanticCount, canaryCount
 	return nil
 }
+
+// RecordSemanticOperation counts one semantic index attempt and its bounded
+// outcome. Outcomes are classes such as `indexed`, `removed`, and
+// `failed_deadline_exceeded`; they never carry a payload or a query.
+func RecordSemanticOperation(operation, outcome string) {
+	if semanticOp == nil {
+		return
+	}
+	semanticOp.Add(context.Background(), 1,
+		metric.WithAttributes(
+			attribute.String("operation", operation),
+			attribute.String("outcome", outcome),
+		))
+}
+
+// RecordSemanticCanary counts one synthetic query against the store. `ok`,
+// `empty`, `below_floor`, and `failed` are the only outcomes.
+func RecordSemanticCanary(outcome string) {
+	if semanticCanary == nil {
+		return
+	}
+	semanticCanary.Add(context.Background(), 1,
+		metric.WithAttributes(attribute.String("outcome", outcome)))
+}
+
+// SetSemanticPending publishes how many events still disagree with the store.
+func SetSemanticPending(count int64) { semanticPending.Store(count) }
 
 // RecordBusinessOutcome counts one business result, which is distinct from the
 // broker job that carried it: the same job can succeed while its business

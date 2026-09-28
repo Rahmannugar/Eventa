@@ -90,7 +90,7 @@ func migrationsDir() string {
 
 func resetIndex(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	const tables = "TRUNCATE discovery_event_index, discovery_event_inbox"
+	const tables = "TRUNCATE discovery_event_index, discovery_event_inbox, discovery_semantic_index"
 	if _, err := pool.Exec(context.Background(), tables); err != nil {
 		t.Fatalf("truncate index tables: %v", err)
 	}

@@ -20,6 +20,8 @@ import (
 	"github.com/eventa/discovery-service/internal/messaging/kafka"
 	"github.com/eventa/discovery-service/internal/metrics"
 	"github.com/eventa/discovery-service/internal/search"
+	"github.com/eventa/discovery-service/internal/semantic"
+	"github.com/eventa/discovery-service/internal/semantic/ahnlich"
 	"github.com/eventa/discovery-service/internal/server"
 	"github.com/eventa/discovery-service/internal/telemetry"
 	"google.golang.org/grpc"
@@ -59,7 +61,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	ingest := index.NewIngest(pool, events)
+	semanticStore, err := ahnlich.Dial(cfg.AhnlichAIURL, cfg.SemanticStore, cfg.SemanticModel, cfg.AhnlichDeadlineMS)
+	if err != nil {
+		logger.Error("semantic_configuration_invalid", "error_type", "invalid_configuration")
+		if err := events.Close(); err != nil {
+			logger.Error("event_client_close_failed", "error_type", errtype.Of(err))
+		}
+		pool.Close()
+		os.Exit(1)
+	}
+	semanticRepository := semantic.NewRepository(pool)
+	indexer := semantic.NewIndexer(semanticRepository, semanticStore)
+	if err := semanticStore.EnsureStore(ctx); err != nil {
+		logger.WarnContext(ctx, "semantic_store_unavailable",
+			"operation", semantic.Operation, "error_type", semantic.ErrorClass(err))
+	}
+
+	ingest := index.NewIngest(pool, events, indexer)
 	consumer := kafka.NewConsumer(
 		"EventLifecycleConsumer",
 		cfg.KafkaBrokers,
@@ -75,6 +93,11 @@ func main() {
 		"operation", index.Operation,
 		"topic", cfg.KafkaEventLifecycleTopic,
 		"group", cfg.KafkaConsumerGroup)
+
+	reconciler := semantic.NewReconciler(indexer, semanticRepository, semanticStore,
+		cfg.SemanticReconcileBatch, float32(cfg.SemanticCanaryFloor))
+	go reconciler.Run(ctx, time.Duration(cfg.SemanticReconcileMS)*time.Millisecond)
+	go reconciler.Pass(ctx)
 
 	checks := health.New(database.Readiness{Pool: pool})
 	mux := http.NewServeMux()
@@ -131,6 +154,9 @@ func main() {
 		queryAPI.Stop()
 	}
 	consumer.Stop()
+	if err := semanticStore.Close(); err != nil {
+		logger.Error("semantic_store_close_failed", "error_type", errtype.Of(err))
+	}
 	if err := events.Close(); err != nil {
 		logger.Error("event_service_close_failed", "error_type", errtype.Of(err))
 	}
