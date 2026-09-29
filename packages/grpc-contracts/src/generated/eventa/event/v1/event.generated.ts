@@ -201,6 +201,22 @@ export interface GetPublishedEventResponse {
   event: PublishedEvent | undefined;
 }
 
+export interface ListRecommendableEventsByIdsRequest {
+  /**
+   * Candidate event ids, at most 50. An id that is unknown, unpublished, or
+   * not currently recommendable is left out of the response.
+   */
+  eventIds: string[];
+}
+
+export interface ListRecommendableEventsByIdsResponse {
+  /**
+   * The requested events that pass Event Service's authority checks, in the
+   * order the ids were requested.
+   */
+  events: PublishedEvent[];
+}
+
 export interface UpdateDraftEventRequest {
   adminId: string;
   eventId: string;

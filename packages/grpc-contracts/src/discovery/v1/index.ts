@@ -9,6 +9,8 @@ export {
   type EventSearchResult,
   type GetAttendeeInterestsRequest,
   type GetAttendeeInterestsResponse,
+  type RecommendEventsRequest,
+  type RecommendEventsResponse,
   type SearchEventsRequest,
   type SearchEventsResponse,
   type SetAttendeeInterestsRequest,

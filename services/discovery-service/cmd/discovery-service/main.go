@@ -20,6 +20,7 @@ import (
 	"github.com/eventa/discovery-service/internal/lookup"
 	"github.com/eventa/discovery-service/internal/messaging/kafka"
 	"github.com/eventa/discovery-service/internal/metrics"
+	"github.com/eventa/discovery-service/internal/recommendations"
 	"github.com/eventa/discovery-service/internal/search"
 	"github.com/eventa/discovery-service/internal/semantic"
 	"github.com/eventa/discovery-service/internal/semantic/ahnlich"
@@ -121,9 +122,11 @@ func main() {
 	}()
 	logger.InfoContext(ctx, "service_started", "health_port", cfg.HealthPort)
 
+	interestsRepository := interests.NewRepository(pool)
 	queryAPI, grpcListener, err := server.New(
 		search.NewHandler(search.NewRepository(pool), logger),
-		interests.NewHandler(interests.NewRepository(pool), logger),
+		interests.NewHandler(interestsRepository, logger),
+		recommendations.NewHandler(interestsRepository, semanticStore, events, logger),
 		logger, cfg.GRPCPort,
 	)
 	if err != nil {

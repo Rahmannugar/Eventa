@@ -1,6 +1,6 @@
 # API
 
-Discovery Service exposes operational HTTP health checks and two internal gRPC capabilities: event search and attendee interests. Business work enters as messages; search and interest requests arrive from the API Gateway.
+Discovery Service exposes operational HTTP health checks and three internal gRPC capabilities: event search, attendee interests, and recommendations. Business work enters as messages; search, interest, and recommendation requests arrive from the API Gateway.
 
 ## Endpoints
 
@@ -71,6 +71,18 @@ Response: the stored `attendee_id`, `interests`, and `updated_at`.
 
 Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-bounds list, `INTERNAL` for a database failure. A rejected request writes nothing.
 
+## `DiscoveryService.RecommendEvents`
+
+Ranks published events for one attendee from the interests that attendee has saved.
+
+Request: `attendee_id`, a UUID, and `limit`, the page size. `0` means 10 and values above 20 are rejected.
+
+Response: the same `attendee_id` and the matching `events` in `EventSearchResult` shape, best match first. An attendee who has saved no interests gets an empty list — that is the cold-start position, not a failure.
+
+Discovery reads the stored interests, renders them into query text, and asks the semantic store for a bounded multiple of the requested page. The store supplies the ranking; Event Service then decides which of those candidates it still serves, so a cancelled, retired, already-started, sold-out, or out-of-sale event never appears. Candidates Event Service drops are simply absent from the answer, and the remainder keeps the store's order.
+
+Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-range limit, `UNAVAILABLE` when the semantic store does not answer, `DEADLINE_EXCEEDED` when Event Service does not answer in time, and `INTERNAL` for a database failure. Interest text is never logged; the log line carries counts.
+
 ## Not exposed
 
-There is no public business endpoint on this service. Attendees reach search through `GET /search/events` and their interests through `GET` and `PUT /attendees/me/interests` on the API Gateway; recommendations arrive with a later slice.
+There is no public business endpoint on this service. Attendees reach search through `GET /search/events`, their interests through `GET` and `PUT /attendees/me/interests`, and their recommendations through `GET /attendees/me/recommendations` on the API Gateway.

@@ -35,6 +35,24 @@ func TestBuildTextOmitsEmptyParts(t *testing.T) {
 	}
 }
 
+func TestBuildPreferencesRendersTheSavedInterestsDeterministically(t *testing.T) {
+	first := BuildPreferences([]string{"music", "Jazz"})
+	second := BuildPreferences([]string{"music", "Jazz"})
+
+	if first != second {
+		t.Errorf("preferences differ between renders: %q vs %q", first, second)
+	}
+	if want := "Interests: music, Jazz"; first != want {
+		t.Errorf("BuildPreferences() = %q, want %q", first, want)
+	}
+}
+
+func TestBuildPreferencesIsEmptyWithoutInterests(t *testing.T) {
+	if text := BuildPreferences(nil); text != "" {
+		t.Errorf("BuildPreferences(nil) = %q, want an empty rendering", text)
+	}
+}
+
 func TestTruncateBoundsTextAndKeepsItValidUTF8(t *testing.T) {
 	if text := Truncate("short"); text != "short" {
 		t.Errorf("Truncate(%q) = %q, want it unchanged", "short", text)

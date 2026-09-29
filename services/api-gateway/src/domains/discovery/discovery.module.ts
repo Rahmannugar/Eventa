@@ -13,6 +13,7 @@ import {
   DISCOVERY_GRPC_DEADLINE_MS,
 } from './constants/discovery.constants';
 import { DiscoveryInterestsController } from './controllers/discovery-interests.controller';
+import { DiscoveryRecommendationsController } from './controllers/discovery-recommendations.controller';
 import { DiscoverySearchController } from './controllers/discovery-search.controller';
 import {
   InterestsRateLimitService,
@@ -20,10 +21,15 @@ import {
   InterestsWriteRateLimitGuard,
 } from './rate-limit/discovery-interests-rate-limit';
 import {
+  RecommendationsRateLimitGuard,
+  RecommendationsRateLimitService,
+} from './rate-limit/discovery-recommendations-rate-limit';
+import {
   EventSearchRateLimitGuard,
   EventSearchRateLimitService,
 } from './rate-limit/discovery-search-rate-limit';
 import { DiscoveryInterestsService } from './services/discovery-interests.service';
+import { DiscoveryRecommendationsService } from './services/discovery-recommendations.service';
 import { DiscoverySearchService } from './services/discovery-search.service';
 
 interface DiscoveryModuleOptions {
@@ -56,7 +62,11 @@ export class DiscoveryModule {
           },
         ]),
       ],
-      controllers: [DiscoverySearchController, DiscoveryInterestsController],
+      controllers: [
+        DiscoverySearchController,
+        DiscoveryInterestsController,
+        DiscoveryRecommendationsController,
+      ],
       providers: [
         {
           provide: DISCOVERY_GRPC_DEADLINE_MS,
@@ -80,8 +90,16 @@ export class DiscoveryModule {
         },
         InterestsReadRateLimitGuard,
         InterestsWriteRateLimitGuard,
+        {
+          provide: RecommendationsRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new RecommendationsRateLimitService(state, options.rateLimitKeySecret),
+          inject: [RATE_LIMIT_STATE],
+        },
+        RecommendationsRateLimitGuard,
         DiscoverySearchService,
         DiscoveryInterestsService,
+        DiscoveryRecommendationsService,
       ],
     };
   }

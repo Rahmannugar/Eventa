@@ -3,6 +3,8 @@ import type { Observable } from 'rxjs';
 import type {
   GetAttendeeInterestsRequest,
   GetAttendeeInterestsResponse,
+  RecommendEventsRequest,
+  RecommendEventsResponse,
   SearchEventsRequest,
   SearchEventsResponse,
   SetAttendeeInterestsRequest,
@@ -27,4 +29,10 @@ export interface DeadlineAwareDiscoveryClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<SetAttendeeInterestsResponse>;
+
+  recommendEvents(
+    request: RecommendEventsRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<RecommendEventsResponse>;
 }

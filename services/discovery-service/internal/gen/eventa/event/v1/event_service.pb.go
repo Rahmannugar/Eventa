@@ -24,12 +24,13 @@ var File_eventa_event_v1_event_service_proto protoreflect.FileDescriptor
 
 const file_eventa_event_v1_event_service_proto_rawDesc = "" +
 	"\n" +
-	"#eventa/event/v1/event_service.proto\x12\x0feventa.event.v1\x1a\x1beventa/event/v1/event.proto2\xd7\x17\n" +
+	"#eventa/event/v1/event_service.proto\x12\x0feventa.event.v1\x1a\x1beventa/event/v1/event.proto2\xe5\x18\n" +
 	"\fEventService\x12g\n" +
 	"\x10CreateDraftEvent\x12(.eventa.event.v1.CreateDraftEventRequest\x1a).eventa.event.v1.CreateDraftEventResponse\x12d\n" +
 	"\x0fListAdminEvents\x12'.eventa.event.v1.ListAdminEventsRequest\x1a(.eventa.event.v1.ListAdminEventsResponse\x12^\n" +
 	"\rGetAdminEvent\x12%.eventa.event.v1.GetAdminEventRequest\x1a&.eventa.event.v1.GetAdminEventResponse\x12j\n" +
-	"\x11GetPublishedEvent\x12).eventa.event.v1.GetPublishedEventRequest\x1a*.eventa.event.v1.GetPublishedEventResponse\x12d\n" +
+	"\x11GetPublishedEvent\x12).eventa.event.v1.GetPublishedEventRequest\x1a*.eventa.event.v1.GetPublishedEventResponse\x12\x8b\x01\n" +
+	"\x1cListRecommendableEventsByIds\x124.eventa.event.v1.ListRecommendableEventsByIdsRequest\x1a5.eventa.event.v1.ListRecommendableEventsByIdsResponse\x12d\n" +
 	"\x0fGetEventSummary\x12'.eventa.event.v1.GetEventSummaryRequest\x1a(.eventa.event.v1.GetEventSummaryResponse\x12g\n" +
 	"\x10UpdateDraftEvent\x12(.eventa.event.v1.UpdateDraftEventRequest\x1a).eventa.event.v1.UpdateDraftEventResponse\x12\x82\x01\n" +
 	"\x19DefineEventTicketCurrency\x121.eventa.event.v1.DefineEventTicketCurrencyRequest\x1a2.eventa.event.v1.DefineEventTicketCurrencyResponse\x12{\n" +
@@ -59,110 +60,114 @@ var file_eventa_event_v1_event_service_proto_goTypes = []any{
 	(*ListAdminEventsRequest)(nil),                   // 1: eventa.event.v1.ListAdminEventsRequest
 	(*GetAdminEventRequest)(nil),                     // 2: eventa.event.v1.GetAdminEventRequest
 	(*GetPublishedEventRequest)(nil),                 // 3: eventa.event.v1.GetPublishedEventRequest
-	(*GetEventSummaryRequest)(nil),                   // 4: eventa.event.v1.GetEventSummaryRequest
-	(*UpdateDraftEventRequest)(nil),                  // 5: eventa.event.v1.UpdateDraftEventRequest
-	(*DefineEventTicketCurrencyRequest)(nil),         // 6: eventa.event.v1.DefineEventTicketCurrencyRequest
-	(*CreateEventTicketTypeRequest)(nil),             // 7: eventa.event.v1.CreateEventTicketTypeRequest
-	(*ListEventTicketTypesRequest)(nil),              // 8: eventa.event.v1.ListEventTicketTypesRequest
-	(*AddEventTicketTypeRequest)(nil),                // 9: eventa.event.v1.AddEventTicketTypeRequest
-	(*UpdateEventTicketTypeRequest)(nil),             // 10: eventa.event.v1.UpdateEventTicketTypeRequest
-	(*RetireEventTicketTypeRequest)(nil),             // 11: eventa.event.v1.RetireEventTicketTypeRequest
-	(*GetEventTicketCatalogueRequest)(nil),           // 12: eventa.event.v1.GetEventTicketCatalogueRequest
-	(*GetAttendeeEventTicketCatalogueRequest)(nil),   // 13: eventa.event.v1.GetAttendeeEventTicketCatalogueRequest
-	(*ReserveEventCapacityRequest)(nil),              // 14: eventa.event.v1.ReserveEventCapacityRequest
-	(*FinalizeEventCapacityReservationRequest)(nil),  // 15: eventa.event.v1.FinalizeEventCapacityReservationRequest
-	(*ReleaseEventCapacityReservationRequest)(nil),   // 16: eventa.event.v1.ReleaseEventCapacityReservationRequest
-	(*JoinEventWaitlistRequest)(nil),                 // 17: eventa.event.v1.JoinEventWaitlistRequest
-	(*LeaveEventWaitlistRequest)(nil),                // 18: eventa.event.v1.LeaveEventWaitlistRequest
-	(*GetEventWaitlistEntryRequest)(nil),             // 19: eventa.event.v1.GetEventWaitlistEntryRequest
-	(*CreateEventMediaUploadRequest)(nil),            // 20: eventa.event.v1.CreateEventMediaUploadRequest
-	(*GetEventMediaUploadRequest)(nil),               // 21: eventa.event.v1.GetEventMediaUploadRequest
-	(*RemoveEventMediaRequest)(nil),                  // 22: eventa.event.v1.RemoveEventMediaRequest
-	(*PublishEventRequest)(nil),                      // 23: eventa.event.v1.PublishEventRequest
-	(*CancelEventRequest)(nil),                       // 24: eventa.event.v1.CancelEventRequest
-	(*RetireDraftEventRequest)(nil),                  // 25: eventa.event.v1.RetireDraftEventRequest
-	(*CreateDraftEventResponse)(nil),                 // 26: eventa.event.v1.CreateDraftEventResponse
-	(*ListAdminEventsResponse)(nil),                  // 27: eventa.event.v1.ListAdminEventsResponse
-	(*GetAdminEventResponse)(nil),                    // 28: eventa.event.v1.GetAdminEventResponse
-	(*GetPublishedEventResponse)(nil),                // 29: eventa.event.v1.GetPublishedEventResponse
-	(*GetEventSummaryResponse)(nil),                  // 30: eventa.event.v1.GetEventSummaryResponse
-	(*UpdateDraftEventResponse)(nil),                 // 31: eventa.event.v1.UpdateDraftEventResponse
-	(*DefineEventTicketCurrencyResponse)(nil),        // 32: eventa.event.v1.DefineEventTicketCurrencyResponse
-	(*CreateEventTicketTypeResponse)(nil),            // 33: eventa.event.v1.CreateEventTicketTypeResponse
-	(*ListEventTicketTypesResponse)(nil),             // 34: eventa.event.v1.ListEventTicketTypesResponse
-	(*AddEventTicketTypeResponse)(nil),               // 35: eventa.event.v1.AddEventTicketTypeResponse
-	(*UpdateEventTicketTypeResponse)(nil),            // 36: eventa.event.v1.UpdateEventTicketTypeResponse
-	(*RetireEventTicketTypeResponse)(nil),            // 37: eventa.event.v1.RetireEventTicketTypeResponse
-	(*GetEventTicketCatalogueResponse)(nil),          // 38: eventa.event.v1.GetEventTicketCatalogueResponse
-	(*GetAttendeeEventTicketCatalogueResponse)(nil),  // 39: eventa.event.v1.GetAttendeeEventTicketCatalogueResponse
-	(*ReserveEventCapacityResponse)(nil),             // 40: eventa.event.v1.ReserveEventCapacityResponse
-	(*FinalizeEventCapacityReservationResponse)(nil), // 41: eventa.event.v1.FinalizeEventCapacityReservationResponse
-	(*ReleaseEventCapacityReservationResponse)(nil),  // 42: eventa.event.v1.ReleaseEventCapacityReservationResponse
-	(*JoinEventWaitlistResponse)(nil),                // 43: eventa.event.v1.JoinEventWaitlistResponse
-	(*LeaveEventWaitlistResponse)(nil),               // 44: eventa.event.v1.LeaveEventWaitlistResponse
-	(*GetEventWaitlistEntryResponse)(nil),            // 45: eventa.event.v1.GetEventWaitlistEntryResponse
-	(*CreateEventMediaUploadResponse)(nil),           // 46: eventa.event.v1.CreateEventMediaUploadResponse
-	(*GetEventMediaUploadResponse)(nil),              // 47: eventa.event.v1.GetEventMediaUploadResponse
-	(*RemoveEventMediaResponse)(nil),                 // 48: eventa.event.v1.RemoveEventMediaResponse
-	(*PublishEventResponse)(nil),                     // 49: eventa.event.v1.PublishEventResponse
-	(*CancelEventResponse)(nil),                      // 50: eventa.event.v1.CancelEventResponse
-	(*RetireDraftEventResponse)(nil),                 // 51: eventa.event.v1.RetireDraftEventResponse
+	(*ListRecommendableEventsByIdsRequest)(nil),      // 4: eventa.event.v1.ListRecommendableEventsByIdsRequest
+	(*GetEventSummaryRequest)(nil),                   // 5: eventa.event.v1.GetEventSummaryRequest
+	(*UpdateDraftEventRequest)(nil),                  // 6: eventa.event.v1.UpdateDraftEventRequest
+	(*DefineEventTicketCurrencyRequest)(nil),         // 7: eventa.event.v1.DefineEventTicketCurrencyRequest
+	(*CreateEventTicketTypeRequest)(nil),             // 8: eventa.event.v1.CreateEventTicketTypeRequest
+	(*ListEventTicketTypesRequest)(nil),              // 9: eventa.event.v1.ListEventTicketTypesRequest
+	(*AddEventTicketTypeRequest)(nil),                // 10: eventa.event.v1.AddEventTicketTypeRequest
+	(*UpdateEventTicketTypeRequest)(nil),             // 11: eventa.event.v1.UpdateEventTicketTypeRequest
+	(*RetireEventTicketTypeRequest)(nil),             // 12: eventa.event.v1.RetireEventTicketTypeRequest
+	(*GetEventTicketCatalogueRequest)(nil),           // 13: eventa.event.v1.GetEventTicketCatalogueRequest
+	(*GetAttendeeEventTicketCatalogueRequest)(nil),   // 14: eventa.event.v1.GetAttendeeEventTicketCatalogueRequest
+	(*ReserveEventCapacityRequest)(nil),              // 15: eventa.event.v1.ReserveEventCapacityRequest
+	(*FinalizeEventCapacityReservationRequest)(nil),  // 16: eventa.event.v1.FinalizeEventCapacityReservationRequest
+	(*ReleaseEventCapacityReservationRequest)(nil),   // 17: eventa.event.v1.ReleaseEventCapacityReservationRequest
+	(*JoinEventWaitlistRequest)(nil),                 // 18: eventa.event.v1.JoinEventWaitlistRequest
+	(*LeaveEventWaitlistRequest)(nil),                // 19: eventa.event.v1.LeaveEventWaitlistRequest
+	(*GetEventWaitlistEntryRequest)(nil),             // 20: eventa.event.v1.GetEventWaitlistEntryRequest
+	(*CreateEventMediaUploadRequest)(nil),            // 21: eventa.event.v1.CreateEventMediaUploadRequest
+	(*GetEventMediaUploadRequest)(nil),               // 22: eventa.event.v1.GetEventMediaUploadRequest
+	(*RemoveEventMediaRequest)(nil),                  // 23: eventa.event.v1.RemoveEventMediaRequest
+	(*PublishEventRequest)(nil),                      // 24: eventa.event.v1.PublishEventRequest
+	(*CancelEventRequest)(nil),                       // 25: eventa.event.v1.CancelEventRequest
+	(*RetireDraftEventRequest)(nil),                  // 26: eventa.event.v1.RetireDraftEventRequest
+	(*CreateDraftEventResponse)(nil),                 // 27: eventa.event.v1.CreateDraftEventResponse
+	(*ListAdminEventsResponse)(nil),                  // 28: eventa.event.v1.ListAdminEventsResponse
+	(*GetAdminEventResponse)(nil),                    // 29: eventa.event.v1.GetAdminEventResponse
+	(*GetPublishedEventResponse)(nil),                // 30: eventa.event.v1.GetPublishedEventResponse
+	(*ListRecommendableEventsByIdsResponse)(nil),     // 31: eventa.event.v1.ListRecommendableEventsByIdsResponse
+	(*GetEventSummaryResponse)(nil),                  // 32: eventa.event.v1.GetEventSummaryResponse
+	(*UpdateDraftEventResponse)(nil),                 // 33: eventa.event.v1.UpdateDraftEventResponse
+	(*DefineEventTicketCurrencyResponse)(nil),        // 34: eventa.event.v1.DefineEventTicketCurrencyResponse
+	(*CreateEventTicketTypeResponse)(nil),            // 35: eventa.event.v1.CreateEventTicketTypeResponse
+	(*ListEventTicketTypesResponse)(nil),             // 36: eventa.event.v1.ListEventTicketTypesResponse
+	(*AddEventTicketTypeResponse)(nil),               // 37: eventa.event.v1.AddEventTicketTypeResponse
+	(*UpdateEventTicketTypeResponse)(nil),            // 38: eventa.event.v1.UpdateEventTicketTypeResponse
+	(*RetireEventTicketTypeResponse)(nil),            // 39: eventa.event.v1.RetireEventTicketTypeResponse
+	(*GetEventTicketCatalogueResponse)(nil),          // 40: eventa.event.v1.GetEventTicketCatalogueResponse
+	(*GetAttendeeEventTicketCatalogueResponse)(nil),  // 41: eventa.event.v1.GetAttendeeEventTicketCatalogueResponse
+	(*ReserveEventCapacityResponse)(nil),             // 42: eventa.event.v1.ReserveEventCapacityResponse
+	(*FinalizeEventCapacityReservationResponse)(nil), // 43: eventa.event.v1.FinalizeEventCapacityReservationResponse
+	(*ReleaseEventCapacityReservationResponse)(nil),  // 44: eventa.event.v1.ReleaseEventCapacityReservationResponse
+	(*JoinEventWaitlistResponse)(nil),                // 45: eventa.event.v1.JoinEventWaitlistResponse
+	(*LeaveEventWaitlistResponse)(nil),               // 46: eventa.event.v1.LeaveEventWaitlistResponse
+	(*GetEventWaitlistEntryResponse)(nil),            // 47: eventa.event.v1.GetEventWaitlistEntryResponse
+	(*CreateEventMediaUploadResponse)(nil),           // 48: eventa.event.v1.CreateEventMediaUploadResponse
+	(*GetEventMediaUploadResponse)(nil),              // 49: eventa.event.v1.GetEventMediaUploadResponse
+	(*RemoveEventMediaResponse)(nil),                 // 50: eventa.event.v1.RemoveEventMediaResponse
+	(*PublishEventResponse)(nil),                     // 51: eventa.event.v1.PublishEventResponse
+	(*CancelEventResponse)(nil),                      // 52: eventa.event.v1.CancelEventResponse
+	(*RetireDraftEventResponse)(nil),                 // 53: eventa.event.v1.RetireDraftEventResponse
 }
 var file_eventa_event_v1_event_service_proto_depIdxs = []int32{
 	0,  // 0: eventa.event.v1.EventService.CreateDraftEvent:input_type -> eventa.event.v1.CreateDraftEventRequest
 	1,  // 1: eventa.event.v1.EventService.ListAdminEvents:input_type -> eventa.event.v1.ListAdminEventsRequest
 	2,  // 2: eventa.event.v1.EventService.GetAdminEvent:input_type -> eventa.event.v1.GetAdminEventRequest
 	3,  // 3: eventa.event.v1.EventService.GetPublishedEvent:input_type -> eventa.event.v1.GetPublishedEventRequest
-	4,  // 4: eventa.event.v1.EventService.GetEventSummary:input_type -> eventa.event.v1.GetEventSummaryRequest
-	5,  // 5: eventa.event.v1.EventService.UpdateDraftEvent:input_type -> eventa.event.v1.UpdateDraftEventRequest
-	6,  // 6: eventa.event.v1.EventService.DefineEventTicketCurrency:input_type -> eventa.event.v1.DefineEventTicketCurrencyRequest
-	7,  // 7: eventa.event.v1.EventService.CreateEventTicketType:input_type -> eventa.event.v1.CreateEventTicketTypeRequest
-	8,  // 8: eventa.event.v1.EventService.ListEventTicketTypes:input_type -> eventa.event.v1.ListEventTicketTypesRequest
-	9,  // 9: eventa.event.v1.EventService.AddEventTicketType:input_type -> eventa.event.v1.AddEventTicketTypeRequest
-	10, // 10: eventa.event.v1.EventService.UpdateEventTicketType:input_type -> eventa.event.v1.UpdateEventTicketTypeRequest
-	11, // 11: eventa.event.v1.EventService.RetireEventTicketType:input_type -> eventa.event.v1.RetireEventTicketTypeRequest
-	12, // 12: eventa.event.v1.EventService.GetEventTicketCatalogue:input_type -> eventa.event.v1.GetEventTicketCatalogueRequest
-	13, // 13: eventa.event.v1.EventService.GetAttendeeEventTicketCatalogue:input_type -> eventa.event.v1.GetAttendeeEventTicketCatalogueRequest
-	14, // 14: eventa.event.v1.EventService.ReserveEventCapacity:input_type -> eventa.event.v1.ReserveEventCapacityRequest
-	15, // 15: eventa.event.v1.EventService.FinalizeEventCapacityReservation:input_type -> eventa.event.v1.FinalizeEventCapacityReservationRequest
-	16, // 16: eventa.event.v1.EventService.ReleaseEventCapacityReservation:input_type -> eventa.event.v1.ReleaseEventCapacityReservationRequest
-	17, // 17: eventa.event.v1.EventService.JoinEventWaitlist:input_type -> eventa.event.v1.JoinEventWaitlistRequest
-	18, // 18: eventa.event.v1.EventService.LeaveEventWaitlist:input_type -> eventa.event.v1.LeaveEventWaitlistRequest
-	19, // 19: eventa.event.v1.EventService.GetEventWaitlistEntry:input_type -> eventa.event.v1.GetEventWaitlistEntryRequest
-	20, // 20: eventa.event.v1.EventService.CreateEventMediaUpload:input_type -> eventa.event.v1.CreateEventMediaUploadRequest
-	21, // 21: eventa.event.v1.EventService.GetEventMediaUpload:input_type -> eventa.event.v1.GetEventMediaUploadRequest
-	22, // 22: eventa.event.v1.EventService.RemoveEventMedia:input_type -> eventa.event.v1.RemoveEventMediaRequest
-	23, // 23: eventa.event.v1.EventService.PublishEvent:input_type -> eventa.event.v1.PublishEventRequest
-	24, // 24: eventa.event.v1.EventService.CancelEvent:input_type -> eventa.event.v1.CancelEventRequest
-	25, // 25: eventa.event.v1.EventService.RetireDraftEvent:input_type -> eventa.event.v1.RetireDraftEventRequest
-	26, // 26: eventa.event.v1.EventService.CreateDraftEvent:output_type -> eventa.event.v1.CreateDraftEventResponse
-	27, // 27: eventa.event.v1.EventService.ListAdminEvents:output_type -> eventa.event.v1.ListAdminEventsResponse
-	28, // 28: eventa.event.v1.EventService.GetAdminEvent:output_type -> eventa.event.v1.GetAdminEventResponse
-	29, // 29: eventa.event.v1.EventService.GetPublishedEvent:output_type -> eventa.event.v1.GetPublishedEventResponse
-	30, // 30: eventa.event.v1.EventService.GetEventSummary:output_type -> eventa.event.v1.GetEventSummaryResponse
-	31, // 31: eventa.event.v1.EventService.UpdateDraftEvent:output_type -> eventa.event.v1.UpdateDraftEventResponse
-	32, // 32: eventa.event.v1.EventService.DefineEventTicketCurrency:output_type -> eventa.event.v1.DefineEventTicketCurrencyResponse
-	33, // 33: eventa.event.v1.EventService.CreateEventTicketType:output_type -> eventa.event.v1.CreateEventTicketTypeResponse
-	34, // 34: eventa.event.v1.EventService.ListEventTicketTypes:output_type -> eventa.event.v1.ListEventTicketTypesResponse
-	35, // 35: eventa.event.v1.EventService.AddEventTicketType:output_type -> eventa.event.v1.AddEventTicketTypeResponse
-	36, // 36: eventa.event.v1.EventService.UpdateEventTicketType:output_type -> eventa.event.v1.UpdateEventTicketTypeResponse
-	37, // 37: eventa.event.v1.EventService.RetireEventTicketType:output_type -> eventa.event.v1.RetireEventTicketTypeResponse
-	38, // 38: eventa.event.v1.EventService.GetEventTicketCatalogue:output_type -> eventa.event.v1.GetEventTicketCatalogueResponse
-	39, // 39: eventa.event.v1.EventService.GetAttendeeEventTicketCatalogue:output_type -> eventa.event.v1.GetAttendeeEventTicketCatalogueResponse
-	40, // 40: eventa.event.v1.EventService.ReserveEventCapacity:output_type -> eventa.event.v1.ReserveEventCapacityResponse
-	41, // 41: eventa.event.v1.EventService.FinalizeEventCapacityReservation:output_type -> eventa.event.v1.FinalizeEventCapacityReservationResponse
-	42, // 42: eventa.event.v1.EventService.ReleaseEventCapacityReservation:output_type -> eventa.event.v1.ReleaseEventCapacityReservationResponse
-	43, // 43: eventa.event.v1.EventService.JoinEventWaitlist:output_type -> eventa.event.v1.JoinEventWaitlistResponse
-	44, // 44: eventa.event.v1.EventService.LeaveEventWaitlist:output_type -> eventa.event.v1.LeaveEventWaitlistResponse
-	45, // 45: eventa.event.v1.EventService.GetEventWaitlistEntry:output_type -> eventa.event.v1.GetEventWaitlistEntryResponse
-	46, // 46: eventa.event.v1.EventService.CreateEventMediaUpload:output_type -> eventa.event.v1.CreateEventMediaUploadResponse
-	47, // 47: eventa.event.v1.EventService.GetEventMediaUpload:output_type -> eventa.event.v1.GetEventMediaUploadResponse
-	48, // 48: eventa.event.v1.EventService.RemoveEventMedia:output_type -> eventa.event.v1.RemoveEventMediaResponse
-	49, // 49: eventa.event.v1.EventService.PublishEvent:output_type -> eventa.event.v1.PublishEventResponse
-	50, // 50: eventa.event.v1.EventService.CancelEvent:output_type -> eventa.event.v1.CancelEventResponse
-	51, // 51: eventa.event.v1.EventService.RetireDraftEvent:output_type -> eventa.event.v1.RetireDraftEventResponse
-	26, // [26:52] is the sub-list for method output_type
-	0,  // [0:26] is the sub-list for method input_type
+	4,  // 4: eventa.event.v1.EventService.ListRecommendableEventsByIds:input_type -> eventa.event.v1.ListRecommendableEventsByIdsRequest
+	5,  // 5: eventa.event.v1.EventService.GetEventSummary:input_type -> eventa.event.v1.GetEventSummaryRequest
+	6,  // 6: eventa.event.v1.EventService.UpdateDraftEvent:input_type -> eventa.event.v1.UpdateDraftEventRequest
+	7,  // 7: eventa.event.v1.EventService.DefineEventTicketCurrency:input_type -> eventa.event.v1.DefineEventTicketCurrencyRequest
+	8,  // 8: eventa.event.v1.EventService.CreateEventTicketType:input_type -> eventa.event.v1.CreateEventTicketTypeRequest
+	9,  // 9: eventa.event.v1.EventService.ListEventTicketTypes:input_type -> eventa.event.v1.ListEventTicketTypesRequest
+	10, // 10: eventa.event.v1.EventService.AddEventTicketType:input_type -> eventa.event.v1.AddEventTicketTypeRequest
+	11, // 11: eventa.event.v1.EventService.UpdateEventTicketType:input_type -> eventa.event.v1.UpdateEventTicketTypeRequest
+	12, // 12: eventa.event.v1.EventService.RetireEventTicketType:input_type -> eventa.event.v1.RetireEventTicketTypeRequest
+	13, // 13: eventa.event.v1.EventService.GetEventTicketCatalogue:input_type -> eventa.event.v1.GetEventTicketCatalogueRequest
+	14, // 14: eventa.event.v1.EventService.GetAttendeeEventTicketCatalogue:input_type -> eventa.event.v1.GetAttendeeEventTicketCatalogueRequest
+	15, // 15: eventa.event.v1.EventService.ReserveEventCapacity:input_type -> eventa.event.v1.ReserveEventCapacityRequest
+	16, // 16: eventa.event.v1.EventService.FinalizeEventCapacityReservation:input_type -> eventa.event.v1.FinalizeEventCapacityReservationRequest
+	17, // 17: eventa.event.v1.EventService.ReleaseEventCapacityReservation:input_type -> eventa.event.v1.ReleaseEventCapacityReservationRequest
+	18, // 18: eventa.event.v1.EventService.JoinEventWaitlist:input_type -> eventa.event.v1.JoinEventWaitlistRequest
+	19, // 19: eventa.event.v1.EventService.LeaveEventWaitlist:input_type -> eventa.event.v1.LeaveEventWaitlistRequest
+	20, // 20: eventa.event.v1.EventService.GetEventWaitlistEntry:input_type -> eventa.event.v1.GetEventWaitlistEntryRequest
+	21, // 21: eventa.event.v1.EventService.CreateEventMediaUpload:input_type -> eventa.event.v1.CreateEventMediaUploadRequest
+	22, // 22: eventa.event.v1.EventService.GetEventMediaUpload:input_type -> eventa.event.v1.GetEventMediaUploadRequest
+	23, // 23: eventa.event.v1.EventService.RemoveEventMedia:input_type -> eventa.event.v1.RemoveEventMediaRequest
+	24, // 24: eventa.event.v1.EventService.PublishEvent:input_type -> eventa.event.v1.PublishEventRequest
+	25, // 25: eventa.event.v1.EventService.CancelEvent:input_type -> eventa.event.v1.CancelEventRequest
+	26, // 26: eventa.event.v1.EventService.RetireDraftEvent:input_type -> eventa.event.v1.RetireDraftEventRequest
+	27, // 27: eventa.event.v1.EventService.CreateDraftEvent:output_type -> eventa.event.v1.CreateDraftEventResponse
+	28, // 28: eventa.event.v1.EventService.ListAdminEvents:output_type -> eventa.event.v1.ListAdminEventsResponse
+	29, // 29: eventa.event.v1.EventService.GetAdminEvent:output_type -> eventa.event.v1.GetAdminEventResponse
+	30, // 30: eventa.event.v1.EventService.GetPublishedEvent:output_type -> eventa.event.v1.GetPublishedEventResponse
+	31, // 31: eventa.event.v1.EventService.ListRecommendableEventsByIds:output_type -> eventa.event.v1.ListRecommendableEventsByIdsResponse
+	32, // 32: eventa.event.v1.EventService.GetEventSummary:output_type -> eventa.event.v1.GetEventSummaryResponse
+	33, // 33: eventa.event.v1.EventService.UpdateDraftEvent:output_type -> eventa.event.v1.UpdateDraftEventResponse
+	34, // 34: eventa.event.v1.EventService.DefineEventTicketCurrency:output_type -> eventa.event.v1.DefineEventTicketCurrencyResponse
+	35, // 35: eventa.event.v1.EventService.CreateEventTicketType:output_type -> eventa.event.v1.CreateEventTicketTypeResponse
+	36, // 36: eventa.event.v1.EventService.ListEventTicketTypes:output_type -> eventa.event.v1.ListEventTicketTypesResponse
+	37, // 37: eventa.event.v1.EventService.AddEventTicketType:output_type -> eventa.event.v1.AddEventTicketTypeResponse
+	38, // 38: eventa.event.v1.EventService.UpdateEventTicketType:output_type -> eventa.event.v1.UpdateEventTicketTypeResponse
+	39, // 39: eventa.event.v1.EventService.RetireEventTicketType:output_type -> eventa.event.v1.RetireEventTicketTypeResponse
+	40, // 40: eventa.event.v1.EventService.GetEventTicketCatalogue:output_type -> eventa.event.v1.GetEventTicketCatalogueResponse
+	41, // 41: eventa.event.v1.EventService.GetAttendeeEventTicketCatalogue:output_type -> eventa.event.v1.GetAttendeeEventTicketCatalogueResponse
+	42, // 42: eventa.event.v1.EventService.ReserveEventCapacity:output_type -> eventa.event.v1.ReserveEventCapacityResponse
+	43, // 43: eventa.event.v1.EventService.FinalizeEventCapacityReservation:output_type -> eventa.event.v1.FinalizeEventCapacityReservationResponse
+	44, // 44: eventa.event.v1.EventService.ReleaseEventCapacityReservation:output_type -> eventa.event.v1.ReleaseEventCapacityReservationResponse
+	45, // 45: eventa.event.v1.EventService.JoinEventWaitlist:output_type -> eventa.event.v1.JoinEventWaitlistResponse
+	46, // 46: eventa.event.v1.EventService.LeaveEventWaitlist:output_type -> eventa.event.v1.LeaveEventWaitlistResponse
+	47, // 47: eventa.event.v1.EventService.GetEventWaitlistEntry:output_type -> eventa.event.v1.GetEventWaitlistEntryResponse
+	48, // 48: eventa.event.v1.EventService.CreateEventMediaUpload:output_type -> eventa.event.v1.CreateEventMediaUploadResponse
+	49, // 49: eventa.event.v1.EventService.GetEventMediaUpload:output_type -> eventa.event.v1.GetEventMediaUploadResponse
+	50, // 50: eventa.event.v1.EventService.RemoveEventMedia:output_type -> eventa.event.v1.RemoveEventMediaResponse
+	51, // 51: eventa.event.v1.EventService.PublishEvent:output_type -> eventa.event.v1.PublishEventResponse
+	52, // 52: eventa.event.v1.EventService.CancelEvent:output_type -> eventa.event.v1.CancelEventResponse
+	53, // 53: eventa.event.v1.EventService.RetireDraftEvent:output_type -> eventa.event.v1.RetireDraftEventResponse
+	27, // [27:54] is the sub-list for method output_type
+	0,  // [0:27] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

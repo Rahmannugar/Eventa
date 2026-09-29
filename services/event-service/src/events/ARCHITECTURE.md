@@ -63,6 +63,8 @@ The active-attendee uniqueness index supports retry-safe membership. The waiting
 
 The published-event repository query combines event ID and `published` status before loading the event-owned venue and verified media. Drafts never cross the internal published-read boundary, and callers cannot distinguish them from missing IDs. The dedicated contract excludes `created_by_admin_id` and draft lifecycle state.
 
+The same authority answers a batch of candidate IDs for Discovery. `listRecommendableByIds` adds the start time, retirement, and an existing active ticket type whose sales window has not ended and whose capacity is not exhausted, then returns only the matches in request order. A recommendation therefore never carries an event this service would refuse to serve.
+
 ## Verified Media Upload
 
 1. The client requests an upload for a fixed slot using the event version it read. An occupied slot reserves a replacement while its verified media stays active.

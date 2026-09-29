@@ -79,11 +79,13 @@ async function ensureTestDatabase(): Promise<void> {
       await adminClient.unsafe(`CREATE DATABASE "${testDatabaseName}"`);
     }
   } catch (error: unknown) {
-    if (
-      typeof error !== 'object' ||
-      error === null ||
-      Reflect.get(error, 'code') !== '42P04'
-    ) {
+    // Two spec files can create the database at the same time: one gets
+    // "database already exists", the other the unique-index violation.
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? error.code
+        : undefined;
+    if (code !== '42P04' && code !== '23505') {
       throw error;
     }
   } finally {

@@ -13,6 +13,7 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
 - `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
 - `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
+- `internal/recommendations` — the recommendation query: preference rendering, the store lookup, Event Service's candidate resolution, and its gRPC handler.
 - `internal/semantic` — the derived semantic index: the capability port, the durable state rows, the one convergence path, and the reconciliation pass.
 - `internal/semantic/ahnlich` — the Ahnlich AI adapter: connection, deadlines, model registry, and every vendor type.
 - `internal/server` — the gRPC listener and its interceptors: trace continuation, request metrics and log line, and panic containment.
@@ -69,7 +70,15 @@ Readiness does not cover Ahnlich. An unreachable store makes indexing fail loudl
 
 Interests belong to Discovery, not to Identity: registration stays an Identity transaction, and an attendee manages their interests afterwards. The attendee id arrives from the Gateway's authenticated session and Discovery stores the list against it without ever resolving an account.
 
-A save replaces the whole list in one statement after the request is bounded and normalised, so a repeated submission cannot append to itself. The list is derived from what the attendee typed and can be rebuilt the same way; the vector representation that recommendations use is built from this record, and losing the vector store never loses the interests themselves.
+A save replaces the whole list in one statement after the request is bounded and normalised, so a repeated submission cannot append to itself. The list is derived from what the attendee typed and can be rebuilt the same way; the text the recommendation query is sent with is built from this record, so the store is only ever asked about interests Discovery still holds.
+
+## Recommendations
+
+`DiscoveryService.RecommendEvents` combines the two halves the service already owns. It reads the stored interests, renders them through `semantic.BuildPreferences`, and passes that text to `Store.Search`, which embeds it in the proxy and returns the closest events with their cosine scores. The store is queried for a bounded multiple of the requested page, in the same store that indexing fills, so an attendee's interests and the event corpus are embedded by one model and compared in one index.
+
+Ranking is Discovery's; authority is Event Service's. The candidate ids go to `lookup.ListRecommendableEvents`, and only the events Event Service still serves come back — publication, retirement, start time, live sales, and remaining capacity are all decided there. The response keeps the store's order, drops what Event Service did not return, and stops at the requested limit, so a cancelled event disappears without Discovery holding a second opinion about its state.
+
+No preference vector is stored. Ahnlich embeds the interests at query time, so there is no derived attendee state to reconcile: losing the store costs one search, never the interests themselves.
 
 ## Data ownership
 

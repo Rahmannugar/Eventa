@@ -10,6 +10,7 @@ Event Service implements `eventa.event.v1.EventService`.
 | `ListAdminEvents`                  | Returns a cursor-paginated admin event catalogue.                                 |
 | `GetAdminEvent`                    | Returns the latest admin event state, verified images, and version.               |
 | `GetPublishedEvent`                | Returns the public representation only when the event is published.               |
+| `ListRecommendableEventsByIds`     | Returns the requested events that are published and still on sale with capacity.  |
 | `UpdateDraftEvent`                 | Saves complete draft details and returns the new version.                         |
 | `CreateEventMediaUpload`           | Starts a direct image upload for an empty slot or replacement.                    |
 | `GetEventMediaUpload`              | Reports whether an upload is waiting, attached, rejected, conflicted, or expired. |

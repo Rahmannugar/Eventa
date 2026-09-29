@@ -1,6 +1,7 @@
 // Package lookup resolves the authoritative content of one published event.
 // Discovery copies it into its own index and never reads Event Service's
-// database.
+// database. The same resolution answers which candidate events Event Service
+// still serves when recommendations are built.
 package lookup
 
 import (
@@ -68,6 +69,43 @@ func (c *Client) GetPublishedContent(ctx context.Context, eventID string) (*inde
 	if published == nil {
 		return nil, index.ErrContentUnavailable
 	}
+	return contentFromPublished(eventID, published)
+}
+
+// ListRecommendableEvents returns the content Event Service still serves for
+// the candidate ids it accepts. Event Service applies its own authority, so an
+// id that is unknown, unpublished, retired, already started, or without a live
+// ticket sale is simply absent from the answer rather than an error.
+func (c *Client) ListRecommendableEvents(ctx context.Context, eventIDs []string) (map[string]*index.Content, error) {
+	ctx, cancel, span := c.call(ctx, "EventService/ListRecommendableEventsByIds", "EventService", "ListRecommendableEventsByIds")
+	defer cancel()
+
+	response, err := c.client.ListRecommendableEventsByIds(ctx, &eventv1.ListRecommendableEventsByIdsRequest{EventIds: eventIDs})
+	if err != nil {
+		telemetry.EndSpan(span, err)
+		return nil, err
+	}
+	telemetry.EndSpan(span, nil)
+
+	contents := make(map[string]*index.Content, len(response.GetEvents()))
+	for _, published := range response.GetEvents() {
+		eventID := published.GetEventId()
+		if eventID == "" {
+			continue
+		}
+		content, err := contentFromPublished(eventID, published)
+		if err != nil {
+			return nil, err
+		}
+		contents[eventID] = content
+	}
+	return contents, nil
+}
+
+// contentFromPublished reduces Event Service's published event to the content
+// Discovery keeps, refusing a response whose required fields are missing
+// instead of storing an incomplete event.
+func contentFromPublished(eventID string, published *eventv1.PublishedEvent) (*index.Content, error) {
 	venue := published.GetVenue()
 	content := &index.Content{
 		Title:            published.GetTitle(),

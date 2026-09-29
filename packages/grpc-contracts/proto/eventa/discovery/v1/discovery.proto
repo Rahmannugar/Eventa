@@ -35,6 +35,19 @@ message SearchEventsResponse {
   int32 offset = 4;
 }
 
+// Ranked events for one attendee, derived from the interests that attendee
+// has saved. Event Service resolves the candidates, so a cancelled or retired
+// event is never returned.
+message RecommendEventsRequest {
+  string attendee_id = 1;
+  int32 limit = 2;
+}
+
+message RecommendEventsResponse {
+  string attendee_id = 1;
+  repeated EventSearchResult events = 2;
+}
+
 // Attendee-owned interests. Discovery stores them against the attendee id it
 // is given; Identity owns the account itself.
 message GetAttendeeInterestsRequest {

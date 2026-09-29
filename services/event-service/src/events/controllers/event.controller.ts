@@ -32,6 +32,7 @@ import {
   type GetAttendeeEventTicketCatalogueResponse,
   type ListAdminEventsResponse,
   type ListEventTicketTypesResponse,
+  type ListRecommendableEventsByIdsResponse,
   type GetPublishedEventResponse,
   type PublishedEvent,
   type RemoveEventMediaResponse,
@@ -84,7 +85,10 @@ import {
   GetEventMediaUploadDto,
   RemoveEventMediaDto,
 } from '../dto/event-media.dto';
-import { GetPublishedEventDto } from '../dto/published-event.dto';
+import {
+  GetPublishedEventDto,
+  ListRecommendableEventsByIdsDto,
+} from '../dto/published-event.dto';
 import { GetAttendeeEventTicketCatalogueDto } from '../dto/event-ticket-availability.dto';
 import {
   AddEventTicketTypeDto,
@@ -195,6 +199,12 @@ export class EventController implements EventServiceController {
     request: GetPublishedEventDto,
   ): Observable<GetPublishedEventResponse> {
     return from(this.getPublished(request.eventId));
+  }
+
+  listRecommendableEventsByIds(
+    request: ListRecommendableEventsByIdsDto,
+  ): Observable<ListRecommendableEventsByIdsResponse> {
+    return from(this.listRecommendable(request.eventIds));
   }
 
   updateDraftEvent(
@@ -557,6 +567,16 @@ export class EventController implements EventServiceController {
       }
       throw error;
     }
+  }
+
+  private async listRecommendable(
+    eventIds: string[],
+  ): Promise<ListRecommendableEventsByIdsResponse> {
+    return {
+      events: (await this.eventService.listRecommendableByIds(eventIds)).map(
+        (event) => this.toPublishedContract(event),
+      ),
+    };
   }
 
   private async updateEvent(

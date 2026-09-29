@@ -73,6 +73,19 @@ func BuildText(title, description string, categories []string, venueName, venueC
 	return builder.String()
 }
 
+// BuildPreferences renders the searchable representation of an attendee's
+// saved interests. It is the query side of BuildText: deterministic, so the
+// same interests always embed the same way, and empty when there is nothing to
+// match against.
+func BuildPreferences(interests []string) string {
+	if len(interests) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	writeLine(&builder, "Interests: "+strings.Join(interests, ", "))
+	return builder.String()
+}
+
 // joinNonEmpty keeps a rendering free of separators for parts the projection
 // does not know.
 func joinNonEmpty(separator string, parts ...string) string {

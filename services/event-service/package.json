@@ -15,7 +15,7 @@
     "start": "node dist/main.js",
     "test": "pnpm test:contract && pnpm test:unit",
     "test:contract": "pnpm --filter @eventa/grpc-contracts test",
-    "test:integration": "dotenv -e .env -- vitest run test/integration",
+    "test:integration": "dotenv -e .env -- vitest run --no-file-parallelism test/integration",
     "test:unit": "vitest run test/unit",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },

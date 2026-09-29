@@ -44,6 +44,8 @@ Start Event PostgreSQL and run the integration suite against the isolated databa
 pnpm test:integration:event
 ```
 
+Spec files reset the shared test database between tests, so the suite runs them one at a time.
+
 ### Database
 
 Build the Event migration image and apply committed migrations to the local Event database.

@@ -23,6 +23,7 @@ const (
 	EventService_ListAdminEvents_FullMethodName                  = "/eventa.event.v1.EventService/ListAdminEvents"
 	EventService_GetAdminEvent_FullMethodName                    = "/eventa.event.v1.EventService/GetAdminEvent"
 	EventService_GetPublishedEvent_FullMethodName                = "/eventa.event.v1.EventService/GetPublishedEvent"
+	EventService_ListRecommendableEventsByIds_FullMethodName     = "/eventa.event.v1.EventService/ListRecommendableEventsByIds"
 	EventService_GetEventSummary_FullMethodName                  = "/eventa.event.v1.EventService/GetEventSummary"
 	EventService_UpdateDraftEvent_FullMethodName                 = "/eventa.event.v1.EventService/UpdateDraftEvent"
 	EventService_DefineEventTicketCurrency_FullMethodName        = "/eventa.event.v1.EventService/DefineEventTicketCurrency"
@@ -55,6 +56,7 @@ type EventServiceClient interface {
 	ListAdminEvents(ctx context.Context, in *ListAdminEventsRequest, opts ...grpc.CallOption) (*ListAdminEventsResponse, error)
 	GetAdminEvent(ctx context.Context, in *GetAdminEventRequest, opts ...grpc.CallOption) (*GetAdminEventResponse, error)
 	GetPublishedEvent(ctx context.Context, in *GetPublishedEventRequest, opts ...grpc.CallOption) (*GetPublishedEventResponse, error)
+	ListRecommendableEventsByIds(ctx context.Context, in *ListRecommendableEventsByIdsRequest, opts ...grpc.CallOption) (*ListRecommendableEventsByIdsResponse, error)
 	GetEventSummary(ctx context.Context, in *GetEventSummaryRequest, opts ...grpc.CallOption) (*GetEventSummaryResponse, error)
 	UpdateDraftEvent(ctx context.Context, in *UpdateDraftEventRequest, opts ...grpc.CallOption) (*UpdateDraftEventResponse, error)
 	DefineEventTicketCurrency(ctx context.Context, in *DefineEventTicketCurrencyRequest, opts ...grpc.CallOption) (*DefineEventTicketCurrencyResponse, error)
@@ -123,6 +125,16 @@ func (c *eventServiceClient) GetPublishedEvent(ctx context.Context, in *GetPubli
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetPublishedEventResponse)
 	err := c.cc.Invoke(ctx, EventService_GetPublishedEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eventServiceClient) ListRecommendableEventsByIds(ctx context.Context, in *ListRecommendableEventsByIdsRequest, opts ...grpc.CallOption) (*ListRecommendableEventsByIdsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRecommendableEventsByIdsResponse)
+	err := c.cc.Invoke(ctx, EventService_ListRecommendableEventsByIds_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -359,6 +371,7 @@ type EventServiceServer interface {
 	ListAdminEvents(context.Context, *ListAdminEventsRequest) (*ListAdminEventsResponse, error)
 	GetAdminEvent(context.Context, *GetAdminEventRequest) (*GetAdminEventResponse, error)
 	GetPublishedEvent(context.Context, *GetPublishedEventRequest) (*GetPublishedEventResponse, error)
+	ListRecommendableEventsByIds(context.Context, *ListRecommendableEventsByIdsRequest) (*ListRecommendableEventsByIdsResponse, error)
 	GetEventSummary(context.Context, *GetEventSummaryRequest) (*GetEventSummaryResponse, error)
 	UpdateDraftEvent(context.Context, *UpdateDraftEventRequest) (*UpdateDraftEventResponse, error)
 	DefineEventTicketCurrency(context.Context, *DefineEventTicketCurrencyRequest) (*DefineEventTicketCurrencyResponse, error)
@@ -404,6 +417,9 @@ func (UnimplementedEventServiceServer) GetAdminEvent(context.Context, *GetAdminE
 }
 func (UnimplementedEventServiceServer) GetPublishedEvent(context.Context, *GetPublishedEventRequest) (*GetPublishedEventResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPublishedEvent not implemented")
+}
+func (UnimplementedEventServiceServer) ListRecommendableEventsByIds(context.Context, *ListRecommendableEventsByIdsRequest) (*ListRecommendableEventsByIdsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRecommendableEventsByIds not implemented")
 }
 func (UnimplementedEventServiceServer) GetEventSummary(context.Context, *GetEventSummaryRequest) (*GetEventSummaryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEventSummary not implemented")
@@ -560,6 +576,24 @@ func _EventService_GetPublishedEvent_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EventServiceServer).GetPublishedEvent(ctx, req.(*GetPublishedEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EventService_ListRecommendableEventsByIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRecommendableEventsByIdsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).ListRecommendableEventsByIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventService_ListRecommendableEventsByIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventServiceServer).ListRecommendableEventsByIds(ctx, req.(*ListRecommendableEventsByIdsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -982,6 +1016,10 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPublishedEvent",
 			Handler:    _EventService_GetPublishedEvent_Handler,
+		},
+		{
+			MethodName: "ListRecommendableEventsByIds",
+			Handler:    _EventService_ListRecommendableEventsByIds_Handler,
 		},
 		{
 			MethodName: "GetEventSummary",

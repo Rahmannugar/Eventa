@@ -51,6 +51,8 @@ export {
   type JoinEventWaitlistResponse,
   type ListAdminEventsRequest,
   type ListAdminEventsResponse,
+  type ListRecommendableEventsByIdsRequest,
+  type ListRecommendableEventsByIdsResponse,
   type ListEventTicketTypesRequest,
   type ListEventTicketTypesResponse,
   type PublishedEvent,

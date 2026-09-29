@@ -29,8 +29,8 @@ const file_eventa_discovery_v1_discovery_service_proto_rawDesc = "" +
 	"\fSearchEvents\x12(.eventa.discovery.v1.SearchEventsRequest\x1a).eventa.discovery.v1.SearchEventsResponse\x12l\n" +
 	"\x0fRecommendEvents\x12+.eventa.discovery.v1.RecommendEventsRequest\x1a,.eventa.discovery.v1.RecommendEventsResponse\x12{\n" +
 	"\x14GetAttendeeInterests\x120.eventa.discovery.v1.GetAttendeeInterestsRequest\x1a1.eventa.discovery.v1.GetAttendeeInterestsResponse\x12{\n" +
-	"\x14SetAttendeeInterests\x120.eventa.discovery.v1.SetAttendeeInterestsRequest\x1a1.eventa.discovery.v1.SetAttendeeInterestsResponseB\xf0\x01\n" +
-	"\x17com.eventa.discovery.v1B\x15DiscoveryServiceProtoP\x01ZPgithub.com/eventa/discovery-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
+	"\x14SetAttendeeInterests\x120.eventa.discovery.v1.SetAttendeeInterestsRequest\x1a1.eventa.discovery.v1.SetAttendeeInterestsResponseB\xf3\x01\n" +
+	"\x17com.eventa.discovery.v1B\x15DiscoveryServiceProtoP\x01ZSgithub.com/eventa/notification-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
 
 var file_eventa_discovery_v1_discovery_service_proto_goTypes = []any{
 	(*SearchEventsRequest)(nil),          // 0: eventa.discovery.v1.SearchEventsRequest

@@ -126,6 +126,10 @@ export class EventManagementService implements EventManagement {
     return event;
   }
 
+  listRecommendableByIds(eventIds: string[]): Promise<EventRecord[]> {
+    return this.events.findRecommendableByIds(eventIds);
+  }
+
   async updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord> {
     const startsAt = new Date(input.startsAt);
     const endsAt = new Date(input.endsAt);

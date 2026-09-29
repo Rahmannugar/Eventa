@@ -697,8 +697,8 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"attendeeId\x12\x1c\n" +
 	"\tinterests\x18\x02 \x03(\tR\tinterests\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x03 \x01(\tR\tupdatedAtB\xe9\x01\n" +
-	"\x17com.eventa.discovery.v1B\x0eDiscoveryProtoP\x01ZPgithub.com/eventa/discovery-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
+	"updated_at\x18\x03 \x01(\tR\tupdatedAtB\xec\x01\n" +
+	"\x17com.eventa.discovery.v1B\x0eDiscoveryProtoP\x01ZSgithub.com/eventa/notification-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
 
 var (
 	file_eventa_discovery_v1_discovery_proto_rawDescOnce sync.Once

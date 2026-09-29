@@ -184,6 +184,18 @@ message GetPublishedEventResponse {
   PublishedEvent event = 1;
 }
 
+message ListRecommendableEventsByIdsRequest {
+  // Candidate event ids, at most 50. An id that is unknown, unpublished, or
+  // not currently recommendable is left out of the response.
+  repeated string event_ids = 1;
+}
+
+message ListRecommendableEventsByIdsResponse {
+  // The requested events that pass Event Service's authority checks, in the
+  // order the ids were requested.
+  repeated PublishedEvent events = 1;
+}
+
 message UpdateDraftEventRequest {
   string admin_id = 1;
   string event_id = 2;

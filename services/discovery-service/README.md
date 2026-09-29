@@ -27,9 +27,13 @@ TEST_DATABASE_URL=<test database url> task test:integration
 # The semantic cases additionally need the real Ahnlich AI proxy:
 docker compose -f ../../compose.yaml up -d --wait ahnlich-db ahnlich-ai
 TEST_DATABASE_URL=<test database url> TEST_AHNLICH_AI_URL=localhost:1370 task test:integration
+
+# The recommendation cases additionally need the running Event Service:
+TEST_DATABASE_URL=<test database url> TEST_AHNLICH_AI_URL=localhost:1370 \
+  TEST_EVENT_GRPC_URL=localhost:50052 task test:integration
 ```
 
-`TEST_DATABASE_URL` must name a database ending in `_test`; the harness creates and migrates it if it does not exist yet. Cases that read or write the semantic store run only when `TEST_AHNLICH_AI_URL` names a running proxy and are skipped otherwise. The first proxy start downloads its embedding model into the `ahnlich-ai-models` volume.
+`TEST_DATABASE_URL` must name a database ending in `_test`; the harness creates and migrates it if it does not exist yet. Cases that read or write the semantic store run only when `TEST_AHNLICH_AI_URL` names a running proxy and are skipped otherwise, and recommendation cases that resolve candidates run only when `TEST_EVENT_GRPC_URL` names a running Event Service. The first proxy start downloads its embedding model into the `ahnlich-ai-models` volume.
 
 Run the service:
 

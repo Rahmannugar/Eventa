@@ -51,6 +51,6 @@ Event Service exposes event management, ticket catalogues, capacity reservations
 
 Identity publishes versioned attendee verification, attendee password-reset, admin-activation, and admin password-reset email jobs for Notification. `@eventa/messaging-contracts` owns the contracts. Ticket Service publishes one `eventa.ticket.revoked.v1` fact per revoked ticket and Notification consumes that topic to send event-cancellation emails. Notification exposes only operational HTTP health endpoints. See [services/notification-service/API.md](services/notification-service/API.md).
 
-Event Service publishes `event.published.v1` and `event.cancelled.v1` through its publication outbox, and Discovery Service consumes that topic to maintain the event projection search and recommendation read. Discovery exposes structured event search and the attendee interest record to the Gateway over internal gRPC plus operational HTTP health endpoints. See [services/discovery-service/API.md](services/discovery-service/API.md).
+Event Service publishes `event.published.v1` and `event.cancelled.v1` through its publication outbox, and Discovery Service consumes that topic to maintain the event projection search and recommendation read. Discovery exposes structured event search, the attendee interest record, and ranked recommendations to the Gateway over internal gRPC plus operational HTTP health endpoints. See [services/discovery-service/API.md](services/discovery-service/API.md).
 
 Each service documents its owned internal surface in its own `API.md`.

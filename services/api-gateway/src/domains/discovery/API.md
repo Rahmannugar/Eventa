@@ -61,3 +61,29 @@ An attendee who has never saved interests reads an empty list with no `updatedAt
 ### Abuse controls
 
 Interest reads are limited by IP burst and hourly budgets, and interest writes by a separate, smaller budget because a write rewrites the stored record. Each route limits the client IP and the protected session independently, so one attendee cannot spend another's allowance.
+
+## Recommendations
+
+`GET /attendees/me/recommendations` requires an attendee session and returns events ranked for the signed-in attendee. The attendee id always comes from the session, never from the request.
+
+| Parameter | Meaning |
+| --- | --- |
+| `limit` | Page size, 1 to 20. Defaults to 10. |
+
+Each result carries the same fields as a search result — event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code — ordered best match first. An attendee who has saved no interests gets an empty list.
+
+### Errors
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `400` | `RECOMMENDATIONS_INVALID` | Discovery could not understand the request. |
+| `422` | `VALIDATION_FAILED` | The request itself is malformed: an unknown parameter or a `limit` outside 1 to 20. |
+| `429` | `RECOMMENDATIONS_RATE_LIMITED` | The attendee or client IP is over its budget. |
+| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned an answer for a different attendee. |
+| `503` | `DISCOVERY_RECOMMENDATIONS_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
+
+Failures carry no dependency detail beyond what a client can act on.
+
+### Abuse controls
+
+A recommendation costs an embed, a similarity search, and a resolution call, so it is metered more tightly than a search: an IP burst budget plus hourly budgets for the client IP and the protected session, each independent, so one attendee cannot drain another's allowance. Exceeding a budget returns `429`; an unavailable Discovery returns `503` rather than disclosing quota exhaustion.

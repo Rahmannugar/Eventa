@@ -8,6 +8,8 @@
 
 `GetPublishedEvent` accepts an event ID and returns content, schedule, venue, verified media, publication time, and version only when the authoritative event state is `published`. It omits creator provenance and draft lifecycle state. Draft and missing IDs both return gRPC `NOT_FOUND`.
 
+`ListRecommendableEventsByIds` accepts up to 50 event IDs and returns those Event Service still considers recommendable: published, not retired, not yet started, and carrying an active ticket type whose sales have not ended and whose capacity is not exhausted. An ID that is unknown, unpublished, out of sale, or sold out is omitted rather than reported as an error, and the answer preserves the requested order.
+
 `UpdateDraftEvent` accepts the acting admin, event ID, expected version, title, description, one to five categories, ISO-8601 start and end instants, IANA timezone, and venue address. It replaces the editable details and returns the incremented version. The end must be after the start. A stale version returns gRPC `ABORTED`; a missing event returns `NOT_FOUND`.
 
 `DefineEventTicketCurrency` accepts the acting admin, event ID, expected event version, and ISO 4217 currency. The event must be an active draft, and a currency may be defined once per event. Success increments the event version and appends an audit record in the same transaction.

@@ -365,6 +365,86 @@ export class EventManagementRepository implements EventRepositoryPort {
     );
   }
 
+  findRecommendableByIds(eventIds: string[]): Promise<EventRecord[]> {
+    return runWithOperationSpan(
+      'event.find_recommendable_by_ids',
+      async () => {
+        if (eventIds.length === 0) {
+          return [];
+        }
+
+        const results = await this.database
+          .select({ event: EVENT_COLUMNS, venue: VENUE_COLUMNS })
+          .from(events)
+          .leftJoin(eventVenues, eq(eventVenues.eventId, events.id))
+          .where(
+            and(
+              inArray(events.id, eventIds),
+              eq(events.status, 'published'),
+              isNull(events.retiredAt),
+              gt(events.startsAt, sql`now()`),
+              sql`EXISTS (
+                SELECT 1
+                FROM event_ticket_currencies c
+                INNER JOIN event_ticket_types t
+                  ON t.ticket_currency_id = c.id
+                WHERE c.event_id = ${events.id}
+                  AND t.retired_at IS NULL
+                  AND t.sales_end_at > now()
+                  AND t.capacity - t.reserved_quantity - t.sold_quantity > 0
+              )`,
+            ),
+          );
+
+        if (results.length === 0) {
+          return [];
+        }
+
+        const foundIds = results.map((result) => result.event.eventId);
+        const [media, categories] = await Promise.all([
+          this.database
+            .select({ eventId: eventMedia.eventId, media: MEDIA_COLUMNS })
+            .from(eventMedia)
+            .where(inArray(eventMedia.eventId, foundIds))
+            .orderBy(eventMedia.slot),
+          this.database
+            .select({
+              category: eventCategories.category,
+              eventId: eventCategories.eventId,
+            })
+            .from(eventCategories)
+            .where(inArray(eventCategories.eventId, foundIds))
+            .orderBy(eventCategories.category),
+        ]);
+
+        const categoriesByEvent = this.groupCategories(categories);
+        const mediaByEvent = new Map<string, EventMediaRecord[]>();
+        for (const row of media) {
+          const rows = mediaByEvent.get(row.eventId) ?? [];
+          rows.push(row.media);
+          mediaByEvent.set(row.eventId, rows);
+        }
+
+        const byId = new Map(
+          results.map(({ event, venue }) => [
+            event.eventId,
+            this.toEventRecord(
+              event,
+              venue,
+              mediaByEvent.get(event.eventId) ?? [],
+              categoriesByEvent.get(event.eventId) ?? [],
+            ),
+          ]),
+        );
+
+        return eventIds
+          .map((eventId) => byId.get(eventId))
+          .filter((record): record is EventRecord => record !== undefined);
+      },
+      this.spanOptions('SELECT'),
+    );
+  }
+
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult> {
     return runWithOperationSpan(
       'event.update_draft',

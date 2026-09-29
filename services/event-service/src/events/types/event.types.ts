@@ -436,6 +436,7 @@ export interface EventRepository {
   findById(eventId: string): Promise<EventRecord | undefined>;
   findSummary(eventId: string): Promise<EventSummaryRecord | undefined>;
   findPublishedById(eventId: string): Promise<EventRecord | undefined>;
+  findRecommendableByIds(eventIds: string[]): Promise<EventRecord[]>;
   updateDraft(input: UpdateDraftEvent): Promise<UpdateDraftEventResult>;
   publish(input: PublishEvent): Promise<PublishEventResult>;
   cancel(input: CancelEvent): Promise<CancelEventResult>;
@@ -448,6 +449,7 @@ export interface EventManagement {
   getById(eventId: string): Promise<EventRecord>;
   getSummary(eventId: string): Promise<EventSummaryRecord>;
   getPublishedById(eventId: string): Promise<EventRecord>;
+  listRecommendableByIds(eventIds: string[]): Promise<EventRecord[]>;
   updateDraft(input: UpdateDraftEventCommand): Promise<EventRecord>;
   publish(input: PublishEventCommand): Promise<EventRecord>;
   cancel(input: CancelEventCommand): Promise<CancelEventSuccess>;

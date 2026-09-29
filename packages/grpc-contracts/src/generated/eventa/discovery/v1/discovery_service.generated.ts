@@ -11,6 +11,8 @@ import { Observable } from "rxjs";
 import {
   GetAttendeeInterestsRequest,
   GetAttendeeInterestsResponse,
+  RecommendEventsRequest,
+  RecommendEventsResponse,
   SearchEventsRequest,
   SearchEventsResponse,
   SetAttendeeInterestsRequest,
@@ -23,6 +25,8 @@ export const EVENTA_DISCOVERY_V1_PACKAGE_NAME = "eventa.discovery.v1";
 
 export interface DiscoveryServiceClient {
   searchEvents(request: SearchEventsRequest, metadata?: Metadata): Observable<SearchEventsResponse>;
+
+  recommendEvents(request: RecommendEventsRequest, metadata?: Metadata): Observable<RecommendEventsResponse>;
 
   getAttendeeInterests(
     request: GetAttendeeInterestsRequest,
@@ -38,6 +42,8 @@ export interface DiscoveryServiceClient {
 export interface DiscoveryServiceController {
   searchEvents(request: SearchEventsRequest, metadata?: Metadata): Observable<SearchEventsResponse>;
 
+  recommendEvents(request: RecommendEventsRequest, metadata?: Metadata): Observable<RecommendEventsResponse>;
+
   getAttendeeInterests(
     request: GetAttendeeInterestsRequest,
     metadata?: Metadata,
@@ -51,7 +57,7 @@ export interface DiscoveryServiceController {
 
 export function DiscoveryServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["searchEvents", "getAttendeeInterests", "setAttendeeInterests"];
+    const grpcMethods: string[] = ["searchEvents", "recommendEvents", "getAttendeeInterests", "setAttendeeInterests"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("DiscoveryService", method)(constructor.prototype[method], method, descriptor);

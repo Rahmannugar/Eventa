@@ -44,6 +44,21 @@ export interface SearchEventsResponse {
 }
 
 /**
+ * Ranked events for one attendee, derived from the interests that attendee
+ * has saved. Event Service resolves the candidates, so a cancelled or retired
+ * event is never returned.
+ */
+export interface RecommendEventsRequest {
+  attendeeId: string;
+  limit: number;
+}
+
+export interface RecommendEventsResponse {
+  attendeeId: string;
+  events: EventSearchResult[];
+}
+
+/**
  * Attendee-owned interests. Discovery stores them against the attendee id it
  * is given; Identity owns the account itself.
  */

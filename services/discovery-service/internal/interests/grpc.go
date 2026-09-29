@@ -33,7 +33,7 @@ func NewHandler(repository *Repository, logger *slog.Logger) *Handler {
 // who has never saved interests gets an empty list — that is the cold-start
 // position, not a failure. No interest text is logged.
 func (h *Handler) GetAttendeeInterests(ctx context.Context, request *discoveryv1.GetAttendeeInterestsRequest) (*discoveryv1.GetAttendeeInterestsResponse, error) {
-	attendeeID, err := parseAttendeeID(request.GetAttendeeId())
+	attendeeID, err := ParseAttendeeID(request.GetAttendeeId())
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (h *Handler) GetAttendeeInterests(ctx context.Context, request *discoveryv1
 // The request is bounded and normalised before it reaches the database, so a
 // caller is never told it stored more than Discovery actually kept.
 func (h *Handler) SetAttendeeInterests(ctx context.Context, request *discoveryv1.SetAttendeeInterestsRequest) (*discoveryv1.SetAttendeeInterestsResponse, error) {
-	attendeeID, err := parseAttendeeID(request.GetAttendeeId())
+	attendeeID, err := ParseAttendeeID(request.GetAttendeeId())
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +92,10 @@ func (h *Handler) SetAttendeeInterests(ctx context.Context, request *discoveryv1
 	}, nil
 }
 
-// parseAttendeeID rejects anything that is not a UUID before it can reach a
-// query, so a malformed id cannot become a database error.
-func parseAttendeeID(value string) (uuid.UUID, error) {
+// ParseAttendeeID rejects anything that is not a UUID before it can reach a
+// query or a recommendation lookup, so a malformed id cannot become a database
+// error.
+func ParseAttendeeID(value string) (uuid.UUID, error) {
 	attendeeID, err := uuid.Parse(value)
 	if err != nil {
 		return uuid.Nil, status.Error(codes.InvalidArgument, "invalid attendee id")

@@ -45,6 +45,8 @@ import {
   ListAdminEventsResponse,
   ListEventTicketTypesRequest,
   ListEventTicketTypesResponse,
+  ListRecommendableEventsByIdsRequest,
+  ListRecommendableEventsByIdsResponse,
   PublishEventRequest,
   PublishEventResponse,
   ReleaseEventCapacityReservationRequest,
@@ -75,6 +77,11 @@ export interface EventServiceClient {
   getAdminEvent(request: GetAdminEventRequest, metadata?: Metadata): Observable<GetAdminEventResponse>;
 
   getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
+
+  listRecommendableEventsByIds(
+    request: ListRecommendableEventsByIdsRequest,
+    metadata?: Metadata,
+  ): Observable<ListRecommendableEventsByIdsResponse>;
 
   getEventSummary(request: GetEventSummaryRequest, metadata?: Metadata): Observable<GetEventSummaryResponse>;
 
@@ -173,6 +180,11 @@ export interface EventServiceController {
 
   getPublishedEvent(request: GetPublishedEventRequest, metadata?: Metadata): Observable<GetPublishedEventResponse>;
 
+  listRecommendableEventsByIds(
+    request: ListRecommendableEventsByIdsRequest,
+    metadata?: Metadata,
+  ): Observable<ListRecommendableEventsByIdsResponse>;
+
   getEventSummary(request: GetEventSummaryRequest, metadata?: Metadata): Observable<GetEventSummaryResponse>;
 
   updateDraftEvent(request: UpdateDraftEventRequest, metadata?: Metadata): Observable<UpdateDraftEventResponse>;
@@ -264,6 +276,7 @@ export function EventServiceControllerMethods() {
       "listAdminEvents",
       "getAdminEvent",
       "getPublishedEvent",
+      "listRecommendableEventsByIds",
       "getEventSummary",
       "updateDraftEvent",
       "defineEventTicketCurrency",
