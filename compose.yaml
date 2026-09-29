@@ -593,7 +593,7 @@ services:
       - >-
         ahnlich-db run --host 0.0.0.0
         --enable-persistence --persist-location /root/.ahnlich/data/db.dat
-        --persistence-interval 60
+        --persistence-interval 30000
     ports:
       - '1369:1369'
     volumes:
@@ -615,7 +615,7 @@ services:
         ahnlich-ai run --host 0.0.0.0 --db-host ahnlich-db
         --supported-models all-minilm-l6-v2
         --enable-persistence --persist-location /root/.ahnlich/data/ai.dat
-        --persistence-interval 60
+        --persistence-interval 30000
     ports:
       - '1370:1370'
     volumes:
