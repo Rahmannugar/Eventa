@@ -293,6 +293,228 @@ func (x *SearchEventsResponse) GetOffset() int32 {
 	return 0
 }
 
+// Attendee-owned interests. Discovery stores them against the attendee id it
+// is given; Identity owns the account itself.
+type GetAttendeeInterestsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AttendeeId    string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAttendeeInterestsRequest) Reset() {
+	*x = GetAttendeeInterestsRequest{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAttendeeInterestsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAttendeeInterestsRequest) ProtoMessage() {}
+
+func (x *GetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
+func (*GetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetAttendeeInterestsRequest) GetAttendeeId() string {
+	if x != nil {
+		return x.AttendeeId
+	}
+	return ""
+}
+
+type GetAttendeeInterestsResponse struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	AttendeeId string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
+	Interests  []string               `protobuf:"bytes,2,rep,name=interests,proto3" json:"interests,omitempty"`
+	// RFC 3339 time the stored interests last changed.
+	UpdatedAt     string `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAttendeeInterestsResponse) Reset() {
+	*x = GetAttendeeInterestsResponse{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAttendeeInterestsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAttendeeInterestsResponse) ProtoMessage() {}
+
+func (x *GetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
+func (*GetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetAttendeeInterestsResponse) GetAttendeeId() string {
+	if x != nil {
+		return x.AttendeeId
+	}
+	return ""
+}
+
+func (x *GetAttendeeInterestsResponse) GetInterests() []string {
+	if x != nil {
+		return x.Interests
+	}
+	return nil
+}
+
+func (x *GetAttendeeInterestsResponse) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+type SetAttendeeInterestsRequest struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	AttendeeId string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
+	// Free-text interests, for example "music". Discovery trims them and
+	// de-duplicates them case-insensitively before storing.
+	Interests     []string `protobuf:"bytes,2,rep,name=interests,proto3" json:"interests,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAttendeeInterestsRequest) Reset() {
+	*x = SetAttendeeInterestsRequest{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAttendeeInterestsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAttendeeInterestsRequest) ProtoMessage() {}
+
+func (x *SetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
+func (*SetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SetAttendeeInterestsRequest) GetAttendeeId() string {
+	if x != nil {
+		return x.AttendeeId
+	}
+	return ""
+}
+
+func (x *SetAttendeeInterestsRequest) GetInterests() []string {
+	if x != nil {
+		return x.Interests
+	}
+	return nil
+}
+
+type SetAttendeeInterestsResponse struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	AttendeeId string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
+	Interests  []string               `protobuf:"bytes,2,rep,name=interests,proto3" json:"interests,omitempty"`
+	// RFC 3339 time the stored interests last changed.
+	UpdatedAt     string `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAttendeeInterestsResponse) Reset() {
+	*x = SetAttendeeInterestsResponse{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAttendeeInterestsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAttendeeInterestsResponse) ProtoMessage() {}
+
+func (x *SetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
+func (*SetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SetAttendeeInterestsResponse) GetAttendeeId() string {
+	if x != nil {
+		return x.AttendeeId
+	}
+	return ""
+}
+
+func (x *SetAttendeeInterestsResponse) GetInterests() []string {
+	if x != nil {
+		return x.Interests
+	}
+	return nil
+}
+
+func (x *SetAttendeeInterestsResponse) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
 var File_eventa_discovery_v1_discovery_proto protoreflect.FileDescriptor
 
 const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
@@ -341,7 +563,26 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2&.eventa.discovery.v1.EventSearchResultR\x06events\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\x05R\x06offsetB\xe9\x01\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\">\n" +
+	"\x1bGetAttendeeInterestsRequest\x12\x1f\n" +
+	"\vattendee_id\x18\x01 \x01(\tR\n" +
+	"attendeeId\"|\n" +
+	"\x1cGetAttendeeInterestsResponse\x12\x1f\n" +
+	"\vattendee_id\x18\x01 \x01(\tR\n" +
+	"attendeeId\x12\x1c\n" +
+	"\tinterests\x18\x02 \x03(\tR\tinterests\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x03 \x01(\tR\tupdatedAt\"\\\n" +
+	"\x1bSetAttendeeInterestsRequest\x12\x1f\n" +
+	"\vattendee_id\x18\x01 \x01(\tR\n" +
+	"attendeeId\x12\x1c\n" +
+	"\tinterests\x18\x02 \x03(\tR\tinterests\"|\n" +
+	"\x1cSetAttendeeInterestsResponse\x12\x1f\n" +
+	"\vattendee_id\x18\x01 \x01(\tR\n" +
+	"attendeeId\x12\x1c\n" +
+	"\tinterests\x18\x02 \x03(\tR\tinterests\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x03 \x01(\tR\tupdatedAtB\xe9\x01\n" +
 	"\x17com.eventa.discovery.v1B\x0eDiscoveryProtoP\x01ZPgithub.com/eventa/discovery-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
 
 var (
@@ -356,11 +597,15 @@ func file_eventa_discovery_v1_discovery_proto_rawDescGZIP() []byte {
 	return file_eventa_discovery_v1_discovery_proto_rawDescData
 }
 
-var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_eventa_discovery_v1_discovery_proto_goTypes = []any{
-	(*SearchEventsRequest)(nil),  // 0: eventa.discovery.v1.SearchEventsRequest
-	(*EventSearchResult)(nil),    // 1: eventa.discovery.v1.EventSearchResult
-	(*SearchEventsResponse)(nil), // 2: eventa.discovery.v1.SearchEventsResponse
+	(*SearchEventsRequest)(nil),          // 0: eventa.discovery.v1.SearchEventsRequest
+	(*EventSearchResult)(nil),            // 1: eventa.discovery.v1.EventSearchResult
+	(*SearchEventsResponse)(nil),         // 2: eventa.discovery.v1.SearchEventsResponse
+	(*GetAttendeeInterestsRequest)(nil),  // 3: eventa.discovery.v1.GetAttendeeInterestsRequest
+	(*GetAttendeeInterestsResponse)(nil), // 4: eventa.discovery.v1.GetAttendeeInterestsResponse
+	(*SetAttendeeInterestsRequest)(nil),  // 5: eventa.discovery.v1.SetAttendeeInterestsRequest
+	(*SetAttendeeInterestsResponse)(nil), // 6: eventa.discovery.v1.SetAttendeeInterestsResponse
 }
 var file_eventa_discovery_v1_discovery_proto_depIdxs = []int32{
 	1, // 0: eventa.discovery.v1.SearchEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
@@ -384,7 +629,7 @@ func file_eventa_discovery_v1_discovery_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventa_discovery_v1_discovery_proto_rawDesc), len(file_eventa_discovery_v1_discovery_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

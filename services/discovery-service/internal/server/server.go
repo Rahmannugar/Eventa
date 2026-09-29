@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	discoveryv1 "github.com/eventa/discovery-service/internal/gen/eventa/discovery/v1"
+	"github.com/eventa/discovery-service/internal/interests"
 	"github.com/eventa/discovery-service/internal/metrics"
 	"github.com/eventa/discovery-service/internal/search"
 	"github.com/eventa/discovery-service/internal/telemetry"
@@ -31,9 +32,10 @@ import (
 // falls back to a generated identifier.
 var requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
 
-// New binds the search handler to a listener on the configured port. The
-// caller serves and stops the server, so shutdown stays with the process.
-func New(handler *search.Handler, logger *slog.Logger, port int) (*grpc.Server, net.Listener, error) {
+// New binds the query and preference handlers to a listener on the configured
+// port. The caller serves and stops the server, so shutdown stays with the
+// process.
+func New(searchHandler *search.Handler, interestsHandler *interests.Handler, logger *slog.Logger, port int) (*grpc.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("listen on gRPC port: %w", err)
@@ -44,8 +46,31 @@ func New(handler *search.Handler, logger *slog.Logger, port int) (*grpc.Server, 
 		unaryObserve(logger),
 		unaryRecover(logger),
 	))
-	discoveryv1.RegisterDiscoveryServiceServer(instance, handler)
+	discoveryv1.RegisterDiscoveryServiceServer(instance, &service{
+		search:    searchHandler,
+		interests: interestsHandler,
+	})
 	return instance, listener, nil
+}
+
+// service routes each RPC to the handler that owns that capability, so search
+// and interests keep their own packages and tests behind one deployed API.
+type service struct {
+	discoveryv1.UnimplementedDiscoveryServiceServer
+	search    *search.Handler
+	interests *interests.Handler
+}
+
+func (s *service) SearchEvents(ctx context.Context, request *discoveryv1.SearchEventsRequest) (*discoveryv1.SearchEventsResponse, error) {
+	return s.search.SearchEvents(ctx, request)
+}
+
+func (s *service) GetAttendeeInterests(ctx context.Context, request *discoveryv1.GetAttendeeInterestsRequest) (*discoveryv1.GetAttendeeInterestsResponse, error) {
+	return s.interests.GetAttendeeInterests(ctx, request)
+}
+
+func (s *service) SetAttendeeInterests(ctx context.Context, request *discoveryv1.SetAttendeeInterestsRequest) (*discoveryv1.SetAttendeeInterestsResponse, error) {
+	return s.interests.SetAttendeeInterests(ctx, request)
 }
 
 // unaryTrace continues the caller's trace, starts the server span, and

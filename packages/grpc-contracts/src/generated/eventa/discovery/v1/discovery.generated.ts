@@ -43,4 +43,35 @@ export interface SearchEventsResponse {
   offset: number;
 }
 
+/**
+ * Attendee-owned interests. Discovery stores them against the attendee id it
+ * is given; Identity owns the account itself.
+ */
+export interface GetAttendeeInterestsRequest {
+  attendeeId: string;
+}
+
+export interface GetAttendeeInterestsResponse {
+  attendeeId: string;
+  interests: string[];
+  /** RFC 3339 time the stored interests last changed. */
+  updatedAt: string;
+}
+
+export interface SetAttendeeInterestsRequest {
+  attendeeId: string;
+  /**
+   * Free-text interests, for example "music". Discovery trims them and
+   * de-duplicates them case-insensitively before storing.
+   */
+  interests: string[];
+}
+
+export interface SetAttendeeInterestsResponse {
+  attendeeId: string;
+  interests: string[];
+  /** RFC 3339 time the stored interests last changed. */
+  updatedAt: string;
+}
+
 export const EVENTA_DISCOVERY_V1_PACKAGE_NAME = "eventa.discovery.v1";

@@ -15,6 +15,7 @@ import (
 	"github.com/eventa/discovery-service/internal/errtype"
 	"github.com/eventa/discovery-service/internal/health"
 	"github.com/eventa/discovery-service/internal/index"
+	"github.com/eventa/discovery-service/internal/interests"
 	"github.com/eventa/discovery-service/internal/logging"
 	"github.com/eventa/discovery-service/internal/lookup"
 	"github.com/eventa/discovery-service/internal/messaging/kafka"
@@ -121,7 +122,9 @@ func main() {
 	logger.InfoContext(ctx, "service_started", "health_port", cfg.HealthPort)
 
 	queryAPI, grpcListener, err := server.New(
-		search.NewHandler(search.NewRepository(pool), logger), logger, cfg.GRPCPort,
+		search.NewHandler(search.NewRepository(pool), logger),
+		interests.NewHandler(interests.NewRepository(pool), logger),
+		logger, cfg.GRPCPort,
 	)
 	if err != nil {
 		logger.Error("grpc_server_start_failed", "error_type", errtype.Of(err))

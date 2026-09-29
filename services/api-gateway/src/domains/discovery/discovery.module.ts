@@ -12,11 +12,18 @@ import {
   DISCOVERY_GRPC_CLIENT,
   DISCOVERY_GRPC_DEADLINE_MS,
 } from './constants/discovery.constants';
+import { DiscoveryInterestsController } from './controllers/discovery-interests.controller';
 import { DiscoverySearchController } from './controllers/discovery-search.controller';
+import {
+  InterestsRateLimitService,
+  InterestsReadRateLimitGuard,
+  InterestsWriteRateLimitGuard,
+} from './rate-limit/discovery-interests-rate-limit';
 import {
   EventSearchRateLimitGuard,
   EventSearchRateLimitService,
 } from './rate-limit/discovery-search-rate-limit';
+import { DiscoveryInterestsService } from './services/discovery-interests.service';
 import { DiscoverySearchService } from './services/discovery-search.service';
 
 interface DiscoveryModuleOptions {
@@ -49,7 +56,7 @@ export class DiscoveryModule {
           },
         ]),
       ],
-      controllers: [DiscoverySearchController],
+      controllers: [DiscoverySearchController, DiscoveryInterestsController],
       providers: [
         {
           provide: DISCOVERY_GRPC_DEADLINE_MS,
@@ -65,7 +72,16 @@ export class DiscoveryModule {
           inject: [RATE_LIMIT_STATE],
         },
         EventSearchRateLimitGuard,
+        {
+          provide: InterestsRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new InterestsRateLimitService(state, options.rateLimitKeySecret),
+          inject: [RATE_LIMIT_STATE],
+        },
+        InterestsReadRateLimitGuard,
+        InterestsWriteRateLimitGuard,
         DiscoverySearchService,
+        DiscoveryInterestsService,
       ],
     };
   }

@@ -30,3 +30,34 @@ Failures carry no dependency detail beyond what a client can act on.
 ### Abuse controls
 
 Search is an attendee read. It is limited by client IP burst and hourly budget and by a separate hourly budget per protected session, so one attendee cannot drain another's allowance. Exceeding a budget returns `429 EVENT_SEARCH_RATE_LIMITED`; an unavailable Discovery returns `503` rather than disclosing quota exhaustion.
+
+## Interests
+
+`GET /attendees/me/interests` and `PUT /attendees/me/interests` require an attendee session and act on the signed-in attendee only. The attendee id always comes from the session, never from the request.
+
+`PUT` takes a body of up to 50 interests, each 1 to 64 characters, and replaces the stored list rather than appending to it:
+
+```json
+{ "interests": ["music", "jazz", "workshops"] }
+```
+
+Both routes answer with the stored shape:
+
+```json
+{ "interests": ["music", "jazz"], "updatedAt": "2026-09-29T00:05:33Z" }
+```
+
+An attendee who has never saved interests reads an empty list with no `updatedAt`.
+
+### Errors
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `400` | `INTERESTS_INVALID` | The interest list was out of bounds or malformed for Discovery. |
+| `422` | `VALIDATION_FAILED` | The body itself is malformed: more than 50 entries, a non-string entry, or an empty or overlong interest. |
+| `429` | `INTERESTS_READ_RATE_LIMITED`, `INTERESTS_WRITE_RATE_LIMITED` | The attendee or client IP is over its budget. |
+| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned interests for a different attendee. |
+
+### Abuse controls
+
+Interest reads are limited by IP burst and hourly budgets, and interest writes by a separate, smaller budget because a write rewrites the stored record. Each route limits the client IP and the protected session independently, so one attendee cannot spend another's allowance.

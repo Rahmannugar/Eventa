@@ -24,20 +24,30 @@ var File_eventa_discovery_v1_discovery_service_proto protoreflect.FileDescriptor
 
 const file_eventa_discovery_v1_discovery_service_proto_rawDesc = "" +
 	"\n" +
-	"+eventa/discovery/v1/discovery_service.proto\x12\x13eventa.discovery.v1\x1a#eventa/discovery/v1/discovery.proto2w\n" +
+	"+eventa/discovery/v1/discovery_service.proto\x12\x13eventa.discovery.v1\x1a#eventa/discovery/v1/discovery.proto2\xf1\x02\n" +
 	"\x10DiscoveryService\x12c\n" +
-	"\fSearchEvents\x12(.eventa.discovery.v1.SearchEventsRequest\x1a).eventa.discovery.v1.SearchEventsResponseB\xf0\x01\n" +
+	"\fSearchEvents\x12(.eventa.discovery.v1.SearchEventsRequest\x1a).eventa.discovery.v1.SearchEventsResponse\x12{\n" +
+	"\x14GetAttendeeInterests\x120.eventa.discovery.v1.GetAttendeeInterestsRequest\x1a1.eventa.discovery.v1.GetAttendeeInterestsResponse\x12{\n" +
+	"\x14SetAttendeeInterests\x120.eventa.discovery.v1.SetAttendeeInterestsRequest\x1a1.eventa.discovery.v1.SetAttendeeInterestsResponseB\xf0\x01\n" +
 	"\x17com.eventa.discovery.v1B\x15DiscoveryServiceProtoP\x01ZPgithub.com/eventa/discovery-service/internal/gen/eventa/discovery/v1;discoveryv1\xa2\x02\x03EDX\xaa\x02\x13Eventa.Discovery.V1\xca\x02\x13Eventa\\Discovery\\V1\xe2\x02\x1fEventa\\Discovery\\V1\\GPBMetadata\xea\x02\x15Eventa::Discovery::V1b\x06proto3"
 
 var file_eventa_discovery_v1_discovery_service_proto_goTypes = []any{
-	(*SearchEventsRequest)(nil),  // 0: eventa.discovery.v1.SearchEventsRequest
-	(*SearchEventsResponse)(nil), // 1: eventa.discovery.v1.SearchEventsResponse
+	(*SearchEventsRequest)(nil),          // 0: eventa.discovery.v1.SearchEventsRequest
+	(*GetAttendeeInterestsRequest)(nil),  // 1: eventa.discovery.v1.GetAttendeeInterestsRequest
+	(*SetAttendeeInterestsRequest)(nil),  // 2: eventa.discovery.v1.SetAttendeeInterestsRequest
+	(*SearchEventsResponse)(nil),         // 3: eventa.discovery.v1.SearchEventsResponse
+	(*GetAttendeeInterestsResponse)(nil), // 4: eventa.discovery.v1.GetAttendeeInterestsResponse
+	(*SetAttendeeInterestsResponse)(nil), // 5: eventa.discovery.v1.SetAttendeeInterestsResponse
 }
 var file_eventa_discovery_v1_discovery_service_proto_depIdxs = []int32{
 	0, // 0: eventa.discovery.v1.DiscoveryService.SearchEvents:input_type -> eventa.discovery.v1.SearchEventsRequest
-	1, // 1: eventa.discovery.v1.DiscoveryService.SearchEvents:output_type -> eventa.discovery.v1.SearchEventsResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	1, // 1: eventa.discovery.v1.DiscoveryService.GetAttendeeInterests:input_type -> eventa.discovery.v1.GetAttendeeInterestsRequest
+	2, // 2: eventa.discovery.v1.DiscoveryService.SetAttendeeInterests:input_type -> eventa.discovery.v1.SetAttendeeInterestsRequest
+	3, // 3: eventa.discovery.v1.DiscoveryService.SearchEvents:output_type -> eventa.discovery.v1.SearchEventsResponse
+	4, // 4: eventa.discovery.v1.DiscoveryService.GetAttendeeInterests:output_type -> eventa.discovery.v1.GetAttendeeInterestsResponse
+	5, // 5: eventa.discovery.v1.DiscoveryService.SetAttendeeInterests:output_type -> eventa.discovery.v1.SetAttendeeInterestsResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

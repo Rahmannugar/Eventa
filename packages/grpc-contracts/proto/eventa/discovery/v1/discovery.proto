@@ -34,3 +34,30 @@ message SearchEventsResponse {
   int32 limit = 3;
   int32 offset = 4;
 }
+
+// Attendee-owned interests. Discovery stores them against the attendee id it
+// is given; Identity owns the account itself.
+message GetAttendeeInterestsRequest {
+  string attendee_id = 1;
+}
+
+message GetAttendeeInterestsResponse {
+  string attendee_id = 1;
+  repeated string interests = 2;
+  // RFC 3339 time the stored interests last changed.
+  string updated_at = 3;
+}
+
+message SetAttendeeInterestsRequest {
+  string attendee_id = 1;
+  // Free-text interests, for example "music". Discovery trims them and
+  // de-duplicates them case-insensitively before storing.
+  repeated string interests = 2;
+}
+
+message SetAttendeeInterestsResponse {
+  string attendee_id = 1;
+  repeated string interests = 2;
+  // RFC 3339 time the stored interests last changed.
+  string updated_at = 3;
+}

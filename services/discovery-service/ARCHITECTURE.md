@@ -12,6 +12,7 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 - `internal/index` — the lifecycle fact contract, the ingest transaction, the inbox claim, the index write, and the Kafka handler.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
 - `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
+- `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
 - `internal/semantic` — the derived semantic index: the capability port, the durable state rows, the one convergence path, and the reconciliation pass.
 - `internal/semantic/ahnlich` — the Ahnlich AI adapter: connection, deadlines, model registry, and every vendor type.
 - `internal/server` — the gRPC listener and its interceptors: trace continuation, request metrics and log line, and panic containment.
@@ -64,9 +65,15 @@ Metrics stay bounded: `eventa.semantic.operation.count` counts attempts by outco
 
 Readiness does not cover Ahnlich. An unreachable store makes indexing fail loudly and the gauge rise while the instance stays ready, because the structured query it also serves reads only PostgreSQL.
 
+## Attendee interests
+
+Interests belong to Discovery, not to Identity: registration stays an Identity transaction, and an attendee manages their interests afterwards. The attendee id arrives from the Gateway's authenticated session and Discovery stores the list against it without ever resolving an account.
+
+A save replaces the whole list in one statement after the request is bounded and normalised, so a repeated submission cannot append to itself. The list is derived from what the attendee typed and can be rebuilt the same way; the vector representation that recommendations use is built from this record, and losing the vector store never loses the interests themselves.
+
 ## Data ownership
 
-The service owns `discovery_event_inbox`, `discovery_event_index`, and `discovery_semantic_index` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql` and `0002_create_discovery_semantic_index.sql` create them.
+The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, and `discovery_attendee_interests` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, and `0003_create_discovery_attendee_interests.sql` create them.
 
 Durable invariants:
 
@@ -76,6 +83,7 @@ Durable invariants:
 - `version` and the content columns are nullable: a tombstone for an event never indexed carries no version, and a publication Event no longer serves carries no content.
 - `discovery_semantic_index` is primary-keyed on `event_id`, so one event records exactly one store state.
 - `discovery_semantic_index.status` is constrained to `pending_index`, `indexed`, `pending_removal`, or `removed`, and an indexed row must carry the content hash it was pushed with.
+- `discovery_attendee_interests` is primary-keyed on `attendee_id`, so one attendee has exactly one stored list, and it is constrained to at most 50 interests.
 - The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale, available, or near the attendee; those come from Event Service.
 
 ## Dependencies

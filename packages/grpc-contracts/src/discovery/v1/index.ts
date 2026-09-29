@@ -7,7 +7,11 @@ export {
 } from '../../generated/eventa/discovery/v1/discovery_service.generated';
 export {
   type EventSearchResult,
+  type GetAttendeeInterestsRequest,
+  type GetAttendeeInterestsResponse,
   type SearchEventsRequest,
   type SearchEventsResponse,
+  type SetAttendeeInterestsRequest,
+  type SetAttendeeInterestsResponse,
 } from '../../generated/eventa/discovery/v1/discovery.generated';
 export * from './proto-paths';

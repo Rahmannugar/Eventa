@@ -19,7 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DiscoveryService_SearchEvents_FullMethodName = "/eventa.discovery.v1.DiscoveryService/SearchEvents"
+	DiscoveryService_SearchEvents_FullMethodName         = "/eventa.discovery.v1.DiscoveryService/SearchEvents"
+	DiscoveryService_GetAttendeeInterests_FullMethodName = "/eventa.discovery.v1.DiscoveryService/GetAttendeeInterests"
+	DiscoveryService_SetAttendeeInterests_FullMethodName = "/eventa.discovery.v1.DiscoveryService/SetAttendeeInterests"
 )
 
 // DiscoveryServiceClient is the client API for DiscoveryService service.
@@ -27,6 +29,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DiscoveryServiceClient interface {
 	SearchEvents(ctx context.Context, in *SearchEventsRequest, opts ...grpc.CallOption) (*SearchEventsResponse, error)
+	GetAttendeeInterests(ctx context.Context, in *GetAttendeeInterestsRequest, opts ...grpc.CallOption) (*GetAttendeeInterestsResponse, error)
+	SetAttendeeInterests(ctx context.Context, in *SetAttendeeInterestsRequest, opts ...grpc.CallOption) (*SetAttendeeInterestsResponse, error)
 }
 
 type discoveryServiceClient struct {
@@ -47,11 +51,33 @@ func (c *discoveryServiceClient) SearchEvents(ctx context.Context, in *SearchEve
 	return out, nil
 }
 
+func (c *discoveryServiceClient) GetAttendeeInterests(ctx context.Context, in *GetAttendeeInterestsRequest, opts ...grpc.CallOption) (*GetAttendeeInterestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAttendeeInterestsResponse)
+	err := c.cc.Invoke(ctx, DiscoveryService_GetAttendeeInterests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *discoveryServiceClient) SetAttendeeInterests(ctx context.Context, in *SetAttendeeInterestsRequest, opts ...grpc.CallOption) (*SetAttendeeInterestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetAttendeeInterestsResponse)
+	err := c.cc.Invoke(ctx, DiscoveryService_SetAttendeeInterests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DiscoveryServiceServer is the server API for DiscoveryService service.
 // All implementations must embed UnimplementedDiscoveryServiceServer
 // for forward compatibility.
 type DiscoveryServiceServer interface {
 	SearchEvents(context.Context, *SearchEventsRequest) (*SearchEventsResponse, error)
+	GetAttendeeInterests(context.Context, *GetAttendeeInterestsRequest) (*GetAttendeeInterestsResponse, error)
+	SetAttendeeInterests(context.Context, *SetAttendeeInterestsRequest) (*SetAttendeeInterestsResponse, error)
 	mustEmbedUnimplementedDiscoveryServiceServer()
 }
 
@@ -64,6 +90,12 @@ type UnimplementedDiscoveryServiceServer struct{}
 
 func (UnimplementedDiscoveryServiceServer) SearchEvents(context.Context, *SearchEventsRequest) (*SearchEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SearchEvents not implemented")
+}
+func (UnimplementedDiscoveryServiceServer) GetAttendeeInterests(context.Context, *GetAttendeeInterestsRequest) (*GetAttendeeInterestsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAttendeeInterests not implemented")
+}
+func (UnimplementedDiscoveryServiceServer) SetAttendeeInterests(context.Context, *SetAttendeeInterestsRequest) (*SetAttendeeInterestsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetAttendeeInterests not implemented")
 }
 func (UnimplementedDiscoveryServiceServer) mustEmbedUnimplementedDiscoveryServiceServer() {}
 func (UnimplementedDiscoveryServiceServer) testEmbeddedByValue()                          {}
@@ -104,6 +136,42 @@ func _DiscoveryService_SearchEvents_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DiscoveryService_GetAttendeeInterests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAttendeeInterestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiscoveryServiceServer).GetAttendeeInterests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiscoveryService_GetAttendeeInterests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiscoveryServiceServer).GetAttendeeInterests(ctx, req.(*GetAttendeeInterestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DiscoveryService_SetAttendeeInterests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAttendeeInterestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiscoveryServiceServer).SetAttendeeInterests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiscoveryService_SetAttendeeInterests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiscoveryServiceServer).SetAttendeeInterests(ctx, req.(*SetAttendeeInterestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DiscoveryService_ServiceDesc is the grpc.ServiceDesc for DiscoveryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +182,14 @@ var DiscoveryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchEvents",
 			Handler:    _DiscoveryService_SearchEvents_Handler,
+		},
+		{
+			MethodName: "GetAttendeeInterests",
+			Handler:    _DiscoveryService_GetAttendeeInterests_Handler,
+		},
+		{
+			MethodName: "SetAttendeeInterests",
+			Handler:    _DiscoveryService_SetAttendeeInterests_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

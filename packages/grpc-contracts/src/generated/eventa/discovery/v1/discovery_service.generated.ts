@@ -8,7 +8,14 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
-import { SearchEventsRequest, SearchEventsResponse } from "./discovery.generated";
+import {
+  GetAttendeeInterestsRequest,
+  GetAttendeeInterestsResponse,
+  SearchEventsRequest,
+  SearchEventsResponse,
+  SetAttendeeInterestsRequest,
+  SetAttendeeInterestsResponse,
+} from "./discovery.generated";
 
 export const protobufPackage = "eventa.discovery.v1";
 
@@ -16,15 +23,35 @@ export const EVENTA_DISCOVERY_V1_PACKAGE_NAME = "eventa.discovery.v1";
 
 export interface DiscoveryServiceClient {
   searchEvents(request: SearchEventsRequest, metadata?: Metadata): Observable<SearchEventsResponse>;
+
+  getAttendeeInterests(
+    request: GetAttendeeInterestsRequest,
+    metadata?: Metadata,
+  ): Observable<GetAttendeeInterestsResponse>;
+
+  setAttendeeInterests(
+    request: SetAttendeeInterestsRequest,
+    metadata?: Metadata,
+  ): Observable<SetAttendeeInterestsResponse>;
 }
 
 export interface DiscoveryServiceController {
   searchEvents(request: SearchEventsRequest, metadata?: Metadata): Observable<SearchEventsResponse>;
+
+  getAttendeeInterests(
+    request: GetAttendeeInterestsRequest,
+    metadata?: Metadata,
+  ): Observable<GetAttendeeInterestsResponse>;
+
+  setAttendeeInterests(
+    request: SetAttendeeInterestsRequest,
+    metadata?: Metadata,
+  ): Observable<SetAttendeeInterestsResponse>;
 }
 
 export function DiscoveryServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["searchEvents"];
+    const grpcMethods: string[] = ["searchEvents", "getAttendeeInterests", "setAttendeeInterests"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("DiscoveryService", method)(constructor.prototype[method], method, descriptor);
