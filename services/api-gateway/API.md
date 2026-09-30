@@ -10,7 +10,7 @@
 | Commerce  | `/checkout*` HTTP endpoints        | [Commerce API](src/domains/commerce/API.md)   |
 | Tickets   | `/tickets` HTTP endpoint           | Attendee ticket retrieval                     |
 | Admin tickets | `/admin/events/:eventId/check-ins` HTTP endpoint | Scan and check in an issued ticket |
-| Discovery | `/search/events` HTTP endpoint     | [Discovery API](src/domains/discovery/API.md) |
+| Discovery | `/search/events`, interests, recommendations, and `/events/:eventId/similar` HTTP endpoints | [Discovery API](src/domains/discovery/API.md) |
 
 The generated OpenAPI document is authoritative for exact public HTTP schemas. Domain API files explain behavior, errors, and transport policy without duplicating that contract.
 

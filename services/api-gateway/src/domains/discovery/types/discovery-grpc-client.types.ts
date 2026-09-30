@@ -9,6 +9,8 @@ import type {
   SearchEventsResponse,
   SetAttendeeInterestsRequest,
   SetAttendeeInterestsResponse,
+  SimilarEventsRequest,
+  SimilarEventsResponse,
 } from '@eventa/grpc-contracts';
 
 export interface DeadlineAwareDiscoveryClient {
@@ -35,4 +37,10 @@ export interface DeadlineAwareDiscoveryClient {
     metadata: Metadata,
     options: CallOptions,
   ): Observable<RecommendEventsResponse>;
+
+  similarEvents(
+    request: SimilarEventsRequest,
+    metadata: Metadata,
+    options: CallOptions,
+  ): Observable<SimilarEventsResponse>;
 }

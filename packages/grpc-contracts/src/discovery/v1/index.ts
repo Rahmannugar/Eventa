@@ -15,5 +15,7 @@ export {
   type SearchEventsResponse,
   type SetAttendeeInterestsRequest,
   type SetAttendeeInterestsResponse,
+  type SimilarEventsRequest,
+  type SimilarEventsResponse,
 } from '../../generated/eventa/discovery/v1/discovery.generated';
 export * from './proto-paths';

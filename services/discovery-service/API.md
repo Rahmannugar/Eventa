@@ -97,4 +97,4 @@ Status codes: `INVALID_ARGUMENT` for a bad event id or an out-of-range limit, `N
 
 ## Not exposed
 
-There is no public business endpoint on this service. Attendees reach search through `GET /search/events`, their interests through `GET` and `PUT /attendees/me/interests`, and their recommendations through `GET /attendees/me/recommendations` on the API Gateway.
+There is no public business endpoint on this service. Attendees reach search through `GET /search/events`, their interests through `GET` and `PUT /attendees/me/interests`, and their recommendations through `GET /attendees/me/recommendations` on the API Gateway; events similar to one event come from `GET /events/:eventId/similar`.

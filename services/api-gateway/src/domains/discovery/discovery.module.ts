@@ -15,6 +15,7 @@ import {
 import { DiscoveryInterestsController } from './controllers/discovery-interests.controller';
 import { DiscoveryRecommendationsController } from './controllers/discovery-recommendations.controller';
 import { DiscoverySearchController } from './controllers/discovery-search.controller';
+import { DiscoverySimilarEventsController } from './controllers/discovery-similar-events.controller';
 import {
   InterestsRateLimitService,
   InterestsReadRateLimitGuard,
@@ -25,12 +26,17 @@ import {
   RecommendationsRateLimitService,
 } from './rate-limit/discovery-recommendations-rate-limit';
 import {
+  SimilarEventsRateLimitGuard,
+  SimilarEventsRateLimitService,
+} from './rate-limit/discovery-similar-events-rate-limit';
+import {
   EventSearchRateLimitGuard,
   EventSearchRateLimitService,
 } from './rate-limit/discovery-search-rate-limit';
 import { DiscoveryInterestsService } from './services/discovery-interests.service';
 import { DiscoveryRecommendationsService } from './services/discovery-recommendations.service';
 import { DiscoverySearchService } from './services/discovery-search.service';
+import { DiscoverySimilarEventsService } from './services/discovery-similar.service';
 
 interface DiscoveryModuleOptions {
   attendeesModule: DynamicModule;
@@ -66,6 +72,7 @@ export class DiscoveryModule {
         DiscoverySearchController,
         DiscoveryInterestsController,
         DiscoveryRecommendationsController,
+        DiscoverySimilarEventsController,
       ],
       providers: [
         {
@@ -97,9 +104,17 @@ export class DiscoveryModule {
           inject: [RATE_LIMIT_STATE],
         },
         RecommendationsRateLimitGuard,
+        {
+          provide: SimilarEventsRateLimitService,
+          useFactory: (state: RateLimitState) =>
+            new SimilarEventsRateLimitService(state, options.rateLimitKeySecret),
+          inject: [RATE_LIMIT_STATE],
+        },
+        SimilarEventsRateLimitGuard,
         DiscoverySearchService,
         DiscoveryInterestsService,
         DiscoveryRecommendationsService,
+        DiscoverySimilarEventsService,
       ],
     };
   }

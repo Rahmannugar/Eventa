@@ -87,3 +87,30 @@ Failures carry no dependency detail beyond what a client can act on.
 ### Abuse controls
 
 A recommendation costs an embed, a similarity search, and a resolution call, so it is metered more tightly than a search: an IP burst budget plus hourly budgets for the client IP and the protected session, each independent, so one attendee cannot drain another's allowance. Exceeding a budget returns `429`; an unavailable Discovery returns `503` rather than disclosing quota exhaustion.
+
+## Similar events
+
+`GET /events/:eventId/similar` is public, like the event detail it sits beside, and returns events similar to the named one. The path id must be a UUID.
+
+| Parameter | Meaning |
+| --- | --- |
+| `limit` | Page size, 1 to 20. Defaults to 10. |
+
+Each result carries the same fields as a search result, ordered best match first. The event asked about is never returned with itself, and only events Event Service still serves appear.
+
+### Errors
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `400` | `SIMILAR_EVENTS_INVALID` | Discovery could not understand the request. |
+| `404` | `EVENT_NOT_FOUND` | Discovery holds no published event with that id. |
+| `422` | `VALIDATION_FAILED` | The request itself is malformed: a path id that is not a UUID, an unknown parameter, or a `limit` outside 1 to 20. |
+| `429` | `SIMILAR_EVENTS_RATE_LIMITED` | The client IP or the attendee session is over its budget. |
+| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned an answer for a different event. |
+| `503` | `DISCOVERY_SIMILAR_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
+
+Failures carry no dependency detail beyond what a client can act on.
+
+### Abuse controls
+
+A similar-events answer costs an embed, a similarity search, and a resolution call, so it is metered like a recommendation: an IP burst budget plus hourly budgets for the client IP and for the attendee session when one is present, each independent. Exceeding a budget returns `429`; an unavailable Discovery returns `503` rather than disclosing quota exhaustion.
