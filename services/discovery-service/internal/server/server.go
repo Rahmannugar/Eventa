@@ -190,8 +190,10 @@ func httpStatusFor(code codes.Code) int {
 	switch code {
 	case codes.OK:
 		return 200
-	case codes.InvalidArgument, codes.NotFound, codes.AlreadyExists, codes.Aborted, codes.OutOfRange:
+	case codes.InvalidArgument, codes.AlreadyExists, codes.Aborted, codes.OutOfRange:
 		return 400
+	case codes.NotFound:
+		return 404
 	case codes.Unauthenticated:
 		return 401
 	case codes.PermissionDenied:
