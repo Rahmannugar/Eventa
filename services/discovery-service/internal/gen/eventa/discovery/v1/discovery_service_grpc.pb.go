@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	DiscoveryService_SearchEvents_FullMethodName         = "/eventa.discovery.v1.DiscoveryService/SearchEvents"
 	DiscoveryService_RecommendEvents_FullMethodName      = "/eventa.discovery.v1.DiscoveryService/RecommendEvents"
+	DiscoveryService_SimilarEvents_FullMethodName        = "/eventa.discovery.v1.DiscoveryService/SimilarEvents"
 	DiscoveryService_GetAttendeeInterests_FullMethodName = "/eventa.discovery.v1.DiscoveryService/GetAttendeeInterests"
 	DiscoveryService_SetAttendeeInterests_FullMethodName = "/eventa.discovery.v1.DiscoveryService/SetAttendeeInterests"
 )
@@ -31,6 +32,7 @@ const (
 type DiscoveryServiceClient interface {
 	SearchEvents(ctx context.Context, in *SearchEventsRequest, opts ...grpc.CallOption) (*SearchEventsResponse, error)
 	RecommendEvents(ctx context.Context, in *RecommendEventsRequest, opts ...grpc.CallOption) (*RecommendEventsResponse, error)
+	SimilarEvents(ctx context.Context, in *SimilarEventsRequest, opts ...grpc.CallOption) (*SimilarEventsResponse, error)
 	GetAttendeeInterests(ctx context.Context, in *GetAttendeeInterestsRequest, opts ...grpc.CallOption) (*GetAttendeeInterestsResponse, error)
 	SetAttendeeInterests(ctx context.Context, in *SetAttendeeInterestsRequest, opts ...grpc.CallOption) (*SetAttendeeInterestsResponse, error)
 }
@@ -63,6 +65,16 @@ func (c *discoveryServiceClient) RecommendEvents(ctx context.Context, in *Recomm
 	return out, nil
 }
 
+func (c *discoveryServiceClient) SimilarEvents(ctx context.Context, in *SimilarEventsRequest, opts ...grpc.CallOption) (*SimilarEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SimilarEventsResponse)
+	err := c.cc.Invoke(ctx, DiscoveryService_SimilarEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *discoveryServiceClient) GetAttendeeInterests(ctx context.Context, in *GetAttendeeInterestsRequest, opts ...grpc.CallOption) (*GetAttendeeInterestsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAttendeeInterestsResponse)
@@ -89,6 +101,7 @@ func (c *discoveryServiceClient) SetAttendeeInterests(ctx context.Context, in *S
 type DiscoveryServiceServer interface {
 	SearchEvents(context.Context, *SearchEventsRequest) (*SearchEventsResponse, error)
 	RecommendEvents(context.Context, *RecommendEventsRequest) (*RecommendEventsResponse, error)
+	SimilarEvents(context.Context, *SimilarEventsRequest) (*SimilarEventsResponse, error)
 	GetAttendeeInterests(context.Context, *GetAttendeeInterestsRequest) (*GetAttendeeInterestsResponse, error)
 	SetAttendeeInterests(context.Context, *SetAttendeeInterestsRequest) (*SetAttendeeInterestsResponse, error)
 	mustEmbedUnimplementedDiscoveryServiceServer()
@@ -106,6 +119,9 @@ func (UnimplementedDiscoveryServiceServer) SearchEvents(context.Context, *Search
 }
 func (UnimplementedDiscoveryServiceServer) RecommendEvents(context.Context, *RecommendEventsRequest) (*RecommendEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecommendEvents not implemented")
+}
+func (UnimplementedDiscoveryServiceServer) SimilarEvents(context.Context, *SimilarEventsRequest) (*SimilarEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SimilarEvents not implemented")
 }
 func (UnimplementedDiscoveryServiceServer) GetAttendeeInterests(context.Context, *GetAttendeeInterestsRequest) (*GetAttendeeInterestsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAttendeeInterests not implemented")
@@ -170,6 +186,24 @@ func _DiscoveryService_RecommendEvents_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DiscoveryService_SimilarEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimilarEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiscoveryServiceServer).SimilarEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiscoveryService_SimilarEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiscoveryServiceServer).SimilarEvents(ctx, req.(*SimilarEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DiscoveryService_GetAttendeeInterests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetAttendeeInterestsRequest)
 	if err := dec(in); err != nil {
@@ -220,6 +254,10 @@ var DiscoveryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RecommendEvents",
 			Handler:    _DiscoveryService_RecommendEvents_Handler,
+		},
+		{
+			MethodName: "SimilarEvents",
+			Handler:    _DiscoveryService_SimilarEvents_Handler,
 		},
 		{
 			MethodName: "GetAttendeeInterests",

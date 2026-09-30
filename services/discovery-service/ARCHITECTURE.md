@@ -80,6 +80,12 @@ Ranking is Discovery's; authority is Event Service's. The candidate ids go to `l
 
 No preference vector is stored. Ahnlich embeds the interests at query time, so there is no derived attendee state to reconcile: losing the store costs one search, never the interests themselves.
 
+## Similar events
+
+`DiscoveryService.SimilarEvents` answers that question for one event instead of one attendee. It reads the source event from `discovery_event_index` and renders it through the same `semantic.BuildText` the indexer used, so the query embeds in the same vector space as the entry the store already holds; an event Discovery does not hold as published with content is reported as not found rather than guessed at. Candidates are deduplicated, the source event is removed, and the survivors go to `lookup.ListRecommendableEvents`, so the answer keeps the store's order without the source itself and without anything Event Service no longer serves.
+
+The page bounds, candidate handling, response shape, and Event Service failure translation live in `internal/ranking` and are shared with recommendations, so the two similarity APIs cannot drift apart.
+
 ## Data ownership
 
 The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, and `discovery_attendee_interests` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, and `0003_create_discovery_attendee_interests.sql` create them.

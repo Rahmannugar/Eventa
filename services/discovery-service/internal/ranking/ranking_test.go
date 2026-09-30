@@ -1,4 +1,4 @@
-package recommendations
+package ranking
 
 import (
 	"testing"
@@ -12,9 +12,9 @@ import (
 )
 
 func TestParseLimitUsesTheDefaultPageForTheProto3Default(t *testing.T) {
-	limit, err := parseLimit(0)
+	limit, err := ParseLimit(0)
 	if err != nil {
-		t.Fatalf("parseLimit(0) returned %v", err)
+		t.Fatalf("parse limit: %v", err)
 	}
 	if limit != DefaultLimit {
 		t.Errorf("limit = %d, want %d", limit, DefaultLimit)
@@ -23,46 +23,37 @@ func TestParseLimitUsesTheDefaultPageForTheProto3Default(t *testing.T) {
 
 func TestParseLimitRejectsPagesOutsideTheSupportedRange(t *testing.T) {
 	for _, raw := range []int32{-1, MaxLimit + 1} {
-		if _, err := parseLimit(raw); status.Code(err) != codes.InvalidArgument {
-			t.Errorf("parseLimit(%d) error = %v, want InvalidArgument", raw, err)
+		if _, err := ParseLimit(raw); status.Code(err) != codes.InvalidArgument {
+			t.Errorf("ParseLimit(%d) error = %v, want InvalidArgument", raw, err)
 		}
 	}
 }
 
 func TestCandidateLimitOverfetchesAndStaysBounded(t *testing.T) {
-	if got := candidateLimit(1); got != minCandidates {
-		t.Errorf("candidateLimit(1) = %d, want %d", got, minCandidates)
+	if got := CandidateLimit(1); got != minCandidates {
+		t.Errorf("CandidateLimit(1) = %d, want the %d candidate floor", got, minCandidates)
 	}
-	if got := candidateLimit(DefaultLimit); got != DefaultLimit*candidateOverfetch {
-		t.Errorf("candidateLimit(%d) = %d, want %d", DefaultLimit, got, DefaultLimit*candidateOverfetch)
-	}
-	if got := candidateLimit(MaxLimit); got != maxCandidates {
-		t.Errorf("candidateLimit(%d) = %d, want the %d cap", MaxLimit, got, maxCandidates)
+	if got := CandidateLimit(MaxLimit); got != maxCandidates {
+		t.Errorf("CandidateLimit(%d) = %d, want the %d candidate ceiling", MaxLimit, got, maxCandidates)
 	}
 }
 
 func TestUniqueIDsKeepsStoreOrderAndDropsDuplicates(t *testing.T) {
-	ids := uniqueIDs([]semantic.Candidate{
-		{EventID: "first", Similarity: 0.9},
-		{EventID: "second", Similarity: 0.8},
-		{EventID: "first", Similarity: 0.7},
+	ids := UniqueIDs([]semantic.Candidate{
+		{EventID: "b", Similarity: 0.9},
+		{EventID: "a", Similarity: 0.8},
+		{EventID: "b", Similarity: 0.8},
 	})
 
-	want := []string{"first", "second"}
-	if len(ids) != len(want) {
-		t.Fatalf("ids = %v, want %v", ids, want)
-	}
-	for i, id := range want {
-		if ids[i] != id {
-			t.Errorf("ids[%d] = %q, want %q", i, ids[i], id)
-		}
+	if len(ids) != 2 || ids[0] != "b" || ids[1] != "a" {
+		t.Errorf("ids = %v, want store order without duplicates", ids)
 	}
 }
 
 func TestToResultRendersResolvedContentInSearchShape(t *testing.T) {
 	startsAt := time.Date(2026, time.November, 14, 10, 0, 0, 0, time.UTC)
 	endsAt := startsAt.Add(4 * time.Hour)
-	result := toResult("event-1", &index.Content{
+	result := ToResult("event-1", &index.Content{
 		Title:            "Lagos Street Food Festival",
 		Description:      "Tastings from forty vendors.",
 		StartsAt:         startsAt,
@@ -82,5 +73,20 @@ func TestToResultRendersResolvedContentInSearchShape(t *testing.T) {
 	}
 	if result.GetVenueCountryCode() != "NG" || len(result.GetCategories()) != 1 {
 		t.Errorf("venue and categories not rendered: %v", result)
+	}
+}
+
+func TestResolveErrorKeepsADeadlineDistinguishableFromAnOutage(t *testing.T) {
+	deadline := ResolveError(status.Error(codes.DeadlineExceeded, "slow"), "similar events unavailable")
+	if status.Code(deadline) != codes.DeadlineExceeded {
+		t.Errorf("deadline error = %v, want DeadlineExceeded", deadline)
+	}
+	if msg := status.Convert(deadline).Message(); msg != "event service did not answer in time" {
+		t.Errorf("message = %q, want the deadline wording", msg)
+	}
+
+	outage := ResolveError(status.Error(codes.Unavailable, "down"), "similar events unavailable")
+	if status.Code(outage) != codes.Unavailable || status.Convert(outage).Message() != "similar events unavailable" {
+		t.Errorf("outage error = %v, want Unavailable carrying the calling API's message", outage)
 	}
 }

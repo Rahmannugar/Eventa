@@ -25,6 +25,7 @@ import (
 	"github.com/eventa/discovery-service/internal/semantic"
 	"github.com/eventa/discovery-service/internal/semantic/ahnlich"
 	"github.com/eventa/discovery-service/internal/server"
+	"github.com/eventa/discovery-service/internal/similar"
 	"github.com/eventa/discovery-service/internal/telemetry"
 	"google.golang.org/grpc"
 )
@@ -127,6 +128,7 @@ func main() {
 		search.NewHandler(search.NewRepository(pool), logger),
 		interests.NewHandler(interestsRepository, logger),
 		recommendations.NewHandler(interestsRepository, semanticStore, events, logger),
+		similar.NewHandler(semanticRepository, semanticStore, events, logger),
 		logger, cfg.GRPCPort,
 	)
 	if err != nil {

@@ -48,6 +48,20 @@ message RecommendEventsResponse {
   repeated EventSearchResult events = 2;
 }
 
+// Ranked events for one event: Discovery embeds the source event's own text
+// and asks the store for its nearest published neighbours. The source event
+// is never returned with itself, and Event Service resolves every neighbour,
+// so a cancelled, started, or sold-out event is never returned.
+message SimilarEventsRequest {
+  string event_id = 1;
+  int32 limit = 2;
+}
+
+message SimilarEventsResponse {
+  string event_id = 1;
+  repeated EventSearchResult events = 2;
+}
+
 // Attendee-owned interests. Discovery stores them against the attendee id it
 // is given; Identity owns the account itself.
 message GetAttendeeInterestsRequest {

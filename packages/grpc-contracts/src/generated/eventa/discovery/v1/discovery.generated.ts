@@ -59,6 +59,22 @@ export interface RecommendEventsResponse {
 }
 
 /**
+ * Ranked events for one event: Discovery embeds the source event's own text
+ * and asks the store for its nearest published neighbours. The source event
+ * is never returned with itself, and Event Service resolves every neighbour,
+ * so a cancelled, started, or sold-out event is never returned.
+ */
+export interface SimilarEventsRequest {
+  eventId: string;
+  limit: number;
+}
+
+export interface SimilarEventsResponse {
+  eventId: string;
+  events: EventSearchResult[];
+}
+
+/**
  * Attendee-owned interests. Discovery stores them against the attendee id it
  * is given; Identity owns the account itself.
  */

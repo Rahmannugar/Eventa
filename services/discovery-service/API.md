@@ -1,6 +1,6 @@
 # API
 
-Discovery Service exposes operational HTTP health checks and three internal gRPC capabilities: event search, attendee interests, and recommendations. Business work enters as messages; search, interest, and recommendation requests arrive from the API Gateway.
+Discovery Service exposes operational HTTP health checks and four internal gRPC capabilities: event search, attendee interests, recommendations, and events similar to a named event. Business work enters as messages; these requests arrive from the API Gateway.
 
 ## Endpoints
 
@@ -82,6 +82,18 @@ Response: the same `attendee_id` and the matching `events` in `EventSearchResult
 Discovery reads the stored interests, renders them into query text, and asks the semantic store for a bounded multiple of the requested page. The store supplies the ranking; Event Service then decides which of those candidates it still serves, so a cancelled, retired, already-started, sold-out, or out-of-sale event never appears. Candidates Event Service drops are simply absent from the answer, and the remainder keeps the store's order.
 
 Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-range limit, `UNAVAILABLE` when the semantic store does not answer, `DEADLINE_EXCEEDED` when Event Service does not answer in time, and `INTERNAL` for a database failure. Interest text is never logged; the log line carries counts.
+
+## `DiscoveryService.SimilarEvents`
+
+Ranks published events like one named event.
+
+Request: `event_id`, a UUID, and `limit`, the page size. `0` means 10 and values above 20 are rejected.
+
+Response: the same `event_id` and the matching `events` in `EventSearchResult` shape, best match first.
+
+Discovery reads its own projection of the source event and renders the same text the indexer stored, so the query is embedded in the same vector space as the event's own entry. The source event is removed from the candidates before anything else happens, so an event never appears in the answer to its own question. Event Service then decides which of the remaining candidates it still serves, on the same authority recommendations use, so a cancelled, retired, already-started, or sold-out event never appears.
+
+Status codes: `INVALID_ARGUMENT` for a bad event id or an out-of-range limit, `NOT_FOUND` when Discovery holds no published event with that id, `UNAVAILABLE` when the semantic store does not answer, `DEADLINE_EXCEEDED` when Event Service does not answer in time, and `INTERNAL` for a database failure. The log line carries counts only.
 
 ## Not exposed
 

@@ -400,6 +400,114 @@ func (x *RecommendEventsResponse) GetEvents() []*EventSearchResult {
 	return nil
 }
 
+// Ranked events for one event: Discovery embeds the source event's own text
+// and asks the store for its nearest published neighbours. The source event
+// is never returned with itself, and Event Service resolves every neighbour,
+// so a cancelled, started, or sold-out event is never returned.
+type SimilarEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimilarEventsRequest) Reset() {
+	*x = SimilarEventsRequest{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimilarEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimilarEventsRequest) ProtoMessage() {}
+
+func (x *SimilarEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimilarEventsRequest.ProtoReflect.Descriptor instead.
+func (*SimilarEventsRequest) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SimilarEventsRequest) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *SimilarEventsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type SimilarEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Events        []*EventSearchResult   `protobuf:"bytes,2,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimilarEventsResponse) Reset() {
+	*x = SimilarEventsResponse{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimilarEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimilarEventsResponse) ProtoMessage() {}
+
+func (x *SimilarEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimilarEventsResponse.ProtoReflect.Descriptor instead.
+func (*SimilarEventsResponse) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SimilarEventsResponse) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *SimilarEventsResponse) GetEvents() []*EventSearchResult {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
 // Attendee-owned interests. Discovery stores them against the attendee id it
 // is given; Identity owns the account itself.
 type GetAttendeeInterestsRequest struct {
@@ -411,7 +519,7 @@ type GetAttendeeInterestsRequest struct {
 
 func (x *GetAttendeeInterestsRequest) Reset() {
 	*x = GetAttendeeInterestsRequest{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +531,7 @@ func (x *GetAttendeeInterestsRequest) String() string {
 func (*GetAttendeeInterestsRequest) ProtoMessage() {}
 
 func (x *GetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +544,7 @@ func (x *GetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
 func (*GetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{5}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetAttendeeInterestsRequest) GetAttendeeId() string {
@@ -458,7 +566,7 @@ type GetAttendeeInterestsResponse struct {
 
 func (x *GetAttendeeInterestsResponse) Reset() {
 	*x = GetAttendeeInterestsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +578,7 @@ func (x *GetAttendeeInterestsResponse) String() string {
 func (*GetAttendeeInterestsResponse) ProtoMessage() {}
 
 func (x *GetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,7 +591,7 @@ func (x *GetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
 func (*GetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{6}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetAttendeeInterestsResponse) GetAttendeeId() string {
@@ -519,7 +627,7 @@ type SetAttendeeInterestsRequest struct {
 
 func (x *SetAttendeeInterestsRequest) Reset() {
 	*x = SetAttendeeInterestsRequest{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -531,7 +639,7 @@ func (x *SetAttendeeInterestsRequest) String() string {
 func (*SetAttendeeInterestsRequest) ProtoMessage() {}
 
 func (x *SetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -544,7 +652,7 @@ func (x *SetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
 func (*SetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{7}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetAttendeeInterestsRequest) GetAttendeeId() string {
@@ -573,7 +681,7 @@ type SetAttendeeInterestsResponse struct {
 
 func (x *SetAttendeeInterestsResponse) Reset() {
 	*x = SetAttendeeInterestsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -585,7 +693,7 @@ func (x *SetAttendeeInterestsResponse) String() string {
 func (*SetAttendeeInterestsResponse) ProtoMessage() {}
 
 func (x *SetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -598,7 +706,7 @@ func (x *SetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
 func (*SetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{8}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SetAttendeeInterestsResponse) GetAttendeeId() string {
@@ -678,6 +786,12 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"\x17RecommendEventsResponse\x12\x1f\n" +
 	"\vattendee_id\x18\x01 \x01(\tR\n" +
 	"attendeeId\x12>\n" +
+	"\x06events\x18\x02 \x03(\v2&.eventa.discovery.v1.EventSearchResultR\x06events\"G\n" +
+	"\x14SimilarEventsRequest\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"r\n" +
+	"\x15SimilarEventsResponse\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12>\n" +
 	"\x06events\x18\x02 \x03(\v2&.eventa.discovery.v1.EventSearchResultR\x06events\">\n" +
 	"\x1bGetAttendeeInterestsRequest\x12\x1f\n" +
 	"\vattendee_id\x18\x01 \x01(\tR\n" +
@@ -712,26 +826,29 @@ func file_eventa_discovery_v1_discovery_proto_rawDescGZIP() []byte {
 	return file_eventa_discovery_v1_discovery_proto_rawDescData
 }
 
-var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_eventa_discovery_v1_discovery_proto_goTypes = []any{
 	(*SearchEventsRequest)(nil),          // 0: eventa.discovery.v1.SearchEventsRequest
 	(*EventSearchResult)(nil),            // 1: eventa.discovery.v1.EventSearchResult
 	(*SearchEventsResponse)(nil),         // 2: eventa.discovery.v1.SearchEventsResponse
 	(*RecommendEventsRequest)(nil),       // 3: eventa.discovery.v1.RecommendEventsRequest
 	(*RecommendEventsResponse)(nil),      // 4: eventa.discovery.v1.RecommendEventsResponse
-	(*GetAttendeeInterestsRequest)(nil),  // 5: eventa.discovery.v1.GetAttendeeInterestsRequest
-	(*GetAttendeeInterestsResponse)(nil), // 6: eventa.discovery.v1.GetAttendeeInterestsResponse
-	(*SetAttendeeInterestsRequest)(nil),  // 7: eventa.discovery.v1.SetAttendeeInterestsRequest
-	(*SetAttendeeInterestsResponse)(nil), // 8: eventa.discovery.v1.SetAttendeeInterestsResponse
+	(*SimilarEventsRequest)(nil),         // 5: eventa.discovery.v1.SimilarEventsRequest
+	(*SimilarEventsResponse)(nil),        // 6: eventa.discovery.v1.SimilarEventsResponse
+	(*GetAttendeeInterestsRequest)(nil),  // 7: eventa.discovery.v1.GetAttendeeInterestsRequest
+	(*GetAttendeeInterestsResponse)(nil), // 8: eventa.discovery.v1.GetAttendeeInterestsResponse
+	(*SetAttendeeInterestsRequest)(nil),  // 9: eventa.discovery.v1.SetAttendeeInterestsRequest
+	(*SetAttendeeInterestsResponse)(nil), // 10: eventa.discovery.v1.SetAttendeeInterestsResponse
 }
 var file_eventa_discovery_v1_discovery_proto_depIdxs = []int32{
 	1, // 0: eventa.discovery.v1.SearchEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
 	1, // 1: eventa.discovery.v1.RecommendEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	1, // 2: eventa.discovery.v1.SimilarEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_eventa_discovery_v1_discovery_proto_init() }
@@ -747,7 +864,7 @@ func file_eventa_discovery_v1_discovery_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventa_discovery_v1_discovery_proto_rawDesc), len(file_eventa_discovery_v1_discovery_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

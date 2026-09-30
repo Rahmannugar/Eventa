@@ -26,6 +26,7 @@ import (
 	"github.com/eventa/discovery-service/internal/metrics"
 	"github.com/eventa/discovery-service/internal/recommendations"
 	"github.com/eventa/discovery-service/internal/search"
+	"github.com/eventa/discovery-service/internal/similar"
 	"github.com/eventa/discovery-service/internal/telemetry"
 )
 
@@ -33,10 +34,10 @@ import (
 // falls back to a generated identifier.
 var requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
 
-// New binds the query, preference, and recommendation handlers to a listener
+// New binds the query, preference, recommendation, and similarity handlers to a listener
 // on the configured port. The caller serves and stops the server, so shutdown
 // stays with the process.
-func New(searchHandler *search.Handler, interestsHandler *interests.Handler, recommendationsHandler *recommendations.Handler, logger *slog.Logger, port int) (*grpc.Server, net.Listener, error) {
+func New(searchHandler *search.Handler, interestsHandler *interests.Handler, recommendationsHandler *recommendations.Handler, similarHandler *similar.Handler, logger *slog.Logger, port int) (*grpc.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		return nil, nil, fmt.Errorf("listen on gRPC port: %w", err)
@@ -51,18 +52,20 @@ func New(searchHandler *search.Handler, interestsHandler *interests.Handler, rec
 		search:          searchHandler,
 		interests:       interestsHandler,
 		recommendations: recommendationsHandler,
+		similar:         similarHandler,
 	})
 	return instance, listener, nil
 }
 
 // service routes each RPC to the handler that owns that capability, so search,
-// interests, and recommendations keep their own packages and tests behind one
-// deployed API.
+// interests, recommendations, and similarity keep their own packages and tests
+// behind one deployed API.
 type service struct {
 	discoveryv1.UnimplementedDiscoveryServiceServer
 	search          *search.Handler
 	interests       *interests.Handler
 	recommendations *recommendations.Handler
+	similar         *similar.Handler
 }
 
 func (s *service) SearchEvents(ctx context.Context, request *discoveryv1.SearchEventsRequest) (*discoveryv1.SearchEventsResponse, error) {
@@ -79,6 +82,10 @@ func (s *service) SetAttendeeInterests(ctx context.Context, request *discoveryv1
 
 func (s *service) RecommendEvents(ctx context.Context, request *discoveryv1.RecommendEventsRequest) (*discoveryv1.RecommendEventsResponse, error) {
 	return s.recommendations.RecommendEvents(ctx, request)
+}
+
+func (s *service) SimilarEvents(ctx context.Context, request *discoveryv1.SimilarEventsRequest) (*discoveryv1.SimilarEventsResponse, error) {
+	return s.similar.SimilarEvents(ctx, request)
 }
 
 // unaryTrace continues the caller's trace, starts the server span, and
