@@ -26,6 +26,8 @@ func valid() map[string]any {
 		"KAFKA_BROKERS":                  "event-bus:9092",
 		"KAFKA_CONSUMER_GROUP":           "eventa-discovery-service",
 		"KAFKA_EVENT_LIFECYCLE_TOPIC":    "eventa.event.lifecycle.v1",
+		"KAFKA_COMMERCE_ORDER_TOPIC":     "eventa.commerce.order.v1",
+		"KAFKA_TICKET_CHECK_IN_TOPIC":    "eventa.ticket.check-in.v1",
 		"AHNLICH_AI_URL":                 "ahnlich-ai:1370",
 		"AHNLICH_DEADLINE_MS":            "2000",
 		"SEMANTIC_STORE":                 "eventa_events",
@@ -58,6 +60,18 @@ func TestLoadAcceptsTheCanonicalLocalConfiguration(t *testing.T) {
 	if cfg.KafkaEventLifecycleTopic != "eventa.event.lifecycle.v1" {
 		t.Errorf("topic = %q, want eventa.event.lifecycle.v1", cfg.KafkaEventLifecycleTopic)
 	}
+	if cfg.KafkaCommerceOrderTopic != "eventa.commerce.order.v1" {
+		t.Errorf("commerce topic = %q, want eventa.commerce.order.v1", cfg.KafkaCommerceOrderTopic)
+	}
+	if cfg.KafkaTicketCheckInTopic != "eventa.ticket.check-in.v1" {
+		t.Errorf("check-in topic = %q, want eventa.ticket.check-in.v1", cfg.KafkaTicketCheckInTopic)
+	}
+	if cfg.KafkaCommerceGroup != "eventa-discovery-service-commerce" {
+		t.Errorf("commerce group = %q, want the derived sibling group", cfg.KafkaCommerceGroup)
+	}
+	if cfg.KafkaCheckInGroup != "eventa-discovery-service-check-in" {
+		t.Errorf("check-in group = %q, want the derived sibling group", cfg.KafkaCheckInGroup)
+	}
 	if cfg.EventGRPCDeadlineMS != 3000 {
 		t.Errorf("EventGRPCDeadlineMS = %d, want 3000", cfg.EventGRPCDeadlineMS)
 	}
@@ -89,6 +103,9 @@ func TestLoadReportsTheFirstFailingRule(t *testing.T) {
 		{"malformed broker", func(v map[string]any) { v["KAFKA_BROKERS"] = "event-bus" }, "KAFKA_BROKERS must use host:port entries"},
 		{"missing consumer group", func(v map[string]any) { delete(v, "KAFKA_CONSUMER_GROUP") }, "KAFKA_CONSUMER_GROUP is required"},
 		{"missing lifecycle topic", func(v map[string]any) { delete(v, "KAFKA_EVENT_LIFECYCLE_TOPIC") }, "KAFKA_EVENT_LIFECYCLE_TOPIC is required"},
+		{"missing commerce topic", func(v map[string]any) { delete(v, "KAFKA_COMMERCE_ORDER_TOPIC") }, "KAFKA_COMMERCE_ORDER_TOPIC is required"},
+		{"missing check-in topic", func(v map[string]any) { delete(v, "KAFKA_TICKET_CHECK_IN_TOPIC") }, "KAFKA_TICKET_CHECK_IN_TOPIC is required"},
+		{"malformed check-in topic", func(v map[string]any) { v["KAFKA_TICKET_CHECK_IN_TOPIC"] = "eventa ticket check in" }, "KAFKA_TICKET_CHECK_IN_TOPIC may only contain letters, digits, '.', '_' and '-'"},
 		{"missing ahnlich address", func(v map[string]any) { delete(v, "AHNLICH_AI_URL") }, "AHNLICH_AI_URL is required"},
 		{"malformed ahnlich address", func(v map[string]any) { v["AHNLICH_AI_URL"] = "ahnlich-ai" }, "AHNLICH_AI_URL must use the host:port format"},
 		{"out of range ahnlich deadline", func(v map[string]any) { v["AHNLICH_DEADLINE_MS"] = "99" }, "AHNLICH_DEADLINE_MS must be an integer between 100 and 10000"},

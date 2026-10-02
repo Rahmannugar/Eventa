@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eventa/discovery-service/internal/behaviour"
 	"github.com/eventa/discovery-service/internal/config"
 	"github.com/eventa/discovery-service/internal/database"
 	"github.com/eventa/discovery-service/internal/errtype"
@@ -97,6 +98,39 @@ func main() {
 		"topic", cfg.KafkaEventLifecycleTopic,
 		"group", cfg.KafkaConsumerGroup)
 
+	behaviourIngest := behaviour.NewIngest(pool)
+	commerceConsumer := kafka.NewConsumer(
+		"BehaviourCommerceConsumer",
+		cfg.KafkaBrokers,
+		cfg.KafkaCommerceOrderTopic,
+		cfg.KafkaCommerceGroup,
+		behaviour.KafkaCommerceClientID,
+		"behaviour_consumer_failed",
+		behaviour.Operation,
+		behaviourIngest.Handler(),
+	)
+	commerceConsumer.Start()
+	logger.InfoContext(ctx, "behaviour_consumer_ready",
+		"operation", behaviour.Operation,
+		"topic", cfg.KafkaCommerceOrderTopic,
+		"group", cfg.KafkaCommerceGroup)
+
+	checkInConsumer := kafka.NewConsumer(
+		"BehaviourCheckInConsumer",
+		cfg.KafkaBrokers,
+		cfg.KafkaTicketCheckInTopic,
+		cfg.KafkaCheckInGroup,
+		behaviour.KafkaCheckInClientID,
+		"behaviour_consumer_failed",
+		behaviour.Operation,
+		behaviourIngest.Handler(),
+	)
+	checkInConsumer.Start()
+	logger.InfoContext(ctx, "behaviour_consumer_ready",
+		"operation", behaviour.Operation,
+		"topic", cfg.KafkaTicketCheckInTopic,
+		"group", cfg.KafkaCheckInGroup)
+
 	reconciler := semantic.NewReconciler(indexer, semanticRepository, semanticStore,
 		cfg.SemanticReconcileBatch, float32(cfg.SemanticCanaryFloor))
 	go reconciler.Run(ctx, time.Duration(cfg.SemanticReconcileMS)*time.Millisecond)
@@ -162,6 +196,8 @@ func main() {
 		queryAPI.Stop()
 	}
 	consumer.Stop()
+	commerceConsumer.Stop()
+	checkInConsumer.Stop()
 	if err := semanticStore.Close(); err != nil {
 		logger.Error("semantic_store_close_failed", "error_type", errtype.Of(err))
 	}

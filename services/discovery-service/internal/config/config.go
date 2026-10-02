@@ -1,5 +1,5 @@
 // Package config validates the runtime configuration this service needs: one
-// health port, its own database, the lifecycle topic it consumes, and the Event
+// health port, its own database, the topics it consumes, and the Event
 // Service address it resolves authoritative content from.
 package config
 
@@ -27,15 +27,22 @@ type Config struct {
 	KafkaBrokers             []string
 	KafkaConsumerGroup       string
 	KafkaEventLifecycleTopic string
-	EventGRPCURL             string
-	EventGRPCDeadlineMS      int
-	AhnlichAIURL             string
-	AhnlichDeadlineMS        int
-	SemanticStore            string
-	SemanticModel            string
-	SemanticReconcileMS      int
-	SemanticReconcileBatch   int
-	SemanticCanaryFloor      float64
+	KafkaCommerceOrderTopic  string
+	KafkaTicketCheckInTopic  string
+	// KafkaCommerceGroup and KafkaCheckInGroup are the sibling groups the
+	// two behavioural consumers join. Each topic keeps its own group, so a
+	// stalled partition in one never rebalances the other.
+	KafkaCommerceGroup     string
+	KafkaCheckInGroup      string
+	EventGRPCURL           string
+	EventGRPCDeadlineMS    int
+	AhnlichAIURL           string
+	AhnlichDeadlineMS      int
+	SemanticStore          string
+	SemanticModel          string
+	SemanticReconcileMS    int
+	SemanticReconcileBatch int
+	SemanticCanaryFloor    float64
 }
 
 type Telemetry struct {
@@ -197,6 +204,14 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 	if err != nil {
 		return Config{}, Telemetry{}, err
 	}
+	commerceTopic, err := name(k, "KAFKA_COMMERCE_ORDER_TOPIC")
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	checkInTopic, err := name(k, "KAFKA_TICKET_CHECK_IN_TOPIC")
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
 
 	ahnlichURL, err := hostPort(k, "AHNLICH_AI_URL")
 	if err != nil {
@@ -234,6 +249,10 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 		KafkaBrokers:             kafkaBrokers,
 		KafkaConsumerGroup:       consumerGroup,
 		KafkaEventLifecycleTopic: lifecycleTopic,
+		KafkaCommerceOrderTopic:  commerceTopic,
+		KafkaTicketCheckInTopic:  checkInTopic,
+		KafkaCommerceGroup:       consumerGroup + "-commerce",
+		KafkaCheckInGroup:        consumerGroup + "-check-in",
 		EventGRPCURL:             eventURL,
 		EventGRPCDeadlineMS:      eventDeadline,
 		AhnlichAIURL:             ahnlichURL,
