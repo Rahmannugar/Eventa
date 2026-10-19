@@ -147,7 +147,7 @@ var (
 		"Africa/Lagos", "Africa/Accra", "Africa/Nairobi", "Africa/Kigali",
 		"Africa/Dar_es_Salaam",
 	}
-	categoryPool = []string{
+	CategoryPool = []string{
 		"Music", "Tech", "Food & Drink", "Art", "Film", "Sports", "Business",
 		"Comedy", "Fashion", "Literature", "Community", "Nightlife", "Wellness",
 		"Education",
@@ -157,6 +157,12 @@ var (
 		"Student entry", "Group of five",
 	}
 )
+
+// InterestPool is the vocabulary attendee interests are drawn from: the
+// categories seeded events carry plus the themes their titles are built from,
+// so a seeded preference can match seeded content instead of pointing at
+// nothing.
+var InterestPool = append(append(make([]string, 0, len(CategoryPool)+len(nouns)), CategoryPool...), nouns...)
 
 // Generate returns the event for one generator index. The same seed, index,
 // instant, and admin always produce the same event, which is what makes
@@ -252,7 +258,7 @@ func pickCategories(rng *rand.Rand) []string {
 	chosen := make([]string, 0, count)
 	seen := make(map[string]struct{}, count)
 	for len(chosen) < count {
-		candidate := categoryPool[rng.IntN(len(categoryPool))]
+		candidate := CategoryPool[rng.IntN(len(CategoryPool))]
 		if _, exists := seen[candidate]; exists {
 			continue
 		}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -21,29 +22,46 @@ import (
 
 var databaseName = regexp.MustCompile(`^[a-z][a-z0-9_]*_test$`)
 
-// startEventDatabase connects to a disposable Event Service schema. It creates
-// the test database when missing and, when the schema is not there yet,
-// applies Event Service's own reviewed migrations, so every seeded statement
-// faces exactly the constraints production has. Any database that is not
-// obviously disposable is refused.
+// startEventDatabase connects to a disposable Event Service schema, and
+// startIdentityDatabase and startDiscoveryDatabase do the same for the two
+// databases the attendee seed writes. Each creates the database when it is
+// missing and, when its service schema is not there yet, applies that
+// service's own committed migrations, so every inserted row faces exactly the
+// constraints production has. Any database that is not obviously disposable
+// is refused.
 func startEventDatabase(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	return startDatabase(t, "TEST_DATABASE_URL", "events", applyEventMigrations)
+}
+
+func startIdentityDatabase(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	return startDatabase(t, "TEST_IDENTITY_DATABASE_URL", "attendee_accounts", applyIdentityMigrations)
+}
+
+func startDiscoveryDatabase(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	return startDatabase(t, "TEST_DISCOVERY_DATABASE_URL", "discovery_event_index", applyDiscoveryMigrations)
+}
+
+func startDatabase(t *testing.T, env, marker string, migrate func(*testing.T, *pgxpool.Pool)) *pgxpool.Pool {
 	t.Helper()
 
 	if testing.Short() {
 		t.Skip("integration tests are skipped in -short mode")
 	}
 
-	dsn := os.Getenv("TEST_DATABASE_URL")
+	dsn := os.Getenv(env)
 	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL is not set")
+		t.Skip(env + " is not set")
 	}
 
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
-		t.Fatalf("parse TEST_DATABASE_URL: %v", err)
+		t.Fatalf("parse %s: %v", env, err)
 	}
 	if !databaseName.MatchString(config.Database) {
-		t.Fatalf("TEST_DATABASE_URL database %q must match %s", config.Database, databaseName.String())
+		t.Fatalf("%s database %q must match %s", env, config.Database, databaseName.String())
 	}
 
 	createTestDatabase(t, dsn, config.Database)
@@ -58,7 +76,7 @@ func startEventDatabase(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("ping: %v", err)
 	}
 
-	ensureSchema(t, pool)
+	ensureSchema(t, pool, marker, migrate)
 	return pool
 }
 
@@ -67,7 +85,7 @@ func createTestDatabase(t *testing.T, dsn, name string) {
 
 	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
-		t.Fatalf("parse TEST_DATABASE_URL: %v", err)
+		t.Fatalf("parse test database URL: %v", err)
 	}
 	config.Database = "postgres"
 
@@ -89,21 +107,44 @@ func createTestDatabase(t *testing.T, dsn, name string) {
 	t.Fatalf("create test database: %v", err)
 }
 
-// ensureSchema applies Event Service's migrations from their journal when the
-// service schema is absent, and leaves an existing schema alone.
-func ensureSchema(t *testing.T, pool *pgxpool.Pool) {
+// ensureSchema migrates only when the service's marker table is absent, so an
+// existing schema is reused and never rebuilt underneath another test.
+func ensureSchema(t *testing.T, pool *pgxpool.Pool, marker string, migrate func(*testing.T, *pgxpool.Pool)) {
 	t.Helper()
 	ctx := context.Background()
 
 	var existing *string
-	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.events')::text`).Scan(&existing); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT to_regclass($1)::text`, "public."+marker).Scan(&existing); err != nil {
 		t.Fatalf("inspect schema: %v", err)
 	}
 	if existing != nil {
 		return
 	}
+	migrate(t, pool)
+}
 
-	directory := eventServiceDrizzleDir(t)
+func applyEventMigrations(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	applyDrizzleMigrations(t, pool, serviceDirectory("event-service", "drizzle"))
+}
+
+func applyIdentityMigrations(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	applyDrizzleMigrations(t, pool, serviceDirectory("identity-service", "drizzle"))
+}
+
+func applyDiscoveryMigrations(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	applyTernMigrations(t, pool, serviceDirectory("discovery-service", "migrations"))
+}
+
+// applyDrizzleMigrations follows the service's journal: each entry names one
+// SQL file, and each file is split on the breakpoint Drizzle writes between
+// statements.
+func applyDrizzleMigrations(t *testing.T, pool *pgxpool.Pool, directory string) {
+	t.Helper()
+	ctx := context.Background()
+
 	journalJSON, err := os.ReadFile(filepath.Join(directory, "meta", "_journal.json"))
 	if err != nil {
 		t.Fatalf("read migration journal: %v", err)
@@ -142,9 +183,47 @@ func ensureSchema(t *testing.T, pool *pgxpool.Pool) {
 	}
 }
 
-func eventServiceDrizzleDir(t *testing.T) string {
+// applyTernMigrations runs each committed Tern script in order. Only the "up"
+// half of a script is applied, split on semicolons the way Tern itself
+// sequences the statements.
+func applyTernMigrations(t *testing.T, pool *pgxpool.Pool, directory string) {
 	t.Helper()
-	return filepath.Join("..", "..", "..", "..", "services", "event-service", "drizzle")
+	ctx := context.Background()
+
+	scripts, err := filepath.Glob(filepath.Join(directory, "*.sql"))
+	if err != nil {
+		t.Fatalf("list migrations: %v", err)
+	}
+	sort.Strings(scripts)
+	if len(scripts) == 0 {
+		t.Fatalf("no migrations found in %s", directory)
+	}
+
+	for _, script := range scripts {
+		contents, err := os.ReadFile(script)
+		if err != nil {
+			t.Fatalf("read migration %s: %v", filepath.Base(script), err)
+		}
+		up := string(contents)
+		if parts := strings.SplitN(up, "---- create above / drop below ----", 2); len(parts) > 0 {
+			up = parts[0]
+		}
+		for _, statement := range strings.Split(up, ";") {
+			statement = strings.TrimSpace(statement)
+			if statement == "" {
+				continue
+			}
+			if _, err := pool.Exec(ctx, statement); err != nil {
+				t.Fatalf("apply migration %s: %v", filepath.Base(script), err)
+			}
+		}
+	}
+}
+
+// serviceDirectory points at a sibling service's files from the seeder's test
+// package: the seeder owns no schema of its own, it writes service schemas.
+func serviceDirectory(parts ...string) string {
+	return filepath.Join(append([]string{"..", "..", "..", "..", "services"}, parts...)...)
 }
 
 func generateBatch(seed int64, offset, count int, now time.Time, adminID uuid.UUID) []eventseed.Event {
@@ -184,8 +263,8 @@ func insertBatch(t *testing.T, pool *pgxpool.Pool, events []eventseed.Event) int
 	return written
 }
 
-// removeEvents deletes everything the tests created, in foreign-key order, and
-// fails the test if any row it created outlives the run.
+// removeEvents deletes everything the event tests created, in foreign-key
+// order, and fails the test if any row it created outlives the run.
 func removeEvents(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) {
 	t.Helper()
 	ctx := context.Background()

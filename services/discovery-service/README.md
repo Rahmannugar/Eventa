@@ -67,6 +67,8 @@ curl -s localhost:3011/health/ready
 
 Configuration is read from the service-owned `.env` file. `.env.example` lists every variable and its local value. Startup fails deliberately when a variable is missing or out of range; the validation order and error strings are specified by `internal/config`.
 
+Seeded attendee interests come from the repository-owned `tools/seeder attendees` command, which writes `discovery_attendee_interests` directly next to the accounts it creates in Identity. Its environment, knobs, and verification steps are documented in the [Identity README](../identity-service/README.md#benchmark-data--attendees).
+
 ## Ownership
 
 Discovery Service owns its PostgreSQL schema and migrations, the Discovery event projection, and the derived semantic index. It reads the shared lifecycle Kafka topic with a durable inbox, resolves published content from Event Service over internal gRPC, and never reads another service's database.
