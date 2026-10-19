@@ -73,15 +73,15 @@ Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-bounds list,
 
 ## `DiscoveryService.RecommendEvents`
 
-Ranks published events for one attendee from the interests that attendee has saved.
+Ranks published events for one attendee from the interests that attendee has saved and the behaviour Discovery has observed for them.
 
 Request: `attendee_id`, a UUID, and `limit`, the page size. `0` means 10 and values above 20 are rejected.
 
-Response: the same `attendee_id` and the matching `events` in `EventSearchResult` shape, best match first. An attendee who has saved no interests gets an empty list — that is the cold-start position, not a failure.
+Response: the same `attendee_id` and the matching `events` in `EventSearchResult` shape, best match first. An attendee with neither saved interests nor behaviour evidence gets an empty list — that is the cold-start position, not a failure. An attendee with only behaviour evidence is served.
 
-Discovery reads the stored interests, renders them into query text, and asks the semantic store for a bounded multiple of the requested page. The store supplies the ranking; Event Service then decides which of those candidates it still serves, so a cancelled, retired, already-started, sold-out, or out-of-sale event never appears. Candidates Event Service drops are simply absent from the answer, and the remainder keeps the store's order.
+Discovery reads the stored interests and the attendee's most recent evidence rows — up to 12 attended and 12 purchased, newest first — and renders them into one query text whose budget is split by evidence strength: what the attendee attended may fill the largest share, purchases the next, and saved interests the remainder, with unused share passed down that order. It asks the semantic store for a bounded multiple of the requested page. The store supplies the ranking; Event Service then decides which of those candidates it still serves, so a cancelled, retired, already-started, sold-out, or out-of-sale event never appears. Candidates Event Service drops are simply absent from the answer, and the remainder keeps the store's order.
 
-Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-range limit, `UNAVAILABLE` when the semantic store does not answer, `DEADLINE_EXCEEDED` when Event Service does not answer in time, and `INTERNAL` for a database failure. Interest text is never logged; the log line carries counts.
+Status codes: `INVALID_ARGUMENT` for a bad attendee id or an out-of-range limit, `UNAVAILABLE` when the semantic store does not answer, `DEADLINE_EXCEEDED` when Event Service does not answer in time, and `INTERNAL` for a database failure. Interest and behaviour text is never logged; the log line carries counts.
 
 ## `DiscoveryService.SimilarEvents`
 

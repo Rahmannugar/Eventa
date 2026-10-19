@@ -4,12 +4,13 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 
 ## Structure
 
-- `cmd/discovery-service` — composition root. Loads and validates configuration, starts telemetry, opens the pool, dials Event, starts the lifecycle consumer, serves health and the query API, and shuts them down in the reverse order.
+- `cmd/discovery-service` — composition root. Loads and validates configuration, starts telemetry, opens the pool, dials Event, starts the lifecycle and behaviour consumers, serves health and the query API, and shuts them down in the reverse order.
 - `cmd/discovery-migration` — applies the reviewed SQL migrations in `migrations/` through tern, tracked in `discovery_schema_version`.
 - `cmd/discovery-reindex` — rebuilds the semantic store from the projection. It is safe to run repeatedly and exits non-zero while anything remains unconverged.
 - `internal/config` — one fixed validation order, so the first failing rule is the reported error.
 - `internal/database` — pool construction, the migration runner, and the readiness adapter.
 - `internal/index` — the lifecycle fact contract, the ingest transaction, the inbox claim, the index write, and the Kafka handler.
+- `internal/behaviour` — the attendee behaviour evidence: fact parsing for the commerce and check-in topics, the inbox claim and evidence upsert in one transaction, and the bounded evidence read the recommendation rendering consumes.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
 - `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
 - `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
@@ -42,6 +43,14 @@ When Event Service no longer serves a published event — it was cancelled betwe
 
 Outcomes are `processed`, `content_unavailable`, `duplicate`, `ignored`, and `rejected`, carried on `discovery.event_index` for every metric and log line on this path.
 
+## Behaviour consumers
+
+Commerce appends `commerce.order-paid.v1` to its order outbox and Ticket appends `ticket.checked-in.v1` to its ticket outbox; their Debezium lanes relay the facts to `eventa.commerce.order.v1` and `eventa.ticket.check-in.v1`. Discovery reads each topic as its own group member (`<group>-commerce`, `<group>-check-in>`) beside the lifecycle group, so a stall in one topic never rebalances another.
+
+The classification rule is the lifecycle consumer's: a fact of another type on either topic — a refund, a revocation — is acknowledged and skipped so a shared topic never stalls, and a record that claims to be ours but breaks the contract is left uncommitted so the broker redelivers it until the producer is corrected. An accepted fact enters one transaction that claims `discovery_behaviour_inbox` on `(event_type, message_id)` and upserts `discovery_attendee_behaviour` on `(attendee_id, event_id, kind)`. Evidence is one row per attendee, event, and kind: a repeat purchase or a second ticket moves `occurred_at` forward instead of adding weight, and a replay finds its inbox row and commits without a second write.
+
+Outcomes are `processed`, `duplicate`, `ignored`, and `rejected`, carried on `discovery.attendee_behaviour`.
+
 ## Search API
 
 `DiscoveryService.SearchEvents` answers from `discovery_event_index` alone: ordinary SQL over exact filters, no vector store, and no call to Event Service. Every request is validated before it reaches the database — page size and offset are bounded, timestamps must be RFC 3339, and a start bound after an end bound is rejected rather than silently widened. The page query and its count share one predicate, so `total` cannot disagree with the page.
@@ -70,15 +79,17 @@ Readiness does not cover Ahnlich. An unreachable store makes indexing fail loudl
 
 Interests belong to Discovery, not to Identity: registration stays an Identity transaction, and an attendee manages their interests afterwards. The attendee id arrives from the Gateway's authenticated session and Discovery stores the list against it without ever resolving an account.
 
-A save replaces the whole list in one statement after the request is bounded and normalised, so a repeated submission cannot append to itself. The list is derived from what the attendee typed and can be rebuilt the same way; the text the recommendation query is sent with is built from this record, so the store is only ever asked about interests Discovery still holds.
+A save replaces the whole list in one statement after the request is bounded and normalised, so a repeated submission cannot append to itself. The list is derived from what the attendee typed and can be rebuilt the same way; it is one of the two inputs the recommendation query renders.
 
 ## Recommendations
 
-`DiscoveryService.RecommendEvents` combines the two halves the service already owns. It reads the stored interests, renders them through `semantic.BuildPreferences`, and passes that text to `Store.Search`, which embeds it in the proxy and returns the closest events with their cosine scores. The store is queried for a bounded multiple of the requested page, in the same store that indexing fills, so an attendee's interests and the event corpus are embedded by one model and compared in one index.
+`DiscoveryService.RecommendEvents` combines the three inputs the service already owns: the interest record, the behaviour evidence, and the semantic store. It reads the stored interests and the attendee's most recent evidence — up to 12 attended and 12 purchased rows, newest first, joined to projection content — and renders them through `semantic.BuildPreferences` into one query text. The text is budgeted by evidence strength: each tier of the 1800-byte budget is guaranteed its share (attended 900, purchased 600, interests 300) and passes what it cannot use down the weight order, so attended outweighs purchased outweighs what the attendee said at signup by construction, and an interests-only attendee still renders up to the full budget. `Store.Search` embeds that one text in the proxy and returns the closest events with their cosine scores, in the same store that indexing fills, so the preference text and the event corpus are embedded by one model and compared in one index.
+
+An attendee with no interests and no behaviour evidence gets an empty list: that is the cold-start position, not a failure. An attendee with only behaviour evidence is served — that is the point of the evidence.
 
 Ranking is Discovery's; authority is Event Service's. The candidate ids go to `lookup.ListRecommendableEvents`, and only the events Event Service still serves come back — publication, retirement, start time, live sales, and remaining capacity are all decided there. The response keeps the store's order, drops what Event Service did not return, and stops at the requested limit, so a cancelled event disappears without Discovery holding a second opinion about its state.
 
-No preference vector is stored. Ahnlich embeds the interests at query time, so there is no derived attendee state to reconcile: losing the store costs one search, never the interests themselves.
+No preference vector is stored. Ahnlich embeds the preference text at query time, so there is no derived attendee state to reconcile: losing the store costs one search, never the interests or the evidence. The evidence rows themselves are durable facts recorded from the broker and are never rebuilt.
 
 ## Similar events
 
@@ -88,7 +99,7 @@ The page bounds, candidate handling, response shape, and Event Service failure t
 
 ## Data ownership
 
-The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, and `discovery_attendee_interests` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, and `0003_create_discovery_attendee_interests.sql` create them.
+The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, `discovery_attendee_interests`, `discovery_behaviour_inbox`, and `discovery_attendee_behaviour` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, `0003_create_discovery_attendee_interests.sql`, and `0004_create_discovery_attendee_behaviour.sql` create them.
 
 Durable invariants:
 
@@ -99,12 +110,14 @@ Durable invariants:
 - `discovery_semantic_index` is primary-keyed on `event_id`, so one event records exactly one store state.
 - `discovery_semantic_index.status` is constrained to `pending_index`, `indexed`, `pending_removal`, or `removed`, and an indexed row must carry the content hash it was pushed with.
 - `discovery_attendee_interests` is primary-keyed on `attendee_id`, so one attendee has exactly one stored list, and it is constrained to at most 50 interests.
+- `discovery_behaviour_inbox` is primary-keyed on `(event_type, message_id)`, so a replayed behaviour fact cannot be recorded twice.
+- `discovery_attendee_behaviour` is primary-keyed on `(attendee_id, event_id, kind)`, so one attendee records one occurrence per event per kind; a repeat moves `occurred_at` forward instead of adding weight.
 - The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale, available, or near the attendee; those come from Event Service.
 
 ## Dependencies
 
 - PostgreSQL — own schema only
-- Kafka — the shared event lifecycle topic, group-scoped, manual commits
+- Kafka — the shared event lifecycle topic plus the commerce order and ticket check-in topics, one group per topic, manual commits
 - Event Service over internal gRPC, with an explicit deadline
 - The API Gateway calls this service over internal gRPC, with its own deadline
 - Ahnlich AI proxy over internal gRPC, with its own deadline, for the derived semantic index
@@ -114,4 +127,4 @@ Readiness covers only the database. Kafka group membership recovers through the 
 
 ## Shutdown
 
-SIGTERM or SIGINT stops the HTTP health server, gracefully stops the query API, cancels the reconciler, leaves the Kafka group, closes the Event gRPC connection and the semantic store connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.
+SIGTERM or SIGINT stops the HTTP health server, gracefully stops the query API, cancels the reconciler, leaves the Kafka groups, closes the Event gRPC connection and the semantic store connection, drains the pool, then flushes traces and the final metric batch. In-flight messages are left unacknowledged so the broker redelivers them rather than losing them.

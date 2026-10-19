@@ -107,7 +107,7 @@ func main() {
 		behaviour.KafkaCommerceClientID,
 		"behaviour_consumer_failed",
 		behaviour.Operation,
-		behaviourIngest.Handler(),
+		behaviourIngest.Handler(cfg.KafkaCommerceOrderTopic),
 	)
 	commerceConsumer.Start()
 	logger.InfoContext(ctx, "behaviour_consumer_ready",
@@ -123,7 +123,7 @@ func main() {
 		behaviour.KafkaCheckInClientID,
 		"behaviour_consumer_failed",
 		behaviour.Operation,
-		behaviourIngest.Handler(),
+		behaviourIngest.Handler(cfg.KafkaTicketCheckInTopic),
 	)
 	checkInConsumer.Start()
 	logger.InfoContext(ctx, "behaviour_consumer_ready",
@@ -158,10 +158,11 @@ func main() {
 	logger.InfoContext(ctx, "service_started", "health_port", cfg.HealthPort)
 
 	interestsRepository := interests.NewRepository(pool)
+	behaviourRepository := behaviour.NewRepository(pool)
 	queryAPI, grpcListener, err := server.New(
 		search.NewHandler(search.NewRepository(pool), logger),
 		interests.NewHandler(interestsRepository, logger),
-		recommendations.NewHandler(interestsRepository, semanticStore, events, logger),
+		recommendations.NewHandler(interestsRepository, behaviourRepository, semanticStore, events, logger),
 		similar.NewHandler(semanticRepository, semanticStore, events, logger),
 		logger, cfg.GRPCPort,
 	)
