@@ -1,5 +1,6 @@
 import {
   CalendarDotsIcon,
+  ChartLineUpIcon,
   SignOutIcon,
   TicketIcon,
 } from '@phosphor-icons/react';
@@ -47,6 +48,15 @@ export function AdminDashboardShell() {
             <CalendarDotsIcon aria-hidden="true" />
             Events
           </NavLink>
+          <NavLink
+            to="/admin/analytics"
+            className={({ isActive }) =>
+              `admin-navigation__link${isActive ? ' is-active' : ''}`
+            }
+          >
+            <ChartLineUpIcon aria-hidden="true" />
+            Analytics
+          </NavLink>
         </nav>
 
         <div className="admin-account">
@@ -77,6 +87,7 @@ export function AdminDashboardShell() {
           <NavLink to="/admin" end>
             Events
           </NavLink>
+          <NavLink to="/admin/analytics">Analytics</NavLink>
           <Button
             variant="quiet"
             aria-label="Sign out"

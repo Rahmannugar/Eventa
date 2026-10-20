@@ -1,4 +1,6 @@
 export interface RuntimeConfig {
+  analyticsGrpcDeadlineMs: number;
+  analyticsGrpcUrl: string;
   apiDocsEnabled: boolean;
   clientOrigin: string;
   commerceGrpcDeadlineMs: number;
@@ -114,6 +116,15 @@ export function readRuntimeConfig(
     throw new Error('DISCOVERY_GRPC_URL must use the host:port format');
   }
 
+  const analyticsGrpcUrl = readRequiredString(
+    environment,
+    'ANALYTICS_GRPC_URL',
+  );
+
+  if (!/^[^\s:/]+:\d+$/.test(analyticsGrpcUrl)) {
+    throw new Error('ANALYTICS_GRPC_URL must use the host:port format');
+  }
+
   const ticketServiceUrl = readRequiredString(environment, 'TICKET_SERVICE_URL');
   let parsedTicketServiceUrl: URL;
   try { parsedTicketServiceUrl = new URL(ticketServiceUrl); } catch { throw new Error('TICKET_SERVICE_URL must be a valid HTTP or HTTPS URL'); }
@@ -178,6 +189,10 @@ export function readRuntimeConfig(
     environment,
     'DISCOVERY_GRPC_DEADLINE_MS',
   );
+  const analyticsGrpcDeadlineMs = readPositiveInteger(
+    environment,
+    'ANALYTICS_GRPC_DEADLINE_MS',
+  );
   const commerceGrpcDeadlineMs = readPositiveInteger(
     environment,
     'COMMERCE_GRPC_DEADLINE_MS',
@@ -200,6 +215,11 @@ export function readRuntimeConfig(
       'DISCOVERY_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
     );
   }
+  if (analyticsGrpcDeadlineMs >= httpRequestTimeoutMs) {
+    throw new Error(
+      'ANALYTICS_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
+    );
+  }
   if (commerceGrpcDeadlineMs >= httpRequestTimeoutMs) {
     throw new Error(
       'COMMERCE_GRPC_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS',
@@ -208,6 +228,8 @@ export function readRuntimeConfig(
   if (ticketServiceDeadlineMs >= httpRequestTimeoutMs) throw new Error('TICKET_SERVICE_DEADLINE_MS must be less than HTTP_REQUEST_TIMEOUT_MS');
 
   return {
+    analyticsGrpcDeadlineMs,
+    analyticsGrpcUrl,
     apiDocsEnabled: readBoolean(environment, 'API_DOCS_ENABLED'),
     clientOrigin: readOrigin(environment, 'CLIENT_ORIGIN'),
     commerceGrpcDeadlineMs,

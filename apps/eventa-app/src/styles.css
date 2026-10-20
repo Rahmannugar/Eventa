@@ -2990,6 +2990,231 @@ a {
   }
 }
 
+.admin-page--analytics {
+  width: min(100%, 94rem);
+}
+
+.analytics-summary {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.analytics-summary__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+
+.analytics-summary__card,
+.analytics-summary__skeleton {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  padding: 1rem 1.15rem;
+  box-shadow: 0 10px 35px rgb(23 35 29 / 4%);
+}
+
+.analytics-summary__card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.analytics-summary__card span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analytics-summary__card strong {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+}
+
+.analytics-summary__skeleton {
+  min-height: 5.1rem;
+  background: linear-gradient(
+    90deg,
+    var(--soft) 25%,
+    rgb(235 232 222 / 55%) 37%,
+    var(--soft) 63%
+  );
+  background-size: 400% 100%;
+  animation: analytics-shimmer 1.4s ease infinite;
+}
+
+.analytics-summary__empty {
+  color: var(--muted);
+}
+
+.analytics-summary__revenue {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.analytics-summary__currency {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  padding: 0.9rem 1.15rem;
+}
+
+.analytics-summary__currency > strong {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+}
+
+.analytics-summary__currency span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.analytics-summary__currency small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analytics-performance {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.analytics-performance__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.analytics-performance__controls h2 {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+}
+
+.analytics-performance__load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgb(170 52 44 / 30%);
+  border-radius: 0.75rem;
+  background: var(--danger-soft);
+  color: var(--danger);
+  padding: 0.7rem 1rem;
+}
+
+.analytics-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 10px 35px rgb(23 35 29 / 4%);
+}
+
+.analytics-table__head,
+.analytics-table__row {
+  display: grid;
+  grid-template-columns:
+    minmax(11rem, 1.3fr) 7rem 6.5rem 6.5rem minmax(6rem, 0.8fr)
+    minmax(6rem, 0.8fr) minmax(6rem, 0.8fr) 7rem;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.analytics-table__head {
+  border-bottom: 1px solid var(--line);
+  background: rgb(235 232 222 / 42%);
+  padding: 0.7rem 1rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analytics-table__row {
+  border-bottom: 1px solid var(--line);
+  padding: 0.85rem 1rem;
+  font-size: 0.92rem;
+}
+
+.analytics-table__row:last-child {
+  border-bottom: 0;
+}
+
+.analytics-table__event {
+  overflow: hidden;
+  color: var(--evergreen);
+  font-weight: 650;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-table__event:hover {
+  text-decoration: underline;
+}
+
+.analytics-table__skeleton {
+  border-bottom: 1px solid var(--line);
+  min-height: 3rem;
+  background: linear-gradient(
+    90deg,
+    var(--soft) 25%,
+    rgb(235 232 222 / 55%) 37%,
+    var(--soft) 63%
+  );
+  background-size: 400% 100%;
+  animation: analytics-shimmer 1.4s ease infinite;
+}
+
+.analytics-table__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@keyframes analytics-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (max-width: 60rem) {
+  .analytics-table {
+    overflow-x: auto;
+  }
+
+  .analytics-table__head,
+  .analytics-table__row {
+    min-width: 52rem;
+  }
+
+  .analytics-performance__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

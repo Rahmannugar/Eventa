@@ -17,6 +17,7 @@ import { AdminsModule } from './domains/admins/admins.module';
 import { EventsModule } from './domains/events/events.module';
 import { CommerceModule } from './domains/commerce/commerce.module';
 import { DiscoveryModule } from './domains/discovery/discovery.module';
+import { AnalyticsModule } from './domains/analytics/analytics.module';
 
 @Module({})
 export class AppModule implements NestModule {
@@ -60,6 +61,12 @@ export class AppModule implements NestModule {
           attendeesModule,
           discoveryGrpcDeadlineMs: config.discoveryGrpcDeadlineMs,
           discoveryGrpcUrl: config.discoveryGrpcUrl,
+          rateLimitKeySecret: config.rateLimitKeySecret,
+        }),
+        AnalyticsModule.register({
+          adminsModule,
+          analyticsGrpcDeadlineMs: config.analyticsGrpcDeadlineMs,
+          analyticsGrpcUrl: config.analyticsGrpcUrl,
           rateLimitKeySecret: config.rateLimitKeySecret,
         }),
         EventsModule.register({
