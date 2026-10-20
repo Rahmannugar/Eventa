@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package eventa.analytics.v1;
+
+// One event's reporting projection, derived only from committed business
+// facts. Revenue fields are minor currency units. Status is "published" or
+// "cancelled". Currency is empty until the first paid order for the event.
+message EventPerformance {
+  string event_id = 1;
+  string status = 2;
+  string currency = 3;
+  int64 tickets_sold = 4;
+  int64 tickets_refunded = 5;
+  int64 tickets_checked_in = 6;
+  int64 tickets_revoked = 7;
+  int64 gross_revenue_minor = 8;
+  int64 refunded_revenue_minor = 9;
+  int64 net_revenue_minor = 10;
+  optional string published_at = 11;
+  optional string cancelled_at = 12;
+  string updated_at = 13;
+}
+
+message ListEventPerformanceRequest {
+  // Page size, 1 to 100. Values outside the range are clamped.
+  int32 limit = 1;
+  // Row offset into the filtered, ordered set.
+  int32 offset = 2;
+  // Optional status filter: "published" or "cancelled". Empty matches both.
+  string status = 3;
+}
+
+message ListEventPerformanceResponse {
+  repeated EventPerformance events = 1;
+  int32 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetEventPerformanceRequest {
+  string event_id = 1;
+}
+
+message GetEventPerformanceResponse {
+  EventPerformance event = 1;
+}
+
+// Revenue and ticket movement for one currency. An event sells in a single
+// currency, so portfolio totals are grouped per currency rather than summed
+// across currencies.
+message CurrencyTotals {
+  string currency = 1;
+  int64 tickets_sold = 2;
+  int64 tickets_refunded = 3;
+  int64 gross_revenue_minor = 4;
+  int64 refunded_revenue_minor = 5;
+  int64 net_revenue_minor = 6;
+}
+
+message GetPortfolioSummaryRequest {}
+
+message GetPortfolioSummaryResponse {
+  int32 events_published = 1;
+  int32 events_cancelled = 2;
+  int64 tickets_checked_in = 3;
+  int64 tickets_revoked = 4;
+  repeated CurrencyTotals revenue = 5;
+}

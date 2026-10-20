@@ -585,6 +585,64 @@ services:
     restart: unless-stopped
     logging: *local-logging
 
+  analytics-database:
+    image: postgres:17-alpine
+    env_file:
+      - ./services/analytics-service/.env
+    ports:
+      - '61432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - analytics-service-database-data:/var/lib/postgresql/data
+    logging: *local-logging
+
+  analytics-migration:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    image: eventa-analytics-service:local
+    entrypoint: ['/analytics-migration']
+    env_file:
+      - ./services/analytics-service/.env
+    depends_on:
+      analytics-database:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: 'no'
+    logging: *local-logging
+
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    image: eventa-analytics-service:local
+    env_file:
+      - ./services/analytics-service/.env
+    ports:
+      - '3009:3009'
+      - '50055:50055'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3009/health/ready']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      analytics-migration:
+        condition: service_completed_successfully
+      analytics-database:
+        condition: service_healthy
+      event-bus:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *local-logging
+
   ahnlich-db:
     image: ghcr.io/deven96/ahnlich-db:latest
     # The image entrypoint is `sh -c`, so the whole server invocation has to
@@ -660,6 +718,8 @@ services:
       identity-service:
         condition: service_healthy
       discovery-service:
+        condition: service_healthy
+      analytics-service:
         condition: service_healthy
       api-gateway-redis:
         condition: service_healthy
@@ -766,6 +826,7 @@ volumes:
   identity-database-data:
   notification-service-database-data:
   discovery-service-database-data:
+  analytics-service-database-data:
   ahnlich-db-data:
   ahnlich-ai-data:
   ahnlich-ai-models:

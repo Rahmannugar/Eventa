@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package eventa.analytics.v1;
+
+import "eventa/analytics/v1/analytics.proto";
+
+service AnalyticsService {
+  // Admin-scoped reporting reads over the event performance projection.
+  rpc ListEventPerformance(ListEventPerformanceRequest) returns (ListEventPerformanceResponse);
+  rpc GetEventPerformance(GetEventPerformanceRequest) returns (GetEventPerformanceResponse);
+  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+}
