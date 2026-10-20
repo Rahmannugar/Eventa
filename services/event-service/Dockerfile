@@ -30,6 +30,7 @@ FROM dependencies AS quality
 COPY . .
 
 RUN pnpm --filter @eventa/grpc-contracts build \
+  && pnpm --filter @eventa/messaging-contracts build \
   && pnpm --filter @eventa/observability build \
   && pnpm --filter @eventa/event-service lint \
   && pnpm --filter @eventa/event-service typecheck \
