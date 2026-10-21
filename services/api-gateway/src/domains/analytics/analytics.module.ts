@@ -42,7 +42,9 @@ export class AnalyticsModule {
               protoPath: getAnalyticsProtoPaths(),
               loader: {
                 arrays: true,
+                defaults: true,
                 includeDirs: getAnalyticsProtoIncludeDirs(),
+                longs: Number,
               },
               url: options.analyticsGrpcUrl,
             },

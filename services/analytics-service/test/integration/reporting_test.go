@@ -142,9 +142,10 @@ func TestSummarySplitsRevenueByCurrency(t *testing.T) {
 		t.Fatalf("currency rows = %d, want 2", len(revenue))
 	}
 
-	usd, eur := revenue[0], revenue[1]
-	if usd.GetCurrency() != "USD" || eur.GetCurrency() != "EUR" {
-		t.Fatalf("currencies = %q/%q, want USD/EUR", usd.GetCurrency(), eur.GetCurrency())
+	// Rows arrive in the repository's stable alphabetical currency order.
+	eur, usd := revenue[0], revenue[1]
+	if eur.GetCurrency() != "EUR" || usd.GetCurrency() != "USD" {
+		t.Fatalf("currencies = %q/%q, want EUR/USD", eur.GetCurrency(), usd.GetCurrency())
 	}
 	if usd.GetTicketsSold() != 3 || usd.GetGrossRevenueMinor() != 15000 ||
 		usd.GetRefundedRevenueMinor() != 5000 || usd.GetNetRevenueMinor() != 10000 {
