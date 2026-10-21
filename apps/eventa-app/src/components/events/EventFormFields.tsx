@@ -26,7 +26,9 @@ import {
   regionNameForCode,
   regionOptions,
 } from '../../lib/location/location-data';
+import { Button } from '../ui/Button';
 import { TextField } from '../ui/TextField';
+import { EventVenueMap } from './EventVenueMap';
 
 const categorySuggestions = [
   'Arts & Culture',
@@ -277,10 +279,87 @@ export function EventFormFields({
               />
             )}
           </div>
+
+          <div className="event-form__location">
+            <div
+              aria-label="Venue location map"
+              className="event-form__location-map"
+              role="group"
+            >
+              <EventVenueMap
+                onPick={(latitude, longitude) => {
+                  onChange('latitude', String(latitude));
+                  onChange('longitude', String(longitude));
+                }}
+                point={venuePoint(values)}
+              />
+            </div>
+            <div className="event-form__grid">
+              <TextField
+                id={`${idPrefix}-latitude`}
+                label="Latitude (optional)"
+                autoComplete="off"
+                error={errors.latitude}
+                inputMode="decimal"
+                maxLength={11}
+                onChange={(input) => onChange('latitude', input.target.value)}
+                placeholder="6.5244"
+                value={values.latitude}
+              />
+              <TextField
+                id={`${idPrefix}-longitude`}
+                label="Longitude (optional)"
+                autoComplete="off"
+                error={errors.longitude}
+                inputMode="decimal"
+                maxLength={11}
+                onChange={(input) => onChange('longitude', input.target.value)}
+                placeholder="3.3792"
+                value={values.longitude}
+              />
+            </div>
+            <div className="event-form__location-actions">
+              <small className="field__hint">
+                Click the map to mark the venue, or type coordinates — set both
+                or neither.
+              </small>
+              {values.latitude === '' && values.longitude === '' ? null : (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  onClick={() => {
+                    onChange('latitude', '');
+                    onChange('longitude', '');
+                  }}
+                >
+                  Clear location
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
     </>
   );
+}
+
+// An invalid or half-typed coordinate simply places no pin: the map shows
+// what is true, and the field's own error explains what to fix.
+function venuePoint(values: DraftEventFormValues): {
+  latitude: number | null;
+  longitude: number | null;
+} {
+  return {
+    latitude: parseCoordinate(values.latitude, 90),
+    longitude: parseCoordinate(values.longitude, 180),
+  };
+}
+
+function parseCoordinate(raw: string, bound: number): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && Math.abs(value) <= bound ? value : null;
 }
 
 function CategoryMultiSelect({

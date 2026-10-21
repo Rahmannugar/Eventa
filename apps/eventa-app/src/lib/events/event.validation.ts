@@ -22,6 +22,8 @@ export interface DraftEventFormValues {
   regionCode: string;
   postalCode: string;
   countryCode: string;
+  latitude: string;
+  longitude: string;
 }
 
 export type DraftEventFormErrors = Partial<
@@ -60,6 +62,8 @@ const formSchema = z
       .trim()
       .toUpperCase()
       .regex(/^[A-Z]{2}$/, 'Choose a country.'),
+    latitude: z.string().trim().max(11),
+    longitude: z.string().trim().max(11),
   })
   .superRefine((value, context) => {
     try {
@@ -78,6 +82,37 @@ const formSchema = z
         message: 'Check the date, time, and time zone.',
         path: ['startsAt'],
       });
+    }
+
+    if (value.latitude !== '' && value.longitude === '') {
+      context.addIssue({
+        code: 'custom',
+        message: 'Enter the longitude too.',
+        path: ['longitude'],
+      });
+    } else if (value.longitude !== '' && value.latitude === '') {
+      context.addIssue({
+        code: 'custom',
+        message: 'Enter the latitude too.',
+        path: ['latitude'],
+      });
+    } else if (value.latitude !== '' && value.longitude !== '') {
+      const latitude = Number(value.latitude);
+      const longitude = Number(value.longitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Enter a latitude between -90 and 90.',
+          path: ['latitude'],
+        });
+      }
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Enter a longitude between -180 and 180.',
+          path: ['longitude'],
+        });
+      }
     }
   });
 
@@ -110,6 +145,14 @@ export function draftEventFormValues(event: AdminEvent): DraftEventFormValues {
       ),
     postalCode: event.venue?.postalCode ?? '',
     countryCode: event.venue?.countryCode ?? '',
+    latitude:
+      event.venue?.latitude === undefined
+        ? ''
+        : String(Math.round(event.venue.latitude * 1e6) / 1e6),
+    longitude:
+      event.venue?.longitude === undefined
+        ? ''
+        : String(Math.round(event.venue.longitude * 1e6) / 1e6),
   };
 }
 
@@ -129,6 +172,8 @@ export function emptyEventFormValues(): DraftEventFormValues {
     regionCode: '',
     postalCode: '',
     countryCode: '',
+    latitude: '',
+    longitude: '',
   };
 }
 
@@ -192,6 +237,12 @@ function validateEventForm(
         ...(value.regionCode === '' ? {} : { regionCode: value.regionCode }),
         ...(value.postalCode === '' ? {} : { postalCode: value.postalCode }),
         countryCode: value.countryCode,
+        ...(value.latitude === ''
+          ? {}
+          : {
+              latitude: Number(value.latitude),
+              longitude: Number(value.longitude),
+            }),
       },
     },
   };

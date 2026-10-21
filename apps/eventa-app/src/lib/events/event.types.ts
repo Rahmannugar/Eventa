@@ -7,6 +7,8 @@ export interface EventVenue {
   regionCode?: string | undefined;
   postalCode?: string | undefined;
   countryCode: string;
+  latitude?: number | undefined;
+  longitude?: number | undefined;
 }
 
 export type EventMediaSlot =

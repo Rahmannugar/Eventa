@@ -37,6 +37,8 @@ const eventVenueSchema = z.object({
     .optional(),
   postalCode: z.string().min(1).optional(),
   countryCode: z.string().length(2),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
 });
 
 const eventMediaSchema = z.object({
