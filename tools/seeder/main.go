@@ -26,13 +26,16 @@ const usage = `seeder — bulk-insert Eventa benchmark data at the database leve
 Usage:
   seeder events [flags]
   seeder attendees [flags]
+  seeder venues [flags]
 
 Subcommands:
   events      seed published events with ticket inventory and publication outbox rows
   attendees   seed verified attendee accounts and the interest rows Discovery keeps for them
+  venues      place coordinateless venue rows in their seed city (a backfill for rows
+              created before location search; rerunning it never moves a placed venue)
 
 Environment:
-  EVENT_DATABASE_URL          Event Service database (required by events, or -database-url)
+  EVENT_DATABASE_URL          Event Service database (required by events and venues, or -database-url)
   IDENTITY_DATABASE_URL       Identity database: the owning admin for events, the accounts
                               for attendees (or -identity-url)
   DISCOVERY_DATABASE_URL      Discovery database for attendee interests (or -discovery-url)
@@ -75,6 +78,8 @@ func run(args []string) error {
 		return seedEvents(args[1:])
 	case "attendees":
 		return seedAttendees(args[1:])
+	case "venues":
+		return backfillVenues(args[1:])
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return nil
@@ -148,6 +153,58 @@ func seedEvents(args []string) error {
 	fmt.Printf(
 		"seeded events=%d range=[%d,%d] seed=%d batches=%d inserted=%d skipped=%d admin=%s\n",
 		*count, first, last, *seed, batches, inserted, int64(*count)-inserted, owner,
+	)
+	return nil
+}
+
+// backfillVenues places venue rows that predate location search: it claims
+// coordinateless rows in the seed's city pool, gives each its deterministic
+// point, and stops when a claim returns nothing, so it is safe to rerun
+// against a partially placed dataset.
+func backfillVenues(args []string) error {
+	flags := flag.NewFlagSet("venues", flag.ContinueOnError)
+	batchSize := flags.Int("batch-size", 500, "venue rows per transaction")
+	databaseURL := flags.String("database-url", "", "Event Service database URL (default $EVENT_DATABASE_URL)")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+
+	if *batchSize < 1 {
+		return errors.New("-batch-size must be at least 1")
+	}
+	eventURL := firstNonEmpty(*databaseURL, os.Getenv("EVENT_DATABASE_URL"))
+	if eventURL == "" {
+		return errors.New("the Event Service database URL is required: set EVENT_DATABASE_URL or pass -database-url")
+	}
+
+	ctx := context.Background()
+	pool, err := openDatabase(ctx, "event", eventURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	var (
+		placed  int64
+		batches int
+	)
+	for {
+		changed, err := commitBatch(ctx, pool, func(ctx context.Context, tx pgx.Tx) (int64, error) {
+			return eventseed.BackfillVenueCoordinates(ctx, tx, *batchSize)
+		})
+		if err != nil {
+			return fmt.Errorf("backfill venue coordinates: %w", err)
+		}
+		batches++
+		placed += changed
+		if changed == 0 {
+			break
+		}
+	}
+
+	fmt.Printf(
+		"backfilled venue coordinates=%d batches=%d batch_size=%d\n",
+		placed, batches, *batchSize,
 	)
 	return nil
 }

@@ -82,6 +82,13 @@ go -C tools/seeder run . events -count 10000 -offset 0 -batch-size 200
 
 `-count` sets the number of events, `-offset` the first generator index, `-batch-size` the rows per transaction, and `-seed` the generator seed. Seeded events belong to the first activated admin in the Identity database unless `-admin-id` says otherwise.
 
+Rows created before location search carry no coordinates. The `venues` command gives them their point: it claims only coordinateless rows whose city is one of the seed's cities, so it settles on its own, rerunning it never moves a placed venue, and a city it does not know stays empty until someone places it deliberately.
+
+```bash
+EVENT_DATABASE_URL=postgres://eventa_event:eventa_event_password@127.0.0.1:57432/eventa_event \
+go -C tools/seeder run . venues -batch-size 500
+```
+
 Every range is deterministic: the same seed, offset, and count always produce the same rows, so rerunning a range inserts nothing new. Keep the seed and the offsets of a dataset you intend to keep, and use a fresh offset range for throwaway runs.
 
 Check what a run produced:
