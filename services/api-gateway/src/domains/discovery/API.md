@@ -9,10 +9,11 @@
 | `query` | Free-text words matched against title and description. |
 | `categories[]` | One or more exact categories, compared case-insensitively. |
 | `startsFrom`, `startsTo` | Inclusive RFC 3339 bounds on the event start time. |
+| `near` | Location filter as `latitude,longitude,radiusKm`, radius greater than 0 and at most 20000. |
 | `limit` | Page size, 1 to 50. Defaults to 20. |
 | `offset` | Page offset, at most 10000. Defaults to 0. |
 
-Each result carries the event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code. Results are ordered by start time, then event id.
+Each result carries the event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code. Without `near` they are ordered by start time, then event id. With `near` the answer is restricted to events whose venue lies inside the radius and ordered by distance first, then start time and event id; each result then also carries `distanceKm`, its distance from the requested point.
 
 Responses are cached by the client only through their normal HTTP lifetime; Gateway holds no search cache.
 
@@ -20,7 +21,7 @@ Responses are cached by the client only through their normal HTTP lifetime; Gate
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| `400` | `SEARCH_QUERY_INVALID` | The Discovery query could not be understood — a malformed timestamp or an unbalanced time range. |
+| `400` | `SEARCH_QUERY_INVALID` | The Discovery query could not be understood — a malformed timestamp, an unbalanced time range, or a `near` point or radius outside its bounds. |
 | `422` | `VALIDATION_FAILED` | The request itself is malformed: an unknown parameter, an out-of-range `limit` or `offset`, or a non-RFC 3339 timestamp. |
 | `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned a result Gateway could not render. |
 | `503` | `DISCOVERY_SEARCH_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
@@ -69,14 +70,15 @@ Interest reads are limited by IP burst and hourly budgets, and interest writes b
 | Parameter | Meaning |
 | --- | --- |
 | `limit` | Page size, 1 to 20. Defaults to 10. |
+| `origin` | The attendee's location as `latitude,longitude`, blending proximity into the ranking. |
 
-Each result carries the same fields as a search result — event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code — ordered best match first. An attendee who has saved no interests gets an empty list.
+Each result carries the same fields as a search result — event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code — ordered best match first. An attendee who has saved no interests gets an empty list. With `origin`, results whose venue lies within 50 km gain weight in the ranking and carry `distanceKm`; results without usable coordinates, and the whole answer when no `origin` is given, are ordered by interest match alone.
 
 ### Errors
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| `400` | `RECOMMENDATIONS_INVALID` | Discovery could not understand the request. |
+| `400` | `RECOMMENDATIONS_INVALID` | Discovery could not understand the request, or the `origin` point is outside its bounds. |
 | `422` | `VALIDATION_FAILED` | The request itself is malformed: an unknown parameter or a `limit` outside 1 to 20. |
 | `429` | `RECOMMENDATIONS_RATE_LIMITED` | The attendee or client IP is over its budget. |
 | `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned an answer for a different attendee. |

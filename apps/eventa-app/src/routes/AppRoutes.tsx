@@ -11,6 +11,7 @@ import { AdminEventEditorPage } from '../pages/AdminEventEditorPage';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AttendeeEmailVerificationPage } from '../pages/AttendeeEmailVerificationPage';
 import { AttendeeRegistrationPage } from '../pages/AttendeeRegistrationPage';
+import { AttendeeSearchPage } from '../pages/AttendeeSearchPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
@@ -36,6 +37,7 @@ export function AppRoutes() {
       />
       <Route element={<ProtectedSessionBoundary actor="attendee" />}>
         <Route path="/attendee" element={<AccountPage actor="attendee" />} />
+        <Route path="/attendee/search" element={<AttendeeSearchPage />} />
       </Route>
 
       <Route path="/admin/login" element={<LoginPage actor="admin" />} />

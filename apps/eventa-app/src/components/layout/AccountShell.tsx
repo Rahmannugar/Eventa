@@ -1,5 +1,5 @@
 import { SignOutIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { userFacingApiError } from '../../lib/api/api-error';
 import type { Actor } from '../../lib/auth/auth.types';
@@ -32,9 +32,16 @@ export function AccountShell({ actor }: { actor: Actor }) {
     <main className={`account-shell account-shell--${actor}`}>
       <header className="account-shell__header">
         <Brand />
-        <span className="actor-badge">
-          {actor === 'admin' ? 'Admin Dashboard' : 'Attendee'}
-        </span>
+        <div className="account-shell__header-end">
+          {actor === 'attendee' ? (
+            <Link className="account-shell__nav" to="/attendee/search">
+              Find events
+            </Link>
+          ) : null}
+          <span className="actor-badge">
+            {actor === 'admin' ? 'Admin Dashboard' : 'Attendee'}
+          </span>
+        </div>
       </header>
 
       <section className="account-shell__content">

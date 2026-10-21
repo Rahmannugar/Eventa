@@ -9,6 +9,8 @@ export {
   type EventSearchResult,
   type GetAttendeeInterestsRequest,
   type GetAttendeeInterestsResponse,
+  type NearClause,
+  type Origin,
   type RecommendEventsRequest,
   type RecommendEventsResponse,
   type SearchEventsRequest,

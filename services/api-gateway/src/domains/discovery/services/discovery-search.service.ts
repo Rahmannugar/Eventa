@@ -1,6 +1,7 @@
 import {
   DISCOVERY_SERVICE_NAME,
   type EventSearchResult,
+  type NearClause,
   type SearchEventsRequest,
   type SearchEventsResponse,
 } from '@eventa/grpc-contracts';
@@ -55,6 +56,7 @@ export class DiscoverySearchService implements OnModuleInit {
       startsTo: query.startsTo,
       limit: query.limit,
       offset: query.offset,
+      near: query.near === undefined ? undefined : this.parseNear(query.near),
     };
 
     try {
@@ -80,6 +82,26 @@ export class DiscoverySearchService implements OnModuleInit {
       }
       throw this.unavailable('DISCOVERY_SEARCH_RPC_UNAVAILABLE');
     }
+  }
+
+  // parseNear keeps the edge cheap: the DTO proves the shape, and a point or
+  // radius outside the geographies the discovery service accepts fails here
+  // with the same answer the gRPC validation would produce.
+  private parseNear(value: string): NearClause {
+    const [latitude = Number.NaN, longitude = Number.NaN, radiusKm = Number.NaN] =
+      value.split(',').map(Number);
+    if (
+      !(Math.abs(latitude) <= 90) ||
+      !(Math.abs(longitude) <= 180) ||
+      !(radiusKm > 0 && radiusKm <= 20000)
+    ) {
+      throw new ApiHttpException(
+        HttpStatus.BAD_REQUEST,
+        'SEARCH_QUERY_INVALID',
+        'Search could not be understood.',
+      );
+    }
+    return { latitude, longitude, radiusKm };
   }
 
   // toDto re-reads the response rather than trusting it: a result without an
@@ -111,6 +133,7 @@ export class DiscoverySearchService implements OnModuleInit {
       venueName: event.venueName,
       venueCity: event.venueCity,
       venueCountryCode: event.venueCountryCode,
+      distanceKm: event.distanceKm,
     };
   }
 

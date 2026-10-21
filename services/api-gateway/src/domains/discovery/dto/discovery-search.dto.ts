@@ -15,6 +15,8 @@ import {
 const RFC3339 =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
+const THREE_NUMBERS = /^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/;
+
 export class SearchEventsQueryDto {
   @ApiPropertyOptional({
     description: 'Free-text words matched against title and description',
@@ -67,6 +69,18 @@ export class SearchEventsQueryDto {
   @Matches(RFC3339, { message: 'startsTo must be an RFC 3339 timestamp' })
   startsTo?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Restrict to events within a radius of a point, as latitude,longitude,radiusKm. Results are ordered by distance from the point.',
+    example: '6.5244,3.3792,10',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(THREE_NUMBERS, {
+    message: 'near must be latitude,longitude,radiusKm',
+  })
+  near?: string;
+
   @ApiPropertyOptional({ default: 20, maximum: 50, minimum: 1 })
   @Type(() => Number)
   @IsInt()
@@ -112,6 +126,13 @@ export class SearchEventResultDto {
 
   @ApiPropertyOptional({ example: 'NG' })
   venueCountryCode?: string | undefined;
+
+  @ApiPropertyOptional({
+    description:
+      'Distance from the requested point in kilometres; set only when the search carried a near filter',
+    example: 1.1,
+  })
+  distanceKm?: number | undefined;
 }
 
 export class SearchEventsDto {

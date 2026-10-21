@@ -1,6 +1,7 @@
 import {
   DISCOVERY_SERVICE_NAME,
   type EventSearchResult,
+  type Origin,
   type RecommendEventsResponse,
 } from '@eventa/grpc-contracts';
 import { Metadata, status } from '@grpc/grpc-js';
@@ -54,7 +55,11 @@ export class DiscoveryRecommendationsService implements OnModuleInit {
     try {
       const response = await firstValueFrom(
         this.requireClient().recommendEvents(
-          { attendeeId, limit: query.limit },
+          {
+            attendeeId,
+            limit: query.limit,
+            origin: query.origin === undefined ? undefined : this.parseOrigin(query.origin),
+          },
           this.metadata(requestId),
           { deadline: new Date(Date.now() + this.deadlineMs) },
         ),
@@ -63,6 +68,20 @@ export class DiscoveryRecommendationsService implements OnModuleInit {
     } catch (error: unknown) {
       throw this.translate(error);
     }
+  }
+
+  // parseOrigin rejects a location outside the same bounds the discovery
+  // service enforces, so the caller gets one answer either way.
+  private parseOrigin(value: string): Origin {
+    const [latitude = Number.NaN, longitude = Number.NaN] = value.split(',').map(Number);
+    if (!(Math.abs(latitude) <= 90) || !(Math.abs(longitude) <= 180)) {
+      throw new ApiHttpException(
+        HttpStatus.BAD_REQUEST,
+        'RECOMMENDATIONS_INVALID',
+        'That location could not be understood.',
+      );
+    }
+    return { latitude, longitude };
   }
 
   // toDto re-reads the response rather than trusting it: an answer for a
@@ -142,5 +161,6 @@ function toEventDto(event: EventSearchResult): SearchEventResultDto {
     venueName: event.venueName,
     venueCity: event.venueCity,
     venueCountryCode: event.venueCountryCode,
+    distanceKm: event.distanceKm,
   };
 }
