@@ -48,7 +48,10 @@ export class DiscoverySearchService implements OnModuleInit {
     );
   }
 
-  async search(query: SearchEventsQueryDto, requestId: string): Promise<SearchEventsDto> {
+  async search(
+    query: SearchEventsQueryDto,
+    requestId: string,
+  ): Promise<SearchEventsDto> {
     const request: SearchEventsRequest = {
       query: query.query ?? '',
       categories: query.categories ?? [],
@@ -61,11 +64,9 @@ export class DiscoverySearchService implements OnModuleInit {
 
     try {
       const response = await firstValueFrom(
-        this.requireClient().searchEvents(
-          request,
-          this.metadata(requestId),
-          { deadline: new Date(Date.now() + this.deadlineMs) },
-        ),
+        this.requireClient().searchEvents(request, this.metadata(requestId), {
+          deadline: new Date(Date.now() + this.deadlineMs),
+        }),
       );
       return this.toDto(response);
     } catch (error: unknown) {
@@ -88,8 +89,11 @@ export class DiscoverySearchService implements OnModuleInit {
   // radius outside the geographies the discovery service accepts fails here
   // with the same answer the gRPC validation would produce.
   private parseNear(value: string): NearClause {
-    const [latitude = Number.NaN, longitude = Number.NaN, radiusKm = Number.NaN] =
-      value.split(',').map(Number);
+    const [
+      latitude = Number.NaN,
+      longitude = Number.NaN,
+      radiusKm = Number.NaN,
+    ] = value.split(',').map(Number);
     if (
       !(Math.abs(latitude) <= 90) ||
       !(Math.abs(longitude) <= 180) ||
@@ -107,9 +111,7 @@ export class DiscoverySearchService implements OnModuleInit {
   // toDto re-reads the response rather than trusting it: a result without an
   // identity or a title is not something the client can render.
   private toDto(response: SearchEventsResponse): SearchEventsDto {
-    const events = (response.events ?? []).map((event) =>
-      this.toResult(event),
-    );
+    const events = (response.events ?? []).map((event) => this.toResult(event));
     return {
       events,
       total: response.total ?? 0,

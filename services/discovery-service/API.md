@@ -37,14 +37,14 @@ One structured query over the Discovery-owned event projection. It is an interna
 
 Request:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `query` | string | Free-text words matched case-insensitively against title and description. `%` and `_` are literal. |
-| `categories` | repeated string | Exact categories. A row matches when it carries any listed value, compared case-insensitively. |
-| `starts_from`, `starts_to` | RFC 3339 string | Inclusive bounds on the event start time. |
-| `limit` | int32 | Page size. `0` means 20; values above 50 are clamped. |
-| `offset` | int32 | Page offset, at most 10000. |
-| `near` | message `NearClause`: `latitude`, `longitude`, `radius_km` | Optional proximity clause. Only venues within `radius_km` of the point are returned. Latitude must be −90..90, longitude −180..180, and the radius positive and at most 20000. |
+| Field                      | Type                                                       | Meaning                                                                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `query`                    | string                                                     | Free-text words matched case-insensitively against title and description. `%` and `_` are literal.                                                                             |
+| `categories`               | repeated string                                            | Exact categories. A row matches when it carries any listed value, compared case-insensitively.                                                                                 |
+| `starts_from`, `starts_to` | RFC 3339 string                                            | Inclusive bounds on the event start time.                                                                                                                                      |
+| `limit`                    | int32                                                      | Page size. `0` means 20; values above 50 are clamped.                                                                                                                          |
+| `offset`                   | int32                                                      | Page offset, at most 10000.                                                                                                                                                    |
+| `near`                     | message `NearClause`: `latitude`, `longitude`, `radius_km` | Optional proximity clause. Only venues within `radius_km` of the point are returned. Latitude must be −90..90, longitude −180..180, and the radius positive and at most 20000. |
 
 Response: the matching `events`, plus `total`, `limit`, and `offset`. Without `near`, results are ordered by start time, then event id, so pagination is stable. With `near`, each result carries `distance_km` — the venue's distance from the requested point — and the page is ordered by that distance first, then start time. A venue without stored coordinates never matches a `near` clause; without one it is returned as any other event is.
 

@@ -50,9 +50,7 @@ export function useNearMe() {
         if (attempt !== attemptRef.current) return;
         setState({
           status:
-            error.code === error.PERMISSION_DENIED
-              ? 'blocked'
-              : 'unavailable',
+            error.code === error.PERMISSION_DENIED ? 'blocked' : 'unavailable',
         });
       },
       { maximumAge: 300_000, timeout: 10_000 },

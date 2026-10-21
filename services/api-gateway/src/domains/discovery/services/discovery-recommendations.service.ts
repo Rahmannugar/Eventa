@@ -58,7 +58,10 @@ export class DiscoveryRecommendationsService implements OnModuleInit {
           {
             attendeeId,
             limit: query.limit,
-            origin: query.origin === undefined ? undefined : this.parseOrigin(query.origin),
+            origin:
+              query.origin === undefined
+                ? undefined
+                : this.parseOrigin(query.origin),
           },
           this.metadata(requestId),
           { deadline: new Date(Date.now() + this.deadlineMs) },
@@ -73,7 +76,9 @@ export class DiscoveryRecommendationsService implements OnModuleInit {
   // parseOrigin rejects a location outside the same bounds the discovery
   // service enforces, so the caller gets one answer either way.
   private parseOrigin(value: string): Origin {
-    const [latitude = Number.NaN, longitude = Number.NaN] = value.split(',').map(Number);
+    const [latitude = Number.NaN, longitude = Number.NaN] = value
+      .split(',')
+      .map(Number);
     if (!(Math.abs(latitude) <= 90) || !(Math.abs(longitude) <= 180)) {
       throw new ApiHttpException(
         HttpStatus.BAD_REQUEST,
@@ -91,10 +96,7 @@ export class DiscoveryRecommendationsService implements OnModuleInit {
     response: RecommendEventsResponse,
     attendeeId: string,
   ): RecommendedEventsDto {
-    if (
-      response.attendeeId !== attendeeId ||
-      !Array.isArray(response.events)
-    ) {
+    if (response.attendeeId !== attendeeId || !Array.isArray(response.events)) {
       throw new ApiHttpException(
         HttpStatus.SERVICE_UNAVAILABLE,
         'DISCOVERY_SERVICE_UNAVAILABLE',

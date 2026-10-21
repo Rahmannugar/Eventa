@@ -62,7 +62,11 @@ export function EventSearch() {
   return (
     <div className="event-search">
       <div className="event-search__controls">
-        <form className="event-search__form" role="search" onSubmit={submitSearch}>
+        <form
+          className="event-search__form"
+          role="search"
+          onSubmit={submitSearch}
+        >
           <div className="field">
             <label htmlFor="event-search-query">Search events</label>
             <input
@@ -101,9 +105,7 @@ export function EventSearch() {
 
       {active ? (
         <div className="form-status form-status--action" role="status">
-          <span>
-            Showing events within {NEAR_RADIUS_KM} km, closest first.
-          </span>
+          <span>Showing events within {NEAR_RADIUS_KM} km, closest first.</span>
           <Button type="button" onClick={nearMe.disable} variant="quiet">
             Show all events
           </Button>
@@ -113,7 +115,10 @@ export function EventSearch() {
       {query.isPending ? (
         <div className="event-search-results" aria-busy="true">
           {[0, 1, 2].map((item) => (
-            <div className="event-search-card event-search-card--skeleton" key={item} />
+            <div
+              className="event-search-card event-search-card--skeleton"
+              key={item}
+            />
           ))}
           <span className="visually-hidden">Loading events…</span>
         </div>
@@ -141,10 +146,7 @@ export function EventSearch() {
           </Button>
         </section>
       ) : (
-        <div
-          aria-busy={query.isFetching}
-          className="event-search__results"
-        >
+        <div aria-busy={query.isFetching} className="event-search__results">
           <span className="visually-hidden" role="status">
             {query.isFetching ? 'Updating results…' : ''}
           </span>
@@ -217,9 +219,7 @@ function formatEventDate(event: EventSearchResult): string {
 
 function formatDistance(distanceKm: number): string {
   const rounded =
-    distanceKm < 10
-      ? Math.round(distanceKm * 10) / 10
-      : Math.round(distanceKm);
+    distanceKm < 10 ? Math.round(distanceKm * 10) / 10 : Math.round(distanceKm);
   return `${String(rounded)} km away`;
 }
 

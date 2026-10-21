@@ -4,14 +4,14 @@
 
 `GET /search/events` requires an attendee session and returns matching events from the Discovery projection. It never exposes a draft, a cancelled event, or an event whose content Event Service no longer serves.
 
-| Parameter | Meaning |
-| --- | --- |
-| `query` | Free-text words matched against title and description. |
-| `categories[]` | One or more exact categories, compared case-insensitively. |
-| `startsFrom`, `startsTo` | Inclusive RFC 3339 bounds on the event start time. |
-| `near` | Location filter as `latitude,longitude,radiusKm`, radius greater than 0 and at most 20000. |
-| `limit` | Page size, 1 to 50. Defaults to 20. |
-| `offset` | Page offset, at most 10000. Defaults to 0. |
+| Parameter                | Meaning                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `query`                  | Free-text words matched against title and description.                                     |
+| `categories[]`           | One or more exact categories, compared case-insensitively.                                 |
+| `startsFrom`, `startsTo` | Inclusive RFC 3339 bounds on the event start time.                                         |
+| `near`                   | Location filter as `latitude,longitude,radiusKm`, radius greater than 0 and at most 20000. |
+| `limit`                  | Page size, 1 to 50. Defaults to 20.                                                        |
+| `offset`                 | Page offset, at most 10000. Defaults to 0.                                                 |
 
 Each result carries the event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code. Without `near` they are ordered by start time, then event id. With `near` the answer is restricted to events whose venue lies inside the radius and ordered by distance first, then start time and event id; each result then also carries `distanceKm`, its distance from the requested point.
 
@@ -19,12 +19,12 @@ Responses are cached by the client only through their normal HTTP lifetime; Gate
 
 ### Errors
 
-| Status | Code | Meaning |
-| --- | --- | --- |
-| `400` | `SEARCH_QUERY_INVALID` | The Discovery query could not be understood — a malformed timestamp, an unbalanced time range, or a `near` point or radius outside its bounds. |
-| `422` | `VALIDATION_FAILED` | The request itself is malformed: an unknown parameter, an out-of-range `limit` or `offset`, or a non-RFC 3339 timestamp. |
-| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned a result Gateway could not render. |
-| `503` | `DISCOVERY_SEARCH_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
+| Status | Code                                     | Meaning                                                                                                                                        |
+| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`  | `SEARCH_QUERY_INVALID`                   | The Discovery query could not be understood — a malformed timestamp, an unbalanced time range, or a `near` point or radius outside its bounds. |
+| `422`  | `VALIDATION_FAILED`                      | The request itself is malformed: an unknown parameter, an out-of-range `limit` or `offset`, or a non-RFC 3339 timestamp.                       |
+| `503`  | `DISCOVERY_SERVICE_UNAVAILABLE`          | Discovery is unreachable, rejected the call, or returned a result Gateway could not render.                                                    |
+| `503`  | `DISCOVERY_SEARCH_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline.                                                                                                        |
 
 Failures carry no dependency detail beyond what a client can act on.
 
@@ -52,12 +52,12 @@ An attendee who has never saved interests reads an empty list with no `updatedAt
 
 ### Errors
 
-| Status | Code | Meaning |
-| --- | --- | --- |
-| `400` | `INTERESTS_INVALID` | The interest list was out of bounds or malformed for Discovery. |
-| `422` | `VALIDATION_FAILED` | The body itself is malformed: more than 50 entries, a non-string entry, or an empty or overlong interest. |
-| `429` | `INTERESTS_READ_RATE_LIMITED`, `INTERESTS_WRITE_RATE_LIMITED` | The attendee or client IP is over its budget. |
-| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned interests for a different attendee. |
+| Status | Code                                                          | Meaning                                                                                                   |
+| ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `400`  | `INTERESTS_INVALID`                                           | The interest list was out of bounds or malformed for Discovery.                                           |
+| `422`  | `VALIDATION_FAILED`                                           | The body itself is malformed: more than 50 entries, a non-string entry, or an empty or overlong interest. |
+| `429`  | `INTERESTS_READ_RATE_LIMITED`, `INTERESTS_WRITE_RATE_LIMITED` | The attendee or client IP is over its budget.                                                             |
+| `503`  | `DISCOVERY_SERVICE_UNAVAILABLE`                               | Discovery is unreachable, rejected the call, or returned interests for a different attendee.              |
 
 ### Abuse controls
 
@@ -67,22 +67,22 @@ Interest reads are limited by IP burst and hourly budgets, and interest writes b
 
 `GET /attendees/me/recommendations` requires an attendee session and returns events ranked for the signed-in attendee. The attendee id always comes from the session, never from the request.
 
-| Parameter | Meaning |
-| --- | --- |
-| `limit` | Page size, 1 to 20. Defaults to 10. |
-| `origin` | The attendee's location as `latitude,longitude`, blending proximity into the ranking. |
+| Parameter | Meaning                                                                               |
+| --------- | ------------------------------------------------------------------------------------- |
+| `limit`   | Page size, 1 to 20. Defaults to 10.                                                   |
+| `origin`  | The attendee's location as `latitude,longitude`, blending proximity into the ranking. |
 
 Each result carries the same fields as a search result — event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code — ordered best match first. An attendee who has saved no interests gets an empty list. With `origin`, results whose venue lies within 50 km gain weight in the ranking and carry `distanceKm`; results without usable coordinates, and the whole answer when no `origin` is given, are ordered by interest match alone.
 
 ### Errors
 
-| Status | Code | Meaning |
-| --- | --- | --- |
-| `400` | `RECOMMENDATIONS_INVALID` | Discovery could not understand the request, or the `origin` point is outside its bounds. |
-| `422` | `VALIDATION_FAILED` | The request itself is malformed: an unknown parameter or a `limit` outside 1 to 20. |
-| `429` | `RECOMMENDATIONS_RATE_LIMITED` | The attendee or client IP is over its budget. |
-| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned an answer for a different attendee. |
-| `503` | `DISCOVERY_RECOMMENDATIONS_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
+| Status | Code                                              | Meaning                                                                                      |
+| ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `400`  | `RECOMMENDATIONS_INVALID`                         | Discovery could not understand the request, or the `origin` point is outside its bounds.     |
+| `422`  | `VALIDATION_FAILED`                               | The request itself is malformed: an unknown parameter or a `limit` outside 1 to 20.          |
+| `429`  | `RECOMMENDATIONS_RATE_LIMITED`                    | The attendee or client IP is over its budget.                                                |
+| `503`  | `DISCOVERY_SERVICE_UNAVAILABLE`                   | Discovery is unreachable, rejected the call, or returned an answer for a different attendee. |
+| `503`  | `DISCOVERY_RECOMMENDATIONS_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline.                                                      |
 
 Failures carry no dependency detail beyond what a client can act on.
 
@@ -94,22 +94,22 @@ A recommendation costs an embed, a similarity search, and a resolution call, so 
 
 `GET /events/:eventId/similar` is public, like the event detail it sits beside, and returns events similar to the named one. The path id must be a UUID.
 
-| Parameter | Meaning |
-| --- | --- |
-| `limit` | Page size, 1 to 20. Defaults to 10. |
+| Parameter | Meaning                             |
+| --------- | ----------------------------------- |
+| `limit`   | Page size, 1 to 20. Defaults to 10. |
 
 Each result carries the same fields as a search result, ordered best match first. The event asked about is never returned with itself, and only events Event Service still serves appear.
 
 ### Errors
 
-| Status | Code | Meaning |
-| --- | --- | --- |
-| `400` | `SIMILAR_EVENTS_INVALID` | Discovery could not understand the request. |
-| `404` | `EVENT_NOT_FOUND` | Discovery holds no published event with that id. |
-| `422` | `VALIDATION_FAILED` | The request itself is malformed: a path id that is not a UUID, an unknown parameter, or a `limit` outside 1 to 20. |
-| `429` | `SIMILAR_EVENTS_RATE_LIMITED` | The client IP or the attendee session is over its budget. |
-| `503` | `DISCOVERY_SERVICE_UNAVAILABLE` | Discovery is unreachable, rejected the call, or returned an answer for a different event. |
-| `503` | `DISCOVERY_SIMILAR_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline. |
+| Status | Code                                      | Meaning                                                                                                            |
+| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `400`  | `SIMILAR_EVENTS_INVALID`                  | Discovery could not understand the request.                                                                        |
+| `404`  | `EVENT_NOT_FOUND`                         | Discovery holds no published event with that id.                                                                   |
+| `422`  | `VALIDATION_FAILED`                       | The request itself is malformed: a path id that is not a UUID, an unknown parameter, or a `limit` outside 1 to 20. |
+| `429`  | `SIMILAR_EVENTS_RATE_LIMITED`             | The client IP or the attendee session is over its budget.                                                          |
+| `503`  | `DISCOVERY_SERVICE_UNAVAILABLE`           | Discovery is unreachable, rejected the call, or returned an answer for a different event.                          |
+| `503`  | `DISCOVERY_SIMILAR_RPC_DEADLINE_EXCEEDED` | The Discovery call missed its deadline.                                                                            |
 
 Failures carry no dependency detail beyond what a client can act on.
 
