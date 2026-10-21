@@ -2,6 +2,7 @@ package unittest
 
 import (
 	"encoding/json"
+	"math"
 	"regexp"
 	"strings"
 	"testing"
@@ -50,6 +51,10 @@ func TestTheSameSeedAndRangeAlwaysGenerateTheSameRows(t *testing.T) {
 		}
 		if first[index].CurrencyID != second[index].CurrencyID {
 			t.Fatalf("event %d changed currency id between runs", index)
+		}
+		if first[index].Venue.Latitude != second[index].Venue.Latitude ||
+			first[index].Venue.Longitude != second[index].Venue.Longitude {
+			t.Fatalf("event %d changed venue coordinates between runs", index)
 		}
 		for ticketIndex, ticketType := range first[index].TicketTypes {
 			if ticketType.ID != second[index].TicketTypes[ticketIndex].ID {
@@ -114,6 +119,12 @@ func TestGeneratedEventsSatisfyTheEventSchemaRules(t *testing.T) {
 		}
 		if !countryRule.MatchString(event.Venue.CountryCode) {
 			t.Fatalf("event %q: country code %q must be two uppercase letters", event.Title, event.Venue.CountryCode)
+		}
+		if event.Venue.Latitude < -90 || event.Venue.Latitude > 90 {
+			t.Fatalf("event %q: latitude %f out of range", event.Title, event.Venue.Latitude)
+		}
+		if event.Venue.Longitude < -180 || event.Venue.Longitude > 180 {
+			t.Fatalf("event %q: longitude %f out of range", event.Title, event.Venue.Longitude)
 		}
 
 		if len(event.TicketTypes) < 1 || len(event.TicketTypes) > 3 {
@@ -213,4 +224,57 @@ func TestEveryEventCarriesSellableInventory(t *testing.T) {
 			t.Fatalf("event %q is missing its publish timestamp or owning admin", event.Title)
 		}
 	}
+}
+
+// centroids of the city pool, mirrored from the seeder's own table so a new
+// city without a centroid fails here instead of seeding coordinate-free rows.
+var cityCentroids = map[string][2]float64{
+	"Lagos":         {6.5244, 3.3792},
+	"Abuja":         {9.0765, 7.3986},
+	"Ibadan":        {7.3775, 3.9470},
+	"Accra":         {5.6037, -0.1870},
+	"Kumasi":        {6.6885, -1.6244},
+	"Nairobi":       {-1.2921, 36.8219},
+	"Kigali":        {-1.9441, 30.0619},
+	"Dar es Salaam": {-6.7924, 39.2083},
+}
+
+// TestVenueCoordinatesScatterWithinTenKilometresOfTheirCity pins the jitter
+// contract: every event sits close to real city coordinates for realistic
+// distance ordering, and events in one city are not stacked on a single point.
+func TestVenueCoordinatesScatterWithinTenKilometresOfTheirCity(t *testing.T) {
+	admin := uuid.MustParse("0d0f7d2e-0000-4000-8000-000000000001")
+	now := time.Now().UTC().Truncate(time.Second)
+
+	seen := map[[2]float64]struct{}{}
+	for _, event := range sampleEvents(t, now, admin) {
+		centroid, known := cityCentroids[event.Venue.City]
+		if !known {
+			t.Fatalf("event %q: city %q has no known centroid", event.Title, event.Venue.City)
+		}
+		distanceKm := haversineKm(
+			centroid[0], centroid[1],
+			event.Venue.Latitude, event.Venue.Longitude,
+		)
+		if distanceKm > 10.0001 {
+			t.Fatalf("event %q: %.2f km from %s centroid exceeds the 10 km jitter radius",
+				event.Title, distanceKm, event.Venue.City)
+		}
+		seen[[2]float64{event.Venue.Latitude, event.Venue.Longitude}] = struct{}{}
+	}
+	if len(seen) < 2 {
+		t.Fatal("all sampled events share one coordinate; jitter is not scattering")
+	}
+}
+
+func haversineKm(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadiusKm = 6371.0
+	const degToRad = math.Pi / 180
+
+	dLat := (lat2 - lat1) * degToRad
+	dLon := (lon2 - lon1) * degToRad
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*degToRad)*math.Cos(lat2*degToRad)*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+	return 2 * earthRadiusKm * math.Asin(math.Sqrt(a))
 }

@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"strings"
 	"time"
@@ -42,6 +43,8 @@ type Venue struct {
 	AddressLine1 string
 	City         string
 	CountryCode  string
+	Latitude     float64
+	Longitude    float64
 }
 
 // TicketType is one sellable ticket currency beneath the event's currency.
@@ -104,6 +107,8 @@ func (e Event) PayloadJSON() []byte {
 type city struct {
 	Name        string
 	CountryCode string
+	Latitude    float64
+	Longitude   float64
 }
 
 // The word lists below keep the corpus varied enough that search,
@@ -112,8 +117,10 @@ type city struct {
 // so a range always generates the same rows.
 var (
 	cities = []city{
-		{"Lagos", "NG"}, {"Abuja", "NG"}, {"Ibadan", "NG"}, {"Accra", "GH"},
-		{"Kumasi", "GH"}, {"Nairobi", "KE"}, {"Kigali", "RW"}, {"Dar es Salaam", "TZ"},
+		{"Lagos", "NG", 6.5244, 3.3792}, {"Abuja", "NG", 9.0765, 7.3986},
+		{"Ibadan", "NG", 7.3775, 3.9470}, {"Accra", "GH", 5.6037, -0.1870},
+		{"Kumasi", "GH", 6.6885, -1.6244}, {"Nairobi", "KE", -1.2921, 36.8219},
+		{"Kigali", "RW", -1.9441, 30.0619}, {"Dar es Salaam", "TZ", -6.7924, 39.2083},
 	}
 	adjectives = []string{
 		"Annual", "Sunset", "Rooftop", "Indie", "Urban", "Coastal", "Twilight",
@@ -191,6 +198,7 @@ func Generate(seed int64, index int, now time.Time, adminID uuid.UUID) Event {
 
 	startsAt := generatedStart(now, rng.IntN(280)+7, rng.IntN(8)+10)
 	endsAt := startsAt.Add(time.Duration(rng.IntN(6)+2) * time.Hour)
+	latitude, longitude := jitterAround(home, rng)
 
 	return Event{
 		ID:    deriveID(seed, index, "event"),
@@ -211,10 +219,31 @@ func Generate(seed int64, index int, now time.Time, adminID uuid.UUID) Event {
 			AddressLine1: fmt.Sprintf("%d %s", rng.IntN(400)+1, streets[rng.IntN(len(streets))]),
 			City:         home.Name,
 			CountryCode:  home.CountryCode,
+			Latitude:     latitude,
+			Longitude:    longitude,
 		},
 		CurrencyID:  deriveID(seed, index, "currency"),
 		TicketTypes: ticketTypes(seed, index, now, startsAt, rng),
 	}
+}
+
+// jitterAround scatters an event up to 10 km from its city centroid along a
+// deterministic bearing and distance, so events in one city sit near each
+// other without sharing a point and distance ordering is realistic.
+func jitterAround(home city, rng *rand.Rand) (latitude, longitude float64) {
+	const maxRadiusKm = 10.0
+	const kmPerDegreeLat = 111.32
+
+	radiusKm := rng.Float64() * maxRadiusKm
+	bearing := rng.Float64() * 2 * math.Pi
+
+	dLat := radiusKm * math.Cos(bearing) / kmPerDegreeLat
+	dLon := radiusKm * math.Sin(bearing) /
+		(kmPerDegreeLat * math.Cos(home.Latitude*math.Pi/180))
+
+	latitude = home.Latitude + dLat
+	longitude = home.Longitude + dLon
+	return latitude, longitude
 }
 
 // generatedStart places a future start at a fixed hour so a seeded event is

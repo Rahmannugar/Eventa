@@ -86,16 +86,17 @@ func insertCategories(ctx context.Context, tx pgx.Tx, batch []Event) error {
 }
 
 func insertVenues(ctx context.Context, tx pgx.Tx, batch []Event) error {
-	const columns = 5
+	const columns = 7
 	args := make([]any, 0, len(batch)*columns)
 	for _, event := range batch {
 		args = append(args,
 			event.ID, event.Venue.Name, event.Venue.AddressLine1,
 			event.Venue.City, event.Venue.CountryCode,
+			event.Venue.Latitude, event.Venue.Longitude,
 		)
 	}
 	_, err := tx.Exec(ctx,
-		`INSERT INTO event_venues (event_id, name, address_line_1, city, country_code)
+		`INSERT INTO event_venues (event_id, name, address_line_1, city, country_code, latitude, longitude)
 		 VALUES `+valuesClause(columns, len(batch))+`
 		 ON CONFLICT (event_id) DO NOTHING`,
 		args...)
