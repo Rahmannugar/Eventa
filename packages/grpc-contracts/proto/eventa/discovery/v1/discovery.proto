@@ -55,6 +55,17 @@ message SearchEventsResponse {
 message RecommendEventsRequest {
   string attendee_id = 1;
   int32 limit = 2;
+  // Optional point the attendee is ranking from. When present, the page is
+  // blended with distance from this point and every returned event carries
+  // its distance_km.
+  optional Origin origin = 3;
+}
+
+// A point on the globe, in decimal degrees, that a caller reports as their
+// position.
+message Origin {
+  double latitude = 1;
+  double longitude = 2;
 }
 
 message RecommendEventsResponse {

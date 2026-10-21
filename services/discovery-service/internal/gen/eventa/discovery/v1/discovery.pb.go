@@ -379,9 +379,13 @@ func (x *SearchEventsResponse) GetOffset() int32 {
 // has saved. Event Service resolves the candidates, so a cancelled or retired
 // event is never returned.
 type RecommendEventsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AttendeeId    string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	AttendeeId string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
+	Limit      int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional point the attendee is ranking from. When present, the page is
+	// blended with distance from this point and every returned event carries
+	// its distance_km.
+	Origin        *Origin `protobuf:"bytes,3,opt,name=origin,proto3,oneof" json:"origin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -430,6 +434,67 @@ func (x *RecommendEventsRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *RecommendEventsRequest) GetOrigin() *Origin {
+	if x != nil {
+		return x.Origin
+	}
+	return nil
+}
+
+// A point on the globe, in decimal degrees, that a caller reports as their
+// position.
+type Origin struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Latitude      float64                `protobuf:"fixed64,1,opt,name=latitude,proto3" json:"latitude,omitempty"`
+	Longitude     float64                `protobuf:"fixed64,2,opt,name=longitude,proto3" json:"longitude,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Origin) Reset() {
+	*x = Origin{}
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Origin) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Origin) ProtoMessage() {}
+
+func (x *Origin) ProtoReflect() protoreflect.Message {
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Origin.ProtoReflect.Descriptor instead.
+func (*Origin) Descriptor() ([]byte, []int) {
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *Origin) GetLatitude() float64 {
+	if x != nil {
+		return x.Latitude
+	}
+	return 0
+}
+
+func (x *Origin) GetLongitude() float64 {
+	if x != nil {
+		return x.Longitude
+	}
+	return 0
+}
+
 type RecommendEventsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AttendeeId    string                 `protobuf:"bytes,1,opt,name=attendee_id,json=attendeeId,proto3" json:"attendee_id,omitempty"`
@@ -440,7 +505,7 @@ type RecommendEventsResponse struct {
 
 func (x *RecommendEventsResponse) Reset() {
 	*x = RecommendEventsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +517,7 @@ func (x *RecommendEventsResponse) String() string {
 func (*RecommendEventsResponse) ProtoMessage() {}
 
 func (x *RecommendEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[5]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +530,7 @@ func (x *RecommendEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecommendEventsResponse.ProtoReflect.Descriptor instead.
 func (*RecommendEventsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{5}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RecommendEventsResponse) GetAttendeeId() string {
@@ -496,7 +561,7 @@ type SimilarEventsRequest struct {
 
 func (x *SimilarEventsRequest) Reset() {
 	*x = SimilarEventsRequest{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +573,7 @@ func (x *SimilarEventsRequest) String() string {
 func (*SimilarEventsRequest) ProtoMessage() {}
 
 func (x *SimilarEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[6]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +586,7 @@ func (x *SimilarEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimilarEventsRequest.ProtoReflect.Descriptor instead.
 func (*SimilarEventsRequest) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{6}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SimilarEventsRequest) GetEventId() string {
@@ -548,7 +613,7 @@ type SimilarEventsResponse struct {
 
 func (x *SimilarEventsResponse) Reset() {
 	*x = SimilarEventsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -560,7 +625,7 @@ func (x *SimilarEventsResponse) String() string {
 func (*SimilarEventsResponse) ProtoMessage() {}
 
 func (x *SimilarEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[7]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -573,7 +638,7 @@ func (x *SimilarEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimilarEventsResponse.ProtoReflect.Descriptor instead.
 func (*SimilarEventsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{7}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SimilarEventsResponse) GetEventId() string {
@@ -601,7 +666,7 @@ type GetAttendeeInterestsRequest struct {
 
 func (x *GetAttendeeInterestsRequest) Reset() {
 	*x = GetAttendeeInterestsRequest{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -613,7 +678,7 @@ func (x *GetAttendeeInterestsRequest) String() string {
 func (*GetAttendeeInterestsRequest) ProtoMessage() {}
 
 func (x *GetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[8]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -626,7 +691,7 @@ func (x *GetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
 func (*GetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{8}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetAttendeeInterestsRequest) GetAttendeeId() string {
@@ -648,7 +713,7 @@ type GetAttendeeInterestsResponse struct {
 
 func (x *GetAttendeeInterestsResponse) Reset() {
 	*x = GetAttendeeInterestsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -660,7 +725,7 @@ func (x *GetAttendeeInterestsResponse) String() string {
 func (*GetAttendeeInterestsResponse) ProtoMessage() {}
 
 func (x *GetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[9]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -673,7 +738,7 @@ func (x *GetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
 func (*GetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{9}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetAttendeeInterestsResponse) GetAttendeeId() string {
@@ -709,7 +774,7 @@ type SetAttendeeInterestsRequest struct {
 
 func (x *SetAttendeeInterestsRequest) Reset() {
 	*x = SetAttendeeInterestsRequest{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +786,7 @@ func (x *SetAttendeeInterestsRequest) String() string {
 func (*SetAttendeeInterestsRequest) ProtoMessage() {}
 
 func (x *SetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[10]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +799,7 @@ func (x *SetAttendeeInterestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAttendeeInterestsRequest.ProtoReflect.Descriptor instead.
 func (*SetAttendeeInterestsRequest) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{10}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SetAttendeeInterestsRequest) GetAttendeeId() string {
@@ -763,7 +828,7 @@ type SetAttendeeInterestsResponse struct {
 
 func (x *SetAttendeeInterestsResponse) Reset() {
 	*x = SetAttendeeInterestsResponse{}
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[11]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +840,7 @@ func (x *SetAttendeeInterestsResponse) String() string {
 func (*SetAttendeeInterestsResponse) ProtoMessage() {}
 
 func (x *SetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[11]
+	mi := &file_eventa_discovery_v1_discovery_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +853,7 @@ func (x *SetAttendeeInterestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAttendeeInterestsResponse.ProtoReflect.Descriptor instead.
 func (*SetAttendeeInterestsResponse) Descriptor() ([]byte, []int) {
-	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{11}
+	return file_eventa_discovery_v1_discovery_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetAttendeeInterestsResponse) GetAttendeeId() string {
@@ -870,11 +935,16 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2&.eventa.discovery.v1.EventSearchResultR\x06events\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x04 \x01(\x05R\x06offset\"O\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\"\x94\x01\n" +
 	"\x16RecommendEventsRequest\x12\x1f\n" +
 	"\vattendee_id\x18\x01 \x01(\tR\n" +
 	"attendeeId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\"z\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x128\n" +
+	"\x06origin\x18\x03 \x01(\v2\x1b.eventa.discovery.v1.OriginH\x00R\x06origin\x88\x01\x01B\t\n" +
+	"\a_origin\"B\n" +
+	"\x06Origin\x12\x1a\n" +
+	"\blatitude\x18\x01 \x01(\x01R\blatitude\x12\x1c\n" +
+	"\tlongitude\x18\x02 \x01(\x01R\tlongitude\"z\n" +
 	"\x17RecommendEventsResponse\x12\x1f\n" +
 	"\vattendee_id\x18\x01 \x01(\tR\n" +
 	"attendeeId\x12>\n" +
@@ -918,31 +988,33 @@ func file_eventa_discovery_v1_discovery_proto_rawDescGZIP() []byte {
 	return file_eventa_discovery_v1_discovery_proto_rawDescData
 }
 
-var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_eventa_discovery_v1_discovery_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_eventa_discovery_v1_discovery_proto_goTypes = []any{
 	(*SearchEventsRequest)(nil),          // 0: eventa.discovery.v1.SearchEventsRequest
 	(*NearClause)(nil),                   // 1: eventa.discovery.v1.NearClause
 	(*EventSearchResult)(nil),            // 2: eventa.discovery.v1.EventSearchResult
 	(*SearchEventsResponse)(nil),         // 3: eventa.discovery.v1.SearchEventsResponse
 	(*RecommendEventsRequest)(nil),       // 4: eventa.discovery.v1.RecommendEventsRequest
-	(*RecommendEventsResponse)(nil),      // 5: eventa.discovery.v1.RecommendEventsResponse
-	(*SimilarEventsRequest)(nil),         // 6: eventa.discovery.v1.SimilarEventsRequest
-	(*SimilarEventsResponse)(nil),        // 7: eventa.discovery.v1.SimilarEventsResponse
-	(*GetAttendeeInterestsRequest)(nil),  // 8: eventa.discovery.v1.GetAttendeeInterestsRequest
-	(*GetAttendeeInterestsResponse)(nil), // 9: eventa.discovery.v1.GetAttendeeInterestsResponse
-	(*SetAttendeeInterestsRequest)(nil),  // 10: eventa.discovery.v1.SetAttendeeInterestsRequest
-	(*SetAttendeeInterestsResponse)(nil), // 11: eventa.discovery.v1.SetAttendeeInterestsResponse
+	(*Origin)(nil),                       // 5: eventa.discovery.v1.Origin
+	(*RecommendEventsResponse)(nil),      // 6: eventa.discovery.v1.RecommendEventsResponse
+	(*SimilarEventsRequest)(nil),         // 7: eventa.discovery.v1.SimilarEventsRequest
+	(*SimilarEventsResponse)(nil),        // 8: eventa.discovery.v1.SimilarEventsResponse
+	(*GetAttendeeInterestsRequest)(nil),  // 9: eventa.discovery.v1.GetAttendeeInterestsRequest
+	(*GetAttendeeInterestsResponse)(nil), // 10: eventa.discovery.v1.GetAttendeeInterestsResponse
+	(*SetAttendeeInterestsRequest)(nil),  // 11: eventa.discovery.v1.SetAttendeeInterestsRequest
+	(*SetAttendeeInterestsResponse)(nil), // 12: eventa.discovery.v1.SetAttendeeInterestsResponse
 }
 var file_eventa_discovery_v1_discovery_proto_depIdxs = []int32{
 	1, // 0: eventa.discovery.v1.SearchEventsRequest.near:type_name -> eventa.discovery.v1.NearClause
 	2, // 1: eventa.discovery.v1.SearchEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
-	2, // 2: eventa.discovery.v1.RecommendEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
-	2, // 3: eventa.discovery.v1.SimilarEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 2: eventa.discovery.v1.RecommendEventsRequest.origin:type_name -> eventa.discovery.v1.Origin
+	2, // 3: eventa.discovery.v1.RecommendEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
+	2, // 4: eventa.discovery.v1.SimilarEventsResponse.events:type_name -> eventa.discovery.v1.EventSearchResult
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_eventa_discovery_v1_discovery_proto_init() }
@@ -952,13 +1024,14 @@ func file_eventa_discovery_v1_discovery_proto_init() {
 	}
 	file_eventa_discovery_v1_discovery_proto_msgTypes[0].OneofWrappers = []any{}
 	file_eventa_discovery_v1_discovery_proto_msgTypes[2].OneofWrappers = []any{}
+	file_eventa_discovery_v1_discovery_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eventa_discovery_v1_discovery_proto_rawDesc), len(file_eventa_discovery_v1_discovery_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -55,13 +55,19 @@ func NewHandler(repository *interests.Repository, behaviourRepository *behaviour
 // saved interests and behavioural evidence, ranked by the store and then
 // confirmed by Event Service. An attendee with neither interests nor
 // behaviour gets an empty list: that is the cold-start position, not a
-// failure. No interest or behaviour text is logged.
+// failure. When the request reports an origin, distance joins the ranking
+// as one bounded signal and each answer carries its distance_km. No
+// interest or behaviour text is logged.
 func (h *Handler) RecommendEvents(ctx context.Context, request *discoveryv1.RecommendEventsRequest) (*discoveryv1.RecommendEventsResponse, error) {
 	attendeeID, err := interests.ParseAttendeeID(request.GetAttendeeId())
 	if err != nil {
 		return nil, err
 	}
 	limit, err := ranking.ParseLimit(request.GetLimit())
+	if err != nil {
+		return nil, err
+	}
+	origin, err := originFromRequest(request.GetOrigin())
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +95,7 @@ func (h *Handler) RecommendEvents(ctx context.Context, request *discoveryv1.Reco
 		interestCount = len(stored.Interests)
 	}
 	if interestCount == 0 && len(attended) == 0 && len(purchased) == 0 {
-		h.logCompleted(ctx, "no_preferences", 0, 0, 0, 0, 0)
+		h.logCompleted(ctx, "no_preferences", 0, 0, 0, 0, 0, origin != nil)
 		return response, nil
 	}
 
@@ -110,9 +116,10 @@ func (h *Handler) RecommendEvents(ctx context.Context, request *discoveryv1.Reco
 
 	ids := ranking.UniqueIDs(candidates)
 	if len(ids) == 0 {
-		h.logCompleted(ctx, "no_candidates", interestCount, len(attended), len(purchased), 0, 0)
+		h.logCompleted(ctx, "no_candidates", interestCount, len(attended), len(purchased), 0, 0, origin != nil)
 		return response, nil
 	}
+	similarities := similarityByID(candidates)
 
 	resolved, err := h.events.ListRecommendableEvents(ctx, ids)
 	if err != nil {
@@ -124,19 +131,29 @@ func (h *Handler) RecommendEvents(ctx context.Context, request *discoveryv1.Reco
 		return nil, ranking.ResolveError(err, "recommendations unavailable")
 	}
 
-	for _, eventID := range ids {
-		content := resolved[eventID]
-		if content == nil {
-			continue
-		}
-		response.Events = append(response.Events, ranking.ToResult(eventID, content))
+	for _, candidate := range rankCandidates(ids, resolved, similarities, origin) {
+		result := ranking.ToResult(candidate.eventID, candidate.content)
+		result.DistanceKm = candidate.distance
+		response.Events = append(response.Events, result)
 		if len(response.Events) == limit {
 			break
 		}
 	}
 
-	h.logCompleted(ctx, "", interestCount, len(attended), len(purchased), len(ids), len(response.Events))
+	h.logCompleted(ctx, "", interestCount, len(attended), len(purchased), len(ids), len(response.Events), origin != nil)
 	return response, nil
+}
+
+// similarityByID keeps the score the store assigned to each candidate. The
+// first occurrence wins, mirroring how UniqueIDs treats a duplicate id.
+func similarityByID(candidates []semantic.Candidate) map[string]float32 {
+	scores := make(map[string]float32, len(candidates))
+	for _, candidate := range candidates {
+		if _, seen := scores[candidate.EventID]; !seen {
+			scores[candidate.EventID] = candidate.Similarity
+		}
+	}
+	return scores
 }
 
 // interestValues reads the saved interests from a record that may not exist,
@@ -172,8 +189,9 @@ func toPreferenceEvents(rows []behaviour.Evidence) []semantic.PreferenceEvent {
 // logCompleted records what one request did in counts only: how many
 // interests and behaviour rows it read, how many candidates the store
 // offered, and how many events Event Service confirmed. A reason marks an
-// answer that stopped early.
-func (h *Handler) logCompleted(ctx context.Context, reason string, interestCount, attended, purchased, candidateCount, returned int) {
+// answer that stopped early, and has_origin marks the ranking the answer
+// was ordered by.
+func (h *Handler) logCompleted(ctx context.Context, reason string, interestCount, attended, purchased, candidateCount, returned int, hasOrigin bool) {
 	attributes := []any{
 		"operation", Operation,
 		"outcome", "success",
@@ -182,6 +200,7 @@ func (h *Handler) logCompleted(ctx context.Context, reason string, interestCount
 		"purchased", purchased,
 		"candidates", candidateCount,
 		"returned", returned,
+		"has_origin", hasOrigin,
 	}
 	if reason != "" {
 		attributes = append(attributes, "reason", reason)

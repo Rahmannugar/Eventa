@@ -15,7 +15,7 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 - `internal/georeconcile` — the venue geography refresh: the bounded pass over published rows still missing coordinates, the lookup resolve, and the attempt/backoff rules.
 - `internal/search` — the structured query: filter validation and bounds, the optional proximity predicate and distance order over the projection's geography, the SQL, and the gRPC handler.
 - `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
-- `internal/recommendations` — the recommendation query: preference rendering, the store lookup, Event Service's candidate resolution, and its gRPC handler.
+- `internal/recommendations` — the recommendation query: preference rendering, the store lookup, Event Service's candidate resolution, the origin-based distance blend, and its gRPC handler.
 - `internal/semantic` — the derived semantic index: the capability port, the durable state rows, the one convergence path, and the reconciliation pass.
 - `internal/semantic/ahnlich` — the Ahnlich AI adapter: connection, deadlines, model registry, and every vendor type.
 - `internal/server` — the gRPC listener and its interceptors: trace continuation, request metrics and log line, and panic containment.
@@ -94,7 +94,9 @@ A save replaces the whole list in one statement after the request is bounded and
 
 An attendee with no interests and no behaviour evidence gets an empty list: that is the cold-start position, not a failure. An attendee with only behaviour evidence is served — that is the point of the evidence.
 
-Ranking is Discovery's; authority is Event Service's. The candidate ids go to `lookup.ListRecommendableEvents`, and only the events Event Service still serves come back — publication, retirement, start time, live sales, and remaining capacity are all decided there. The response keeps the store's order, drops what Event Service did not return, and stops at the requested limit, so a cancelled event disappears without Discovery holding a second opinion about its state.
+Ranking is Discovery's; authority is Event Service's. The candidate ids go to `lookup.ListRecommendableEvents`, and only the events Event Service still serves come back — publication, retirement, start time, live sales, and remaining capacity are all decided there. The answer drops what Event Service did not return and stops at the requested limit, so a cancelled event disappears without Discovery holding a second opinion about its state.
+
+When the request reports an origin, distance joins that ranking as one bounded signal (`internal/recommendations/rank.go`). Each resolved candidate whose venue carries coordinates gains a proximity factor — 1 at the origin, falling linearly to 0 from 50 km — and its ordering value becomes the store's cosine score at 80% plus that factor at 20%. The scales never meet raw: kilometres become the bounded factor first, and the weight is the only place it combines with similarity. A candidate without coordinates, or a request without an origin, ranks on similarity alone — location can move a page but never decides it — and a stable sort keeps equal scores in store order. Distances are great-circle kilometres computed in memory from the content Event Service already returned, so the ranking adds no query, and the response carries `distance_km` for every located event when an origin was given.
 
 No preference vector is stored. Ahnlich embeds the preference text at query time, so there is no derived attendee state to reconcile: losing the store costs one search, never the interests or the evidence. The evidence rows themselves are durable facts recorded from the broker and are never rebuilt.
 

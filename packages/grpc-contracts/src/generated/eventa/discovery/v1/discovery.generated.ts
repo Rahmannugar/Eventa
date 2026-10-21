@@ -71,6 +71,21 @@ export interface SearchEventsResponse {
 export interface RecommendEventsRequest {
   attendeeId: string;
   limit: number;
+  /**
+   * Optional point the attendee is ranking from. When present, the page is
+   * blended with distance from this point and every returned event carries
+   * its distance_km.
+   */
+  origin?: Origin | undefined;
+}
+
+/**
+ * A point on the globe, in decimal degrees, that a caller reports as their
+ * position.
+ */
+export interface Origin {
+  latitude: number;
+  longitude: number;
 }
 
 export interface RecommendEventsResponse {
