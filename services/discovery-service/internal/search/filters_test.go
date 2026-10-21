@@ -2,6 +2,7 @@ package search
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func TestParseAppliesDefaultAndMaximumPageBounds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := Parse("", nil, "", "", test.limit, test.offset)
+			got, err := Parse("", nil, "", "", nil, test.limit, test.offset)
 			if err != nil {
 				t.Fatalf("Parse returned error: %v", err)
 			}
@@ -60,7 +61,7 @@ func TestParseRejectsMalformedRequests(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := Parse(test.query, nil, test.from, test.to, test.limit, test.offset)
+			_, err := Parse(test.query, nil, test.from, test.to, nil, test.limit, test.offset)
 			if !errors.Is(err, ErrInvalidFilters) {
 				t.Fatalf("got error %v, want ErrInvalidFilters", err)
 			}
@@ -69,7 +70,7 @@ func TestParseRejectsMalformedRequests(t *testing.T) {
 }
 
 func TestParseKeepsOnlyDistinctNonEmptyCategories(t *testing.T) {
-	filters, err := Parse("", []string{" Music ", "music", "", "  ", "Food"}, "", "", 0, 0)
+	filters, err := Parse("", []string{" Music ", "music", "", "  ", "Food"}, "", "", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Parse returned error: %v", err)
 	}
@@ -84,7 +85,7 @@ func TestParseBoundsTheCategoryList(t *testing.T) {
 		values[i] = strings.Repeat("c", 3) + string(rune('a'+i))
 	}
 
-	filters, err := Parse("", values, "", "", 0, 0)
+	filters, err := Parse("", values, "", "", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Parse returned error: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestParseKeepsTimeBounds(t *testing.T) {
 	from := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 12, 1, 18, 0, 0, 0, time.UTC)
 
-	filters, err := Parse("festival", nil, from.Format(time.RFC3339), to.Format(time.RFC3339), 0, 0)
+	filters, err := Parse("festival", nil, from.Format(time.RFC3339), to.Format(time.RFC3339), nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Parse returned error: %v", err)
 	}
@@ -106,5 +107,45 @@ func TestParseKeepsTimeBounds(t *testing.T) {
 	}
 	if filters.StartsTo == nil || !filters.StartsTo.Equal(to) {
 		t.Fatalf("got end bound %v, want %v", filters.StartsTo, to)
+	}
+}
+
+func TestParseValidatesTheProximityClause(t *testing.T) {
+	valid := &Near{Latitude: 6.5244, Longitude: 3.3792, RadiusKm: 10}
+	filters, err := Parse("", nil, "", "", valid, 0, 0)
+	if err != nil {
+		t.Fatalf("Parse returned error for a valid clause: %v", err)
+	}
+	if filters.Near != valid {
+		t.Fatalf("got near %+v, want the validated clause kept", filters.Near)
+	}
+
+	absent, err := Parse("", nil, "", "", nil, 0, 0)
+	if err != nil {
+		t.Fatalf("Parse returned error for an absent clause: %v", err)
+	}
+	if absent.Near != nil {
+		t.Fatalf("got near %+v, want none", absent.Near)
+	}
+
+	invalid := []struct {
+		name string
+		near *Near
+	}{
+		{"latitude above the pole", &Near{Latitude: 91, Longitude: 0, RadiusKm: 10}},
+		{"latitude below the pole", &Near{Latitude: -90.5, Longitude: 0, RadiusKm: 10}},
+		{"longitude past the antimeridian", &Near{Latitude: 0, Longitude: 181, RadiusKm: 10}},
+		{"zero radius", &Near{Latitude: 0, Longitude: 0, RadiusKm: 0}},
+		{"negative radius", &Near{Latitude: 0, Longitude: 0, RadiusKm: -1}},
+		{"radius beyond the bound", &Near{Latitude: 0, Longitude: 0, RadiusKm: MaxRadiusKm + 1}},
+		{"latitude that is not a number", &Near{Latitude: math.NaN(), Longitude: 0, RadiusKm: 10}},
+		{"infinite radius", &Near{Latitude: 0, Longitude: 0, RadiusKm: math.Inf(1)}},
+	}
+	for _, test := range invalid {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := Parse("", nil, "", "", test.near, 0, 0); !errors.Is(err, ErrInvalidFilters) {
+				t.Fatalf("got error %v, want ErrInvalidFilters", err)
+			}
+		})
 	}
 }

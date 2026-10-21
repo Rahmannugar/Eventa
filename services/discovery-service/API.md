@@ -44,12 +44,13 @@ Request:
 | `starts_from`, `starts_to` | RFC 3339 string | Inclusive bounds on the event start time. |
 | `limit` | int32 | Page size. `0` means 20; values above 50 are clamped. |
 | `offset` | int32 | Page offset, at most 10000. |
+| `near` | message `NearClause`: `latitude`, `longitude`, `radius_km` | Optional proximity clause. Only venues within `radius_km` of the point are returned. Latitude must be −90..90, longitude −180..180, and the radius positive and at most 20000. |
 
-Response: the matching `events`, plus `total`, `limit`, and `offset`. Results are ordered by start time, then event id, so pagination is stable.
+Response: the matching `events`, plus `total`, `limit`, and `offset`. Without `near`, results are ordered by start time, then event id, so pagination is stable. With `near`, each result carries `distance_km` — the venue's distance from the requested point — and the page is ordered by that distance first, then start time. A venue without stored coordinates never matches a `near` clause; without one it is returned as any other event is.
 
 Only rows the projection holds as `published` with content are returned. A cancelled event never appears, and neither does a published row whose content Event Service no longer serves.
 
-Status codes: `INVALID_ARGUMENT` for a malformed request — a bad timestamp, a negative offset, or an unbalanced time range — and `INTERNAL` for a database failure. Neither log line nor error message contains the caller's query text.
+Status codes: `INVALID_ARGUMENT` for a malformed request — a bad timestamp, a negative offset, an unbalanced time range, or a proximity clause outside these bounds — and `INTERNAL` for a database failure. Neither log line nor error message contains the caller's query text.
 
 ## `DiscoveryService.GetAttendeeInterests`
 

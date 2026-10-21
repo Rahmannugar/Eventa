@@ -13,7 +13,7 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 - `internal/behaviour` — the attendee behaviour evidence: fact parsing for the commerce and check-in topics, the inbox claim and evidence upsert in one transaction, and the bounded evidence read the recommendation rendering consumes.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
 - `internal/georeconcile` — the venue geography refresh: the bounded pass over published rows still missing coordinates, the lookup resolve, and the attempt/backoff rules.
-- `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
+- `internal/search` — the structured query: filter validation and bounds, the optional proximity predicate and distance order over the projection's geography, the SQL, and the gRPC handler.
 - `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
 - `internal/recommendations` — the recommendation query: preference rendering, the store lookup, Event Service's candidate resolution, and its gRPC handler.
 - `internal/semantic` — the derived semantic index: the capability port, the durable state rows, the one convergence path, and the reconciliation pass.
@@ -121,7 +121,7 @@ Durable invariants:
 - `discovery_attendee_behaviour` is primary-keyed on `(attendee_id, event_id, kind)`, so one attendee records one occurrence per event per kind; a repeat moves `occurred_at` forward instead of adding weight.
 - Venue coordinates are both present or both null, and `venue_geo` is a stored generated point, so the searchable geography can never disagree with the columns it derives from.
 - `discovery_venue_geo_refresh` is primary-keyed on `event_id`, so one event holds at most one geography claim; completion removes the row, and a spent attempt schedules the next one.
-- The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale, available, or near the attendee; those come from Event Service.
+- The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale or available; those come from Event Service. Its geography is copied from Event Service too, so a proximity query computes distance over that copy and never decides where an event is.
 
 ## Dependencies
 

@@ -13,6 +13,17 @@ message SearchEventsRequest {
   optional string starts_to = 4;
   int32 limit = 5;
   int32 offset = 6;
+  // Optional proximity clause: only venues within radius_km of the point are
+  // returned, ordered by distance from it first.
+  optional NearClause near = 7;
+}
+
+// A point on the globe and the search radius around it.
+message NearClause {
+  double latitude = 1;
+  double longitude = 2;
+  // Search radius in kilometres. Must be greater than zero.
+  double radius_km = 3;
 }
 
 message EventSearchResult {
@@ -26,6 +37,9 @@ message EventSearchResult {
   optional string venue_name = 8;
   optional string venue_city = 9;
   optional string venue_country_code = 10;
+  // Set only when the request carried a near clause: the venue's distance
+  // from the requested point, in kilometres.
+  optional double distance_km = 11;
 }
 
 message SearchEventsResponse {

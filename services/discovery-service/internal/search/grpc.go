@@ -35,6 +35,7 @@ func (h *Handler) SearchEvents(ctx context.Context, request *discoveryv1.SearchE
 		request.GetCategories(),
 		request.GetStartsFrom(),
 		request.GetStartsTo(),
+		nearFromRequest(request),
 		request.GetLimit(),
 		request.GetOffset(),
 	)
@@ -60,6 +61,7 @@ func (h *Handler) SearchEvents(ctx context.Context, request *discoveryv1.SearchE
 		"has_query", filters.Query != "",
 		"categories", len(filters.Categories),
 		"has_time_bounds", filters.StartsFrom != nil || filters.StartsTo != nil,
+		"has_near", filters.Near != nil,
 	)
 
 	return &discoveryv1.SearchEventsResponse{
@@ -68,6 +70,20 @@ func (h *Handler) SearchEvents(ctx context.Context, request *discoveryv1.SearchE
 		Limit:  int32(filters.Limit),
 		Offset: int32(filters.Offset),
 	}, nil
+}
+
+// nearFromRequest lifts the optional proximity clause out of the message.
+// An absent clause stays nil so the query keeps its plain ordering.
+func nearFromRequest(request *discoveryv1.SearchEventsRequest) *Near {
+	clause := request.GetNear()
+	if clause == nil {
+		return nil
+	}
+	return &Near{
+		Latitude:  clause.GetLatitude(),
+		Longitude: clause.GetLongitude(),
+		RadiusKm:  clause.GetRadiusKm(),
+	}
 }
 
 // toResult projects one stored row onto the response message.
@@ -83,6 +99,7 @@ func toResult(row *Row) *discoveryv1.EventSearchResult {
 		VenueName:        row.VenueName,
 		VenueCity:        row.VenueCity,
 		VenueCountryCode: row.VenueCountryCode,
+		DistanceKm:       row.DistanceKm,
 	}
 }
 

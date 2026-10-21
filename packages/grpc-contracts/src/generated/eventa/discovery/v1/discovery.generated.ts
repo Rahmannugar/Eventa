@@ -21,6 +21,19 @@ export interface SearchEventsRequest {
   startsTo?: string | undefined;
   limit: number;
   offset: number;
+  /**
+   * Optional proximity clause: only venues within radius_km of the point are
+   * returned, ordered by distance from it first.
+   */
+  near?: NearClause | undefined;
+}
+
+/** A point on the globe and the search radius around it. */
+export interface NearClause {
+  latitude: number;
+  longitude: number;
+  /** Search radius in kilometres. Must be greater than zero. */
+  radiusKm: number;
 }
 
 export interface EventSearchResult {
@@ -33,7 +46,14 @@ export interface EventSearchResult {
   categories: string[];
   venueName?: string | undefined;
   venueCity?: string | undefined;
-  venueCountryCode?: string | undefined;
+  venueCountryCode?:
+    | string
+    | undefined;
+  /**
+   * Set only when the request carried a near clause: the venue's distance
+   * from the requested point, in kilometres.
+   */
+  distanceKm?: number | undefined;
 }
 
 export interface SearchEventsResponse {
