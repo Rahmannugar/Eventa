@@ -130,6 +130,8 @@ export interface Venue {
   addressLineOne: string;
   addressLineTwo?: string | undefined;
   regionCode?: string | undefined;
+  latitude?: number | undefined;
+  longitude?: number | undefined;
 }
 
 export interface CreateDraftEventRequest {

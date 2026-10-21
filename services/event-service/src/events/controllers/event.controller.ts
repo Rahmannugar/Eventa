@@ -391,6 +391,8 @@ export class EventController implements EventServiceController {
                 regionCode: event.venue.regionCode ?? undefined,
                 postalCode: event.venue.postalCode ?? undefined,
                 countryCode: event.venue.countryCode,
+                latitude: event.venue.latitude ?? undefined,
+                longitude: event.venue.longitude ?? undefined,
               },
       };
     } catch (error: unknown) {
@@ -533,6 +535,8 @@ export class EventController implements EventServiceController {
                   regionCode: event.venue.regionCode ?? undefined,
                   postalCode: event.venue.postalCode ?? undefined,
                   countryCode: event.venue.countryCode,
+                  latitude: event.venue.latitude ?? undefined,
+                  longitude: event.venue.longitude ?? undefined,
                 },
           updatedAt: event.updatedAt.toISOString(),
         })),
@@ -1413,6 +1417,8 @@ export class EventController implements EventServiceController {
               regionCode: event.venue.regionCode ?? undefined,
               postalCode: event.venue.postalCode ?? undefined,
               countryCode: event.venue.countryCode,
+              latitude: event.venue.latitude ?? undefined,
+              longitude: event.venue.longitude ?? undefined,
             },
       media: event.media.map((media) => ({
         mediaId: media.mediaId,
@@ -1472,6 +1478,8 @@ export class EventController implements EventServiceController {
         regionCode: event.venue.regionCode ?? undefined,
         postalCode: event.venue.postalCode ?? undefined,
         countryCode: event.venue.countryCode,
+        latitude: event.venue.latitude ?? undefined,
+        longitude: event.venue.longitude ?? undefined,
       },
       media: event.media.map((media) => ({
         mediaId: media.mediaId,

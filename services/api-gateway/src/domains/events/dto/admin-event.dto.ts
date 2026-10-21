@@ -8,6 +8,7 @@ import {
   IsIn,
   IsInt,
   IsISO8601,
+  IsNumber,
   IsOptional,
   IsString,
   IsTimeZone,
@@ -167,6 +168,22 @@ export class EventVenueDto {
   @Length(2, 2)
   @Matches(/^[A-Z]{2}$/)
   countryCode!: string;
+
+  @ApiPropertyOptional({ example: 6.5244, minimum: -90, maximum: 90 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 7 })
+  @IsOptional()
+  @Min(-90)
+  @Max(90)
+  latitude?: number | undefined;
+
+  @ApiPropertyOptional({ example: 3.3792, minimum: -180, maximum: 180 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 7 })
+  @IsOptional()
+  @Min(-180)
+  @Max(180)
+  longitude?: number | undefined;
 }
 
 export class CreateDraftEventDto {

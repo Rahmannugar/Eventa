@@ -19,6 +19,7 @@ import {
   IsEnum,
   IsInt,
   IsISO8601,
+  IsNumber,
   IsOptional,
   IsString,
   IsTimeZone,
@@ -144,6 +145,18 @@ export class EventVenueDto implements Venue {
   @Length(2, 2)
   @Matches(/^[A-Z]{2}$/)
   countryCode!: string;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 7 })
+  @Min(-90)
+  @Max(90)
+  latitude?: number | undefined;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 7 })
+  @Min(-180)
+  @Max(180)
+  longitude?: number | undefined;
 }
 
 export class CreateDraftEventDto implements CreateDraftEventRequest {

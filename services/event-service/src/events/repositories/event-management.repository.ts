@@ -72,6 +72,8 @@ const VENUE_COLUMNS = {
   regionCode: eventVenues.regionCode,
   postalCode: eventVenues.postalCode,
   countryCode: eventVenues.countryCode,
+  latitude: eventVenues.latitude,
+  longitude: eventVenues.longitude,
 };
 
 const MEDIA_COLUMNS = {

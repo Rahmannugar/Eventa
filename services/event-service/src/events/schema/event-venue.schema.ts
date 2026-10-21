@@ -1,5 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { check, index, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import {
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { events } from './event.schema';
 
@@ -17,6 +24,8 @@ export const eventVenues = pgTable(
     regionCode: text('region_code'),
     postalCode: text('postal_code'),
     countryCode: text('country_code').notNull(),
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
   },
   (table) => [
     index('event_venues_country_region_event_index').on(
@@ -79,6 +88,18 @@ export const eventVenues = pgTable(
     check(
       'event_venues_region_code',
       sql`${table.regionCode} IS NULL OR (${table.region} IS NOT NULL AND ${table.regionCode} ~ '^[A-Z0-9][A-Z0-9-]{0,7}$')`,
+    ),
+    check(
+      'event_venues_latitude_range',
+      sql`${table.latitude} IS NULL OR (${table.latitude} >= -90 AND ${table.latitude} <= 90)`,
+    ),
+    check(
+      'event_venues_longitude_range',
+      sql`${table.longitude} IS NULL OR (${table.longitude} >= -180 AND ${table.longitude} <= 180)`,
+    ),
+    check(
+      'event_venues_coordinates_paired',
+      sql`(${table.latitude} IS NULL) = (${table.longitude} IS NULL)`,
     ),
   ],
 );

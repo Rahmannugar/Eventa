@@ -7,6 +7,8 @@ export interface EventVenue {
   regionCode: string | null;
   postalCode: string | null;
   countryCode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface EventRecord {
@@ -285,6 +287,8 @@ export interface CreateDraftEventCommand {
     regionCode?: string;
     postalCode?: string;
     countryCode: string;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
   };
 }
 
@@ -427,6 +431,8 @@ export interface UpdateDraftEventCommand {
     regionCode?: string;
     postalCode?: string;
     countryCode: string;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
   };
 }
 

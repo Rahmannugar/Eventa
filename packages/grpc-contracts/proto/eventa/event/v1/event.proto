@@ -113,6 +113,8 @@ message Venue {
   string address_line_one = 8;
   optional string address_line_two = 9;
   optional string region_code = 10;
+  optional double latitude = 11;
+  optional double longitude = 12;
 }
 
 message CreateDraftEventRequest {

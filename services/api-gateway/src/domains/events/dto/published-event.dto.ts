@@ -27,6 +27,12 @@ export class PublishedEventVenueDto {
 
   @ApiProperty()
   countryCode!: string;
+
+  @ApiPropertyOptional({ minimum: -90, maximum: 90 })
+  latitude?: number | undefined;
+
+  @ApiPropertyOptional({ minimum: -180, maximum: 180 })
+  longitude?: number | undefined;
 }
 
 export class PublishedEventMediaDto {

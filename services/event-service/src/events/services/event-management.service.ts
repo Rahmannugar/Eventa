@@ -247,6 +247,12 @@ export class EventManagementService implements EventManagement {
       throw new EventVenueInvalidError();
     }
 
+    const latitude = this.normalizeCoordinate(input.latitude, -90, 90);
+    const longitude = this.normalizeCoordinate(input.longitude, -180, 180);
+    if ((latitude === null) !== (longitude === null)) {
+      throw new EventVenueInvalidError();
+    }
+
     return {
       name: input.name.trim(),
       addressLine1: input.addressLine1.trim(),
@@ -256,7 +262,23 @@ export class EventManagementService implements EventManagement {
       regionCode,
       postalCode: this.normalizeOptional(input.postalCode),
       countryCode: input.countryCode.toUpperCase(),
+      latitude,
+      longitude,
     };
+  }
+
+  private normalizeCoordinate(
+    value: number | undefined,
+    min: number,
+    max: number,
+  ): number | null {
+    if (value === undefined || Number.isNaN(value)) {
+      return null;
+    }
+    if (value < min || value > max) {
+      throw new EventVenueInvalidError();
+    }
+    return value;
   }
 
   private encodePageToken(cursor: EventListCursor): string {

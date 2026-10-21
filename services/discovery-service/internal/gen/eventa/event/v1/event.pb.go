@@ -815,6 +815,8 @@ type Venue struct {
 	AddressLineOne string                 `protobuf:"bytes,8,opt,name=address_line_one,json=addressLineOne,proto3" json:"address_line_one,omitempty"`
 	AddressLineTwo *string                `protobuf:"bytes,9,opt,name=address_line_two,json=addressLineTwo,proto3,oneof" json:"address_line_two,omitempty"`
 	RegionCode     *string                `protobuf:"bytes,10,opt,name=region_code,json=regionCode,proto3,oneof" json:"region_code,omitempty"`
+	Latitude       *float64               `protobuf:"fixed64,11,opt,name=latitude,proto3,oneof" json:"latitude,omitempty"`
+	Longitude      *float64               `protobuf:"fixed64,12,opt,name=longitude,proto3,oneof" json:"longitude,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -917,6 +919,20 @@ func (x *Venue) GetRegionCode() string {
 		return *x.RegionCode
 	}
 	return ""
+}
+
+func (x *Venue) GetLatitude() float64 {
+	if x != nil && x.Latitude != nil {
+		return *x.Latitude
+	}
+	return 0
+}
+
+func (x *Venue) GetLongitude() float64 {
+	if x != nil && x.Longitude != nil {
+		return *x.Longitude
+	}
+	return 0
 }
 
 type CreateDraftEventRequest struct {
@@ -5010,7 +5026,7 @@ const file_eventa_event_v1_event_proto_rawDesc = "" +
 	"\n" +
 	"size_bytes\x18\x05 \x01(\x05R\tsizeBytes\x12\x14\n" +
 	"\x05width\x18\x06 \x01(\x05R\x05width\x12\x16\n" +
-	"\x06height\x18\a \x01(\x05R\x06height\"\xb8\x03\n" +
+	"\x06height\x18\a \x01(\x05R\x06height\"\x97\x04\n" +
 	"\x05Venue\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12$\n" +
 	"\x0eaddress_line_1\x18\x02 \x01(\tR\faddressLine1\x12)\n" +
@@ -5024,12 +5040,17 @@ const file_eventa_event_v1_event_proto_rawDesc = "" +
 	"\x10address_line_two\x18\t \x01(\tH\x03R\x0eaddressLineTwo\x88\x01\x01\x12$\n" +
 	"\vregion_code\x18\n" +
 	" \x01(\tH\x04R\n" +
-	"regionCode\x88\x01\x01B\x11\n" +
+	"regionCode\x88\x01\x01\x12\x1f\n" +
+	"\blatitude\x18\v \x01(\x01H\x05R\blatitude\x88\x01\x01\x12!\n" +
+	"\tlongitude\x18\f \x01(\x01H\x06R\tlongitude\x88\x01\x01B\x11\n" +
 	"\x0f_address_line_2B\t\n" +
 	"\a_regionB\x0e\n" +
 	"\f_postal_codeB\x13\n" +
 	"\x11_address_line_twoB\x0e\n" +
-	"\f_region_code\"\x8d\x02\n" +
+	"\f_region_codeB\v\n" +
+	"\t_latitudeB\f\n" +
+	"\n" +
+	"_longitude\"\x8d\x02\n" +
 	"\x17CreateDraftEventRequest\x12\x19\n" +
 	"\badmin_id\x18\x01 \x01(\tR\aadminId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +

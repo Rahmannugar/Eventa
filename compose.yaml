@@ -32,7 +32,7 @@ services:
     logging: *local-logging
 
   event-database:
-    image: postgres:17-alpine
+    image: postgis/postgis:17-3.5-alpine
     command:
       - postgres
       - -c
@@ -526,7 +526,7 @@ services:
     logging: *local-logging
 
   discovery-database:
-    image: postgres:17-alpine
+    image: postgis/postgis:17-3.5-alpine
     env_file:
       - ./services/discovery-service/.env
     ports:

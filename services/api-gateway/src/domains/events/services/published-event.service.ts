@@ -123,6 +123,8 @@ export class PublishedEventService implements OnModuleInit {
         ? {}
         : { postalCode: venue.postalCode }),
       countryCode: venue.countryCode,
+      ...(venue.latitude === undefined ? {} : { latitude: venue.latitude }),
+      ...(venue.longitude === undefined ? {} : { longitude: venue.longitude }),
     };
   }
 
