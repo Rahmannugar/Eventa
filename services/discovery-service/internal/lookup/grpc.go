@@ -116,6 +116,10 @@ func contentFromPublished(eventID string, published *eventv1.PublishedEvent) (*i
 		VenueCity:        venue.GetCity(),
 		VenueCountryCode: venue.GetCountryCode(),
 	}
+	if venue != nil {
+		content.VenueLatitude = venue.Latitude
+		content.VenueLongitude = venue.Longitude
+	}
 	startsAt, err := parseTimestamp(published.GetStartsAt())
 	if err != nil {
 		return nil, fmt.Errorf("event %s starts_at: %w", eventID, err)

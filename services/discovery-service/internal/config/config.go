@@ -43,6 +43,8 @@ type Config struct {
 	SemanticReconcileMS    int
 	SemanticReconcileBatch int
 	SemanticCanaryFloor    float64
+	GeoReconcileMS         int
+	GeoReconcileBatch      int
 }
 
 type Telemetry struct {
@@ -241,6 +243,14 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 	if err != nil {
 		return Config{}, Telemetry{}, err
 	}
+	geoReconcileMS, err := boundedInt(k, "GEO_RECONCILE_INTERVAL_MS", 1000, 3600000)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
+	geoReconcileBatch, err := boundedInt(k, "GEO_RECONCILE_BATCH", 1, 500)
+	if err != nil {
+		return Config{}, Telemetry{}, err
+	}
 
 	return Config{
 		HealthPort:               healthPort,
@@ -262,5 +272,7 @@ func loadFrom(k *koanf.Koanf) (Config, Telemetry, error) {
 		SemanticReconcileMS:      reconcileMS,
 		SemanticReconcileBatch:   reconcileBatch,
 		SemanticCanaryFloor:      canaryFloor,
+		GeoReconcileMS:           geoReconcileMS,
+		GeoReconcileBatch:        geoReconcileBatch,
 	}, telemetry, nil
 }

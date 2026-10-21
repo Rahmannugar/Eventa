@@ -14,6 +14,8 @@ type Content struct {
 	VenueName        string
 	VenueCity        string
 	VenueCountryCode string
+	VenueLatitude    *float64
+	VenueLongitude   *float64
 }
 
 // optionalTime yields a pointer Postgres can store as a nullable timestamp.
@@ -29,6 +31,15 @@ func optionalText(value string) any {
 		return nil
 	}
 	return value
+}
+
+// optionalCoordinate stores a venue coordinate as the nullable value Postgres
+// keeps; nil means the venue carries no location.
+func optionalCoordinate(value *float64) any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }
 
 func categoryList(content *Content) []string {

@@ -12,6 +12,7 @@ Discovery Service is a frameworkless Go deployable. It composes explicit package
 - `internal/index` — the lifecycle fact contract, the ingest transaction, the inbox claim, the index write, and the Kafka handler.
 - `internal/behaviour` — the attendee behaviour evidence: fact parsing for the commerce and check-in topics, the inbox claim and evidence upsert in one transaction, and the bounded evidence read the recommendation rendering consumes.
 - `internal/lookup` — the narrow Event gRPC client used to resolve published content, with its own deadline.
+- `internal/georeconcile` — the venue geography refresh: the bounded pass over published rows still missing coordinates, the lookup resolve, and the attempt/backoff rules.
 - `internal/search` — the structured query: filter validation and bounds, the SQL over the projection, and the gRPC handler.
 - `internal/interests` — the attendee preference record: bounds and normalisation, the SQL over that record, and its gRPC handler.
 - `internal/recommendations` — the recommendation query: preference rendering, the store lookup, Event Service's candidate resolution, and its gRPC handler.
@@ -42,6 +43,12 @@ A replayed fact finds its inbox row and commits without a second resolve or a se
 When Event Service no longer serves a published event — it was cancelled between publication and this consumer — the fact is still applied and the publication is recorded without content. Discovery never invents content it could not read, and the cancellation fact that follows writes the tombstone. A genuine resolve failure rolls the transaction back instead, so the claim is not recorded and the offset does not advance.
 
 Outcomes are `processed`, `content_unavailable`, `duplicate`, `ignored`, and `rejected`, carried on `discovery.event_index` for every metric and log line on this path.
+
+## Venue geography refresh
+
+Coordinates are Event Service content: the published resolve copies them into the index row together with the rest of the venue, and a projection written while Event Service already serves them needs nothing more. A projection can also be written before the coordinates exist — a draft published ahead of the organizer's venue, or a database backfilled after the fact — so `internal/georeconcile` keeps a work row for every published row still missing both coordinates.
+
+Each bounded pass claims due rows with `FOR UPDATE SKIP LOCKED`, resolves the event through the same lookup and deadline the consumer uses, and writes the coordinates into the index row. An event Event Service authoritatively serves without coordinates closes the work instead of retrying. A failed resolve spends an attempt and reschedules on a doubling backoff capped at one hour, so a dead Event Service retries without hot-looping and never drops the claim. The work table carries claims, not content: its completion is the row's removal.
 
 ## Behaviour consumers
 
@@ -99,7 +106,7 @@ The page bounds, candidate handling, response shape, and Event Service failure t
 
 ## Data ownership
 
-The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, `discovery_attendee_interests`, `discovery_behaviour_inbox`, and `discovery_attendee_behaviour` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, `0003_create_discovery_attendee_interests.sql`, and `0004_create_discovery_attendee_behaviour.sql` create them.
+The service owns `discovery_event_inbox`, `discovery_event_index`, `discovery_semantic_index`, `discovery_attendee_interests`, `discovery_behaviour_inbox`, `discovery_attendee_behaviour`, and `discovery_venue_geo_refresh` in its own PostgreSQL database. Migrations `0001_create_discovery_event_index.sql`, `0002_create_discovery_semantic_index.sql`, `0003_create_discovery_attendee_interests.sql`, `0004_create_discovery_attendee_behaviour.sql`, and `0005_add_venue_geography.sql` create them; `0005` adds the nullable coordinate columns, the generated `venue_geo` geography point derived from them, and its GiST index.
 
 Durable invariants:
 
@@ -112,6 +119,8 @@ Durable invariants:
 - `discovery_attendee_interests` is primary-keyed on `attendee_id`, so one attendee has exactly one stored list, and it is constrained to at most 50 interests.
 - `discovery_behaviour_inbox` is primary-keyed on `(event_type, message_id)`, so a replayed behaviour fact cannot be recorded twice.
 - `discovery_attendee_behaviour` is primary-keyed on `(attendee_id, event_id, kind)`, so one attendee records one occurrence per event per kind; a repeat moves `occurred_at` forward instead of adding weight.
+- Venue coordinates are both present or both null, and `venue_geo` is a stored generated point, so the searchable geography can never disagree with the columns it derives from.
+- `discovery_venue_geo_refresh` is primary-keyed on `event_id`, so one event holds at most one geography claim; completion removes the row, and a spent attempt schedules the next one.
 - The projection is a copy for retrieval and rebuild. It never answers whether an event is on sale, available, or near the attendee; those come from Event Service.
 
 ## Dependencies

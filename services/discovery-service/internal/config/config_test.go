@@ -35,6 +35,8 @@ func valid() map[string]any {
 		"SEMANTIC_RECONCILE_INTERVAL_MS": "30000",
 		"SEMANTIC_RECONCILE_BATCH":       "100",
 		"SEMANTIC_CANARY_MIN_SIMILARITY": "0.1",
+		"GEO_RECONCILE_INTERVAL_MS":      "60000",
+		"GEO_RECONCILE_BATCH":            "100",
 	}
 }
 
@@ -112,6 +114,7 @@ func TestLoadReportsTheFirstFailingRule(t *testing.T) {
 		{"missing semantic store", func(v map[string]any) { delete(v, "SEMANTIC_STORE") }, "SEMANTIC_STORE is required"},
 		{"missing semantic model", func(v map[string]any) { delete(v, "SEMANTIC_MODEL") }, "SEMANTIC_MODEL is required"},
 		{"reconcile batch too large", func(v map[string]any) { v["SEMANTIC_RECONCILE_BATCH"] = "501" }, "SEMANTIC_RECONCILE_BATCH must be an integer between 1 and 500"},
+		{"geo reconcile batch too large", func(v map[string]any) { v["GEO_RECONCILE_BATCH"] = "501" }, "GEO_RECONCILE_BATCH must be an integer between 1 and 500"},
 		{"canary floor out of range", func(v map[string]any) { v["SEMANTIC_CANARY_MIN_SIMILARITY"] = "2" }, "SEMANTIC_CANARY_MIN_SIMILARITY must be a number between -1 and 1"},
 	}
 

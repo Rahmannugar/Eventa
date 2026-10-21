@@ -14,6 +14,7 @@ import (
 	"github.com/eventa/discovery-service/internal/config"
 	"github.com/eventa/discovery-service/internal/database"
 	"github.com/eventa/discovery-service/internal/errtype"
+	"github.com/eventa/discovery-service/internal/georeconcile"
 	"github.com/eventa/discovery-service/internal/health"
 	"github.com/eventa/discovery-service/internal/index"
 	"github.com/eventa/discovery-service/internal/interests"
@@ -135,6 +136,11 @@ func main() {
 		cfg.SemanticReconcileBatch, float32(cfg.SemanticCanaryFloor))
 	go reconciler.Run(ctx, time.Duration(cfg.SemanticReconcileMS)*time.Millisecond)
 	go reconciler.Pass(ctx)
+
+	geoReconciler := georeconcile.NewReconciler(
+		georeconcile.NewRepository(pool), events, cfg.GeoReconcileBatch)
+	go geoReconciler.Run(ctx, time.Duration(cfg.GeoReconcileMS)*time.Millisecond)
+	go geoReconciler.Pass(ctx)
 
 	checks := health.New(database.Readiness{Pool: pool})
 	mux := http.NewServeMux()

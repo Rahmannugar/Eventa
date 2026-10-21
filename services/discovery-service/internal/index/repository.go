@@ -52,8 +52,8 @@ func indexPublished(ctx context.Context, tx pgx.Tx, fact Fact, content *Content)
 		INSERT INTO discovery_event_index (
 			event_id, status, version, published_at, title, description,
 			starts_at, ends_at, time_zone, categories, venue_name, venue_city,
-			venue_country_code, indexed_at, updated_at)
-		VALUES ($1, 'published', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
+			venue_country_code, venue_latitude, venue_longitude, indexed_at, updated_at)
+		VALUES ($1, 'published', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now(), now())
 		ON CONFLICT (event_id) DO UPDATE SET
 			status = EXCLUDED.status,
 			version = EXCLUDED.version,
@@ -67,6 +67,8 @@ func indexPublished(ctx context.Context, tx pgx.Tx, fact Fact, content *Content)
 			venue_name = EXCLUDED.venue_name,
 			venue_city = EXCLUDED.venue_city,
 			venue_country_code = EXCLUDED.venue_country_code,
+			venue_latitude = EXCLUDED.venue_latitude,
+			venue_longitude = EXCLUDED.venue_longitude,
 			updated_at = now()
 	`, args...)
 	if err != nil {
@@ -98,7 +100,7 @@ func markCancelled(ctx context.Context, tx pgx.Tx, fact Fact) error {
 // so every content column stays null rather than being invented.
 func publishedColumns(content *Content) []any {
 	if content == nil {
-		return []any{nil, nil, nil, nil, nil, []string{}, nil, nil, nil}
+		return []any{nil, nil, nil, nil, nil, []string{}, nil, nil, nil, nil, nil}
 	}
 	return []any{
 		content.Title, content.Description,
@@ -106,5 +108,7 @@ func publishedColumns(content *Content) []any {
 		optionalText(content.TimeZone), categoryList(content),
 		optionalText(content.VenueName), optionalText(content.VenueCity),
 		optionalText(content.VenueCountryCode),
+		optionalCoordinate(content.VenueLatitude),
+		optionalCoordinate(content.VenueLongitude),
 	}
 }
