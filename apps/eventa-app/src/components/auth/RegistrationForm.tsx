@@ -62,13 +62,13 @@ export function RegistrationForm() {
 
   return (
     <>
-      <div className="auth-heading">
+      <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
         <h2>Create account</h2>
         <p>Enter your details to create an attendee account.</p>
       </div>
 
       <form
-        className="login-form"
+        className="grid gap-5"
         noValidate
         onSubmit={(event) => {
           void submit(event);
@@ -113,7 +113,7 @@ export function RegistrationForm() {
         />
 
         {registration.error === null ? null : (
-          <div className="form-alert" role="alert" aria-live="assertive">
+          <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--danger)]" role="alert" aria-live="assertive">
             {userFacingApiError(registration.error)}
           </div>
         )}
@@ -121,13 +121,13 @@ export function RegistrationForm() {
         <Button
           type="submit"
           busy={registration.isPending}
-          className="login-form__submit"
+          className="mt-1 w-full"
         >
           {registration.isPending ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
 
-      <p className="auth-form-link">
+      <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4">
         Already have an account? <Link to="/attendee/login">Sign in</Link>
       </p>
     </>

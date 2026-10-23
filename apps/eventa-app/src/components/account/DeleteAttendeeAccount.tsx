@@ -98,10 +98,10 @@ export function DeleteAttendeeAccount() {
   }
 
   return (
-    <section className="danger-zone" aria-labelledby="delete-account-title">
+    <section className="mt-4 flex flex-col items-start justify-between gap-6 rounded-2xl border border-red-700/25 bg-[var(--paper)] p-5 sm:flex-row sm:items-center" aria-labelledby="delete-account-title">
       <div>
-        <h2 id="delete-account-title">Delete account</h2>
-        <p>
+        <h2 className="text-sm text-[var(--danger)]" id="delete-account-title">Delete account</h2>
+        <p className="mt-1 max-w-[31rem] text-[13px] leading-relaxed text-[var(--muted)]">
           Permanently close this attendee account and end all of its sessions.
         </p>
       </div>
@@ -119,14 +119,14 @@ export function DeleteAttendeeAccount() {
 
       {open ? (
         <div
-          className="dialog-backdrop"
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#071f19]/60 p-4 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) close();
           }}
         >
           <section
             ref={dialogRef}
-            className="confirmation-dialog"
+            className="relative w-full max-w-[29rem] rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6 shadow-[0_24px_70px_rgb(7_31_25_/_25%)]"
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
@@ -138,7 +138,7 @@ export function DeleteAttendeeAccount() {
             <button
               ref={closeButtonRef}
               type="button"
-              className="confirmation-dialog__close"
+              className="absolute top-4 right-4 grid size-9 place-items-center rounded-[.6rem] text-[var(--muted)] hover:bg-[var(--soft)] hover:text-[var(--ink)] [&_svg]:size-4"
               aria-label="Close account deletion"
               disabled={deletion.isPending}
               onClick={close}
@@ -146,14 +146,14 @@ export function DeleteAttendeeAccount() {
               <XIcon aria-hidden="true" />
             </button>
 
-            <h2 id="delete-dialog-title">Delete your account?</h2>
-            <p id="delete-dialog-description">
+            <h2 className="pr-10 font-[var(--serif)] text-[1.8rem] font-medium tracking-[-.04em]" id="delete-dialog-title">Delete your account?</h2>
+            <p className="mt-3 text-[13px] leading-relaxed text-[var(--muted)]" id="delete-dialog-description">
               This closes your attendee account immediately. Enter your current
               password to confirm.
             </p>
 
             <form
-              className="confirmation-dialog__form"
+              className="mt-5 grid gap-5"
               noValidate
               onSubmit={(event) => {
                 void confirm(event);
@@ -172,12 +172,12 @@ export function DeleteAttendeeAccount() {
               />
 
               {deletion.error === null ? null : (
-                <div className="form-alert" role="alert" aria-live="assertive">
+                <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-4 py-3 text-sm font-semibold leading-relaxed text-[var(--danger)]" role="alert" aria-live="assertive">
                   {userFacingApiError(deletion.error)}
                 </div>
               )}
 
-              <div className="confirmation-dialog__actions">
+              <div className="flex justify-end gap-3">
                 <Button
                   type="button"
                   variant="secondary"

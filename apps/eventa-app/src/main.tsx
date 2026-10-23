@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import 'byte-datepicker/styles.css';
 
 import { App } from './App';
-import './styles.css';
+import './tailwind.css';
 
 const root = document.getElementById('root');
 

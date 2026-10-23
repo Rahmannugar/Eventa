@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/eventa/ticket-service/internal/issuance"
 	"github.com/segmentio/kafka-go"
 )
@@ -75,7 +77,20 @@ func (c *OrderPaidConsumer) Run(ctx context.Context, onError func(error)) {
 				return
 			}
 			onError(err)
-			return
+			if !waitForRetry(ctx) {
+				return
+			}
 		}
+	}
+}
+
+func waitForRetry(ctx context.Context) bool {
+	timer := time.NewTimer(3 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }

@@ -54,6 +54,8 @@ export interface EventSearchResult {
    * from the requested point, in kilometres.
    */
   distanceKm?: number | undefined;
+  venueLatitude?: number | undefined;
+  venueLongitude?: number | undefined;
 }
 
 export interface SearchEventsResponse {

@@ -101,14 +101,14 @@ export function EventFormFields({
   return (
     <>
       <section
-        className="event-form__section"
+        className="overflow-hidden rounded-2xl border border-border bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
         aria-labelledby={`${idPrefix}-about-title`}
       >
-        <div className="event-form__section-heading">
+        <div className="flex items-start gap-3.5 border-b border-border px-5 py-4 [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:text-[var(--evergreen)] [&_h2]:text-base [&_p]:mt-1 [&_p]:text-xs [&_p]:leading-normal [&_p]:text-[var(--muted)]">
           <TagIcon aria-hidden="true" />
           <h2 id={`${idPrefix}-about-title`}>About</h2>
         </div>
-        <div className="event-form__fields">
+        <div className="grid gap-5 p-5 sm:p-6">
           <TextField
             id={`${idPrefix}-title`}
             label="Event title"
@@ -137,15 +137,15 @@ export function EventFormFields({
       </section>
 
       <section
-        className="event-form__section"
+        className="overflow-hidden rounded-2xl border border-border bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
         aria-labelledby={`${idPrefix}-schedule-title`}
       >
-        <div className="event-form__section-heading">
+        <div className="flex items-start gap-3.5 border-b border-border px-5 py-4 [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:text-[var(--evergreen)] [&_h2]:text-base [&_p]:mt-1 [&_p]:text-xs [&_p]:leading-normal [&_p]:text-[var(--muted)]">
           <CalendarBlankIcon aria-hidden="true" />
           <h2 id={`${idPrefix}-schedule-title`}>Date and time</h2>
         </div>
-        <div className="event-form__fields">
-          <div className="event-form__grid">
+        <div className="grid gap-5 p-5 sm:p-6">
+          <div className="grid gap-5 sm:grid-cols-2">
             <DateTimeField
               id={`${idPrefix}-starts-at`}
               label="Starts"
@@ -174,14 +174,14 @@ export function EventFormFields({
       </section>
 
       <section
-        className="event-form__section"
+        className="overflow-hidden rounded-2xl border border-border bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
         aria-labelledby={`${idPrefix}-venue-title`}
       >
-        <div className="event-form__section-heading">
+        <div className="flex items-start gap-3.5 border-b border-border px-5 py-4 [&>svg]:mt-0.5 [&>svg]:size-5 [&>svg]:text-[var(--evergreen)] [&_h2]:text-base [&_p]:mt-1 [&_p]:text-xs [&_p]:leading-normal [&_p]:text-[var(--muted)]">
           <MapPinIcon aria-hidden="true" />
           <h2 id={`${idPrefix}-venue-title`}>Venue</h2>
         </div>
-        <div className="event-form__fields">
+        <div className="grid gap-5 p-5 sm:p-6">
           <TextField
             id={`${idPrefix}-venue-name`}
             label="Venue name"
@@ -209,7 +209,7 @@ export function EventFormFields({
             error={errors.addressLine2}
             onChange={(input) => onChange('addressLine2', input.target.value)}
           />
-          <div className="event-form__grid event-form__grid--address">
+          <div className="grid gap-5 sm:grid-cols-2">
             <TextField
               id={`${idPrefix}-city`}
               label="City"
@@ -280,10 +280,10 @@ export function EventFormFields({
             )}
           </div>
 
-          <div className="event-form__location">
+          <div className="grid gap-4">
             <div
               aria-label="Venue location map"
-              className="event-form__location-map"
+              className="h-76 overflow-hidden rounded-xl border border-border bg-[#e8e6df] [&_.leaflet-container]:size-full [&_.leaflet-container]:bg-[#e8e6df] [&_.leaflet-control-attribution]:text-[10px]"
               role="group"
             >
               <EventVenueMap
@@ -294,7 +294,7 @@ export function EventFormFields({
                 point={venuePoint(values)}
               />
             </div>
-            <div className="event-form__grid">
+            <div className="grid gap-5 sm:grid-cols-2">
               <TextField
                 id={`${idPrefix}-latitude`}
                 label="Latitude (optional)"
@@ -318,8 +318,8 @@ export function EventFormFields({
                 value={values.longitude}
               />
             </div>
-            <div className="event-form__location-actions">
-              <small className="field__hint">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <small className="text-[11px] text-[var(--muted)]">
                 Click the map to mark the venue, or type coordinates — set both
                 or neither.
               </small>
@@ -398,22 +398,23 @@ function CategoryMultiSelect({
   }
 
   return (
-    <div className="field">
+    <div className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold">
       <label id={`${id}-label`} htmlFor={id}>
         Categories
       </label>
-      <div className="multi-select__control">
+      <div className="grid gap-2">
         {values.length === 0 ? null : (
           <div
-            className="multi-select__values"
+            className="flex min-w-0 flex-wrap gap-1.5"
             aria-label="Selected categories"
           >
             {values.map((value) => (
-              <span className="category-chip" key={value}>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--soft)] px-2.5 py-1 text-xs font-bold text-[var(--evergreen)] [&_svg]:size-3" key={value}>
                 {value}
                 <button
                   type="button"
                   aria-label={`Remove ${value}`}
+                  className="grid size-5 place-items-center rounded-full hover:bg-[var(--paper)]"
                   onClick={() =>
                     onChange(values.filter((item) => item !== value))
                   }
@@ -429,12 +430,12 @@ function CategoryMultiSelect({
             <button
               id={id}
               type="button"
-              className="multi-select__trigger"
+              className="flex min-h-12 w-full items-center justify-between gap-2.5 rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-left text-[var(--ink)] hover:border-[var(--focus)] aria-invalid:border-[var(--danger)] [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[var(--muted)]"
               aria-labelledby={`${id}-label`}
               aria-describedby={error === undefined ? undefined : errorId}
               aria-invalid={error === undefined ? undefined : true}
             >
-              <span className="select-placeholder">
+              <span className="text-[var(--muted)]">
                 {values.length === 0
                   ? 'Choose or type categories'
                   : 'Add category'}
@@ -444,7 +445,7 @@ function CategoryMultiSelect({
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content
-              className="select-popover"
+              className="z-50 w-[var(--radix-popover-trigger-width)] min-w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-[var(--paper)] shadow-[0_18px_50px_rgb(23_35_29_/_16%)] [&_[cmdk-input]]:w-full [&_[cmdk-input]]:border-b [&_[cmdk-input]]:border-border [&_[cmdk-input]]:p-3.5 [&_[cmdk-list]]:max-h-68 [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:p-1.5 [&_[cmdk-item]]:flex [&_[cmdk-item]]:cursor-pointer [&_[cmdk-item]]:items-center [&_[cmdk-item]]:gap-2 [&_[cmdk-item]]:rounded-lg [&_[cmdk-item]]:p-2.5 [&_[cmdk-item]]:text-sm [&_[cmdk-item][data-selected=true]]:bg-[var(--soft)] [&_[cmdk-item][data-disabled=true]]:cursor-not-allowed [&_[cmdk-item][data-disabled=true]]:opacity-45 [&_[cmdk-empty]]:p-4 [&_[cmdk-empty]]:text-center [&_[cmdk-empty]]:text-xs [&_[cmdk-empty]]:text-[var(--muted)]"
               align="start"
               sideOffset={6}
             >
@@ -493,9 +494,9 @@ function CategoryMultiSelect({
           </Popover.Portal>
         </Popover.Root>
       </div>
-      <small className="field__hint">Choose up to five.</small>
+      <small className="text-[11px] text-[var(--muted)]">Choose up to five.</small>
       {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
+        <p className="text-xs font-semibold leading-normal text-[var(--danger)]" id={errorId}>
           {error}
         </p>
       )}
@@ -519,12 +520,12 @@ function DateTimeField({
   const errorId = `${id}-error`;
 
   return (
-    <div className="field">
+    <div className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold">
       <label id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
       <ByteDateTimePicker
-        className="event-date-time-picker"
+        className="block [&_.byte-dropdown]:border [&_.byte-cell]:min-h-11 [&_.byte-nav-btn]:min-h-11 [&_.byte-header-title]:min-h-11 [&_.byte-action-btn]:min-h-11 [&_.byte-time-field_select]:min-h-11"
         dateFormatString="dd mmm yyyy"
         error={error !== undefined}
         hideInput
@@ -537,7 +538,7 @@ function DateTimeField({
           <button
             id={id}
             type="button"
-            className="date-picker__trigger"
+            className="flex min-h-12 w-full items-center gap-2.5 rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-left text-[var(--ink)] hover:border-[var(--focus)] aria-invalid:border-[var(--danger)] disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[var(--muted)] [&>span]:truncate"
             aria-describedby={error === undefined ? undefined : errorId}
             aria-expanded={isOpen}
             aria-haspopup="dialog"
@@ -547,7 +548,7 @@ function DateTimeField({
           >
             <CalendarBlankIcon aria-hidden="true" />
             {formattedValue === '' ? (
-              <span className="select-placeholder">Choose date and time</span>
+              <span className="text-[var(--muted)]">Choose date and time</span>
             ) : (
               <span>{formattedValue}</span>
             )}
@@ -555,7 +556,7 @@ function DateTimeField({
         )}
       </ByteDateTimePicker>
       {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
+        <p className="text-xs font-semibold leading-normal text-[var(--danger)]" id={errorId}>
           {error}
         </p>
       )}
@@ -597,7 +598,7 @@ export function SearchSelect({
   const selected = options.find((option) => option.value === value);
 
   return (
-    <div className="field">
+    <div className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold">
       <label id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
@@ -607,7 +608,7 @@ export function SearchSelect({
             id={id}
             type="button"
             disabled={disabled}
-            className="search-select__trigger"
+            className="flex min-h-12 w-full items-center justify-between gap-2.5 rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-left text-[var(--ink)] hover:border-[var(--focus)] aria-invalid:border-[var(--danger)] disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[var(--muted)]"
             role="combobox"
             aria-expanded={open}
             aria-labelledby={`${id}-label`}
@@ -624,7 +625,7 @@ export function SearchSelect({
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="select-popover"
+            className="z-50 w-[var(--radix-popover-trigger-width)] min-w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-[var(--paper)] shadow-[0_18px_50px_rgb(23_35_29_/_16%)] [&_[cmdk-input]]:w-full [&_[cmdk-input]]:border-b [&_[cmdk-input]]:border-border [&_[cmdk-input]]:p-3.5 [&_[cmdk-list]]:max-h-68 [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:p-1.5 [&_[cmdk-item]]:flex [&_[cmdk-item]]:cursor-pointer [&_[cmdk-item]]:items-center [&_[cmdk-item]]:gap-2 [&_[cmdk-item]]:rounded-lg [&_[cmdk-item]]:p-2.5 [&_[cmdk-item]]:text-sm [&_[cmdk-item][data-selected=true]]:bg-[var(--soft)] [&_[cmdk-item][data-disabled=true]]:cursor-not-allowed [&_[cmdk-item][data-disabled=true]]:opacity-45 [&_[cmdk-empty]]:p-4 [&_[cmdk-empty]]:text-center [&_[cmdk-empty]]:text-xs [&_[cmdk-empty]]:text-[var(--muted)]"
             align="start"
             sideOffset={6}
           >
@@ -658,7 +659,7 @@ export function SearchSelect({
         </Popover.Portal>
       </Popover.Root>
       {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
+        <p className="text-xs font-semibold leading-normal text-[var(--danger)]" id={errorId}>
           {error}
         </p>
       )}
@@ -679,16 +680,17 @@ function TextAreaField({
   const resolvedId = id ?? generatedId;
   const errorId = `${resolvedId}-error`;
   return (
-    <div className="field">
+    <div className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold">
       <label htmlFor={resolvedId}>{label}</label>
       <textarea
         {...props}
         id={resolvedId}
         aria-describedby={error === undefined ? undefined : errorId}
         aria-invalid={error === undefined ? undefined : true}
+        className="min-h-32 w-full resize-y rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-sm leading-relaxed text-[var(--ink)] hover:border-[var(--focus)] focus:border-[var(--focus)] focus:outline-none aria-invalid:border-[var(--danger)]"
       />
       {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
+        <p className="text-xs font-semibold leading-normal text-[var(--danger)]" id={errorId}>
           {error}
         </p>
       )}

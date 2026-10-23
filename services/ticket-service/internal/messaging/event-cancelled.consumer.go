@@ -79,7 +79,9 @@ func (c *EventCancelledConsumer) Run(ctx context.Context, onError func(error)) {
 				return
 			}
 			onError(err)
-			return
+			if !waitForRetry(ctx) {
+				return
+			}
 		}
 	}
 }

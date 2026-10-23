@@ -1,27 +1,12 @@
-import { Link } from 'react-router-dom';
-
 import { EventSearch } from '../components/search/EventSearch';
-import { Brand } from '../components/ui/Brand';
 
 export function AttendeeSearchPage() {
   return (
-    <main className="account-shell account-shell--attendee">
-      <header className="account-shell__header">
-        <Brand />
-        <div className="account-shell__header-end">
-          <Link className="account-shell__nav" to="/attendee">
-            Account
-          </Link>
-          <span className="actor-badge">Attendee</span>
-        </div>
+    <div className="mx-auto w-[calc(100%_-_2rem)] max-w-[1180px] pb-20 pt-5 sm:w-[calc(100%_-_3rem)] sm:pt-10">
+      <header className="mb-8">
+        <h1 className="font-[family-name:var(--serif)] text-4xl tracking-tight">Find events</h1>
       </header>
-
-      <section className="account-shell__content">
-        <div>
-          <h1>Find events</h1>
-        </div>
-        <EventSearch />
-      </section>
-    </main>
+      <EventSearch />
+    </div>
   );
 }

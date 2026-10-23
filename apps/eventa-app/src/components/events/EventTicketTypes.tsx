@@ -257,8 +257,8 @@ export function EventTicketTypes({
   );
 
   return (
-    <section className="event-details-section" aria-labelledby="tickets-title">
-      <div className="event-details-section__heading ticket-types__heading">
+    <section className="overflow-hidden rounded-2xl border border-border bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]" aria-labelledby="tickets-title">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border p-5 [&>div]:flex [&>div]:items-baseline [&>div]:gap-3 [&_h2]:text-[15px] [&_span]:text-sm [&_span]:text-[var(--muted)]">
         <div>
           <h2 id="tickets-title">Tickets</h2>
           {catalogue.data === undefined ? null : (
@@ -283,11 +283,11 @@ export function EventTicketTypes({
           </Button>
         ) : null}
       </div>
-      <div className="event-details-section__body ticket-types">
+      <div className="p-5">
         {catalogue.isPending ? (
           <p role="status">Loading tickets…</p>
         ) : catalogue.error !== null && catalogue.data === undefined ? (
-          <div className="form-alert form-alert--error" role="alert">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3.5 text-sm font-semibold leading-normal text-[var(--danger)]" role="alert">
             <span>Tickets could not be loaded.</span>
             <Button
               type="button"
@@ -298,7 +298,7 @@ export function EventTicketTypes({
             </Button>
           </div>
         ) : ticketCurrencies.length === 0 && !definingCurrency ? (
-          <div className="ticket-types__empty">
+          <div className="grid justify-items-start gap-3 text-[var(--muted)] [&>svg]:size-7">
             <TicketIcon aria-hidden="true" />
             <p>No ticket currencies defined.</p>
             {canChange ? (
@@ -312,7 +312,7 @@ export function EventTicketTypes({
             ) : null}
           </div>
         ) : (
-          <div className="ticket-currencies">
+          <div className="grid gap-4">
             {ticketCurrencies.map((ticketCurrency) => {
               const ticketTypes =
                 catalogue.data?.ticketTypes.filter(
@@ -322,11 +322,11 @@ export function EventTicketTypes({
                 ) ?? [];
               return (
                 <section
-                  className="ticket-currency"
+                  className="grid gap-4 rounded-xl border border-border p-4"
                   key={ticketCurrency.ticketCurrencyId}
                   aria-labelledby={`ticket-currency-${ticketCurrency.ticketCurrencyId}`}
                 >
-                  <div className="ticket-currency__heading">
+                  <div className="flex flex-wrap items-center justify-between gap-3 [&>div]:flex [&>div]:items-center [&>div]:gap-3 [&_span]:text-sm [&_span]:text-[var(--muted)]">
                     <div>
                       <h3
                         id={`ticket-currency-${ticketCurrency.ticketCurrencyId}`}
@@ -362,14 +362,14 @@ export function EventTicketTypes({
                     ) : null}
                   </div>
                   {ticketTypes.length === 0 ? (
-                    <p className="ticket-currency__empty">
+                    <p className="text-sm text-[var(--muted)]">
                       No ticket types added.
                     </p>
                   ) : (
-                    <div className="ticket-types__list">
+                    <div className="grid gap-4">
                       {ticketTypes.map((ticketType) => (
                         <div
-                          className="ticket-type-entry"
+                          className="grid"
                           key={ticketType.ticketTypeId}
                         >
                           <TicketTypeCard
@@ -422,7 +422,7 @@ export function EventTicketTypes({
                           ) : null}
                           {retiringTicketTypeId === ticketType.ticketTypeId ? (
                             <div
-                              className="ticket-type-retirement"
+                              className="grid gap-4 rounded-b-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-4"
                               role="alert"
                             >
                               <p>
@@ -436,7 +436,7 @@ export function EventTicketTypes({
                                   reset={retireTicketType.reset}
                                 />
                               )}
-                              <div className="ticket-type-form__actions">
+                              <div className="flex flex-wrap justify-end gap-3">
                                 <Button
                                   type="button"
                                   variant="quiet"
@@ -491,14 +491,15 @@ export function EventTicketTypes({
 
         {definingCurrency ? (
           <form
-            className="ticket-currency-form"
+            className="grid items-end gap-4 border-t border-border pt-5 sm:grid-cols-[minmax(12rem,1fr)_auto]"
             onSubmit={(submission) => void submitCurrency(submission)}
             noValidate
           >
-            <label className="field" htmlFor="ticket-currency">
-              <span>Currency</span>
+            <label className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold" htmlFor="ticket-currency">
+              <span className="text-[13px] font-bold">Currency</span>
               <select
                 id="ticket-currency"
+                className="min-h-12 w-full rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-[var(--ink)] focus:border-[var(--focus)] focus:outline-none aria-invalid:border-[var(--danger)]"
                 value={currency}
                 aria-invalid={errors.currency === undefined ? undefined : true}
                 onChange={(change) => setCurrency(change.target.value)}
@@ -511,7 +512,7 @@ export function EventTicketTypes({
                 ))}
               </select>
               {errors.currency === undefined ? null : (
-                <span className="field__error">{errors.currency}</span>
+                <span className="text-xs font-semibold leading-normal text-[var(--danger)]">{errors.currency}</span>
               )}
             </label>
             {defineCurrency.error === null ? null : (
@@ -521,7 +522,7 @@ export function EventTicketTypes({
                 reset={defineCurrency.reset}
               />
             )}
-            <div className="ticket-type-form__actions">
+            <div className="flex flex-wrap justify-end gap-3">
               <Button
                 type="button"
                 variant="quiet"

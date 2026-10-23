@@ -90,7 +90,7 @@ export function LoginForm({ actor }: { actor: Actor }) {
 
   return (
     <>
-      <div className="auth-heading">
+      <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
         <h2>Sign in</h2>
         <p>
           {actor === 'admin'
@@ -100,14 +100,14 @@ export function LoginForm({ actor }: { actor: Actor }) {
       </div>
 
       <form
-        className="login-form"
+        className="grid gap-5"
         noValidate
         onSubmit={(event) => {
           void submit(event);
         }}
       >
         {completedAuthenticationStep(actor, location.state) ? (
-          <div className="form-status" role="status">
+          <div className="rounded-xl border border-[#0b5945]/25 bg-[#0b5945]/10 px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--evergreen-deep)]" role="status">
             {actor === 'attendee'
               ? 'Email verified. Sign in to continue.'
               : 'Account activated. Sign in to continue.'}
@@ -141,12 +141,12 @@ export function LoginForm({ actor }: { actor: Actor }) {
           }}
         />
 
-        <Link className="forgot-password-link" to={`/${actor}/forgot-password`}>
+        <Link className="-mt-2 w-fit text-[.78rem] font-bold text-[var(--evergreen)] underline-offset-4" to={`/${actor}/forgot-password`}>
           Forgot password?
         </Link>
 
         {login.error === null ? null : (
-          <div className="form-alert" role="alert" aria-live="assertive">
+          <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--danger)]" role="alert" aria-live="assertive">
             {userFacingApiError(login.error)}
           </div>
         )}
@@ -154,13 +154,13 @@ export function LoginForm({ actor }: { actor: Actor }) {
         <Button
           type="submit"
           busy={login.isPending}
-          className="login-form__submit"
+          className="mt-1 w-full"
         >
           {login.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
 
-      <p className="auth-form-link">
+      <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4">
         {actor === 'attendee' ? (
           <>
             New to Eventa? <Link to="/attendee/register">Create account</Link>

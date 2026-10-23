@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,5 +39,18 @@ func TestSearchEventsRejectsAMalformedNearClauseWithoutQuerying(t *testing.T) {
 	})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("got code %s for a zero radius, want %s", status.Code(err), codes.InvalidArgument)
+	}
+}
+
+func TestSearchResultIncludesVenueCoordinates(t *testing.T) {
+	latitude, longitude := 6.5244, 3.3792
+	result := toResult(&Row{
+		EventID:        uuid.New(),
+		Title:          "Lagos event",
+		VenueLatitude:  &latitude,
+		VenueLongitude: &longitude,
+	})
+	if result.VenueLatitude == nil || *result.VenueLatitude != latitude || result.VenueLongitude == nil || *result.VenueLongitude != longitude {
+		t.Fatalf("venue coordinates were not preserved: %v/%v", result.VenueLatitude, result.VenueLongitude)
 	}
 }

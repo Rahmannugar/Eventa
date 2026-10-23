@@ -10,7 +10,7 @@ Eventa is a distributed event ticketing platform that enables organizers to crea
 
 The system is composed of independently deployable modular-monolith services responsible for identity, events, commerce, ticketing, discovery, analytics, notifications, and an API Gateway. Services communicate using HTTP, gRPC, Kafka, and RabbitMQ, combining synchronous request-response communication with asynchronous event-driven workflows. Transactional outbox records and Debezium are the primary relay for durable database-backed inter-service facts and initial job assignments.
 
-The project is designed to explore production engineering practices including distributed transactions, compensating actions, event-driven architecture, observability, background processing, and clear service ownership. The whole system is reproducible with Docker Compose, and we run that Compose stack on a VPS rather than on a workstation — see [Where to Run Eventa](#where-to-run-eventa).
+The project is designed to explore production engineering practices including distributed transactions, compensating actions, event-driven architecture, observability, background processing, and clear service ownership. The whole system is reproducible with Docker Compose; see [Where to Run Eventa](#where-to-run-eventa) for where to run it.
 
 ## Architecture
 
@@ -70,9 +70,7 @@ Product interfaces use attendee and organizer language. They translate system st
 
 Eventa is a large Compose project: roughly forty containers including six PostgreSQL databases, Kafka, five Debezium relays, RabbitMQ, Redis, Ahnlich, and the observability pipeline. **Run it on a VPS or another dedicated remote machine, not on your laptop or workstation.** Building the images and keeping the stack healthy consumes the CPU, memory, and disk a development machine should spend on editing, gates, and unit tests.
 
-We run Eventa from a clone on a remote host and start it there with the same Compose commands documented below; only the machine changes. Keep the workstation for code and for gates that need no running stack, and execute everything that requires the whole system — image builds, `up`, seeding, end-to-end proofs — on the host over SSH.
-
-"Local" in the sections below means the machine that runs the Compose project (its own `.env` files, its own `localhost` endpoints), which is the host, not your workstation.
+"Local" in the sections below means the machine that runs the Compose project (its own `.env` files, its own `localhost` endpoints).
 
 ## Local Development
 

@@ -11,9 +11,9 @@ import { Brand } from '../ui/Brand';
 
 function SessionLoader({ actor }: { actor: Actor }) {
   return (
-    <main className="session-state" aria-busy="true">
+    <main className="grid min-h-screen content-center justify-items-center gap-8 bg-[var(--canvas)] p-6" aria-busy="true">
       <Brand />
-      <div className="session-state__card">
+      <div className="w-full max-w-[30rem] rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-8 text-center shadow-lg">
         <p>Loading {actor === 'admin' ? 'Admin Dashboard' : 'your account'}…</p>
       </div>
     </main>
@@ -22,11 +22,11 @@ function SessionLoader({ actor }: { actor: Actor }) {
 
 function SessionFailure({ retry }: { retry: () => Promise<unknown> }) {
   return (
-    <main className="session-state">
+    <main className="grid min-h-screen content-center justify-items-center gap-8 bg-[var(--canvas)] p-6">
       <Brand />
-      <div className="session-state__card" role="alert">
-        <h1>Unable to load your account</h1>
-        <p>Check your connection and try again.</p>
+      <div className="w-full max-w-[30rem] rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-8 text-center shadow-lg" role="alert">
+        <h1 className="my-3 font-[Georgia] text-3xl tracking-tight">Unable to load your account</h1>
+        <p className="text-[var(--muted)]">Check your connection and try again.</p>
         <Button
           onClick={() => {
             void retry();

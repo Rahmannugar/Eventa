@@ -45,13 +45,13 @@ export function ForgotPasswordForm({ actor }: { actor: Actor }) {
 
   return (
     <>
-      <div className="auth-heading">
+      <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
         <h2>Reset password</h2>
         <p>Enter the email address for your Eventa account.</p>
       </div>
 
       <form
-        className="login-form"
+        className="grid gap-5"
         noValidate
         onSubmit={(event) => {
           void submit(event);
@@ -77,13 +77,13 @@ export function ForgotPasswordForm({ actor }: { actor: Actor }) {
         <Button
           type="submit"
           busy={request.isPending}
-          className="login-form__submit"
+          className="mt-1 w-full"
         >
           {request.isPending ? 'Requesting code…' : 'Send reset code'}
         </Button>
       </form>
 
-      <p className="auth-form-link">
+      <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4">
         <Link to={`/${actor}/login`}>Back to sign in</Link>
       </p>
     </>

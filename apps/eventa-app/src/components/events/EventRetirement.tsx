@@ -17,6 +17,7 @@ import {
 import type { AdminEvent } from '../../lib/events/event.types';
 import { useRetireDraftEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
+import { confirmationDialog, dialogActions, dialogBackdrop, dialogClose, formAlert } from './adminStyles';
 
 export function EventRetirement({
   disabled,
@@ -139,12 +140,12 @@ export function EventRetirement({
   }
 
   return (
-    <section className="event-retirement" aria-labelledby="retirement-title">
-      <div>
-        <TrashIcon aria-hidden="true" />
+    <section className="grid gap-4 rounded-2xl border border-[var(--danger)]/25 bg-[var(--paper)] p-5" aria-labelledby="retirement-title">
+      <div className="flex items-start gap-3">
+        <TrashIcon aria-hidden="true" className="size-5 shrink-0 text-[var(--danger)]" />
         <div>
-          <h2 id="retirement-title">Remove draft</h2>
-          <p>Remove this event from your Events list.</p>
+          <h2 className="font-[family-name:var(--serif)] text-lg font-medium" id="retirement-title">Remove draft</h2>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">Remove this event from your Events list.</p>
         </div>
       </div>
       <Button
@@ -159,14 +160,14 @@ export function EventRetirement({
 
       {open ? (
         <div
-          className="dialog-backdrop"
+        className={dialogBackdrop}
           onMouseDown={(mouseEvent) => {
             if (mouseEvent.target === mouseEvent.currentTarget) close();
           }}
         >
           <section
             ref={dialogRef}
-            className="confirmation-dialog"
+            className={confirmationDialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="retire-dialog-title"
@@ -184,21 +185,21 @@ export function EventRetirement({
             <button
               ref={closeButtonRef}
               type="button"
-              className="confirmation-dialog__close"
+              className={dialogClose}
               aria-label="Close event removal confirmation"
               disabled={retirement.isPending || reloading}
               onClick={close}
             >
               <XIcon aria-hidden="true" />
             </button>
-            <h2 id="retire-dialog-title">Remove this draft?</h2>
-            <p id="retire-dialog-description">
+            <h2 className="pr-8 font-[family-name:var(--serif)] text-2xl font-medium" id="retire-dialog-title">Remove this draft?</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]" id="retire-dialog-description">
               {event.title} will disappear from your Events list. Its
               information is kept so it can be recovered later.
             </p>
 
             {retirement.error === null ? null : needsLatestEvent ? (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4 grid gap-2`} role="alert">
                 <strong>The event changed before it could be removed.</strong>
                 <span>
                   Load the latest details, review them, then try again.
@@ -219,12 +220,12 @@ export function EventRetirement({
                 </Button>
               </div>
             ) : (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4`} role="alert">
                 {userFacingApiError(retirement.error)}
               </div>
             )}
 
-            <div className="confirmation-dialog__actions event-retirement__dialog-actions">
+            <div className={`${dialogActions} mt-6`}>
               <Button
                 type="button"
                 variant="secondary"

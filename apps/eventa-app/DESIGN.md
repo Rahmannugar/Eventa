@@ -1,10 +1,28 @@
 # Eventa Web Design
 
-## Direction
+## Existing Design Language
 
 Eventa uses a warm, clear visual system built around event discovery and management. Authentication is direct and legible. Interface copy names the immediate user action.
 
 Authrail informs the split authentication canvas, restrained controls, explicit states, and route-level session boundaries. Eventa does not reuse Authrail branding, copy, or source.
+
+The signed-in attendee experience starts with discovery, then leads from search and recommendations to a published event, ticket selection, checkout, and issued tickets. The organizer dashboard keeps its event-management and analytics workflows in a responsive sidebar layout. Search results contain text, time, categories, and venue; published event detail supplies media, while the authoritative ticket catalogue is a separate authenticated request.
+
+## Intended Application Direction
+
+The owner chose Tailwind for the web overhaul, shadcn/ui for interaction primitives, and Phosphor icons. Component styling belongs in Tailwind utility classes rather than separate CSS files; the single Tailwind entry contains framework imports and shared theme tokens. The profile menu uses shadcn's accessible dropdown and Phosphor symbols.
+
+The owner's live review of the first deployed overhaul requires a simpler shell and a responsive event page. The attendee sidebar carries Discover, Find events, and My tickets; Account moves into a top-right profile menu with Settings and Sign out. Remove repeated brand/context labels in the top bar and sidebar. The profile control is an icon with an accessible name. Light and dark appearance are both supported with a visible preference control, persisted per browser and initialized from the system preference. The event page must stack content and ticket choices before its text is squeezed into narrow columns. Use the existing orange ticket brand mark for the favicon.
+
+Keep page headings direct. Do not put small uppercase slogans or category strings above them. On event details, categories sit below the event title as quiet tags. Events without an uploaded cover use one shared web-app photo; an actual uploaded cover always takes precedence. Attendee search and event details include maps for events whose venues have coordinates, and the organizer's venue picker remains an editable map.
+
+Eventa should feel like a place to choose and attend events. Keep its warm parchment, evergreen, and persimmon identity, but make the signed-in experience more structured and less ornamental: a clear attendee navigation shell, a focused home for discovery, a scannable catalogue with entire cards linking to event details, and an event page where the schedule, venue, description, imagery when available, and ticket choices lead naturally into checkout. Use editorial type for event titles and compact sans-serif labels for time, place, and actions. When an event has no cover, use a deliberate typographic card surface without pretending an image exists.
+
+The attendee navigation reflects working destinations. Discover and Account exist first; For you, My tickets, and purchase-result destinations become visible when their real routes are connected. Account settings keep sign-out and deletion accessible without making them the signed-in home. The organizer shell keeps its own actor boundary, event-management tools, and analytics, while sharing the same spacing, type hierarchy, focus treatment, and responsive navigation discipline.
+
+Consumel's list-to-detail hierarchy and Macro Terminal's persistent desktop navigation, compact mobile drawer, and purposeful home composition are references for interaction quality only. Authrail remains a reference for disciplined application states and focus behaviour. Eventa derives its own labels, content, visual identity, and workflow from its actors and contracts; none of these projects supplies Eventa components or copy.
+
+Desktop uses a persistent navigation area and a compact page header around a centered working canvas. Narrow widths use a visible menu control and closable drawer, with navigation and sign-out still reachable by keyboard. Repeated event cards have one unambiguous link target, a visible focus state, and no nested action conflict. Event details keep ticket selection near the purchase action; checkout shows a stable order state and recoverable payment path. Loading, empty, error, pending, sold-out, and success states are distinct and literal.
 
 ## Product Language
 

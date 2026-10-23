@@ -127,6 +127,12 @@ export class SearchEventResultDto {
   @ApiPropertyOptional({ example: 'NG' })
   venueCountryCode?: string | undefined;
 
+  @ApiPropertyOptional({ example: 6.5244 })
+  venueLatitude?: number | undefined;
+
+  @ApiPropertyOptional({ example: 3.3792 })
+  venueLongitude?: number | undefined;
+
   @ApiPropertyOptional({
     description:
       'Distance from the requested point in kilometres; set only when the search carried a near filter',

@@ -22,13 +22,13 @@ export function AppToaster() {
       }}
       toastOptions={{
         classNames: {
-          toast: 'eventa-toast',
-          success: 'eventa-toast eventa-toast--success',
-          error: 'eventa-toast eventa-toast--error',
-          warning: 'eventa-toast eventa-toast--warning',
-          title: 'eventa-toast__title',
-          description: 'eventa-toast__description',
-          closeButton: 'eventa-toast__close',
+          toast: '!rounded-xl !border !border-[var(--line)] !bg-[var(--paper)] !text-[var(--ink)] !shadow-xl',
+          success: '!border-[#0b5945]/30 [&_[data-icon]]:text-[var(--evergreen)]',
+          error: '!border-[var(--danger)]/30 !bg-[var(--danger-soft)] [&_[data-icon]]:text-[var(--danger)]',
+          warning: '[&_[data-icon]]:text-amber-600',
+          title: '!font-extrabold',
+          description: '!text-[var(--muted)]',
+          closeButton: '!border-[var(--line)] !bg-[var(--paper)] !text-[var(--muted)]',
         },
       }}
     />

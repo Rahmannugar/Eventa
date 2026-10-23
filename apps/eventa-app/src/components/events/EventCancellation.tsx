@@ -17,6 +17,7 @@ import {
 import type { AdminEvent } from '../../lib/events/event.types';
 import { useCancelEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
+import { confirmationDialog, dialogActions, dialogBackdrop, dialogClose, formAlert } from './adminStyles';
 
 export function EventCancellation({
   event,
@@ -138,17 +139,17 @@ export function EventCancellation({
 
   return (
     <section
-      className="event-publication event-publication--ready"
+      className="grid gap-4 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
       aria-labelledby="cancellation-title"
     >
-      <div className="event-publication__heading">
-        <WarningCircleIcon aria-hidden="true" weight="fill" />
+      <div className="flex items-start gap-3">
+        <WarningCircleIcon aria-hidden="true" className="size-5 shrink-0 text-[var(--evergreen)]" weight="fill" />
         <div>
-          <h2 id="cancellation-title">Cancellation</h2>
-          <strong>Stop sales and revoke issued tickets</strong>
+          <h2 className="text-xs font-semibold" id="cancellation-title">Cancellation</h2>
+          <strong className="mt-1 block font-[family-name:var(--serif)] text-xl font-medium tracking-tight">Stop sales and revoke issued tickets</strong>
         </div>
       </div>
-      <p>
+      <p className="text-xs leading-relaxed text-[var(--muted)]">
         Cancelling stops new holds, releases active holds, and tells ticketing
         to revoke issued tickets.
       </p>
@@ -163,14 +164,14 @@ export function EventCancellation({
 
       {open ? (
         <div
-          className="dialog-backdrop"
+          className={dialogBackdrop}
           onMouseDown={(mouseEvent) => {
             if (mouseEvent.target === mouseEvent.currentTarget) close();
           }}
         >
           <section
             ref={dialogRef}
-            className="confirmation-dialog"
+            className={confirmationDialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-dialog-title"
@@ -188,21 +189,21 @@ export function EventCancellation({
             <button
               ref={closeButtonRef}
               type="button"
-              className="confirmation-dialog__close"
+              className={dialogClose}
               aria-label="Close cancellation review"
               disabled={cancellation.isPending || reloading}
               onClick={close}
             >
               <XIcon aria-hidden="true" />
             </button>
-            <h2 id="cancel-dialog-title">Cancel this event?</h2>
-            <p id="cancel-dialog-description">
+            <h2 className="pr-8 font-[family-name:var(--serif)] text-2xl font-medium" id="cancel-dialog-title">Cancel this event?</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]" id="cancel-dialog-description">
               {event.title} will stop selling tickets. Active holds are released
               and issued tickets are prepared for revocation.
             </p>
 
             {cancellation.error === null ? null : needsLatestEvent ? (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4 grid gap-2`} role="alert">
                 <strong>The event changed before it could be cancelled.</strong>
                 <span>
                   Load the latest details, review them, then try again.
@@ -223,12 +224,12 @@ export function EventCancellation({
                 </Button>
               </div>
             ) : (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4`} role="alert">
                 {userFacingApiError(cancellation.error)}
               </div>
             )}
 
-            <div className="confirmation-dialog__actions event-publication__dialog-actions">
+            <div className={`${dialogActions} mt-6`}>
               <Button
                 type="button"
                 variant="secondary"

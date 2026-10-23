@@ -24,6 +24,7 @@ import { EventMediaManager } from './EventMediaManager';
 import { EventPublication } from './EventPublication';
 import { EventRetirement } from './EventRetirement';
 import { EventTicketTypes } from './EventTicketTypes';
+import { adminPage, backLink, statusBadge } from './adminStyles';
 
 const eventIdSchema = z.uuid();
 const gallerySlotOrder = ['gallery_1', 'gallery_2', 'gallery_3', 'gallery_4'];
@@ -94,16 +95,16 @@ function EventDetailsContent({
     );
 
   return (
-    <main className="admin-page admin-page--event-details">
-      <header className="event-details-header">
-        <Link className="back-link" to="/admin">
+    <main className={adminPage}>
+      <header className="border-b border-[var(--line)] pb-[clamp(1.5rem,4vw,2.25rem)]">
+        <Link className={backLink} to="/admin">
           <ArrowLeftIcon aria-hidden="true" />
           Events
         </Link>
-        <div className="event-details-header__main">
+        <div className="flex flex-col items-stretch justify-between gap-6 min-[600px]:flex-row min-[600px]:items-end">
           <div>
-            <div className="event-details-header__state">
-              <span className={`status-badge status-badge--${event.status}`}>
+            <div className="flex">
+              <span className={statusBadge(event.status)}>
                 {event.status === 'draft'
                   ? 'Draft'
                   : event.status === 'cancelled'
@@ -111,11 +112,11 @@ function EventDetailsContent({
                     : 'Published'}
               </span>
             </div>
-            <h1>{event.title}</h1>
+            <h1 className="mt-3 max-w-[54rem] wrap-anywhere font-[family-name:var(--serif)] text-[clamp(2.4rem,7vw,4.5rem)] font-medium leading-none tracking-[-.055em]">{event.title}</h1>
           </div>
           {event.status === 'draft' ? (
             <Link
-              className="button button--primary"
+              className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--evergreen)] px-4 py-3 text-sm font-bold text-white no-underline hover:bg-[var(--evergreen-deep)] min-[600px]:w-auto"
               to={`/admin/events/${event.eventId}/edit`}
             >
               <NotePencilIcon aria-hidden="true" />
@@ -125,20 +126,20 @@ function EventDetailsContent({
         </div>
       </header>
 
-      <div className="event-details-layout">
-        <div className="event-details-main">
+      <div className="grid gap-[clamp(1.25rem,3vw,2rem)] pt-[clamp(1.5rem,4vw,2.5rem)] min-[1100px]:grid-cols-[minmax(0,1fr)_20rem] min-[1100px]:items-start">
+        <div className="grid min-w-0 gap-5">
           <section
-            className="event-details-section"
+            className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
             aria-labelledby="about-title"
           >
-            <div className="event-details-section__heading">
-              <h2 id="about-title">About</h2>
+            <div className="border-b border-[var(--line)] px-[clamp(1rem,3vw,1.4rem)] py-4">
+              <h2 className="text-sm font-semibold" id="about-title">About</h2>
             </div>
-            <div className="event-details-section__body event-details-about">
-              <p>{event.description ?? 'No description added.'}</p>
-              <div className="event-details-categories" aria-label="Categories">
+            <div className="grid gap-5 p-[clamp(1rem,3vw,1.4rem)]">
+              <p className="max-w-[66ch] whitespace-pre-wrap text-sm leading-7 text-[var(--ink)]">{event.description ?? 'No description added.'}</p>
+              <div className="flex flex-wrap gap-2" aria-label="Categories">
                 {event.categories.map((category) => (
-                  <span key={category}>{category}</span>
+                  <span className="rounded-full bg-[var(--soft)] px-2.5 py-1.5 text-xs font-bold text-[var(--evergreen-deep)]" key={category}>{category}</span>
                 ))}
               </div>
             </div>
@@ -152,13 +153,13 @@ function EventDetailsContent({
           />
 
           <section
-            className="event-details-section"
+            className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
             aria-labelledby="media-title"
           >
-            <div className="event-details-section__heading">
-              <h2 id="media-title">Images</h2>
+            <div className="border-b border-[var(--line)] px-[clamp(1rem,3vw,1.4rem)] py-4">
+              <h2 className="text-sm font-semibold" id="media-title">Images</h2>
             </div>
-            <div className="event-details-section__body event-details-media">
+            <div className="grid gap-3 p-[clamp(1rem,3vw,1.4rem)]">
               {event.status === 'draft' ? (
                 <EventMediaManager
                   disabled={publicationBusy || retirementBusy || ticketTypeBusy}
@@ -168,15 +169,15 @@ function EventDetailsContent({
               ) : (
                 <>
                   <MediaSlot
-                    className="event-details-cover"
+                    className="aspect-[16/7] min-h-40"
                     media={cover}
                     emptyLabel="No cover image"
                     alt={cover === undefined ? '' : `${event.title} cover`}
                   />
-                  <div className="event-details-gallery" aria-label="Gallery">
+                  <div className="grid gap-3 min-[600px]:grid-cols-2" aria-label="Gallery">
                     {gallery.length === 0 ? (
-                      <div className="event-details-media__empty">
-                        <ImageIcon aria-hidden="true" />
+                      <div className="grid min-h-40 content-center justify-items-center gap-2 rounded-xl border border-dashed border-[var(--line)] bg-[var(--soft)] text-xs font-bold text-[var(--muted)]">
+                        <ImageIcon aria-hidden="true" className="size-6 text-[var(--evergreen)]" />
                         <span>No gallery images</span>
                       </div>
                     ) : (
@@ -195,8 +196,8 @@ function EventDetailsContent({
           </section>
         </div>
 
-        <div className="event-details-rail">
-          <aside className="event-details-summary" aria-label="Event summary">
+        <div className="grid gap-4 min-[1100px]:sticky min-[1100px]:top-8">
+          <aside className="h-fit overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]" aria-label="Event summary">
             <DetailGroup
               icon={<CalendarBlankIcon aria-hidden="true" />}
               title="Schedule"
@@ -275,16 +276,16 @@ function MediaSlot({
 }) {
   if (media === undefined) {
     return (
-      <div className={`event-details-media__empty ${className}`.trim()}>
-        <ImageIcon aria-hidden="true" />
+      <div className={`grid min-h-40 content-center justify-items-center gap-2 rounded-xl border border-dashed border-[var(--line)] bg-[var(--soft)] text-xs font-bold text-[var(--muted)] ${className}`.trim()}>
+        <ImageIcon aria-hidden="true" className="size-6 text-[var(--evergreen)]" />
         <span>{emptyLabel}</span>
       </div>
     );
   }
 
   return (
-    <figure className={`event-details-media__image ${className}`.trim()}>
-      <img src={media.url} alt={alt} loading="lazy" />
+    <figure className={`min-h-40 overflow-hidden rounded-xl bg-[var(--soft)] ${className}`.trim()}>
+      <img className="h-full w-full object-cover" src={media.url} alt={alt} loading="lazy" />
     </figure>
   );
 }
@@ -299,12 +300,12 @@ function DetailGroup({
   title: string;
 }) {
   return (
-    <section className="event-details-summary__group">
-      <div className="event-details-summary__heading">
+    <section className="border-b border-[var(--line)] p-4 last:border-b-0">
+      <div className="flex items-center gap-2 [&_svg]:size-4 [&_svg]:text-[var(--evergreen)]">
         {icon}
-        <h2>{title}</h2>
+        <h2 className="text-sm font-semibold">{title}</h2>
       </div>
-      <div className="event-details-summary__content">{children}</div>
+      <div className="mt-3 grid gap-3 text-xs leading-relaxed text-[var(--ink)] [&_address]:grid [&_address]:gap-1 [&_address]:not-italic">{children}</div>
     </section>
   );
 }
@@ -317,8 +318,8 @@ function DetailValue({
   label: string;
 }) {
   return (
-    <div className="event-details-summary__value">
-      <span>{label}</span>
+    <div className="grid gap-1">
+      <span className="text-[.65rem] font-extrabold uppercase tracking-wide text-[var(--muted)]">{label}</span>
       <p>{children}</p>
     </div>
   );
@@ -365,25 +366,25 @@ function formatUpdatedAt(value: string): string {
 
 function EventDetailsLoading() {
   return (
-    <main className="admin-page" aria-busy="true" aria-label="Loading event">
-      <div className="event-loading__heading" />
-      <div className="event-loading__panel" />
-      <span className="visually-hidden">Loading event…</span>
+    <main className={adminPage} aria-busy="true" aria-label="Loading event">
+      <div className="h-28 w-[min(70%,34rem)] animate-pulse rounded-2xl bg-[var(--soft)] motion-reduce:animate-none" />
+      <div className="mt-8 min-h-[33rem] animate-pulse rounded-2xl bg-[var(--soft)] motion-reduce:animate-none" />
+      <span className="sr-only">Loading event…</span>
     </main>
   );
 }
 
 function EventState({ title, retry }: { title: string; retry?: () => void }) {
   return (
-    <main className="admin-page">
+    <main className={adminPage}>
       <div
-        className="event-page-state"
+        className="mx-auto my-[clamp(3rem,10vw,8rem)] grid w-full max-w-xl justify-items-center text-center"
         role={retry === undefined ? undefined : 'alert'}
       >
-        <WarningCircleIcon aria-hidden="true" />
-        <h1>{title}</h1>
-        <div>
-          <Link className="button button--secondary" to="/admin">
+        <WarningCircleIcon aria-hidden="true" className="size-10 text-[var(--persimmon)]" />
+        <h1 className="mt-4 font-[family-name:var(--serif)] text-[clamp(2rem,6vw,3rem)] tracking-tight">{title}</h1>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--paper)] px-4 py-3 text-sm font-bold text-[var(--ink)] no-underline hover:bg-[var(--soft)]" to="/admin">
             Back to Events
           </Link>
           {retry === undefined ? null : (

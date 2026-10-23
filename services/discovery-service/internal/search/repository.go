@@ -24,6 +24,8 @@ type Row struct {
 	VenueName        *string
 	VenueCity        *string
 	VenueCountryCode *string
+	VenueLatitude    *float64
+	VenueLongitude   *float64
 	DistanceKm       *float64
 }
 
@@ -37,7 +39,7 @@ type Repository struct {
 func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
 
 const rowColumns = `event_id, title, description, starts_at, ends_at, time_zone,
-	categories, venue_name, venue_city, venue_country_code`
+	categories, venue_name, venue_city, venue_country_code, venue_latitude, venue_longitude`
 
 // baseWhere is the shared predicate of the page query and the count. Only
 // published rows that Discovery actually holds content for are searchable:
@@ -153,6 +155,7 @@ func (r *Repository) Search(ctx context.Context, filters Filters) ([]Row, int, e
 		if err := rows.Scan(
 			&row.EventID, &row.Title, &row.Description, &row.StartsAt, &row.EndsAt,
 			&row.TimeZone, &row.Categories, &row.VenueName, &row.VenueCity, &row.VenueCountryCode,
+			&row.VenueLatitude, &row.VenueLongitude,
 			&row.DistanceKm,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan search result: %w", err)

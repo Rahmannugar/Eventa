@@ -99,6 +99,8 @@ func toResult(row *Row) *discoveryv1.EventSearchResult {
 		VenueName:        row.VenueName,
 		VenueCity:        row.VenueCity,
 		VenueCountryCode: row.VenueCountryCode,
+		VenueLatitude:    row.VenueLatitude,
+		VenueLongitude:   row.VenueLongitude,
 		DistanceKm:       row.DistanceKm,
 	}
 }

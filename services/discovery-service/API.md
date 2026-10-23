@@ -46,7 +46,7 @@ Request:
 | `offset`                   | int32                                                      | Page offset, at most 10000.                                                                                                                                                    |
 | `near`                     | message `NearClause`: `latitude`, `longitude`, `radius_km` | Optional proximity clause. Only venues within `radius_km` of the point are returned. Latitude must be −90..90, longitude −180..180, and the radius positive and at most 20000. |
 
-Response: the matching `events`, plus `total`, `limit`, and `offset`. Without `near`, results are ordered by start time, then event id, so pagination is stable. With `near`, each result carries `distance_km` — the venue's distance from the requested point — and the page is ordered by that distance first, then start time. A venue without stored coordinates never matches a `near` clause; without one it is returned as any other event is.
+Response: the matching `events`, plus `total`, `limit`, and `offset`. A result includes optional venue coordinates for map display when the event has them. Without `near`, results are ordered by start time, then event id, so pagination is stable. With `near`, each result carries `distance_km` — the venue's distance from the requested point — and the page is ordered by that distance first, then start time. A venue without stored coordinates never matches a `near` clause; without one it is returned as any other event is.
 
 Only rows the projection holds as `published` with content are returned. A cancelled event never appears, and neither does a published row whose content Event Service no longer serves.
 

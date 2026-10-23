@@ -23,6 +23,7 @@ import type { AdminEvent } from '../../lib/events/event.types';
 import { useAdminEvent, useUpdateDraftEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
 import { EventFormFields } from './EventFormFields';
+import { adminPage, backLink, formAlert, secondaryLink, statusBadge } from './adminStyles';
 
 const eventIdSchema = z.uuid();
 
@@ -57,19 +58,19 @@ export function EventEditor({ eventId }: { eventId: string }) {
   }
 
   return (
-    <main className="admin-page admin-page--editor">
-      <header className="event-editor-header">
+    <main className={`${adminPage} max-w-[90rem] pt-[clamp(1.5rem,4vw,3rem)]`}>
+      <header>
         <Link
-          className="back-link"
+          className={backLink}
           to={`/admin/events/${eventQuery.data.eventId}`}
         >
           <ArrowLeftIcon aria-hidden="true" />
           Event details
         </Link>
-        <div className="event-editor-header__title">
-          <h1>Edit {eventQuery.data.title}</h1>
+        <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] pb-6 max-[560px]:flex-col max-[560px]:items-start">
+          <h1 className="font-[var(--serif)] text-[clamp(2.25rem,6vw,3.7rem)] font-medium leading-none tracking-[-.055em] [overflow-wrap:anywhere]">Edit {eventQuery.data.title}</h1>
           <span
-            className={`status-badge status-badge--${eventQuery.data.status}`}
+            className={statusBadge(eventQuery.data.status)}
           >
             {eventQuery.data.status === 'draft'
               ? 'Draft'
@@ -180,12 +181,12 @@ function DraftEventForm({
   return (
     <form
       ref={formRef}
-      className="event-form event-form--single-column"
+      className="mx-auto mt-[clamp(1.5rem,4vw,2.75rem)] grid w-full max-w-[56rem] gap-5"
       noValidate
       onSubmit={(formEvent) => void submit(formEvent)}
     >
       {update.error === null ? null : conflict ? (
-        <div className="conflict-notice" role="alert">
+        <div className="flex gap-3 rounded-xl border border-amber-700/25 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100 [&>svg]:mt-1 [&>svg]:size-5 [&>svg]:shrink-0" role="alert">
           <WarningCircleIcon aria-hidden="true" weight="fill" />
           <div>
             <strong>This event changed since you opened it</strong>
@@ -213,7 +214,7 @@ function DraftEventForm({
           </div>
         </div>
       ) : (
-        <div className="form-alert" role="alert">
+        <div className={`${formAlert} grid gap-1`} role="alert">
           <strong>Changes not saved.</strong>
           <span>{userFacingApiError(update.error)}</span>
         </div>
@@ -226,9 +227,9 @@ function DraftEventForm({
         onChange={change}
       />
 
-      <footer className="event-form__actions event-form__actions--end">
+      <footer className="sticky bottom-0 z-[8] flex items-center justify-end gap-4 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3 shadow-[0_-8px_28px_rgb(23_35_29_/_7%)] backdrop-blur-sm">
         <Link
-          className="button button--secondary"
+          className={secondaryLink}
           to={`/admin/events/${event.eventId}`}
         >
           Cancel
@@ -243,25 +244,25 @@ function DraftEventForm({
 
 function EventEditorLoading() {
   return (
-    <main className="admin-page" aria-busy="true" aria-label="Loading event">
-      <div className="event-loading__heading" />
-      <div className="event-loading__panel" />
-      <span className="visually-hidden">Loading event…</span>
+    <main className={adminPage} aria-busy="true" aria-label="Loading event">
+      <div className="mb-6 h-16 max-w-80 animate-pulse rounded-xl bg-[var(--soft)]" />
+      <div className="h-96 animate-pulse rounded-2xl bg-[var(--soft)]" />
+      <span className="sr-only">Loading event…</span>
     </main>
   );
 }
 
 function EventState({ title, retry }: { title: string; retry?: () => void }) {
   return (
-    <main className="admin-page">
+    <main className={adminPage}>
       <div
-        className="event-page-state"
+        className="grid justify-items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-12 text-center [&>svg]:size-8 [&>svg]:text-[var(--evergreen)]"
         role={retry === undefined ? undefined : 'alert'}
       >
         <WarningCircleIcon aria-hidden="true" />
         <h1>{title}</h1>
         <div>
-          <Link className="button button--secondary" to="/admin">
+          <Link className={secondaryLink} to="/admin">
             Back to Events
           </Link>
           {retry === undefined ? null : (

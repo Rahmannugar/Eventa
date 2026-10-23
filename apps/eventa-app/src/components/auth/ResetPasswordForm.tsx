@@ -89,13 +89,13 @@ export function ResetPasswordForm({ actor }: { actor: Actor }) {
 
   return (
     <>
-      <div className="auth-heading">
+      <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
         <h2>Choose a new password</h2>
         <p>Enter the six-digit reset code and your new password.</p>
       </div>
 
       <form
-        className="login-form"
+        className="grid gap-5"
         noValidate
         onSubmit={(event) => {
           void submit(event);
@@ -145,13 +145,13 @@ export function ResetPasswordForm({ actor }: { actor: Actor }) {
         <Button
           type="submit"
           busy={reset.isPending}
-          className="login-form__submit"
+          className="mt-1 w-full"
         >
           {reset.isPending ? 'Resetting password…' : 'Reset password'}
         </Button>
       </form>
 
-      <p className="auth-form-link auth-form-link--split">
+      <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4 flex flex-wrap justify-between gap-3">
         <Link to={`/${actor}/forgot-password`}>Send another code</Link>
         <Link to={`/${actor}/login`}>Back to sign in</Link>
       </p>

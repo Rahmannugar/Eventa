@@ -15,6 +15,8 @@ const eventSearchResultSchema = z.object({
   venueCity: z.string().optional(),
   venueCountryCode: z.string().optional(),
   venueName: z.string().optional(),
+  venueLatitude: z.number().min(-90).max(90).optional(),
+  venueLongitude: z.number().min(-180).max(180).optional(),
 });
 
 const eventSearchPageSchema = z.object({
@@ -28,7 +30,7 @@ export function searchEvents(
   criteria: EventSearchCriteria,
   signal?: AbortSignal,
 ): Promise<EventSearchPage> {
-  const params = new URLSearchParams({ limit: '20', offset: '0' });
+  const params = new URLSearchParams({ limit: '20', offset: String(criteria.offset ?? 0) });
   const query = criteria.query.trim();
   if (query !== '') params.set('query', query);
   if (criteria.near !== undefined) {

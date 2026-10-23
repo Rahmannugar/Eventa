@@ -9,6 +9,8 @@ export interface EventSearchResult {
   venueName?: string | undefined;
   venueCity?: string | undefined;
   venueCountryCode?: string | undefined;
+  venueLatitude?: number | undefined;
+  venueLongitude?: number | undefined;
   distanceKm?: number | undefined;
 }
 
@@ -28,4 +30,5 @@ export interface NearPoint {
 export interface EventSearchCriteria {
   query: string;
   near?: NearPoint | undefined;
+  offset?: number | undefined;
 }

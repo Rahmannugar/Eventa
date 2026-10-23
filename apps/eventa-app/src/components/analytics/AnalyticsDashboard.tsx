@@ -17,6 +17,7 @@ import {
   useEventPerformanceList,
 } from '../../lib/analytics/useAnalytics';
 import { Button } from '../ui/Button';
+import { statusBadge } from '../events/adminStyles';
 
 const PAGE_SIZE = 25;
 
@@ -56,9 +57,9 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <main className="admin-page admin-page--analytics">
-      <header className="admin-page__header">
-        <h1>Analytics</h1>
+    <main className="mx-auto w-full max-w-[94rem] px-[clamp(1rem,4vw,3rem)] py-[clamp(2rem,5vw,4.5rem)] max-[560px]:px-4 max-[560px]:py-6">
+      <header className="border-b border-[var(--line)] pb-[clamp(2rem,4vw,3rem)]">
+        <h1 className="font-[var(--serif)] text-[clamp(2.65rem,7vw,4.6rem)] font-medium leading-none tracking-[-.055em]">Analytics</h1>
       </header>
 
       {summary.isPending ? (
@@ -78,12 +79,12 @@ export function AnalyticsDashboard() {
         />
       )}
 
-      <section className="analytics-performance" aria-label="Event performance">
-        <div className="analytics-performance__controls">
-          <h2>Event performance</h2>
-          <div className="field">
-            <label htmlFor="analytics-status-filter">Status</label>
-            <select
+      <section className="mt-8 grid gap-3" aria-label="Event performance">
+        <div className="flex flex-col justify-between gap-4 min-[961px]:flex-row min-[961px]:items-end">
+          <h2 className="font-[var(--serif)] text-[1.35rem]">Event performance</h2>
+          <div className="grid gap-1.5 text-sm">
+            <label className="text-xs font-bold text-[var(--muted)]" htmlFor="analytics-status-filter">Status</label>
+            <select className="min-h-11 rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 text-[var(--ink)]"
               id="analytics-status-filter"
               value={status}
               onChange={(event) =>
@@ -112,7 +113,7 @@ export function AnalyticsDashboard() {
         ) : (
           <>
             {list.error === null ? null : (
-              <div className="analytics-performance__load-error" role="alert">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-red-700/30 bg-[var(--danger-soft)] px-4 py-3 text-[var(--danger)]" role="alert">
                 More rows could not be loaded.
                 <Button
                   variant="quiet"
@@ -124,11 +125,11 @@ export function AnalyticsDashboard() {
               </div>
             )}
             <div
-              className="analytics-table"
+              className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
               aria-label="Event performance"
               aria-busy={list.isFetching}
             >
-              <div className="analytics-table__head" aria-hidden="true">
+              <div className="grid min-w-[52rem] grid-cols-[minmax(11rem,1.3fr)_7rem_6.5rem_6.5rem_minmax(6rem,.8fr)_minmax(6rem,.8fr)_minmax(6rem,.8fr)_7rem] items-center gap-3 border-b border-[var(--line)] bg-[var(--soft)] px-4 py-3 text-[11px] font-extrabold tracking-wide text-[var(--muted)] uppercase" aria-hidden="true">
                 <span>Event</span>
                 <span>Status</span>
                 <span>Tickets sold</span>
@@ -143,7 +144,7 @@ export function AnalyticsDashboard() {
               ))}
             </div>
             <nav
-              className="analytics-table__pagination"
+              className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--muted)]"
               aria-label="Event performance pages"
             >
               <Button
@@ -187,19 +188,19 @@ function AnalyticsSummary({
   ticketsRevoked: number;
 }) {
   return (
-    <section className="analytics-summary" aria-label="Portfolio summary">
-      <div className="analytics-summary__cards">
+    <section className="mt-6 grid gap-4" aria-label="Portfolio summary">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-4">
         <SummaryCard label="Events published" value={eventsPublished} />
         <SummaryCard label="Events cancelled" value={eventsCancelled} />
         <SummaryCard label="Tickets checked in" value={ticketsCheckedIn} />
         <SummaryCard label="Tickets revoked" value={ticketsRevoked} />
       </div>
       {revenue.length === 0 ? (
-        <p className="analytics-summary__empty">
+        <p className="text-[var(--muted)]">
           Revenue appears here once tickets sell.
         </p>
       ) : (
-        <div className="analytics-summary__revenue">
+        <div className="grid gap-3">
           {revenue.map((totals) => (
             <RevenueRow totals={totals} key={totals.currency} />
           ))}
@@ -211,17 +212,17 @@ function AnalyticsSummary({
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="analytics-summary__card">
-      <span>{label}</span>
-      <strong>{value.toLocaleString('en')}</strong>
+    <div className="grid gap-1 rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-5 py-4 shadow-[0_10px_35px_rgb(23_35_29_/_4%)]">
+      <span className="text-xs font-extrabold tracking-wide text-[var(--muted)] uppercase">{label}</span>
+      <strong className="font-[var(--serif)] text-[1.7rem]">{value.toLocaleString('en')}</strong>
     </div>
   );
 }
 
 function RevenueRow({ totals }: { totals: CurrencyTotals }) {
   return (
-    <div className="analytics-summary__currency">
-      <strong>{totals.currency}</strong>
+    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3 rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-5 py-4 [&_small]:text-[11px] [&_small]:font-extrabold [&_small]:tracking-wide [&_small]:text-[var(--muted)] [&_small]:uppercase [&_span]:grid [&_span]:gap-0.5">
+      <strong className="font-[var(--serif)] text-lg">{totals.currency}</strong>
       <span>
         <small>Gross</small>
         {formatMoney(totals.grossRevenueMinor, totals.currency)}
@@ -248,14 +249,14 @@ function RevenueRow({ totals }: { totals: CurrencyTotals }) {
 
 function AnalyticsRow({ event }: { event: EventPerformance }) {
   return (
-    <div className="analytics-table__row">
+    <div className="grid min-w-[52rem] grid-cols-[minmax(11rem,1.3fr)_7rem_6.5rem_6.5rem_minmax(6rem,.8fr)_minmax(6rem,.8fr)_minmax(6rem,.8fr)_7rem] items-center gap-3 border-b border-[var(--line)] px-4 py-3 text-sm last:border-0">
       <Link
-        className="analytics-table__event"
+        className="truncate font-semibold text-[var(--evergreen)] hover:underline"
         to={`/admin/events/${event.eventId}`}
       >
         {event.eventId}
       </Link>
-      <span className={`status-badge status-badge--${event.status}`}>
+      <span className={statusBadge(event.status)}>
         {event.status === 'cancelled' ? 'Cancelled' : 'Published'}
       </span>
       <span>{event.ticketsSold.toLocaleString('en')}</span>
@@ -276,10 +277,10 @@ function AnalyticsError({
   retry: () => void;
 }) {
   return (
-    <section className="event-list-state" role="alert">
-      <WarningCircleIcon aria-hidden="true" />
-      <h2>Analytics could not be loaded</h2>
-      <p>{label}</p>
+    <section className="mt-6 grid justify-items-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--paper)] px-4 py-[clamp(3rem,8vw,6rem)] text-center" role="alert">
+      <WarningCircleIcon className="size-8 text-[var(--evergreen)]" aria-hidden="true" />
+      <h2 className="my-4 font-[var(--serif)] text-[1.7rem]">Analytics could not be loaded</h2>
+      <p className="mb-4 max-w-[30rem] text-sm text-[var(--muted)]">{label}</p>
       <Button type="button" variant="secondary" onClick={retry}>
         Try again
       </Button>
@@ -295,15 +296,15 @@ function AnalyticsEmpty({
   filtered: boolean;
 }) {
   return (
-    <section className="event-list-state">
-      <ChartLineUpIcon aria-hidden="true" />
-      <h2>{filtered ? 'No events match this filter' : 'No performance data yet'}</h2>
+    <section className="mt-6 grid justify-items-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--paper)] px-4 py-[clamp(3rem,8vw,6rem)] text-center">
+      <ChartLineUpIcon className="size-8 text-[var(--evergreen)]" aria-hidden="true" />
+      <h2 className="my-4 font-[var(--serif)] text-[1.7rem]">{filtered ? 'No events match this filter' : 'No performance data yet'}</h2>
       {filtered ? (
         <Button type="button" variant="secondary" onClick={clear}>
           Show all events
         </Button>
       ) : (
-        <p>Numbers appear here after events are published and tickets sell.</p>
+        <p className="max-w-[30rem] text-sm text-[var(--muted)]">Numbers appear here after events are published and tickets sell.</p>
       )}
     </section>
   );
@@ -312,14 +313,14 @@ function AnalyticsEmpty({
 function AnalyticsSummaryLoading() {
   return (
     <div
-      className="analytics-summary__cards analytics-summary__cards--loading"
+      className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-4"
       aria-busy="true"
       aria-label="Loading portfolio summary"
     >
       {[0, 1, 2, 3].map((item) => (
-        <div className="analytics-summary__skeleton" key={item} />
+        <div className="min-h-20 animate-pulse rounded-2xl border border-[var(--line)] bg-[var(--soft)]" key={item} />
       ))}
-      <span className="visually-hidden">Loading portfolio summary…</span>
+      <span className="sr-only">Loading portfolio summary…</span>
     </div>
   );
 }
@@ -327,14 +328,14 @@ function AnalyticsSummaryLoading() {
 function AnalyticsTableLoading() {
   return (
     <div
-      className="analytics-table analytics-table--loading"
+      className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--paper)]"
       aria-busy="true"
       aria-label="Loading event performance"
     >
       {[0, 1, 2, 3].map((item) => (
-        <div className="analytics-table__skeleton" key={item} />
+        <div className="min-h-12 animate-pulse border-b border-[var(--line)] bg-[var(--soft)] last:border-0" key={item} />
       ))}
-      <span className="visually-hidden">Loading event performance…</span>
+      <span className="sr-only">Loading event performance…</span>
     </div>
   );
 }

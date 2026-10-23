@@ -22,6 +22,8 @@ const result: EventSearchResult = {
   title: 'Afrobeats Live: Waterfront Sessions',
   venueCity: 'Lagos',
   venueCountryCode: 'NG',
+  venueLatitude: 6.5244,
+  venueLongitude: 3.3792,
   venueName: 'Eko Atlantic Convention Centre',
 };
 
@@ -90,6 +92,8 @@ describe('DiscoverySearchService', () => {
           title: 'Afrobeats Live: Waterfront Sessions',
           venueCity: 'Lagos',
           venueCountryCode: 'NG',
+          venueLatitude: 6.5244,
+          venueLongitude: 3.3792,
           venueName: 'Eko Atlantic Convention Centre',
         },
       ],

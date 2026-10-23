@@ -46,6 +46,7 @@ export function useLogin(actor: Actor) {
   return useMutation({
     mutationFn: (input: LoginInput) => login(actor, input),
     onSuccess: (account: SessionAccount) => {
+      queryClient.clear();
       queryClient.setQueryData(sessionQueryKey(actor), account);
     },
   });
@@ -57,7 +58,7 @@ export function useLogout(actor: Actor) {
   return useMutation({
     mutationFn: () => logout(actor),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: sessionQueryKey(actor) });
+      queryClient.clear();
     },
   });
 }
@@ -106,7 +107,7 @@ export function useResetPassword(actor: Actor) {
   return useMutation({
     mutationFn: (input: ResetPasswordInput) => resetPassword(actor, input),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: sessionQueryKey(actor) });
+      queryClient.clear();
     },
   });
 }
@@ -118,7 +119,7 @@ export function useDeleteAttendeeAccount() {
     mutationFn: (input: DeleteAttendeeAccountInput) =>
       deleteAttendeeAccount(input),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: sessionQueryKey('attendee') });
+      queryClient.clear();
     },
   });
 }

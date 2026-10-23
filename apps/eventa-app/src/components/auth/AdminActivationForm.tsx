@@ -101,13 +101,13 @@ export function AdminActivationForm() {
   if (!showActivation) {
     return (
       <>
-        <div className="auth-heading">
+        <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
           <h2>Activate account</h2>
           <p>Use the email approved for your organizer account.</p>
         </div>
 
         <form
-          className="login-form"
+          className="grid gap-5"
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
@@ -130,7 +130,7 @@ export function AdminActivationForm() {
           />
 
           {activationRequest.error === null ? null : (
-            <div className="form-alert" role="alert" aria-live="assertive">
+            <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--danger)]" role="alert" aria-live="assertive">
               {userFacingApiError(activationRequest.error)}
             </div>
           )}
@@ -138,7 +138,7 @@ export function AdminActivationForm() {
           <Button
             type="submit"
             busy={activationRequest.isPending}
-            className="login-form__submit"
+            className="mt-1 w-full"
           >
             {activationRequest.isPending
               ? 'Requesting code…'
@@ -156,7 +156,7 @@ export function AdminActivationForm() {
           </Button>
         </form>
 
-        <p className="auth-form-link">
+        <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4">
           <Link to="/admin/login">Back to sign in</Link>
         </p>
       </>
@@ -165,13 +165,13 @@ export function AdminActivationForm() {
 
   return (
     <>
-      <div className="auth-heading">
+      <div className="mt-10 mb-8 [&_h2]:my-3 [&_h2]:font-[Georgia] [&_h2]:text-[clamp(2.25rem,8vw,3.15rem)] [&_h2]:font-medium [&_h2]:leading-none [&_h2]:tracking-[-.05em] [&_p:last-child]:text-[.92rem] [&_p:last-child]:leading-relaxed [&_p:last-child]:text-[var(--muted)]">
         <h2>Complete activation</h2>
         <p>Enter your activation code and choose your password.</p>
       </div>
 
       <form
-        className="login-form"
+        className="grid gap-5"
         noValidate
         onSubmit={(event) => {
           void activate(event);
@@ -213,13 +213,13 @@ export function AdminActivationForm() {
         />
 
         {activation.error === null ? null : (
-          <div className="form-alert" role="alert" aria-live="assertive">
+          <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--danger)]" role="alert" aria-live="assertive">
             {userFacingApiError(activation.error)}
           </div>
         )}
 
         {activationRequest.error === null ? null : (
-          <div className="form-alert" role="alert" aria-live="assertive">
+          <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3.5 py-3 text-[.8rem] font-semibold leading-normal text-[var(--danger)]" role="alert" aria-live="assertive">
             {userFacingApiError(activationRequest.error)}
           </div>
         )}
@@ -228,7 +228,7 @@ export function AdminActivationForm() {
           type="submit"
           busy={activation.isPending}
           disabled={activationRequest.isPending}
-          className="login-form__submit"
+          className="mt-1 w-full"
         >
           {activation.isPending ? 'Activating…' : 'Activate account'}
         </Button>
@@ -248,7 +248,7 @@ export function AdminActivationForm() {
         </Button>
       </form>
 
-      <p className="auth-form-link">
+      <p className="mt-6 text-[.8rem] leading-relaxed text-[var(--muted)] [&_a]:font-bold [&_a]:text-[var(--evergreen)] [&_a]:underline-offset-4">
         <Link to="/admin/login">Back to sign in</Link>
       </p>
     </>

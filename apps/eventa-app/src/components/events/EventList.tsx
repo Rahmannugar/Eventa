@@ -29,6 +29,7 @@ import {
 } from '../../lib/location/location-data';
 import { Button } from '../ui/Button';
 import { SearchSelect } from './EventFormFields';
+import { primaryLink, statusBadge } from './adminStyles';
 
 export function EventList() {
   const location = useLocation();
@@ -55,16 +56,16 @@ export function EventList() {
     query.error !== null && (query.isPlaceholderData || events.length === 0);
 
   return (
-    <main className="admin-page admin-page--events">
-      <header className="event-list-header">
-        <h1>Events</h1>
-        <Link className="button button--primary" to="/admin/events/new">
+    <main className="mx-auto w-full max-w-[94rem] px-[clamp(1rem,4vw,3rem)] py-[clamp(2rem,5vw,4.5rem)] max-[560px]:px-4 max-[560px]:py-6">
+      <header className="flex items-center justify-between gap-4 border-b border-[var(--line)] pb-[clamp(1.5rem,4vw,2.5rem)] max-[560px]:flex-col max-[560px]:items-stretch">
+        <h1 className="font-[var(--serif)] text-[clamp(2.65rem,7vw,4.6rem)] font-medium leading-none tracking-[-.055em]">Events</h1>
+        <Link className={`${primaryLink} max-[560px]:w-full`} to="/admin/events/new">
           <PlusIcon aria-hidden="true" />
           Create event
         </Link>
       </header>
 
-      <section className="event-catalogue-controls" aria-label="Find events">
+      <section className="mt-6 grid grid-cols-1 items-end gap-3 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-4 min-[561px]:grid-cols-2 min-[1100px]:grid-cols-[minmax(16rem,1.6fr)_repeat(3,minmax(10rem,1fr))]" aria-label="Find events">
         <CatalogueSearch
           key={criteria.search}
           initialValue={criteria.search}
@@ -103,9 +104,9 @@ export function EventList() {
             setCatalogueParam(setSearchParams, 'region', value)
           }
         />
-        <div className="field">
-          <label htmlFor="event-sort">Sort by</label>
-          <select
+        <div className="grid min-w-0 gap-1.5 text-sm">
+          <label className="text-xs font-bold text-[var(--muted)]" htmlFor="event-sort">Sort by</label>
+          <select className="min-h-11 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--paper)] px-3 text-[var(--ink)]"
             id="event-sort"
             value={criteria.sort}
             onChange={(event) =>
@@ -133,7 +134,7 @@ export function EventList() {
       ) : (
         <>
           {query.error === null ? null : (
-            <div className="event-list__load-error" role="alert">
+            <div className="mt-5 flex items-center justify-between rounded-xl border border-red-700/20 bg-[var(--danger-soft)] px-3 py-2 text-xs font-bold text-[#812a24]" role="alert">
               More events could not be loaded.
               <Button
                 variant="quiet"
@@ -145,11 +146,11 @@ export function EventList() {
             </div>
           )}
           <div
-            className="event-list"
+            className="mt-6 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--paper)] shadow-[0_10px_35px_rgb(23_35_29_/_4%)] max-[560px]:rounded-none max-[560px]:border-0 max-[560px]:bg-transparent max-[560px]:shadow-none"
             aria-label="Events"
             aria-busy={query.isFetching && !query.isFetchingNextPage}
           >
-            <div className="event-list__head" aria-hidden="true">
+            <div className="grid grid-cols-[minmax(14rem,1.45fr)_minmax(10rem,1fr)_minmax(12rem,1.15fr)_8rem_1.5rem] items-center gap-4 border-b border-[var(--line)] bg-[var(--soft)] px-4 py-3 text-[11px] font-extrabold tracking-wide text-[var(--muted)] uppercase max-[560px]:hidden" aria-hidden="true">
               <span>Event</span>
               <span>Date</span>
               <span>Venue</span>
@@ -161,7 +162,7 @@ export function EventList() {
             ))}
           </div>
           {query.hasNextPage ? (
-            <div className="event-list__more">
+            <div className="flex justify-center pt-5">
               <Button
                 type="button"
                 variant="secondary"
@@ -196,11 +197,11 @@ function CatalogueSearch({
   }, [initialValue, onChange, value]);
 
   return (
-    <div className="field event-catalogue-controls__search">
-      <label htmlFor="event-search">Search by name</label>
-      <div className="event-catalogue-controls__search-input">
+    <div className="grid min-w-0 gap-1.5 text-sm">
+      <label className="text-xs font-bold text-[var(--muted)]" htmlFor="event-search">Search by name</label>
+      <div className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-[var(--line-strong)] bg-[var(--paper)] px-3 text-[var(--muted)] [&_svg]:w-4">
         <MagnifyingGlassIcon aria-hidden="true" />
-        <input
+        <input className="min-w-0 flex-1 border-0 bg-transparent text-[var(--ink)] outline-none"
           id="event-search"
           type="search"
           maxLength={160}
@@ -214,11 +215,11 @@ function CatalogueSearch({
 
 function EventListItem({ event }: { event: AdminEventSummary }) {
   return (
-    <Link className="event-list__item" to={`/admin/events/${event.eventId}`}>
-      <div className="event-list__identity">
-        <div className="event-list__name-line">
-          <strong>{event.title}</strong>
-          <span className={`status-badge status-badge--${event.status}`}>
+    <Link className="grid min-h-24 grid-cols-[minmax(14rem,1.45fr)_minmax(10rem,1fr)_minmax(12rem,1.15fr)_8rem_1.5rem] items-center gap-4 border-b border-[var(--line)] p-4 text-[var(--ink)] no-underline transition-colors last:border-0 hover:bg-[var(--soft)] max-[560px]:mb-3 max-[560px]:min-h-0 max-[560px]:grid-cols-[minmax(0,1fr)_auto] max-[560px]:gap-x-3 max-[560px]:gap-y-4 max-[560px]:rounded-2xl max-[560px]:border max-[560px]:bg-[var(--paper)]" to={`/admin/events/${event.eventId}`}>
+      <div className="min-w-0 max-[560px]:col-start-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <strong className="truncate text-sm">{event.title}</strong>
+          <span className={statusBadge(event.status)}>
             {event.status === 'draft'
               ? 'Draft'
               : event.status === 'cancelled'
@@ -227,7 +228,7 @@ function EventListItem({ event }: { event: AdminEventSummary }) {
           </span>
         </div>
         {event.categories.length === 0 ? null : (
-          <div className="event-list__categories">
+          <div className="mt-2 flex flex-wrap gap-1 [&_span]:rounded-full [&_span]:bg-[var(--soft)] [&_span]:px-2 [&_span]:py-1 [&_span]:text-[10px] [&_span]:font-bold [&_span]:text-[var(--muted)]">
             {event.categories.map((category) => (
               <span key={category}>{category}</span>
             ))}
@@ -243,7 +244,7 @@ function EventListItem({ event }: { event: AdminEventSummary }) {
       <EventDatum label="Updated">
         {formatUpdatedAt(event.updatedAt)}
       </EventDatum>
-      <ArrowRightIcon className="event-list__arrow" aria-hidden="true" />
+      <ArrowRightIcon className="w-4 text-[var(--muted)] max-[560px]:col-start-2 max-[560px]:row-start-1" aria-hidden="true" />
     </Link>
   );
 }
@@ -258,9 +259,9 @@ function EventDatum({
   label: string;
 }) {
   return (
-    <div className="event-list__datum">
-      <small>{label}</small>
-      <span>
+    <div className="min-w-0 max-[560px]:col-span-full">
+      <small className="mb-1 hidden text-[10px] font-extrabold text-[var(--muted)] uppercase max-[560px]:block">{label}</small>
+      <span className="flex items-start gap-1.5 overflow-hidden text-xs leading-normal text-[var(--muted)] [&_svg]:mt-px [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-[var(--evergreen)]">
         {icon}
         {children}
       </span>
@@ -276,15 +277,15 @@ function EventListEmpty({
   filtered: boolean;
 }) {
   return (
-    <section className="event-list-state">
+    <section className="mt-6 grid justify-items-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--paper)] px-4 py-[clamp(3rem,8vw,6rem)] text-center [&>svg]:size-8 [&>svg]:text-[var(--evergreen)]">
       <CalendarBlankIcon aria-hidden="true" />
-      <h2>{filtered ? 'No events found' : 'No events yet'}</h2>
+      <h2 className="my-4 font-[var(--serif)] text-[1.7rem]">{filtered ? 'No events found' : 'No events yet'}</h2>
       {filtered ? (
         <Button type="button" variant="secondary" onClick={clear}>
           Clear filters
         </Button>
       ) : (
-        <Link className="button button--primary" to="/admin/events/new">
+        <Link className={primaryLink} to="/admin/events/new">
           <PlusIcon aria-hidden="true" />
           Create event
         </Link>
@@ -352,9 +353,9 @@ function setCatalogueParam(
 
 function EventListError({ retry }: { retry: () => void }) {
   return (
-    <section className="event-list-state" role="alert">
+    <section className="mt-6 grid justify-items-center rounded-2xl border border-dashed border-[var(--line-strong)] bg-[var(--paper)] px-4 py-[clamp(3rem,8vw,6rem)] text-center [&>svg]:size-8 [&>svg]:text-[var(--evergreen)]" role="alert">
       <WarningCircleIcon aria-hidden="true" />
-      <h2>Events could not be loaded</h2>
+      <h2 className="my-4 font-[var(--serif)] text-[1.7rem]">Events could not be loaded</h2>
       <Button type="button" variant="secondary" onClick={retry}>
         Try again
       </Button>
@@ -365,14 +366,14 @@ function EventListError({ retry }: { retry: () => void }) {
 function EventListLoading() {
   return (
     <div
-      className="event-list event-list--loading"
+      className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--line)]"
       aria-busy="true"
       aria-label="Loading events"
     >
       {[0, 1, 2, 3].map((item) => (
-        <div className="event-list__skeleton" key={item} />
+        <div className="min-h-24 animate-pulse bg-[var(--paper)]" key={item} />
       ))}
-      <span className="visually-hidden">Loading events…</span>
+      <span className="sr-only">Loading events…</span>
     </div>
   );
 }

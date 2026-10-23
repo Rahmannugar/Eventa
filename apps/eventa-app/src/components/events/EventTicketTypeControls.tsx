@@ -47,8 +47,8 @@ export function TicketTypeForm({
   submitLabel: string;
 }) {
   return (
-    <form className="ticket-type-form" onSubmit={onSubmit} noValidate>
-      <div className="ticket-type-form__grid">
+    <form className="mt-5 grid gap-5 border-t border-border pt-5" onSubmit={onSubmit} noValidate>
+      <div className="grid gap-4 sm:grid-cols-2">
         <TextField
           id={`${idPrefix}-name`}
           label="Ticket name"
@@ -99,17 +99,18 @@ export function TicketTypeForm({
         />
       </div>
       {commercialTermsLocked ? (
-        <p className="ticket-type-form__locked">
+        <p className="text-sm text-[var(--muted)]">
           Price and sales dates cannot change after tickets are reserved or
           sold.
         </p>
       ) : null}
-      <label className="field" htmlFor={`${idPrefix}-description`}>
-        <span>
-          Description <small>Optional</small>
+      <label className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold" htmlFor={`${idPrefix}-description`}>
+        <span className="text-[13px] font-bold">
+          Description <small className="font-normal text-[var(--muted)]">Optional</small>
         </span>
         <textarea
           id={`${idPrefix}-description`}
+          className="min-h-24 w-full resize-y rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-sm leading-relaxed text-[var(--ink)] hover:border-[var(--focus)] focus:border-[var(--focus)] focus:outline-none"
           maxLength={500}
           rows={3}
           value={form.description}
@@ -121,7 +122,7 @@ export function TicketTypeForm({
       {error === null ? null : (
         <MutationError error={error} reload={onReload} reset={onResetError} />
       )}
-      <div className="ticket-type-form__actions">
+      <div className="flex flex-wrap justify-end gap-3">
         <Button
           type="button"
           variant="quiet"
@@ -148,7 +149,7 @@ export function MutationError({
   reset: () => void;
 }) {
   return (
-    <div className="form-alert form-alert--error" role="alert">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--danger)] bg-[var(--danger-soft)] p-3.5 text-sm font-semibold leading-normal text-[var(--danger)]" role="alert">
       <span>{ticketTypeError(error)}</span>
       {error instanceof ApiError && error.code === 'EVENT_VERSION_CONFLICT' ? (
         <Button
@@ -183,15 +184,15 @@ export function TicketTypeCard({
   timeZone?: string | undefined;
 }) {
   return (
-    <article className="ticket-type-card">
-      <div className="ticket-type-card__heading">
+    <article className="grid gap-4 rounded-xl border border-border bg-[var(--canvas)] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 [&_p]:mt-1 [&_p]:text-[var(--muted)]">
         <div>
           <h4>{ticketType.name}</h4>
           {ticketType.description === undefined ? null : (
             <p>{ticketType.description}</p>
           )}
         </div>
-        <div className="ticket-type-card__actions">
+        <div className="flex flex-wrap items-start gap-2">
           <Button
             type="button"
             variant="quiet"
@@ -212,7 +213,7 @@ export function TicketTypeCard({
           </Button>
         </div>
       </div>
-      <dl>
+      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 [&_dt]:mb-1 [&_dt]:text-xs [&_dt]:font-bold [&_dt]:tracking-wide [&_dt]:text-[var(--muted)] [&_dt]:uppercase [&_dd]:font-semibold">
         <div>
           <dt>Price</dt>
           <dd>{formatPrice(ticketType.priceMinor, currency)}</dd>
@@ -264,12 +265,12 @@ function DateTimeField({
   value: string;
 }) {
   return (
-    <div className="field">
+    <div className="grid gap-2 [&>label]:text-[13px] [&>label]:font-bold">
       <label id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
       <ByteDateTimePicker
-        className="event-date-time-picker"
+        className="block [&_.byte-dropdown]:border [&_.byte-cell]:min-h-11 [&_.byte-nav-btn]:min-h-11 [&_.byte-header-title]:min-h-11 [&_.byte-action-btn]:min-h-11 [&_.byte-time-field_select]:min-h-11"
         dateFormatString="dd mmm yyyy"
         error={error !== undefined}
         hideInput
@@ -282,7 +283,7 @@ function DateTimeField({
           <button
             id={id}
             type="button"
-            className="date-picker__trigger"
+            className="flex min-h-12 w-full items-center gap-2.5 rounded-xl border border-border bg-[var(--paper)] px-3.5 py-3 text-left text-[var(--ink)] hover:border-[var(--focus)] aria-invalid:border-[var(--danger)] disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-[var(--muted)] [&>span]:truncate"
             aria-expanded={isOpen}
             aria-haspopup="dialog"
             aria-invalid={error === undefined ? undefined : true}
@@ -295,7 +296,7 @@ function DateTimeField({
           </button>
         )}
       </ByteDateTimePicker>
-      {error === undefined ? null : <p className="field__error">{error}</p>}
+      {error === undefined ? null : <p className="text-xs font-semibold leading-normal text-[var(--danger)]">{error}</p>}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { useCreateEvent } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
 import { EventFormFields } from './EventFormFields';
+import { adminPage, backLink, formAlert, secondaryLink } from './adminStyles';
 
 export function EventCreate() {
   const navigate = useNavigate();
@@ -69,25 +70,25 @@ export function EventCreate() {
   }
 
   return (
-    <main className="admin-page admin-page--editor">
-      <header className="event-editor-header">
-        <Link className="back-link" to="/admin">
+    <main className={`${adminPage} max-w-[90rem] pt-[clamp(1.5rem,4vw,3rem)]`}>
+      <header>
+        <Link className={backLink} to="/admin">
           <ArrowLeftIcon aria-hidden="true" />
           Events
         </Link>
-        <div className="event-editor-header__title">
-          <h1>Create event</h1>
+        <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] pb-6 max-[560px]:flex-col max-[560px]:items-start">
+          <h1 className="font-[var(--serif)] text-[clamp(2.25rem,6vw,3.7rem)] font-medium leading-none tracking-[-.055em]">Create event</h1>
         </div>
       </header>
 
       <form
         ref={formRef}
-        className="event-form event-form--single-column"
+        className="mx-auto mt-[clamp(1.5rem,4vw,2.75rem)] grid w-full max-w-[56rem] gap-5"
         noValidate
         onSubmit={(event) => void submit(event)}
       >
         {create.error === null ? null : (
-          <div className="form-alert" role="alert">
+          <div className={`${formAlert} grid gap-1`} role="alert">
             <strong>Event not created.</strong>
             <span>{userFacingApiError(create.error)}</span>
           </div>
@@ -100,8 +101,8 @@ export function EventCreate() {
           onChange={change}
         />
 
-        <footer className="event-form__actions event-form__actions--end">
-          <Link className="button button--secondary" to="/admin">
+        <footer className="sticky bottom-0 z-[8] flex items-center justify-end gap-4 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3 shadow-[0_-8px_28px_rgb(23_35_29_/_7%)] backdrop-blur-sm">
+          <Link className={secondaryLink} to="/admin">
             Cancel
           </Link>
           <Button type="submit" busy={create.isPending}>

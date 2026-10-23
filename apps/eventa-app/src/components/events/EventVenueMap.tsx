@@ -128,5 +128,5 @@ export function EventVenueMap({
     }
   }, [point]);
 
-  return <div className="event-venue-map" ref={containerRef} />;
+  return <div className="size-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus)]" ref={containerRef} />;
 }

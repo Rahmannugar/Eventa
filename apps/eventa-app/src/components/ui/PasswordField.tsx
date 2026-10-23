@@ -16,10 +16,11 @@ export function PasswordField({
   const errorId = `${String(id)}-error`;
 
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      <div className="password-field">
+    <div className="grid gap-2">
+      <label className="text-[.79rem] font-bold" htmlFor={id}>{label}</label>
+      <div className="relative">
         <input
+          className="min-h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3.5 py-3 pr-12 text-[.94rem] text-[var(--ink)] outline-none transition-colors hover:border-[var(--muted)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/20 aria-invalid:border-[var(--danger)]"
           {...props}
           id={id}
           type={visible ? 'text' : 'password'}
@@ -28,7 +29,7 @@ export function PasswordField({
         />
         <button
           type="button"
-          className="password-field__toggle"
+          className="absolute top-1/2 right-1 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-[var(--muted)] hover:bg-[var(--soft)] hover:text-[var(--ink)]"
           aria-label={visible ? 'Hide password' : 'Show password'}
           aria-pressed={visible}
           onClick={() => {
@@ -39,7 +40,7 @@ export function PasswordField({
         </button>
       </div>
       {error === undefined ? null : (
-        <p className="field__error" id={errorId}>
+        <p className="text-xs font-semibold leading-normal text-[var(--danger)]" id={errorId}>
           {error}
         </p>
       )}

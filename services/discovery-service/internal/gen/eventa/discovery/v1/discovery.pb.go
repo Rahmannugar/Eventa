@@ -195,9 +195,11 @@ type EventSearchResult struct {
 	VenueCountryCode *string                `protobuf:"bytes,10,opt,name=venue_country_code,json=venueCountryCode,proto3,oneof" json:"venue_country_code,omitempty"`
 	// Set only when the request carried a near clause: the venue's distance
 	// from the requested point, in kilometres.
-	DistanceKm    *float64 `protobuf:"fixed64,11,opt,name=distance_km,json=distanceKm,proto3,oneof" json:"distance_km,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DistanceKm     *float64 `protobuf:"fixed64,11,opt,name=distance_km,json=distanceKm,proto3,oneof" json:"distance_km,omitempty"`
+	VenueLatitude  *float64 `protobuf:"fixed64,12,opt,name=venue_latitude,json=venueLatitude,proto3,oneof" json:"venue_latitude,omitempty"`
+	VenueLongitude *float64 `protobuf:"fixed64,13,opt,name=venue_longitude,json=venueLongitude,proto3,oneof" json:"venue_longitude,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *EventSearchResult) Reset() {
@@ -303,6 +305,20 @@ func (x *EventSearchResult) GetVenueCountryCode() string {
 func (x *EventSearchResult) GetDistanceKm() float64 {
 	if x != nil && x.DistanceKm != nil {
 		return *x.DistanceKm
+	}
+	return 0
+}
+
+func (x *EventSearchResult) GetVenueLatitude() float64 {
+	if x != nil && x.VenueLatitude != nil {
+		return *x.VenueLatitude
+	}
+	return 0
+}
+
+func (x *EventSearchResult) GetVenueLongitude() float64 {
+	if x != nil && x.VenueLongitude != nil {
+		return *x.VenueLongitude
 	}
 	return 0
 }
@@ -901,7 +917,7 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"NearClause\x12\x1a\n" +
 	"\blatitude\x18\x01 \x01(\x01R\blatitude\x12\x1c\n" +
 	"\tlongitude\x18\x02 \x01(\x01R\tlongitude\x12\x1b\n" +
-	"\tradius_km\x18\x03 \x01(\x01R\bradiusKm\"\x8b\x04\n" +
+	"\tradius_km\x18\x03 \x01(\x01R\bradiusKm\"\x8c\x05\n" +
 	"\x11EventSearchResult\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -919,7 +935,9 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"\x12venue_country_code\x18\n" +
 	" \x01(\tH\x06R\x10venueCountryCode\x88\x01\x01\x12$\n" +
 	"\vdistance_km\x18\v \x01(\x01H\aR\n" +
-	"distanceKm\x88\x01\x01B\x0e\n" +
+	"distanceKm\x88\x01\x01\x12*\n" +
+	"\x0evenue_latitude\x18\f \x01(\x01H\bR\rvenueLatitude\x88\x01\x01\x12,\n" +
+	"\x0fvenue_longitude\x18\r \x01(\x01H\tR\x0evenueLongitude\x88\x01\x01B\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
 	"_starts_atB\n" +
@@ -930,7 +948,9 @@ const file_eventa_discovery_v1_discovery_proto_rawDesc = "" +
 	"\v_venue_nameB\r\n" +
 	"\v_venue_cityB\x15\n" +
 	"\x13_venue_country_codeB\x0e\n" +
-	"\f_distance_km\"\x9a\x01\n" +
+	"\f_distance_kmB\x11\n" +
+	"\x0f_venue_latitudeB\x12\n" +
+	"\x10_venue_longitude\"\x9a\x01\n" +
 	"\x14SearchEventsResponse\x12>\n" +
 	"\x06events\x18\x01 \x03(\v2&.eventa.discovery.v1.EventSearchResultR\x06events\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x14\n" +

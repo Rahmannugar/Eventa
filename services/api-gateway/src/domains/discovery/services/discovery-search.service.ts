@@ -135,6 +135,8 @@ export class DiscoverySearchService implements OnModuleInit {
       venueName: event.venueName,
       venueCity: event.venueCity,
       venueCountryCode: event.venueCountryCode,
+      venueLatitude: event.venueLatitude,
+      venueLongitude: event.venueLongitude,
       distanceKm: event.distanceKm,
     };
   }

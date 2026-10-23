@@ -28,6 +28,7 @@ import {
   usePublishEvent,
 } from '../../lib/events/useEvents';
 import { Button } from '../ui/Button';
+import { confirmationDialog, dialogActions, dialogBackdrop, dialogClose, formAlert } from './adminStyles';
 
 const requirementLabels: Record<EventPublicationRequirement, string> = {
   categories: 'At least one category',
@@ -169,18 +170,18 @@ export function EventPublication({
 
   return (
     <section
-      className={`event-publication event-publication--${missing.length === 0 ? 'ready' : 'incomplete'}`}
+      className="grid gap-4 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5 shadow-[0_10px_35px_rgb(23_35_29_/_4%)]"
       aria-labelledby="publication-title"
     >
-      <div className="event-publication__heading">
+      <div className="flex items-start gap-3">
         {missing.length === 0 ? (
-          <CheckCircleIcon aria-hidden="true" weight="fill" />
+          <CheckCircleIcon aria-hidden="true" className="size-5 shrink-0 text-[var(--evergreen)]" weight="fill" />
         ) : (
-          <WarningCircleIcon aria-hidden="true" weight="fill" />
+          <WarningCircleIcon aria-hidden="true" className="size-5 shrink-0 text-amber-700" weight="fill" />
         )}
         <div>
-          <h2 id="publication-title">Publication</h2>
-          <strong>
+          <h2 className="text-xs font-semibold" id="publication-title">Publication</h2>
+          <strong className="mt-1 block font-[family-name:var(--serif)] text-xl font-medium tracking-tight">
             {missing.length === 0 ? 'Ready to publish' : 'Not ready to publish'}
           </strong>
         </div>
@@ -188,7 +189,7 @@ export function EventPublication({
 
       {missing.length === 0 ? (
         <>
-          <p>
+          <p className="text-xs leading-relaxed text-[var(--muted)]">
             {mediaBusy
               ? 'Finish the image change before publishing.'
               : 'Publishing makes the event public and locks its details and images.'}
@@ -205,7 +206,7 @@ export function EventPublication({
       ) : (
         <>
           {ticketTypes.error !== null ? (
-            <div className="form-alert form-alert--error" role="alert">
+            <div className={`${formAlert} grid gap-2`} role="alert">
               <span>Ticket details could not be checked.</span>
               <Button
                 type="button"
@@ -216,31 +217,31 @@ export function EventPublication({
               </Button>
             </div>
           ) : null}
-          <p>Add the following before publishing:</p>
-          <ul>
+          <p className="text-xs leading-relaxed text-[var(--muted)]">Add the following before publishing:</p>
+          <ul className="grid list-disc gap-2 pl-5 text-xs leading-relaxed text-[var(--ink)]">
             {missing.map((requirement) => (
               <li key={requirement}>{requirementLabels[requirement]}</li>
             ))}
           </ul>
-          <div className="event-publication__actions">
+          <div className="flex flex-wrap gap-2 max-[560px]:flex-col [&_a]:flex-1">
             {missing.some(
               (requirement) =>
                 requirement !== 'cover' && requirement !== 'tickets',
             ) ? (
               <Link
-                className="button button--secondary"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 text-xs font-bold text-[var(--ink)] no-underline hover:bg-[var(--soft)]"
                 to={`/admin/events/${event.eventId}/edit`}
               >
                 Edit event
               </Link>
             ) : null}
             {missing.includes('cover') ? (
-              <a className="button button--secondary" href="#media-title">
+              <a className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 text-xs font-bold text-[var(--ink)] no-underline hover:bg-[var(--soft)]" href="#media-title">
                 Add cover image
               </a>
             ) : null}
             {missing.includes('tickets') ? (
-              <a className="button button--secondary" href="#tickets-title">
+              <a className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 text-xs font-bold text-[var(--ink)] no-underline hover:bg-[var(--soft)]" href="#tickets-title">
                 Add ticket type
               </a>
             ) : null}
@@ -250,14 +251,14 @@ export function EventPublication({
 
       {open ? (
         <div
-          className="dialog-backdrop"
+          className={dialogBackdrop}
           onMouseDown={(mouseEvent) => {
             if (mouseEvent.target === mouseEvent.currentTarget) close();
           }}
         >
           <section
             ref={dialogRef}
-            className="confirmation-dialog"
+            className={confirmationDialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="publish-dialog-title"
@@ -275,21 +276,21 @@ export function EventPublication({
             <button
               ref={closeButtonRef}
               type="button"
-              className="confirmation-dialog__close"
+              className={dialogClose}
               aria-label="Close publication review"
               disabled={publication.isPending || reloading}
               onClick={close}
             >
               <XIcon aria-hidden="true" />
             </button>
-            <h2 id="publish-dialog-title">Publish this event?</h2>
-            <p id="publish-dialog-description">
+            <h2 className="pr-8 font-[family-name:var(--serif)] text-2xl font-medium" id="publish-dialog-title">Publish this event?</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]" id="publish-dialog-description">
               {event.title} will become public. Its details and images can no
               longer be changed.
             </p>
 
             {publication.error === null ? null : needsLatestEvent ? (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4 grid gap-2`} role="alert">
                 <strong>
                   {publicationIncomplete
                     ? 'This event is not ready to publish.'
@@ -310,12 +311,12 @@ export function EventPublication({
                 </Button>
               </div>
             ) : (
-              <div className="form-alert" role="alert">
+              <div className={`${formAlert} mt-4`} role="alert">
                 {userFacingApiError(publication.error)}
               </div>
             )}
 
-            <div className="confirmation-dialog__actions event-publication__dialog-actions">
+            <div className={`${dialogActions} mt-6`}>
               <Button
                 type="button"
                 variant="secondary"

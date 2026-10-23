@@ -77,11 +77,11 @@ export function EventMediaManager({
   }
 
   return (
-    <div className="event-media-manager">
+    <div className="grid gap-3">
       {media.operation.phase === 'error' ? (
-        <div className="event-media-manager__error" role="alert">
-          <WarningCircleIcon aria-hidden="true" />
-          <span>{media.operation.message}</span>
+        <div className="flex items-center gap-3 rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3 py-3 text-xs font-semibold text-[var(--danger)]" role="alert">
+          <WarningCircleIcon aria-hidden="true" className="size-5 shrink-0" />
+          <span className="flex-1">{media.operation.message}</span>
           <Button type="button" variant="quiet" onClick={media.clearError}>
             Dismiss
           </Button>
@@ -89,9 +89,9 @@ export function EventMediaManager({
       ) : null}
 
       {media.operation.phase === 'refresh_required' ? (
-        <div className="event-media-manager__error" role="status">
-          <ArrowClockwiseIcon aria-hidden="true" />
-          <span>The image was added. Reload the event to see it.</span>
+        <div className="flex items-center gap-3 rounded-xl border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-3 py-3 text-xs font-semibold text-[var(--danger)]" role="status">
+          <ArrowClockwiseIcon aria-hidden="true" className="size-5 shrink-0" />
+          <span className="flex-1">The image was added. Reload the event to see it.</span>
           <Button
             type="button"
             variant="quiet"
@@ -102,7 +102,7 @@ export function EventMediaManager({
         </div>
       ) : null}
 
-      <div className="event-media-manager__slots">
+      <div className="grid gap-3 min-[601px]:grid-cols-2">
         {slots.map(({ label, slot }) => {
           const item = event.media.find((candidate) => candidate.slot === slot);
           const active =
@@ -170,40 +170,41 @@ function MediaManagerSlot({
 
   return (
     <article
-      className={`event-media-slot ${isCover ? 'event-media-slot--cover' : ''}`.trim()}
+      className={`min-w-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] ${isCover ? 'min-[601px]:col-span-2' : ''}`.trim()}
       aria-busy={active}
     >
-      <div className="event-media-slot__visual">
+      <div className={`relative overflow-hidden bg-[var(--soft)] ${isCover ? 'aspect-[16/7]' : 'aspect-video'}`}>
         {visualUrl !== undefined ? (
           <img
             src={visualUrl}
             alt={`${eventTitle} ${label.toLowerCase()}${previewUrl === undefined ? '' : ' preview'}`}
             loading="lazy"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="event-media-slot__empty">
-            <ImageIcon aria-hidden="true" />
+          <div className="grid h-full w-full place-items-center text-[var(--evergreen)]">
+            <ImageIcon aria-hidden="true" className="size-6" />
           </div>
         )}
         {status === null ? null : (
-          <div className="event-media-slot__status" role="status">
+          <div className="absolute inset-0 grid content-center justify-items-center gap-2 bg-[#0f2520]/80 text-xs font-bold text-white" role="status">
             {operation.phase === 'uploading' ? (
-              <progress max="100" value={operation.progress}>
+              <progress className="w-[min(10rem,70%)] accent-[var(--persimmon)]" max="100" value={operation.progress}>
                 {operation.progress}%
               </progress>
             ) : (
-              <ArrowClockwiseIcon aria-hidden="true" />
+              <ArrowClockwiseIcon aria-hidden="true" className="size-6" />
             )}
             <span>{status}</span>
           </div>
         )}
       </div>
 
-      <div className="event-media-slot__footer">
-        <strong>{label}</strong>
+      <div className="flex min-h-14 flex-col items-start justify-between gap-2 p-3 min-[601px]:flex-row min-[601px]:items-center">
+        <strong className="text-xs">{label}</strong>
         {confirmingRemoval ? (
           <div
-            className="event-media-slot__confirm"
+            className="flex w-full items-center gap-1 min-[601px]:w-auto [&_button]:flex-1 min-[601px]:[&_button]:flex-none"
             role="group"
             aria-label={`Remove ${label}`}
           >
@@ -220,14 +221,14 @@ function MediaManagerSlot({
             </Button>
           </div>
         ) : (
-          <div className="event-media-slot__actions">
+          <div className="flex w-full items-center gap-1 min-[601px]:w-auto [&_button]:flex-1 min-[601px]:[&_button]:flex-none">
             <label
-              className={`button button--quiet ${busy ? 'button--disabled' : ''}`.trim()}
+              className={`inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-[var(--muted)] hover:bg-[var(--soft)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--focus)] min-[601px]:flex-none ${busy ? 'cursor-not-allowed opacity-55' : ''}`.trim()}
             >
               <UploadSimpleIcon aria-hidden="true" />
               {media === undefined ? 'Add' : 'Replace'}
               <input
-                className="visually-hidden"
+                className="sr-only"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={busy}

@@ -13,7 +13,7 @@
 | `limit`                  | Page size, 1 to 50. Defaults to 20.                                                        |
 | `offset`                 | Page offset, at most 10000. Defaults to 0.                                                 |
 
-Each result carries the event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code. Without `near` they are ordered by start time, then event id. With `near` the answer is restricted to events whose venue lies inside the radius and ordered by distance first, then start time and event id; each result then also carries `distanceKm`, its distance from the requested point.
+Each result carries the event id, title, description, start and end times, IANA timezone, categories, and venue name, city, and country code. Venue latitude and longitude are included when the event has them, so the client can place it on a map. Without `near` results are ordered by start time, then event id. With `near` the answer is restricted to events whose venue lies inside the radius and ordered by distance first, then start time and event id; each result then also carries `distanceKm`, its distance from the requested point.
 
 Responses are cached by the client only through their normal HTTP lifetime; Gateway holds no search cache.
 
